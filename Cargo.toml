@@ -1,0 +1,7 @@
+[package]
+authors = ["Sunrin SHIMURA (keen) <3han5chou7@gmail.com>"]
+name = "webml"
+version = "0.1.0"
+
+[dependencies]
+nom = "2.0.1"
