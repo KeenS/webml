@@ -92,7 +92,7 @@ impl From<nom::ErrorKind> for TypeError {
 pub type Result<T> = ::std::result::Result<T, TypeError>;
 
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Symbol(pub String);
 
 #[derive(Debug, Clone)]

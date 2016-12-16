@@ -1,3 +1,8 @@
+pub mod flat_let;
+pub mod alpha_conv;
+
+pub use self::alpha_conv::AlphaConv;
+
 use ast;
 use prim::*;
 use pass::Pass;

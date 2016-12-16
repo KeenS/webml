@@ -19,7 +19,8 @@ val a = x + 2
     let mut passes = compile_pass![
         parse,
         TyEnv::new(),
-        !hir::AST2HIR,
+        hir::AST2HIR,
+        !hir::AlphaConv::new(),
     ];
 
     passes.trans(input).unwrap();
