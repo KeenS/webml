@@ -1,18 +1,24 @@
-// use ty::Ty;
+use ty::Ty;
 
-// enum HIR {
-//     TopVal(Val)
-// }
+#[derive(Debug)]
+pub enum HIR {
+    Top(Val)
+}
 
-// enum Expr {
-//     Let{ty: Ty, binds: Vec<Val>, ret: Box<Expr>},
-//     Add{ty: Ty, l: Box<Expr>, r: Box<Expr>},
-//     Mul{ty: Ty, l: Box<Expr>, r: Box<Expr>},
-//     Fun{ty: Ty, args: Vec<Symbol>, body: Box<Expr>},
-//     If{cond: Box<Expr>, ty: Ty, then: Box<Expr>, else_: Box<Expr>},
-//     Seq{ty: Ty, exprs: Vec<Expr>},
-//     LitInt(i64),
-// }
+#[derive(Debug)]
+pub enum Expr {
+    Binds{ty: Ty, binds: Vec<Val>, ret: Box<Expr>},
+    Fun{ty: Ty, param: Symbol, body: Box<Expr>},
+    If {ty: Ty, cond: Box<Expr>, then: Box<Expr>, else_: Box<Expr>},
+    // Seq{ty: TyDefer, exprs: Vec<Expr>},
+    Sym(Symbol),
+    LitInt(i64),
+    LitBool(bool),
+}
 
-// struct Val{ty: Ty, name: Symbol, expr: Expr}
-// struct Symbol{ty: Ty, name: String}
+#[derive(Debug)]
+pub struct Val{pub ty: Ty, pub name: Symbol, pub expr: Expr}
+#[derive(Debug)]
+pub struct Symbol(pub String);
+
+pub struct AST2HIR;

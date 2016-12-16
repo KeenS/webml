@@ -6,6 +6,8 @@ pub mod ty;
 pub mod ast;
 mod typing;
 mod hir;
+pub mod pass;
 
 pub use typing::{TyEnv, TypeError};
 pub use parser::parse;
+pub use pass::{Pass, Chain};

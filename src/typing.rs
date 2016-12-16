@@ -1,9 +1,9 @@
+use nom;
+
 use std::collections::HashMap;
 use std::fmt;
 use std::error::Error;
 use std::ops::{Drop, Deref, DerefMut};
-// use std::cell::RefCell;
-// use std::rc::Rc;
 
 use ast;
 use ty::*;
@@ -151,29 +151,38 @@ impl <'a>Scope<'a> {
                 let _rty = self.infer_expr(r, &Some(Ty::Int))?;
                 Ok(ty.clone())
             }
-            &mut Fun{ref mut ty, ref mut arg, ref mut body} => {
+            &mut Fun{ref mut ty, ref mut param, ref mut body} => {
                 check_or_set!(ty, given);
-                let (arg_ty, ret_ty) = match ty.deref().deref() {
-                    &Some(Ty::Fun(ref arg, ref ret)) => (Some(arg.deref().clone()), Some(ret.deref().clone())),
+                let (param_ty, ret_ty) = match ty.deref().deref() {
+                    &Some(Ty::Fun(ref param, ref ret)) => (Some(param.deref().clone()), Some(ret.deref().clone())),
                     _ => (None, None),
                 };
                 let mut scope = self.scope();
-                scope.insert(arg.0.clone(), TyDefer(arg_ty.clone()));
+                scope.insert(param.0.clone(), TyDefer(param_ty.clone()));
 
                 let ret_ty_ = scope.infer_expr(body, &ret_ty)?;
-                let arg_ty_ = scope.get(&arg.0).and_then(|ty| ty.deref().clone());
-                let (arg_ty, ret_ty) = match (arg_ty_, ret_ty_.deref()) {
-                    (Some(ref arg_ty), &Some(ref ret_ty)) => (arg_ty.clone(), ret_ty.clone()),
-                    x => {
-                        println!("{:?}", scope);
+                let param_ty_ = scope.get(&param.0).and_then(|ty| ty.deref().clone());
+                let (param_ty, ret_ty) = match (param_ty_, ret_ty_.deref()) {
+                    (Some(ref param_ty), &Some(ref ret_ty)) => (param_ty.clone(), ret_ty.clone()),
+                    _ => {
                         return Err(TypeError::CannotInfer)
                     },
                 };
-                let fn_ty = Some(Ty::Fun(Box::new(arg_ty), Box::new(ret_ty)));
+                let fn_ty = Some(Ty::Fun(Box::new(param_ty), Box::new(ret_ty)));
                 assert_or_set!(ty, &fn_ty);
                 Ok(TyDefer(fn_ty))
 
             },
+            &mut App{ref mut ty, ref mut fun, ref mut arg} => {
+                check_or_set!(ty, given);
+                let fun_ty = self.infer_expr(fun, &None)?;
+                let (param_ty, ret_ty) = match fun_ty.deref() {
+                    &Some(Ty::Fun(ref param, ref ret)) => (param, ret),
+                    _ => return Err(TypeError::NotFunction(fun.deref_mut().clone()))
+                };
+                let _arg_ty = self.infer_expr(arg, &Some(param_ty.deref().clone()))?;
+                Ok(TyDefer(Some(ret_ty.deref().clone())))
+            }
             &mut If{ref mut cond, ref mut ty, ref mut then, ref mut else_} => {
                 check_or_set!(ty, given);
                 let mut cond_ty = self.infer_expr(cond, &Some(Ty::Bool))?;
@@ -269,7 +278,9 @@ impl <'a>Drop for Scope<'a> {
 pub enum TypeError {
     MisMatch{expected: Ty, actual: Ty},
     CannotInfer,
-    FreeVar
+    FreeVar,
+    NotFunction(ast::Expr),
+    ParseError(nom::ErrorKind),
 }
 
 impl fmt::Display for TypeError {
@@ -284,12 +295,19 @@ impl Error for TypeError {
         match self {
             &MisMatch{..} => "type mismatches against expected type",
             &CannotInfer => "cannot infer the type",
-            &FreeVar => "free variable is found"
+            &FreeVar => "free variable is found",
+            &NotFunction(_) => "not a function",
+            &ParseError(_) => "parse error"
         }
     }
 }
 
 
+impl From<nom::ErrorKind> for TypeError {
+    fn from(e: nom::ErrorKind) -> TypeError {
+        TypeError::ParseError(e)
+    }
+}
 
 type Result<T> = ::std::result::Result<T, TypeError>;
 
@@ -311,5 +329,16 @@ impl TyEnv {
             scope.infer_ast(ast)?
         }
         Ok(())
+    }
+}
+
+
+use pass::Pass;
+impl Pass<Vec<ast::AST>> for TyEnv {
+    type Target = Vec<ast::AST>;
+    type Err = TypeError;
+    fn trans(&mut self, mut asts: Vec<ast::AST>) -> Result<Self::Target> {
+        self.infer(&mut asts)?;
+        Ok(asts)
     }
 }
