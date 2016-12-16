@@ -5,7 +5,7 @@ mod parser;
 pub mod ty;
 pub mod ast;
 mod typing;
-mod hir;
+pub mod hir;
 pub mod pass;
 
 pub use typing::{TyEnv, TypeError};

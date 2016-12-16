@@ -17,13 +17,11 @@ val a = x + 2
 ";
 
     let mut passes = compile_pass![
-        ? parse,
+        parse,
         TyEnv::new(),
+        !hir::AST2HIR,
     ];
 
-    let ret = passes.trans(input).unwrap();
-    for ast in ret {
-        println!("{:?}", ast);
-    }
+    passes.trans(input).unwrap();
 
 }

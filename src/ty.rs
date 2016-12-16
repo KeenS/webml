@@ -41,4 +41,8 @@ impl TyDefer {
     pub fn defined(&self) -> Option<Ty> {
         self.clone().0
     }
+
+    pub fn force(self, message: &str) -> Ty {
+        self.0.expect(message)
+    }
 }
