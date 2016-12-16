@@ -4,7 +4,7 @@ use webml::*;
 use webml::pass::{DebugPass, PPPass};
 
 fn main() {
-    let input = b"val x = 1
+    let input1 = b"val x = 1
 val y=false
 val z = y
 val b = 1 + 2 * 3 + 4
@@ -16,13 +16,13 @@ val g = d 1 2
 val a = x + 2
 ";
 
-    let input = b"
+    let input2 = b"
 val a = let
   val b = let
     val c = 1
     val d = 2
   in
-    c + d
+    c + d * 3 + 4
   end
   val e = if let val f = true in f end
           then let val g = true in g end
@@ -43,13 +43,14 @@ val x = 1
 ";
 
     let mut passes = compile_pass![
-        !parse,
+        parse,
         TyEnv::new(),
         hir::AST2HIR,
         hir::AlphaConv::new(),
+        hir::FlatExpr::new(),
         !hir::FlatLet::new(),
     ];
 
-    passes.trans(input).unwrap();
+    passes.trans(input1).unwrap();
 
 }

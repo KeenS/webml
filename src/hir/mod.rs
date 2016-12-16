@@ -1,8 +1,10 @@
 pub mod flat_let;
 pub mod alpha_conv;
+pub mod flat_expr;
 
 pub use self::alpha_conv::AlphaConv;
 pub use self::flat_let::FlatLet;
+pub use self::flat_expr::FlatExpr;
 
 use ast;
 use prim::*;
