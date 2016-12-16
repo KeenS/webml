@@ -28,16 +28,22 @@ val a = let
           then let val g = true in g end
           else let val h = false in h end
 in
-  if e
-  then b
-  else b
+ (let
+    val i = fn x => fn y => x + y
+  in
+    i
+  end) (let
+    val j = b + b
+  in
+   j
+  end) 2
 end
 val x = 1
 
 ";
 
     let mut passes = compile_pass![
-        parse,
+        !parse,
         TyEnv::new(),
         hir::AST2HIR,
         hir::AlphaConv::new(),
