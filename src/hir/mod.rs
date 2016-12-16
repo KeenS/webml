@@ -48,6 +48,20 @@ impl Expr {
             arg: Box::new(e),
         }
     }
+
+    pub fn ty(&self) -> &Ty {
+        use hir::Expr::*;
+
+        match self {
+            &Binds{ref ty, ..} |
+            &PrimFun{ref ty, ..} |
+            &Fun{ref ty, ..} |
+            &App{ref ty, ..} |
+            &If {ref ty, ..} |
+            &Sym{ref ty, ..} |
+            &Lit{ref ty, ..} => ty
+        }
+    }
 }
 
 pub struct AST2HIR;
