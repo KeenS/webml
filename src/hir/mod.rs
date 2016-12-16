@@ -2,6 +2,7 @@ pub mod flat_let;
 pub mod alpha_conv;
 
 pub use self::alpha_conv::AlphaConv;
+pub use self::flat_let::FlatLet;
 
 use ast;
 use prim::*;

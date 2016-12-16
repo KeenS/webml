@@ -16,11 +16,32 @@ val g = d 1 2
 val a = x + 2
 ";
 
+    let input = b"
+val a = let
+  val b = let
+    val c = 1
+    val d = 2
+  in
+    c + d
+  end
+  val e = if let val f = true in f end
+          then let val g = true in g end
+          else let val h = false in h end
+in
+  if e
+  then b
+  else b
+end
+val x = 1
+
+";
+
     let mut passes = compile_pass![
         parse,
         TyEnv::new(),
         hir::AST2HIR,
-        !hir::AlphaConv::new(),
+        hir::AlphaConv::new(),
+        !hir::FlatLet::new(),
     ];
 
     passes.trans(input).unwrap();
