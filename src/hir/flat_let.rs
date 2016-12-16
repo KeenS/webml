@@ -2,9 +2,7 @@ use prim::*;
 use hir::*;
 use pass::Pass;
 
-pub struct FlatLet {
-    id: usize,
-}
+pub struct FlatLet;
 
 fn take_binds(mut expr: Expr) -> (Expr, Vec<Val>) {
     use hir::Expr::*;
@@ -38,16 +36,9 @@ fn take_binds(mut expr: Expr) -> (Expr, Vec<Val>) {
 
 impl FlatLet {
     pub fn new() -> Self {
-        FlatLet {
-            id: 0
-        }
+        FlatLet
     }
 
-    pub fn gensym(&mut self) -> Symbol {
-        let name = format!("#g{:06}", self.id);
-        self.id += 1;
-        Symbol(name)
-    }
 
    pub fn flat_hir(&mut self, mut hir: HIR) -> HIR {
        hir.0 = hir.0.into_iter().map(|val| self.flat_val(val)).collect();
@@ -71,7 +62,8 @@ impl FlatLet {
                     vec.append(&mut binds);
                     vec.push(val)
                 }
-                let (expr, mut binds_) = take_binds(*ret);
+                let ret = self.flat_expr(*ret);
+                let (expr, mut binds_) = take_binds(ret);
                 ret = Box::new(expr);
                 vec.append(&mut binds_);
                 binds = vec;
