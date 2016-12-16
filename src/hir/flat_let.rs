@@ -62,8 +62,8 @@ impl FlatLet {
                     vec.append(&mut binds);
                     vec.push(val)
                 }
-                let ret = self.flat_expr(*ret);
-                let (expr, mut binds_) = take_binds(ret);
+                let ret_ = self.flat_expr(*ret);
+                let (expr, mut binds_) = take_binds(ret_);
                 ret = Box::new(expr);
                 vec.append(&mut binds_);
                 binds = vec;
