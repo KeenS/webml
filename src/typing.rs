@@ -122,7 +122,7 @@ impl <'a>Scope<'a> {
             //     self.insert(f.name.0.clone(), f.ty.clone());
             //     Ok(())
             // },
-            &mut TopVal(ref mut b) => {
+            &mut Top(ast::Bind::V(ref mut b)) => {
                 self.infer_val(b)?;
                 Ok(())
             },
@@ -253,7 +253,6 @@ impl <'a>Scope<'a> {
             None => return Err(TypeError::FreeVar)
         };
     }
-
 }
 
 

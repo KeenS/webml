@@ -3,7 +3,7 @@ use ty::{TyDefer};
 #[derive(Debug)]
 pub enum AST {
     // TopFun(Fun),
-    TopVal(Val)
+    Top(Bind)
 }
 
 #[derive(Debug)]
