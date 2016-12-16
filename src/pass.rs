@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 pub trait Pass<T> {
     type Target;
     type Err;
@@ -13,6 +15,39 @@ impl <In, Out, Err, F> Pass<In> for F
         Ok(out)
     }
 }
+
+pub struct DebugPass<T>(pub T);
+
+impl <T, In, Out, Err> Pass<In> for DebugPass<T>
+    where T: Pass<In, Target = Out, Err = Err>,
+          Out: Debug,
+{
+    type Target = Out;
+    type Err = Err;
+
+    fn trans(&mut self, i: In) -> Result<Self::Target, Self::Err> {
+        let o = self.0.trans(i)?;
+        println!("{:?}", o);
+        Ok(o)
+    }
+}
+
+pub struct PPPass<T>(pub T);
+
+impl <T, In, Out, Err> Pass<In> for PPPass<T>
+    where T: Pass<In, Target = Out, Err = Err>,
+          Out: Debug,
+{
+    type Target = Out;
+    type Err = Err;
+
+    fn trans(&mut self, i: In) -> Result<Self::Target, Self::Err> {
+        let o = self.0.trans(i)?;
+        println!("{:#?}", o);
+        Ok(o)
+    }
+}
+
 
 pub struct Chain<F, S>(pub F, pub S);
 
@@ -35,9 +70,19 @@ impl <F, FE, S, SE, T, In, Out> Pass<In> for Chain<F, S>
 
 #[macro_export]
 macro_rules! compile_pass {
+    (? $pass: expr) => {DebugPass($pass)};
+    (? $pass: expr, ) => {DebugPass($pass)};
+    (? $pass: expr, $($passes: tt)*) => {
+        Chain(DebugPass($pass), compile_pass!($($passes)*))
+    };
+    (! $pass: expr) => {PPPass($pass)};
+    (! $pass: expr, ) => {PPPass($pass)};
+    (! $pass: expr, $($passes: tt)*) => {
+        Chain(PPPass($pass), compile_pass!($($passes)*))
+    };
     ($pass: expr) => {$pass};
     ($pass: expr, ) => {$pass};
-    ($pass: expr, $($passes: expr, )*) => {
-        Chain($pass, compile_pass!($($passes, )*))
+    ($pass: expr, $($passes: tt)*) => {
+        Chain(compile_pass!($pass), compile_pass!($($passes)*))
     };
 }
