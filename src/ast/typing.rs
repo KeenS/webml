@@ -1,12 +1,9 @@
 use nom;
 
 use std::collections::HashMap;
-use std::fmt;
-use std::error::Error;
 use std::ops::{Drop, Deref, DerefMut};
 
 use ast;
-use ty::*;
 use prim::*;
 
 #[derive(Debug)]
@@ -286,44 +283,6 @@ impl <'a>Drop for Scope<'a> {
         self.0.position -= 1;
     }
 }
-
-
-#[derive(Debug)]
-pub enum TypeError {
-    MisMatch{expected: Ty, actual: Ty},
-    CannotInfer,
-    FreeVar,
-    NotFunction(ast::Expr),
-    ParseError(nom::ErrorKind),
-}
-
-impl fmt::Display for TypeError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        fmt::Debug::fmt(self, f)
-    }
-}
-
-impl Error for TypeError {
-    fn description(&self) -> &str {
-        use self::TypeError::*;
-        match self {
-            &MisMatch{..} => "type mismatches against expected type",
-            &CannotInfer => "cannot infer the type",
-            &FreeVar => "free variable is found",
-            &NotFunction(_) => "not a function",
-            &ParseError(_) => "parse error"
-        }
-    }
-}
-
-
-impl From<nom::ErrorKind> for TypeError {
-    fn from(e: nom::ErrorKind) -> TypeError {
-        TypeError::ParseError(e)
-    }
-}
-
-type Result<T> = ::std::result::Result<T, TypeError>;
 
 impl TyEnv {
     pub fn new() -> Self {

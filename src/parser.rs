@@ -2,7 +2,6 @@ use std::str::from_utf8;
 use nom::*;
 use prim::*;
 use ast::*;
-use ty::*;
 
 named!(top < Vec<AST> >, do_parse!(
     opt!(multispace) >>
@@ -124,12 +123,12 @@ named!(expr0_paren <Expr>, do_parse!(
 named!(symbol <Symbol>, map_res!(
     alphanumeric, |s| match s as &[u8] {
         b"val" | b"fun" | b"fn" | b"let" | b"in" | b"end" | b"if" | b"then" | b"else" => {
-            Err(ErrorKind::IsNot) as  Result<Symbol, ErrorKind>
+            Err(ErrorKind::IsNot) as  ::std::result::Result<Symbol, ErrorKind>
         },
         s => Ok(Symbol(from_utf8(s).expect("failed to parse UTF-8 value").to_string()))
     }));
 
-pub fn parse(input: &[u8]) -> Result<Vec<AST>, ErrorKind> {
+pub fn parse(input: &[u8]) -> ::std::result::Result<Vec<AST>, ErrorKind> {
     let iresult = top(input);
     iresult.to_result()
 }

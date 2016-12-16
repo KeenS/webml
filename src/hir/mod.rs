@@ -1,7 +1,5 @@
 use ast;
 use prim::*;
-use ty::Ty;
-use typing::TypeError;
 use pass::Pass;
 
 #[derive(Debug)]
@@ -123,7 +121,7 @@ impl Pass<Vec<ast::AST>> for AST2HIR {
     type Target = HIR;
     type Err = TypeError;
 
-    fn trans(&mut self, asts: Vec<ast::AST>) -> Result<Self::Target, Self::Err> {
+    fn trans(&mut self, asts: Vec<ast::AST>) -> ::std::result::Result<Self::Target, Self::Err> {
         Ok(self.conv_asts(asts))
     }
 }

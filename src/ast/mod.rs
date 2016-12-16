@@ -1,4 +1,5 @@
-use ty::{TyDefer};
+pub mod typing;
+
 use prim::*;
 
 #[derive(Debug, Clone)]
