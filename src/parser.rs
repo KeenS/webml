@@ -57,7 +57,7 @@ named!(expr_bind <Expr>, do_parse!(
 ));
 
 named!(expr_fun <Expr>, do_parse!(
-    tag!("fun") >>
+    tag!("fn") >>
         multispace >>
         param: symbol >>
         opt!(multispace) >>
@@ -122,7 +122,7 @@ named!(expr0_paren <Expr>, do_parse!(
 
 named!(symbol <Symbol>, map_res!(
     alphanumeric, |s| match s as &[u8] {
-        b"val" | b"fun" | b"let" | b"in" | b"end" | b"if" | b"then" | b"else" => {
+        b"val" | b"fun" | b"fn" | b"let" | b"in" | b"end" | b"if" | b"then" | b"else" => {
             Err(ErrorKind::IsNot) as  Result<Symbol, ErrorKind>
         },
         s => Ok(Symbol(from_utf8(s).expect("failed to parse UTF-8 value").to_string()))

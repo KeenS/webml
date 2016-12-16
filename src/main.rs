@@ -9,7 +9,7 @@ val y=false
 val z = y
 val b = 1 + 2 * 3 + 4
 val c = (1 + 2) * 3 + 4
-val d = fun x => fun y => x + y
+val d = fn x => fn y => x + y
 val e = if true then b else c
 val f = let val d = 1 in d + c end
 val g = d 1 2
