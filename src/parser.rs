@@ -1,5 +1,6 @@
 use std::str::from_utf8;
 use nom::*;
+use prim::*;
 use ast::*;
 use ty::*;
 
@@ -104,12 +105,12 @@ named!(expr1_mul <Expr>, do_parse!(
         (Expr::Mul {ty: TyDefer::empty(), l: Box::new(e1), r: Box::new(e2)})
 ));
 
-named!(expr0_sym <Expr>, map!(symbol, Expr::Sym));
-named!(expr0_int <Expr>, map!(digit, |s| Expr::LitInt(from_utf8(s).expect("internal error: failed to parse integer literal")
-                                                 .parse().expect("internal error: failed to parse integer literal"))));
+named!(expr0_sym <Expr>, map!(symbol, |s| Expr::Sym{ty: TyDefer::empty(), name: s}));
+named!(expr0_int <Expr>, map!(digit, |s| Expr::Lit{ty: TyDefer::empty(), value: Literal::Int(from_utf8(s).expect("internal error: failed to parse integer literal")
+                                                                 .parse().expect("internal error: failed to parse integer literal"))}));
 named!(expr0_bool <Expr>, alt!(
-    map!(tag!("true"),  |_| Expr::LitBool(true)) |
-    map!(tag!("false"), |_| Expr::LitBool(false))));
+    map!(tag!("true"),  |_| Expr::Lit{ty: TyDefer::empty(), value: Literal::Bool(true)}) |
+    map!(tag!("false"), |_| Expr::Lit{ty: TyDefer::empty(), value: Literal::Bool(false)})));
 
 named!(expr0_paren <Expr>, do_parse!(
     tag!("(") >>

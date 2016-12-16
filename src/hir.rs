@@ -1,4 +1,5 @@
 use ast;
+use prim::*;
 use ty::Ty;
 use typing::TypeError;
 use pass::Pass;
@@ -14,27 +15,24 @@ pub enum Expr {
     App{ty: Ty, fun: Box<Expr>, arg: Box<Expr>},
     If {ty: Ty, cond: Box<Expr>, then: Box<Expr>, else_: Box<Expr>},
     // Seq{ty: TyDefer, exprs: Vec<Expr>},
-    Sym(Symbol),
-    LitInt(i64),
-    LitBool(bool),
+    Sym{ty: Ty, name: Symbol},
+    Lit{ty: Ty, value: Literal},
 }
 
 #[derive(Debug)]
 pub struct Val{pub ty: Ty, pub name: Symbol, pub expr: Expr}
-#[derive(Debug)]
-pub struct Symbol(pub String);
 
 impl Expr {
     fn add() -> Expr {
         Expr::PrimFun {
-            ty: Ty::Fun(Box::new(Ty::Int), Box::new(Ty::Fun(Box::new(Ty::Int), Box::new(Ty::Int)))),
+            ty: Ty::fun(Ty::Int, Ty::fun(Ty::Int, Ty::Int)),
             name: Symbol("+".to_string())
         }
     }
 
     fn mul() -> Expr {
         Expr::PrimFun {
-            ty: Ty::Fun(Box::new(Ty::Int), Box::new(Ty::Fun(Box::new(Ty::Int), Box::new(Ty::Int)))),
+            ty: Ty::fun(Ty::Int, Ty::fun(Ty::Int, Ty::Int)),
             name: Symbol("*".to_string())
         }
     }
@@ -64,49 +62,53 @@ impl AST2HIR {
     fn conv_val(&self, val: ast::Val) -> Val {
         Val {
             ty: val.ty.force("internal typing error"),
-            name: self.conv_sym(val.name),
+            name: val.name,
             expr: self.conv_expr(val.expr)
         }
     }
 
     fn conv_expr(&self, expr: ast::Expr) -> Expr {
+        use ast::{Expr as E};
         match expr {
-            ast::Expr::Binds{ty, binds, ret} =>
+            E::Binds{ty, binds, ret} =>
                 Expr::Binds {
                     ty: ty.force("internal typing error"),
                     binds: binds.into_iter().map(|b| self.conv_bind(b)).collect(),
                     ret: Box::new(self.conv_expr(*ret)),
                 },
-            ast::Expr::Add{ty, l, r} =>
+            E::Add{ty, l, r} =>
                 Expr::add()
-                .app1(Ty::Fun(Box::new(Ty::Int), Box::new(Ty::Int)), self.conv_expr(*l))
+                .app1(Ty::fun(Ty::Int, Ty::Int),
+                      self.conv_expr(*l))
                 .app1(ty.force("internal typing error"), self.conv_expr(*r)),
-            ast::Expr::Mul{ty, l, r} =>
+            E::Mul{ty, l, r} =>
                 Expr::mul()
-                .app1(Ty::Fun(Box::new(Ty::Int), Box::new(Ty::Int)),self.conv_expr(*l))
+                .app1(Ty::fun(Ty::Int, Ty::Int),
+                      self.conv_expr(*l))
                 .app1(ty.force("internal typing error"), self.conv_expr(*r)),
-            ast::Expr::Fun{ty, param, body} =>
+            E::Fun{ty, param, body} =>
                 Expr::Fun {
                     ty: ty.defined().expect("internal typing error"),
-                    param: self.conv_sym(param),
+                    param: param,
                     body: Box::new(self.conv_expr(*body)),
 
                 },
-            ast::Expr::App{ty, fun, arg} =>
+            E::App{ty, fun, arg} =>
                 self.conv_expr(*fun).app1(ty.force("internal typing error"), self.conv_expr(*arg)),
-            ast::Expr::If {ty, cond, then, else_} =>
+            E::If {ty, cond, then, else_} =>
                 Expr::If {
                     ty: ty.force("internal typing error"),
                     cond: Box::new(self.conv_expr(*cond)),
                     then: Box::new(self.conv_expr(*then)),
                     else_: Box::new(self.conv_expr(*else_)),
                 },
-            ast::Expr::Sym(s) =>
-                Expr::Sym(self.conv_sym(s)),
-            ast::Expr::LitInt(i) =>
-                Expr::LitInt(i),
-            ast::Expr::LitBool(b) =>
-                Expr::LitBool(b)
+            E::Sym{ty, name} =>
+                Expr::Sym{ty: ty.force("internal typing error"), name: name},
+            E::Lit{ty, value} =>
+                Expr::Lit {
+                    ty: ty.force("internal typing error"),
+                    value: value,
+                }
         }
     }
 
@@ -114,10 +116,6 @@ impl AST2HIR {
         match b {
             ast::Bind::V(val) =>  self.conv_val(val)
         }
-    }
-
-    fn conv_sym(&self, sym: ast::Symbol) -> Symbol {
-        Symbol(sym.0)
     }
 }
 

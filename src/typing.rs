@@ -7,6 +7,7 @@ use std::ops::{Drop, Deref, DerefMut};
 
 use ast;
 use ty::*;
+use prim::*;
 
 #[derive(Debug)]
 pub struct TyEnv {
@@ -168,7 +169,7 @@ impl <'a>Scope<'a> {
                         return Err(TypeError::CannotInfer)
                     },
                 };
-                let fn_ty = Some(Ty::Fun(Box::new(param_ty), Box::new(ret_ty)));
+                let fn_ty = Some(Ty::fun(param_ty, ret_ty));
                 assert_or_set!(ty, &fn_ty);
                 Ok(TyDefer(fn_ty))
 
@@ -186,7 +187,7 @@ impl <'a>Scope<'a> {
             }
             &mut If{ref mut cond, ref mut ty, ref mut then, ref mut else_} => {
                 check_or_set!(ty, given);
-                let mut cond_ty = self.infer_expr(cond, &Some(Ty::Bool))?;
+                let _cond_ty = self.infer_expr(cond, &Some(Ty::Bool))?;
                 let then_ty_ = self.infer_expr(then, given)?;
                 let else_ty_ = self.infer_expr(else_, &then_ty_)?;
                 let then_ty_ = self.infer_expr(then, &else_ty_)?;
@@ -207,21 +208,18 @@ impl <'a>Scope<'a> {
             //     // the last is ty
             //     Err(TypeError::CannotInfer)
             // },
-            &mut Sym(ref mut sym) => {
-                let ty = self.infer_symbol(sym, given)?;
-                assert!(ty.defined().is_some());
-                Ok(ty)
+            &mut Sym{ref mut ty, ref mut name} => {
+                check_or_set!(ty, given);
+                let ty_ = self.infer_symbol(name, given)?;
+                assert_or_set!(ty, ty_.deref());
+                Ok(ty_)
             },
-            &mut LitInt(_) => {
-                check_or_set!(&mut TyDefer(Some(Ty::Int)), given);
-                Ok(TyDefer(Some(Ty::Int)))
+            &mut Lit{ref mut ty, ref mut value} => {
+                check_or_set!(ty, given);
+                let ty_ = self.infer_literal(value, given)?;
+                assert_or_set!(ty, ty_.deref());
+                Ok(ty_)
             },
-
-            &mut LitBool(_) => {
-                check_or_set!(&mut TyDefer(Some(Ty::Bool)), given);
-                Ok(TyDefer(Some(Ty::Bool)))
-            },
-
         }
 
     }
@@ -245,7 +243,7 @@ impl <'a>Scope<'a> {
         Ok(())
     }
 
-    fn infer_symbol(&mut self, sym: &mut ast::Symbol, given: &Option<Ty>) -> Result<TyDefer> {
+    fn infer_symbol(&mut self, sym: &mut Symbol, given: &Option<Ty>) -> Result<TyDefer> {
         match self.get_mut(&sym.0) {
             Some(t) => match (t.deref_mut(), given) {
                 (&mut Some(ref t), &Some(ref g)) => if t == g {
@@ -263,6 +261,21 @@ impl <'a>Scope<'a> {
             None => return Err(TypeError::FreeVar)
         };
     }
+
+    fn infer_literal(&mut self, lit: &mut Literal, given: &Option<Ty>) -> Result<TyDefer> {
+        use prim::Literal::*;
+        let ty = match lit {
+            &mut Int(_)  => Ty::Int,
+            &mut Bool(_) => Ty::Bool,
+        };
+        match (ty, given) {
+            (Ty::Int , &Some(Ty::Int))  => Ok(TyDefer(Some(Ty::Int))),
+            (Ty::Bool, &Some(Ty::Bool)) => Ok(TyDefer(Some(Ty::Bool))),
+            (ty, &None)           => Ok(TyDefer(Some(ty))),
+            (ref ty, &Some(ref exp)) => Err(TypeError::MisMatch{expected: exp.clone(), actual: ty.clone()})
+        }
+    }
+
 }
 
 

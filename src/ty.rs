@@ -1,5 +1,3 @@
-use std::cell::RefCell;
-use std::rc::Rc;
 use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -10,6 +8,12 @@ pub enum Ty {
     Fun(Box<Ty>, Box<Ty>),
 }
 
+
+impl Ty {
+    pub fn fun(param: Ty, ret: Ty) -> Ty {
+        Ty::Fun(Box::new(param), Box::new(ret))
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 // pub enum TyDefer {

@@ -1,10 +1,17 @@
 use ty::{TyDefer};
+use prim::*;
 
 #[derive(Debug, Clone)]
 pub enum AST {
     // TopFun(Fun),
     Top(Bind)
 }
+
+// #[derive(Debug)]
+// pub struct Fun{pub ty: TyDefer, pub name: Symbol, pub args: Vec<Symbol>, pub body: Expr}
+#[derive(Debug, Clone)]
+pub struct Val{pub ty: TyDefer, pub name: Symbol, pub expr: Expr}
+
 
 #[derive(Debug, Clone)]
 pub enum Expr {
@@ -15,9 +22,8 @@ pub enum Expr {
     App{ty: TyDefer, fun: Box<Expr>, arg: Box<Expr>},
     If {ty: TyDefer, cond: Box<Expr>, then: Box<Expr>, else_: Box<Expr>},
     // Seq{ty: TyDefer, exprs: Vec<Expr>},
-    Sym(Symbol),
-    LitInt(i64),
-    LitBool(bool),
+    Sym{ty: TyDefer, name: Symbol},
+    Lit{ty: TyDefer, value: Literal},
 }
 
 #[derive(Debug, Clone)]
@@ -41,11 +47,4 @@ impl Bind {
         }
     }
 }
-
-// #[derive(Debug)]
-// pub struct Fun{pub ty: TyDefer, pub name: Symbol, pub args: Vec<Symbol>, pub body: Expr}
-#[derive(Debug, Clone)]
-pub struct Val{pub ty: TyDefer, pub name: Symbol, pub expr: Expr}
-#[derive(Debug, Clone)]
-pub struct Symbol(pub String);
 
