@@ -181,6 +181,7 @@ impl <'a>Scope<'a> {
                     _ => return Err(TypeError::NotFunction(fun.deref_mut().clone()))
                 };
                 let _arg_ty = self.infer_expr(arg, &Some(param_ty.deref().clone()))?;
+                assert_or_set!(ty, &Some(ret_ty.deref().clone()));
                 Ok(TyDefer(Some(ret_ty.deref().clone())))
             }
             &mut If{ref mut cond, ref mut ty, ref mut then, ref mut else_} => {
