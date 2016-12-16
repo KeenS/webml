@@ -8,12 +8,14 @@ use std::ops::{Drop, Deref, DerefMut};
 use ast;
 use ty::*;
 
+#[derive(Debug)]
 pub struct TyEnv {
     envs: Vec<HashMap<String, TyDefer>>,
     position: usize,
 }
 
 
+#[derive(Debug)]
 struct Scope<'a>(&'a mut TyEnv);
 impl <'a>Deref for Scope<'a> {
     type Target = TyEnv;
@@ -145,8 +147,8 @@ impl <'a>Scope<'a> {
             &mut Mul{ref mut ty, ref mut l, ref mut r}=> {
                 check_or_set!(ty, given);
                 assert_or_set!(ty, &Some(Ty::Int));
-                let mut lty = self.infer_expr(l, &Some(Ty::Int))?;
-                let mut rty = self.infer_expr(r, &Some(Ty::Int))?;
+                let _lty = self.infer_expr(l, &Some(Ty::Int))?;
+                let _rty = self.infer_expr(r, &Some(Ty::Int))?;
                 Ok(ty.clone())
             }
             &mut Fun{ref mut ty, ref mut arg, ref mut body} => {
@@ -158,11 +160,14 @@ impl <'a>Scope<'a> {
                 let mut scope = self.scope();
                 scope.insert(arg.0.clone(), TyDefer(arg_ty.clone()));
 
-                let ret_ty_ = scope.infer_expr(body, &arg_ty)?;
+                let ret_ty_ = scope.infer_expr(body, &ret_ty)?;
                 let arg_ty_ = scope.get(&arg.0).and_then(|ty| ty.deref().clone());
                 let (arg_ty, ret_ty) = match (arg_ty_, ret_ty_.deref()) {
                     (Some(ref arg_ty), &Some(ref ret_ty)) => (arg_ty.clone(), ret_ty.clone()),
-                    _ => return Err(TypeError::CannotInfer),
+                    x => {
+                        println!("{:?}", scope);
+                        return Err(TypeError::CannotInfer)
+                    },
                 };
                 let fn_ty = Some(Ty::Fun(Box::new(arg_ty), Box::new(ret_ty)));
                 assert_or_set!(ty, &fn_ty);
@@ -231,24 +236,22 @@ impl <'a>Scope<'a> {
     }
 
     fn infer_symbol(&mut self, sym: &mut ast::Symbol, given: &Option<Ty>) -> Result<TyDefer> {
-        let g = match self.get(&sym.0) {
-            Some(t) => match (t.deref(), given) {
-                (&Some(ref t), &Some(ref g)) => if t == g {
+        match self.get_mut(&sym.0) {
+            Some(t) => match (t.deref_mut(), given) {
+                (&mut Some(ref t), &Some(ref g)) => if t == g {
                     return Ok(TyDefer(Some(t.clone())))
                 } else {
                     return Err(TypeError::MisMatch{expected: g.clone(), actual: t.clone()})
                 },
-                (&Some(ref t), &None) => return Ok(TyDefer(Some(t.clone()))),
-                (&None, &Some(ref g)) => {
-                    g.clone()
+                (&mut Some(ref t), &None) => return Ok(TyDefer(Some(t.clone()))),
+                (x @ &mut None, g @ &Some(_)) => {
+                    *x = g.clone();
+                    return Ok(TyDefer(g.clone()))
                 },
                 _ => return Err(TypeError::CannotInfer)
             },
             None => return Err(TypeError::FreeVar)
         };
-        self.insert(sym.0.clone(), TyDefer(Some(g.clone())));
-        Ok(TyDefer(Some(g)))
-
     }
 
 }
