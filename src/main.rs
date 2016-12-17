@@ -46,9 +46,9 @@ val x = 1
         parse,
         TyEnv::new(),
         hir::AST2HIR,
-        hir::AlphaConv::new(),
-        hir::FlatExpr::new(),
-        hir::FlatLet::new(),
+        !hir::AlphaConv::new(),
+        !hir::FlatExpr::new(),
+        !hir::FlatLet::new(),
         !hir::Inline::new(),
     ];
 
