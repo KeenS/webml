@@ -14,7 +14,7 @@ impl FlatExpr {
     }
 
     pub fn gensym(&mut self) -> Symbol {
-        let name = format!("#g{:06}", self.id);
+        let name = format!("#g{}", self.id);
         self.id += 1;
         Symbol(name)
     }
