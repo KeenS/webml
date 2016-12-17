@@ -1,5 +1,7 @@
 use std::fmt::Debug;
 
+use util::PP;
+
 pub trait Pass<T> {
     type Target;
     type Err;
@@ -36,14 +38,14 @@ pub struct PPPass<T>(pub T);
 
 impl <T, In, Out, Err> Pass<In> for PPPass<T>
     where T: Pass<In, Target = Out, Err = Err>,
-          Out: Debug,
+          Out: PP,
 {
     type Target = Out;
     type Err = Err;
 
     fn trans(&mut self, i: In) -> Result<Self::Target, Self::Err> {
         let o = self.0.trans(i)?;
-        println!("{:#?}", o);
+        o.pp(&mut ::std::io::stdout(), 0).unwrap();
         Ok(o)
     }
 }

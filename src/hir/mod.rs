@@ -1,10 +1,13 @@
+pub mod pp;
 pub mod flat_let;
 pub mod alpha_conv;
 pub mod flat_expr;
+pub mod inline;
 
 pub use self::alpha_conv::AlphaConv;
 pub use self::flat_let::FlatLet;
 pub use self::flat_expr::FlatExpr;
+pub use self::inline::Inline;
 
 use ast;
 use prim::*;
@@ -12,6 +15,9 @@ use pass::Pass;
 
 #[derive(Debug)]
 pub struct HIR(pub Vec<Val>);
+
+#[derive(Debug)]
+pub struct Val{pub ty: Ty, pub name: Symbol, pub expr: Expr}
 
 #[derive(Debug)]
 pub enum Expr {
@@ -25,8 +31,6 @@ pub enum Expr {
     Lit{ty: Ty, value: Literal},
 }
 
-#[derive(Debug)]
-pub struct Val{pub ty: Ty, pub name: Symbol, pub expr: Expr}
 
 impl Expr {
     fn add() -> Expr {

@@ -1,6 +1,7 @@
 #[macro_use]
 extern crate nom;
 
+pub mod util;
 pub mod prim;
 mod parser;
 pub mod pass;

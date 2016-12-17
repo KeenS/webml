@@ -3,8 +3,10 @@ use nom;
 use std::ops::{Deref, DerefMut};
 use std::error::Error;
 use std::fmt;
+use std::io;
 
 use ast;
+use util::PP;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Ty {
@@ -18,6 +20,23 @@ pub enum Ty {
 impl Ty {
     pub fn fun(param: Ty, ret: Ty) -> Ty {
         Ty::Fun(Box::new(param), Box::new(ret))
+    }
+}
+
+impl PP for Ty {
+    fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()>{
+        use self::Ty::*;
+        match self {
+            &Unit => write!(w, "()")?,
+            &Bool => write!(w, "bool")?,
+            &Int  => write!(w, "int")?,
+            &Fun(ref t1, ref t2) => {
+                t1.pp(w, indent)?;
+                write!(w, " -> ")?;
+                t2.pp(w, indent)?;
+            },
+        }
+        Ok(())
     }
 }
 
@@ -95,8 +114,32 @@ pub type Result<T> = ::std::result::Result<T, TypeError>;
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Symbol(pub String);
 
+impl PP for Symbol {
+    fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()>{
+        write!(w, "{}", self.0)?;
+        Ok(())
+    }
+}
+
+
 #[derive(Debug, Clone)]
 pub enum Literal {
     Int(i64),
     Bool(bool),
+}
+
+impl PP for Literal {
+    fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()>{
+        use self::Literal::*;
+        match self {
+            &Int(ref v) => {
+                write!(w, "{}", v)?;
+
+            },
+            &Bool(ref v) => {
+                write!(w, "{}", v)?;
+            }
+        }
+        Ok(())
+    }
 }
