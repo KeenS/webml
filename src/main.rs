@@ -49,7 +49,7 @@ val x = 1
         !hir::AlphaConv::new(),
         !hir::FlatExpr::new(),
         !hir::FlatLet::new(),
-        !hir::Inline::new(),
+//        !hir::Inline::new(),
     ];
 
     passes.trans(input2).unwrap();

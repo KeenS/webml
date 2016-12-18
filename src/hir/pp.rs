@@ -5,8 +5,8 @@ use hir::*;
 
 impl PP for HIR {
     fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
-        for val in &self.0 {
-            val.pp(w, indent)?;
+        for bind in &self.0 {
+            bind.pp(w, indent)?;
             write!(w, "\n")?;
         }
         Ok(())
@@ -14,9 +14,11 @@ impl PP for HIR {
 }
 
 
+
 impl PP for Val {
     fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
-        write!(w, "{}val {}: ", Self::nspaces(indent), self.name.0)?;
+        let rec = if self.rec { "rec "} else {""};
+        write!(w, "{}val{} {}: ", Self::nspaces(indent), rec, self.name.0)?;
         self.ty.pp(w, indent)?;
         write!(w, " = ")?;
         self.expr.pp(w, indent + 4)?;
@@ -24,6 +26,7 @@ impl PP for Val {
     }
 
 }
+
 
 impl PP for Expr {
     fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {

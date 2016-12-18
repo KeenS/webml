@@ -57,8 +57,8 @@ impl FlatExpr {
                 Binds{
                     ty: ty.clone(),
                     binds: vec![
-                        Val{ty: fun_ty, name: funsym, expr: fun_},
-                        Val{ty: arg_ty, name: argsym, expr: arg_}
+                        Val{ty: fun_ty, rec: false, name: funsym, expr: fun_},
+                        Val{ty: arg_ty, rec: false, name: argsym, expr: arg_}
                     ],
                     ret: Box::new(App{fun: fun, arg: arg, ty: ty})
                 }

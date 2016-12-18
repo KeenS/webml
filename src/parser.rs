@@ -3,16 +3,15 @@ use nom::*;
 use prim::*;
 use ast::*;
 
-named!(top < Vec<AST> >, do_parse!(
+named!(top < AST >, do_parse!(
     opt!(multispace) >>
-        tops: separated_list!(multispace, map!(bind, AST::Top)) >>
+        tops: separated_list!(multispace, bind) >>
         opt!(multispace) >>
-        (tops)
+        (AST(tops))
 ));
 
-named!(bind <Bind>, alt!(
-    map!(bind_val, Bind::V)
-));
+named!(bind <Val>, alt!(bind_val | bind_fun));
+
 
 named!(bind_val <Val>, do_parse!(
     tag!("val") >>
@@ -22,7 +21,24 @@ named!(bind_val <Val>, do_parse!(
         tag!("=") >>
         opt!(multispace) >>
         e: expr >>
-        (Val{ty: TyDefer::empty(), name: name, expr: e})
+        (Val{ty: TyDefer::empty(), rec: false, name: name, expr: e})
+));
+
+named!(bind_fun <Val>, do_parse!(
+    tag!("fun") >> multispace >>
+        name: symbol >> multispace >>
+        params: separated_nonempty_list!(multispace, symbol) >>
+        opt!(multispace) >>
+        tag!("=") >>
+        opt!(multispace) >>
+        e: expr >>
+        ({
+            let expr =  params.into_iter().rev().fold(
+                e, |acc, param|
+                Expr::Fun{ty: TyDefer::empty(), param: param, body: Box::new(acc)}
+            );
+            Val{ty: TyDefer::empty(), rec: true, name: name, expr: expr}
+        })
 ));
 
 named!(expr <Expr>, alt!(
@@ -128,7 +144,7 @@ named!(symbol <Symbol>, map_res!(
         s => Ok(Symbol(from_utf8(s).expect("failed to parse UTF-8 value").to_string()))
     }));
 
-pub fn parse(input: &[u8]) -> ::std::result::Result<Vec<AST>, ErrorKind> {
+pub fn parse(input: &[u8]) -> ::std::result::Result<AST, ErrorKind> {
     let iresult = top(input);
     iresult.to_result()
 }

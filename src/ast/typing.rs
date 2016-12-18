@@ -113,19 +113,29 @@ impl <'a>Scope<'a> {
     }
 
     fn infer_ast(&mut self, ast: &mut ast::AST) -> Result<()> {
-        use ast::AST::*;
-        match ast {
-            // &mut TopFun(ref mut f) => {
-            //     self.infer_fun(f)?;
-            //     self.insert(f.name.0.clone(), f.ty.clone());
-            //     Ok(())
-            // },
-            &mut Top(ast::Bind::V(ref mut b)) => {
-                self.infer_val(b)?;
-                Ok(())
-            },
-        }
+        for mut val in ast.0.iter_mut() {
+            self.infer_val(&mut val)?;
+        };
+        Ok(())
     }
+
+
+    fn infer_val(&mut self, val: &mut ast::Val) -> Result<()> {
+        let &mut ast::Val{ref mut ty, ref rec, ref mut name, ref mut expr} = val;
+        let body_ty;
+        if *rec {
+            self.insert(name.0.clone(), ty.clone());
+            body_ty = self.infer_expr(expr, &None)?;
+
+        } else {
+            body_ty = self.infer_expr(expr, &None)?;
+            self.insert(name.0.clone(), ty.clone());
+        }
+        assert_or_set!(ty, &body_ty);
+        self.insert(name.0.clone(), ty.clone());
+        Ok(())
+    }
+
 
     fn infer_expr(&mut self, expr: &mut ast::Expr, given: &Option<Ty>) -> Result<TyDefer> {
         use ast::Expr::*;
@@ -134,7 +144,7 @@ impl <'a>Scope<'a> {
                 check_or_set!(ty, given);
                 let mut scope = self.scope();
                 for mut bind in binds {
-                    scope.infer_bind(&mut bind)?;
+                    scope.infer_val(&mut bind)?;
                 }
                 let ret_ty = scope.infer_expr(ret, ty)?;
                 assert_or_set!(ty, &ret_ty);
@@ -169,7 +179,6 @@ impl <'a>Scope<'a> {
                 let fn_ty = Some(Ty::fun(param_ty, ret_ty));
                 assert_or_set!(ty, &fn_ty);
                 Ok(TyDefer(fn_ty))
-
             },
             &mut App{ref mut ty, ref mut fun, ref mut arg} => {
                 check_or_set!(ty, given);
@@ -219,25 +228,6 @@ impl <'a>Scope<'a> {
             },
         }
 
-    }
-
-    fn infer_bind(&mut self, bind: &mut ast::Bind) -> Result<()> {
-        use ast::Bind::*;
-        match bind {
-            &mut V(ref mut v) => self.infer_val(v),
-        }
-    }
-
-    // fn infer_fun(&mut self, fun: &mut ast::Fun) -> Result<()> {
-    //     Err(TypeError::CannotInfer)
-    // }
-
-    fn infer_val(&mut self, val: &mut ast::Val) -> Result<()> {
-        let &mut ast::Val{ref mut ty, ref mut name, ref mut expr} = val;
-        let body_ty = self.infer_expr(expr, &None)?;
-        assert_or_set!(ty, &body_ty);
-        self.insert(name.0.clone(), ty.clone());
-        Ok(())
     }
 
     fn infer_symbol(&mut self, sym: &mut Symbol, given: &Option<Ty>) -> Result<TyDefer> {
@@ -296,22 +286,20 @@ impl TyEnv {
         Scope::new(self)
     }
 
-    pub fn infer(&mut self, asts: &mut Vec<ast::AST>) -> Result<()> {
+    pub fn infer(&mut self, ast: &mut ast::AST) -> Result<()> {
         let mut scope = self.scope();
-        for mut ast in asts {
-            scope.infer_ast(ast)?
-        }
+        scope.infer_ast(ast)?;
         Ok(())
     }
 }
 
 
 use pass::Pass;
-impl Pass<Vec<ast::AST>> for TyEnv {
-    type Target = Vec<ast::AST>;
+impl Pass<ast::AST> for TyEnv {
+    type Target = ast::AST;
     type Err = TypeError;
-    fn trans(&mut self, mut asts: Vec<ast::AST>) -> Result<Self::Target> {
-        self.infer(&mut asts)?;
-        Ok(asts)
+    fn trans(&mut self, mut ast: ast::AST) -> Result<Self::Target> {
+        self.infer(&mut ast)?;
+        Ok(ast)
     }
 }

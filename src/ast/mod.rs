@@ -3,20 +3,14 @@ pub mod typing;
 use prim::*;
 
 #[derive(Debug, Clone)]
-pub enum AST {
-    // TopFun(Fun),
-    Top(Bind)
-}
+pub struct AST(pub Vec<Val>);
 
-// #[derive(Debug)]
-// pub struct Fun{pub ty: TyDefer, pub name: Symbol, pub args: Vec<Symbol>, pub body: Expr}
 #[derive(Debug, Clone)]
-pub struct Val{pub ty: TyDefer, pub name: Symbol, pub expr: Expr}
-
+pub struct Val{pub ty: TyDefer, pub rec: bool, pub name: Symbol, pub expr: Expr}
 
 #[derive(Debug, Clone)]
 pub enum Expr {
-    Binds{ty: TyDefer, binds: Vec<Bind>, ret: Box<Expr>},
+    Binds{ty: TyDefer, binds: Vec<Val>, ret: Box<Expr>},
     Add{ty: TyDefer, l: Box<Expr>, r: Box<Expr>},
     Mul{ty: TyDefer, l: Box<Expr>, r: Box<Expr>},
     Fun{ty: TyDefer, param: Symbol, body: Box<Expr>},
@@ -26,26 +20,3 @@ pub enum Expr {
     Sym{ty: TyDefer, name: Symbol},
     Lit{ty: TyDefer, value: Literal},
 }
-
-#[derive(Debug, Clone)]
-pub enum Bind {
-    // F(Fun),
-    V(Val),
-}
-
-impl Bind {
-    pub fn name(&self) -> &Symbol {
-        match self {
-            // &Bind::F(ref f) => &f.name,
-            &Bind::V(ref v) => &v.name,
-        }
-    }
-
-    pub fn ty(&self) -> &TyDefer {
-        match self {
-            // &Bind::F(ref f) => &f.ty,
-            &Bind::V(ref v) => &v.ty,
-        }
-    }
-}
-

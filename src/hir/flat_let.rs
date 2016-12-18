@@ -40,7 +40,7 @@ impl FlatLet {
     }
 
 
-   pub fn flat_hir(&mut self, mut hir: HIR) -> HIR {
+    pub fn flat_hir(&mut self, mut hir: HIR) -> HIR {
        hir.0 = hir.0.into_iter().map(|val| self.flat_val(val)).collect();
        hir
     }

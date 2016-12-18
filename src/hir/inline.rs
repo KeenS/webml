@@ -45,7 +45,7 @@ impl Inline {
                         Binds{
                             ty: ty,
                             binds: vec![
-                                Val{ty: arg_ty, name: param, expr: *arg}
+                                Val{ty: arg_ty, rec: false, name: param, expr: *arg}
                             ],
                             ret: body
                         }

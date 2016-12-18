@@ -17,7 +17,10 @@ use pass::Pass;
 pub struct HIR(pub Vec<Val>);
 
 #[derive(Debug)]
-pub struct Val{pub ty: Ty, pub name: Symbol, pub expr: Expr}
+pub struct RecVal{pub ty: Ty, pub name: Symbol, pub expr: Expr}
+
+#[derive(Debug)]
+pub struct Val{pub ty: Ty, rec: bool, pub name: Symbol, pub expr: Expr}
 
 #[derive(Debug)]
 pub enum Expr {
@@ -30,7 +33,6 @@ pub enum Expr {
     Sym{ty: Ty, name: Symbol},
     Lit{ty: Ty, value: Literal},
 }
-
 
 impl Expr {
     fn add() -> Expr {
@@ -73,19 +75,14 @@ impl Expr {
 pub struct AST2HIR;
 
 impl AST2HIR {
-    fn conv_asts(&self, asts: Vec<ast::AST>) -> HIR {
-        HIR(asts.into_iter().map(|ast| self.conv_ast(ast)).collect())
-    }
-
-    fn conv_ast(&self, ast: ast::AST) -> Val {
-        match ast {
-            ast::AST::Top(ast::Bind::V(v)) => self.conv_val(v)
-        }
+    fn conv_ast(&self, ast: ast::AST) -> HIR {
+        HIR(ast.0.into_iter().map(|val| self.conv_val(val)).collect())
     }
 
     fn conv_val(&self, val: ast::Val) -> Val {
         Val {
             ty: val.ty.force("internal typing error"),
+            rec: val.rec,
             name: val.name,
             expr: self.conv_expr(val.expr)
         }
@@ -97,7 +94,7 @@ impl AST2HIR {
             E::Binds{ty, binds, ret} =>
                 Expr::Binds {
                     ty: ty.force("internal typing error"),
-                    binds: binds.into_iter().map(|b| self.conv_bind(b)).collect(),
+                    binds: binds.into_iter().map(|b| self.conv_val(b)).collect(),
                     ret: Box::new(self.conv_expr(*ret)),
                 },
             E::Add{ty, l, r} =>
@@ -135,19 +132,13 @@ impl AST2HIR {
                 }
         }
     }
-
-    fn conv_bind(&self, b: ast::Bind) -> Val {
-        match b {
-            ast::Bind::V(val) =>  self.conv_val(val)
-        }
-    }
 }
 
-impl Pass<Vec<ast::AST>> for AST2HIR {
+impl Pass<ast::AST> for AST2HIR {
     type Target = HIR;
     type Err = TypeError;
 
-    fn trans(&mut self, asts: Vec<ast::AST>) -> ::std::result::Result<Self::Target, Self::Err> {
-        Ok(self.conv_asts(asts))
+    fn trans(&mut self, ast: ast::AST) -> ::std::result::Result<Self::Target, Self::Err> {
+        Ok(self.conv_ast(ast))
     }
 }
