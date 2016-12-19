@@ -17,16 +17,13 @@ use pass::Pass;
 pub struct HIR(pub Vec<Val>);
 
 #[derive(Debug)]
-pub struct RecVal{pub ty: Ty, pub name: Symbol, pub expr: Expr}
-
-#[derive(Debug)]
-pub struct Val{pub ty: Ty, rec: bool, pub name: Symbol, pub expr: Expr}
+pub struct Val{pub ty: Ty, pub rec: bool, pub name: Symbol, pub expr: Expr}
 
 #[derive(Debug)]
 pub enum Expr {
     Binds{ty: Ty, binds: Vec<Val>, ret: Box<Expr>},
     PrimFun{ty: Ty, name: Symbol},
-    Fun{ty: Ty, param: Symbol, body: Box<Expr>},
+    Fun{param_ty: Ty, param: Symbol, body_ty: Ty, body: Box<Expr>},
     App{ty: Ty, fun: Box<Expr>, arg: Box<Expr>},
     If {ty: Ty, cond: Box<Expr>, then: Box<Expr>, else_: Box<Expr>},
     // Seq{ty: TyDefer, exprs: Vec<Expr>},
@@ -57,17 +54,18 @@ impl Expr {
         }
     }
 
-    pub fn ty(&self) -> &Ty {
+    pub fn ty(&self) -> Ty {
         use hir::Expr::*;
 
         match self {
+            &Fun{ref param_ty, ref body_ty, ..} => Ty::Fun(Box::new(param_ty.clone()),
+                                                      Box::new(body_ty.clone())),
             &Binds{ref ty, ..} |
             &PrimFun{ref ty, ..} |
-            &Fun{ref ty, ..} |
             &App{ref ty, ..} |
             &If {ref ty, ..} |
             &Sym{ref ty, ..} |
-            &Lit{ref ty, ..} => ty
+            &Lit{ref ty, ..} => ty.clone()
         }
     }
 }
@@ -107,10 +105,11 @@ impl AST2HIR {
                 .app1(Ty::fun(Ty::Int, Ty::Int),
                       self.conv_expr(*l))
                 .app1(ty.force("internal typing error"), self.conv_expr(*r)),
-            E::Fun{ty, param, body} =>
+            E::Fun{param_ty, param, body_ty, body} =>
                 Expr::Fun {
-                    ty: ty.defined().expect("internal typing error"),
+                    param_ty: param_ty.defined().expect("internal typing error"),
                     param: param,
+                    body_ty: body_ty.defined().expect("internal typing error"),
                     body: Box::new(self.conv_expr(*body)),
 
                 },

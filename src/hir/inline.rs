@@ -31,9 +31,9 @@ impl Inline {
                 ret = Box::new(ret_);
                 Binds {binds: binds, ret: ret, ty: ty}
             },
-            Fun{mut body, ty, param} => {
+            Fun{mut body, param, param_ty, body_ty} => {
                 body = Box::new(self.inline_expr(*body));
-                Fun{body: body, ty: ty, param: param}
+                Fun{body: body, param: param, param_ty: param_ty, body_ty: body_ty}
             }
             App{fun, arg, ty} => {
                 let fun = *fun;

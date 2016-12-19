@@ -41,9 +41,9 @@ impl FlatExpr {
                 ret = Box::new(ret_);
                 Binds {binds: binds, ret: ret, ty: ty}
             },
-            Fun{mut body, ty, param} => {
+            Fun{mut body, param, param_ty, body_ty} => {
                 body = Box::new(self.flat_expr(*body));
-                Fun{body: body, ty: ty, param: param}
+                Fun{body: body, param: param, param_ty: param_ty, body_ty: body_ty}
             }
             App{mut fun, mut arg, ty} => {
                 let fun_ = self.flat_expr(*fun);

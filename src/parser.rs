@@ -35,7 +35,7 @@ named!(bind_fun <Val>, do_parse!(
         ({
             let expr =  params.into_iter().rev().fold(
                 e, |acc, param|
-                Expr::Fun{ty: TyDefer::empty(), param: param, body: Box::new(acc)}
+                Expr::Fun{param_ty: TyDefer::empty(), param: param, body_ty: TyDefer::empty(), body: Box::new(acc)}
             );
             Val{ty: TyDefer::empty(), rec: true, name: name, expr: expr}
         })
@@ -80,7 +80,7 @@ named!(expr_fun <Expr>, do_parse!(
         tag!("=>") >>
         opt!(multispace) >>
         body: expr >>
-        (Expr::Fun {ty: TyDefer::empty(), param: param, body: Box::new(body)})
+        (Expr::Fun {param_ty: TyDefer::empty(), param: param, body_ty: TyDefer::empty(), body: Box::new(body)})
 ));
 
 named!(expr_if <Expr>, do_parse!(

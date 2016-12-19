@@ -47,6 +47,7 @@ val x = 1
         TyEnv::new(),
         hir::AST2HIR,
         !hir::AlphaConv::new(),
+        // TODO: val hoisting
         !hir::FlatExpr::new(),
         !hir::FlatLet::new(),
 //        !hir::Inline::new(),

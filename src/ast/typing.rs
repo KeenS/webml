@@ -159,25 +159,20 @@ impl <'a>Scope<'a> {
                 let _rty = self.infer_expr(r, &Some(Ty::Int))?;
                 Ok(ty.clone())
             }
-            &mut Fun{ref mut ty, ref mut param, ref mut body} => {
-                check_or_set!(ty, given);
-                let (param_ty, ret_ty) = match ty.deref().deref() {
-                    &Some(Ty::Fun(ref param, ref ret)) => (Some(param.deref().clone()), Some(ret.deref().clone())),
-                    _ => (None, None),
-                };
+            &mut Fun{ref mut param_ty, ref mut param, ref mut body_ty, ref mut body} => {
+                //check_or_set!(ty, given);
                 let mut scope = self.scope();
-                scope.insert(param.0.clone(), TyDefer(param_ty.clone()));
+                scope.insert(param.0.clone(), param_ty.clone());
 
-                let ret_ty_ = scope.infer_expr(body, &ret_ty)?;
+                let body_ty_ = scope.infer_expr(body, &body_ty)?;
                 let param_ty_ = scope.get(&param.0).and_then(|ty| ty.deref().clone());
-                let (param_ty, ret_ty) = match (param_ty_, ret_ty_.deref()) {
-                    (Some(ref param_ty), &Some(ref ret_ty)) => (param_ty.clone(), ret_ty.clone()),
-                    _ => {
-                        return Err(TypeError::CannotInfer)
-                    },
-                };
-                let fn_ty = Some(Ty::fun(param_ty, ret_ty));
-                assert_or_set!(ty, &fn_ty);
+                assert_or_set!(param_ty, &param_ty_);
+                assert_or_set!(body_ty, &body_ty_);
+                let param_ty = param_ty.deref().deref().clone();
+                let body_ty = body_ty.deref().deref().clone();
+                let fn_ty = param_ty
+                    .and_then(|p|
+                              body_ty.map(|b| Ty::fun(p, b)));
                 Ok(TyDefer(fn_ty))
             },
             &mut App{ref mut ty, ref mut fun, ref mut arg} => {
@@ -209,11 +204,6 @@ impl <'a>Scope<'a> {
 
                 Ok(ty.clone())
             },
-            // &mut Seq{ref mut ty, ref mut exprs} => {
-            //     // all but last is ()
-            //     // the last is ty
-            //     Err(TypeError::CannotInfer)
-            // },
             &mut Sym{ref mut ty, ref mut name} => {
                 check_or_set!(ty, given);
                 let ty_ = self.infer_symbol(name, given)?;
