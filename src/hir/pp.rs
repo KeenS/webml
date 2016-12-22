@@ -54,7 +54,7 @@ impl PP for Expr {
                 write!(w, "<closure ")?;
                 fname.pp(w, indent)?;
                 write!(w, " (")?;
-                for &(ref var, _) in envs.iter() {
+                for &(_, ref var) in envs.iter() {
                     var.pp(w, indent)?;
                     write!(w, ", ")?;
                 }
