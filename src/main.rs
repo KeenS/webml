@@ -50,7 +50,7 @@ val x = 1";
         parse,
         TyEnv::new(),
         hir::AST2HIR,
-        hir::AlphaConv::new(),
+        hir::Rename::new(),
         // TODO: val hoisting
         !hir::ClosureConv::new(),
         hir::FlatExpr::new(),

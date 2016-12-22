@@ -5,16 +5,16 @@ use prim::*;
 use hir::*;
 use pass::Pass;
 
-pub struct AlphaConv {
+pub struct Rename {
     tables: Vec<HashMap<Symbol, String>>,
     pos: usize,
     id: usize,
 }
 
-struct Scope<'a>(&'a mut AlphaConv);
+struct Scope<'a>(&'a mut Rename);
 
 impl <'a>Deref for Scope<'a> {
-    type Target = AlphaConv;
+    type Target = Rename;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
@@ -33,7 +33,7 @@ impl <'a>Drop for Scope<'a> {
 }
 
 impl <'a>Scope<'a> {
-    fn new(inner: &'a mut AlphaConv) -> Self {
+    fn new(inner: &'a mut Rename) -> Self {
         let pos = inner.pos;
         if inner.tables.len() <= pos {
             inner.tables.push(HashMap::new())
@@ -72,39 +72,39 @@ impl <'a>Scope<'a> {
     }
 
 
-    fn conv_hir<'b , 'c>(&'b mut self, hir: &'c mut  HIR) {
+    fn rename_hir<'b , 'c>(&'b mut self, hir: &'c mut  HIR) {
         let mut scope = self;
         for val in  hir.0.iter_mut() {
             if val.rec {
                 scope.new_symbol(&mut val.name);
-                scope.conv_val(val);
+                scope.rename_val(val);
             } else {
-                scope.conv_val(val);
+                scope.rename_val(val);
                 scope.new_symbol(&mut val.name);
             }
         }
     }
 
-    fn conv_val<'b, 'c>(&'b mut self, val: &'c mut Val) {
-        self.conv_expr(&mut val.expr);
+    fn rename_val<'b, 'c>(&'b mut self, val: &'c mut Val) {
+        self.rename_expr(&mut val.expr);
     }
 
-    fn conv_expr<'b, 'c>(&'b mut self, expr: &'c mut Expr) {
+    fn rename_expr<'b, 'c>(&'b mut self, expr: &'c mut Expr) {
         use hir::Expr::*;
         match expr {
             &mut Binds{ref mut binds, ref mut ret, ..} => {
                 let mut scope = self;
                 for bind in  binds.iter_mut() {
-                    scope.conv_val(bind);
+                    scope.rename_val(bind);
                     scope.new_symbol(&mut bind.name);
                 }
-                scope.conv_expr(ret);
+                scope.rename_expr(ret);
             }
             ,
             &mut Fun{ref mut param, ref mut body, ..} => {
                 let mut scope = self.new_scope();
                 scope.new_symbol(&mut param.1);
-                scope.conv_expr(body);
+                scope.rename_expr(body);
             },
             &mut Closure {ref mut envs, ..} => {
                 for &mut (_, ref mut var) in envs.iter_mut() {
@@ -112,13 +112,13 @@ impl <'a>Scope<'a> {
                 }
             }
             &mut App{ref mut fun, ref mut arg, ..} => {
-                self.conv_expr(fun);
-                self.conv_expr(arg);
+                self.rename_expr(fun);
+                self.rename_expr(arg);
             },
             &mut If {ref mut cond, ref mut then, ref mut else_, ..} => {
-                self.conv_expr(cond);
-                self.conv_expr(then);
-                self.conv_expr(else_);
+                self.rename_expr(cond);
+                self.rename_expr(then);
+                self.rename_expr(else_);
             }
 
             &mut Sym{ref mut name, ..} => {
@@ -133,9 +133,9 @@ impl <'a>Scope<'a> {
 }
 
 
-impl AlphaConv {
+impl Rename {
     pub fn new() -> Self {
-        AlphaConv {
+        Rename {
             tables: Vec::new(),
             pos: 0,
             id: 0,
@@ -147,11 +147,11 @@ impl AlphaConv {
     }
 }
 
-impl Pass<HIR> for AlphaConv {
+impl Pass<HIR> for Rename {
     type Target = HIR;
     type Err = TypeError;
     fn trans(&mut self, mut hir: HIR) -> ::std::result::Result<Self::Target, Self::Err> {
-        self.scope().conv_hir(&mut hir);
+        self.scope().rename_hir(&mut hir);
         Ok(hir)
     }
 }

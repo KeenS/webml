@@ -1,10 +1,10 @@
 pub mod pp;
 pub mod flat_let;
-pub mod alpha_conv;
+pub mod rename;
 pub mod closure_conv;
 pub mod flat_expr;
 
-pub use self::alpha_conv::AlphaConv;
+pub use self::rename::Rename;
 pub use self::flat_let::FlatLet;
 pub use self::flat_expr::FlatExpr;
 pub use self::closure_conv::ClosureConv;
