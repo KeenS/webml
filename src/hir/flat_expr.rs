@@ -37,8 +37,11 @@ impl FlatExpr {
                     val.expr = self.flat_expr(val.expr);
                     val
                 }).collect();
+                let retsym = self.gensym();
                 let ret_ = self.flat_expr(*ret);
-                ret = Box::new(ret_);
+                let retty = ret_.ty();
+                binds.push(Val{ty: retty.clone(), rec: false, name: retsym.clone(), expr: ret_});
+                ret = Box::new(Sym{ty: retty, name: retsym.clone()});
                 Binds {binds: binds, ret: ret, ty: ty}
             },
             Op{ty, name, mut l, mut r} => {
@@ -48,15 +51,17 @@ impl FlatExpr {
                 let lty = l_.ty().clone();
                 let rsym = self.gensym();
                 let rty = r_.ty().clone();
+                let retsym = self.gensym();
                 l = Box::new(Sym{ty: lty.clone(), name: lsym.clone()});
                 r = Box::new(Sym{ty: rty.clone(), name: rsym.clone()});
                 Binds{
                     ty: ty.clone(),
                     binds: vec![
                         Val{ty: lty, rec: false, name: lsym, expr: l_},
-                        Val{ty: rty, rec: false, name: rsym, expr: r_}
+                        Val{ty: rty, rec: false, name: rsym, expr: r_},
+                        Val{ty: ty.clone(), rec: false, name: retsym.clone(), expr: Op{ty: ty.clone(), name: name, l: l, r: r}},
                     ],
-                    ret: Box::new(Op{ty: ty, name: name, l: l, r: r})
+                    ret: Box::new(Sym{ty: ty, name:retsym})
                 }
             }
             Fun{mut body, param, body_ty, captures} => {
@@ -72,13 +77,15 @@ impl FlatExpr {
                 let arg_ty = arg_.ty().clone();
                 fun = Box::new(Sym{ty: fun_ty.clone(), name: funsym.clone()});
                 arg = Box::new(Sym{ty: arg_ty.clone(), name: argsym.clone()});
+                let retsym = self.gensym();
                 Binds{
                     ty: ty.clone(),
                     binds: vec![
                         Val{ty: fun_ty, rec: false, name: funsym, expr: fun_},
-                        Val{ty: arg_ty, rec: false, name: argsym, expr: arg_}
+                        Val{ty: arg_ty, rec: false, name: argsym, expr: arg_},
+                        Val{ty: ty.clone(), rec: false, name: retsym.clone(), expr: App{fun: fun, arg: arg, ty: ty.clone()}},
                     ],
-                    ret: Box::new(App{fun: fun, arg: arg, ty: ty})
+                    ret: Box::new(Sym{name: retsym, ty: ty})
                 }
             }
             If {mut cond, mut then, mut else_, ty} => {
