@@ -22,6 +22,7 @@ pub struct Val{pub ty: Ty, pub rec: bool, pub name: Symbol, pub expr: Expr}
 #[derive(Debug)]
 pub enum Expr {
     Binds{ty: Ty, binds: Vec<Val>, ret: Box<Expr>},
+    Op{ty: Ty, name: Symbol, l: Box<Expr>, r: Box<Expr>},
     PrimFun{ty: Ty, name: Symbol},
     Fun{param: (Ty, Symbol), body_ty: Ty, body: Box<Expr>, captures: Vec<(Ty, Symbol)>},
     Closure{envs: Vec<(Ty, Symbol)>, param_ty: Ty, body_ty: Ty, fname: Symbol},
@@ -33,20 +34,6 @@ pub enum Expr {
 }
 
 impl Expr {
-    fn add() -> Expr {
-        Expr::PrimFun {
-            ty: Ty::fun(Ty::Int, Ty::fun(Ty::Int, Ty::Int)),
-            name: Symbol("+".to_string())
-        }
-    }
-
-    fn mul() -> Expr {
-        Expr::PrimFun {
-            ty: Ty::fun(Ty::Int, Ty::fun(Ty::Int, Ty::Int)),
-            name: Symbol("*".to_string())
-        }
-    }
-
     fn app1(self, ty: Ty, e: Expr) -> Expr {
         Expr::App {
             ty: ty,
@@ -63,6 +50,7 @@ impl Expr {
             &Fun{param: (ref param_ty, _), ref body_ty, ..} =>
                 Ty::Fun(Box::new(param_ty.clone()),
                         Box::new(body_ty.clone())),
+            &Op{ref ty, ..} |
             &Binds{ref ty, ..} |
             &PrimFun{ref ty, ..} |
             &App{ref ty, ..} |
@@ -99,19 +87,23 @@ impl AST2HIR {
                     ret: Box::new(self.conv_expr(*ret)),
                 },
             E::Add{ty, l, r} =>
-                Expr::add()
-                .app1(Ty::fun(Ty::Int, Ty::Int),
-                      self.conv_expr(*l))
-                .app1(ty.force("internal typing error"), self.conv_expr(*r)),
+                Expr::Op {
+                    ty: ty.force("internal typing error"),
+                    name: Symbol("+".to_string()),
+                    l: Box::new(self.conv_expr(*l)),
+                    r: Box::new(self.conv_expr(*r)),
+                },
             E::Mul{ty, l, r} =>
-                Expr::mul()
-                .app1(Ty::fun(Ty::Int, Ty::Int),
-                      self.conv_expr(*l))
-                .app1(ty.force("internal typing error"), self.conv_expr(*r)),
+                Expr::Op {
+                    ty: ty.force("internal typing error"),
+                    name: Symbol("*".to_string()),
+                    l: Box::new(self.conv_expr(*l)),
+                    r: Box::new(self.conv_expr(*r)),
+                },
             E::Fun{param_ty, param, body_ty, body} =>
                 Expr::Fun {
-                    param: (param_ty.defined().expect("internal typing error"), param),
-                    body_ty: body_ty.defined().expect("internal typing error"),
+                    param: (param_ty.force("internal typing error"), param),
+                    body_ty: body_ty.force("internal typing error"),
                     body: Box::new(self.conv_expr(*body)),
                     captures: Vec::new(),
 

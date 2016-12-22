@@ -41,6 +41,24 @@ impl FlatExpr {
                 ret = Box::new(ret_);
                 Binds {binds: binds, ret: ret, ty: ty}
             },
+            Op{ty, name, mut l, mut r} => {
+                let l_ = self.flat_expr(*l);
+                let r_ = self.flat_expr(*r);
+                let lsym = self.gensym();
+                let lty = l_.ty().clone();
+                let rsym = self.gensym();
+                let rty = r_.ty().clone();
+                l = Box::new(Sym{ty: lty.clone(), name: lsym.clone()});
+                r = Box::new(Sym{ty: rty.clone(), name: rsym.clone()});
+                Binds{
+                    ty: ty.clone(),
+                    binds: vec![
+                        Val{ty: lty, rec: false, name: lsym, expr: l_},
+                        Val{ty: rty, rec: false, name: rsym, expr: r_}
+                    ],
+                    ret: Box::new(Op{ty: ty, name: name, l: l, r: r})
+                }
+            }
             Fun{mut body, param, body_ty, captures} => {
                 body = Box::new(self.flat_expr(*body));
                 Fun{body: body, param: param, body_ty: body_ty, captures: captures}

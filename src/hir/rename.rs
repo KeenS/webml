@@ -101,6 +101,10 @@ impl <'a>Scope<'a> {
                 scope.rename_expr(ret);
             }
             ,
+            &mut Op{ref mut l, ref mut r, ..} => {
+                self.rename_expr(l);
+                self.rename_expr(r);
+            },
             &mut Fun{ref mut param, ref mut body, ..} => {
                 let mut scope = self.new_scope();
                 scope.new_symbol(&mut param.1);

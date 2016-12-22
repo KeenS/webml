@@ -63,12 +63,14 @@ impl UnnestFunc {
 
                 }).collect();
                 ret = Box::new(self.conv_expr(cls, *ret));
-                Binds {
-                    ty: ty,
-                    binds: binds,
-                    ret: ret,
-                }
+                Binds {ty: ty, binds: binds, ret: ret,}
             },
+            Op{ty, name, mut l, mut r} => {
+                l = Box::new(self.conv_expr(cls, *l));
+                r = Box::new(self.conv_expr(cls, *r));
+                Op {ty: ty, name: name, l: l, r: r}
+            },
+
             Fun{param, body_ty, mut body, mut captures} => {
                 assert_eq!(captures.len(), 0);
                 body = Box::new(self.conv_expr(cls, *body));
@@ -88,15 +90,9 @@ impl UnnestFunc {
                     param: (param_ty, param),
                     body_ty: body_ty,
                     body: body,
-                    captures: captures,
-                };
+                    captures: captures,};
                 let fty = anonfun.ty();
-                cls.push(Val {
-                    ty: anonfun.ty(),
-                    rec: false,
-                    name: fname.clone(),
-                    expr: anonfun,
-                });
+                cls.push(Val {ty: anonfun.ty(), rec: false, name: fname.clone(), expr: anonfun,});
                 if  is_closure {
                     closure
                 } else {
@@ -106,22 +102,13 @@ impl UnnestFunc {
             App{ty, mut fun, mut arg} => {
                 fun = Box::new(self.conv_expr(cls, *fun));
                 arg = Box::new(self.conv_expr(cls, *arg));
-                App {
-                    ty: ty,
-                    fun: fun,
-                    arg: arg
-                }
+                App {ty: ty, fun: fun, arg: arg}
             },
             If {ty, mut cond, mut then, mut else_} => {
                 cond  = Box::new(self.conv_expr(cls, *cond));
                 then  = Box::new(self.conv_expr(cls, *then));
                 else_ = Box::new(self.conv_expr(cls, *else_));
-                If {
-                    ty: ty,
-                    cond: cond,
-                    then: then,
-                    else_: else_,
-                }
+                If {ty: ty, cond: cond, then: then, else_: else_,}
             }
 
             Sym{name, ty} => {
@@ -148,8 +135,11 @@ impl UnnestFunc {
                     scope.analyze_free_val(frees, bound, bind);
                 }
                 scope.analyze_free_expr(frees, bound, ret);
-            }
-            ,
+            } ,
+            &Op{ref l, ref r, ..} => {
+                self.analyze_free_expr(frees, bound, l);
+                self.analyze_free_expr(frees, bound, r);
+            },
             &Fun{..} => panic!("internal bug"),
             &App{ref fun, ref arg, ..} => {
                 self.analyze_free_expr(frees, bound, fun);

@@ -11,6 +11,15 @@ fn take_binds(mut expr: Expr) -> (Expr, Vec<Val>) {
             expr = *ret;
             (expr, binds)
         }
+        Op{ty, name, mut l, mut r} => {
+            let (l_, mut lbinds) = take_binds(*l);
+            let (r_, mut rbinds) = take_binds(*r);
+            l = Box::new(l_);
+            r = Box::new(r_);
+            lbinds.append(&mut rbinds);
+            let expr = Op {ty: ty, name: name, l: l, r: r};
+            (expr, lbinds)
+        },
         App{mut fun, mut arg, ty} => {
             let (f, mut fbinds) = take_binds(*fun);
             let (a, mut abinds) = take_binds(*arg);
@@ -70,6 +79,11 @@ impl FlatLet {
                 binds = vec;
                 Binds {binds: binds, ret: ret, ty: ty}
             },
+            Op{ty, name, mut l, mut r} => {
+                l = Box::new(self.flat_expr(*l));
+                r = Box::new(self.flat_expr(*r));
+                Op{ty: ty, name: name, l: l, r: r}
+            }
             Fun{mut body, param, body_ty, captures} => {
                 body = Box::new(self.flat_expr(*body));
                 Fun{body: body, param: param, body_ty: body_ty, captures: captures}
