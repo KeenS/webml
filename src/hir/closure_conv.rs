@@ -69,22 +69,25 @@ impl ClosureConv {
                     ret: ret,
                 }
             },
-            Fun{param, body_ty, mut body} => {
+            Fun{param, body_ty, mut body, mut captures} => {
                 body = Box::new(self.conv_expr(cls, *body));
                 let (param_ty, param) = param;
                 let mut frees = Vec::new();
                 self.analyze_free_expr(&mut frees, &param, &body);
                 let fname = self.new_fname();
                 let closure = Closure {
-                    envs: frees,
+                    envs: frees.clone(),
                     param_ty: param_ty.clone(),
                     body_ty: body_ty.clone(),
                     fname: fname.clone(),
                 };
+
+                captures.extend(frees);
                 let anonfun = Fun {
                     param: (param_ty, param),
                     body_ty: body_ty,
-                    body: body
+                    body: body,
+                    captures: captures,
                 };
                 cls.push(Val {
                     ty: anonfun.ty(),

@@ -70,9 +70,9 @@ impl FlatLet {
                 binds = vec;
                 Binds {binds: binds, ret: ret, ty: ty}
             },
-            Fun{mut body, param, body_ty} => {
+            Fun{mut body, param, body_ty, captures} => {
                 body = Box::new(self.flat_expr(*body));
-                Fun{body: body, param: param, body_ty: body_ty}
+                Fun{body: body, param: param, body_ty: body_ty, captures: captures}
             }
             App{mut fun, mut arg, ty} => {
                 fun = Box::new(self.flat_expr(*fun));

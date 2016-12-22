@@ -23,7 +23,7 @@ pub struct Val{pub ty: Ty, pub rec: bool, pub name: Symbol, pub expr: Expr}
 pub enum Expr {
     Binds{ty: Ty, binds: Vec<Val>, ret: Box<Expr>},
     PrimFun{ty: Ty, name: Symbol},
-    Fun{param: (Ty, Symbol), body_ty: Ty, body: Box<Expr>, /* captures */},
+    Fun{param: (Ty, Symbol), body_ty: Ty, body: Box<Expr>, captures: Vec<(Ty, Symbol)>},
     Closure{envs: Vec<(Ty, Symbol)>, param_ty: Ty, body_ty: Ty, fname: Symbol},
     App{ty: Ty, fun: Box<Expr>, arg: Box<Expr>},
     If {ty: Ty, cond: Box<Expr>, then: Box<Expr>, else_: Box<Expr>},
@@ -113,6 +113,7 @@ impl AST2HIR {
                     param: (param_ty.defined().expect("internal typing error"), param),
                     body_ty: body_ty.defined().expect("internal typing error"),
                     body: Box::new(self.conv_expr(*body)),
+                    captures: Vec::new(),
 
                 },
             E::App{ty, fun, arg} =>
