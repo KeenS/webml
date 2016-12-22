@@ -70,6 +70,7 @@ impl UnnestFunc {
                 }
             },
             Fun{param, body_ty, mut body, mut captures} => {
+                assert_eq!(captures.len(), 0);
                 body = Box::new(self.conv_expr(cls, *body));
                 let (param_ty, param) = param;
                 let mut frees = Vec::new();
@@ -81,21 +82,26 @@ impl UnnestFunc {
                     body_ty: body_ty.clone(),
                     fname: fname.clone(),
                 };
-
                 captures.extend(frees);
+                let is_closure = captures.len() != 0;
                 let anonfun = Fun {
                     param: (param_ty, param),
                     body_ty: body_ty,
                     body: body,
                     captures: captures,
                 };
+                let fty = anonfun.ty();
                 cls.push(Val {
                     ty: anonfun.ty(),
                     rec: false,
-                    name: fname,
+                    name: fname.clone(),
                     expr: anonfun,
                 });
-                closure
+                if  is_closure {
+                    closure
+                } else {
+                    Expr::Sym{name: fname, ty: fty}
+                }
             },
             App{ty, mut fun, mut arg} => {
                 fun = Box::new(self.conv_expr(cls, *fun));
