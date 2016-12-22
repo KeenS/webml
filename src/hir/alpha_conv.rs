@@ -75,8 +75,13 @@ impl <'a>Scope<'a> {
     fn conv_hir<'b , 'c>(&'b mut self, hir: &'c mut  HIR) {
         let mut scope = self;
         for val in  hir.0.iter_mut() {
-            scope.conv_val(val);
-            scope.new_symbol(&mut val.name);
+            if val.rec {
+                scope.new_symbol(&mut val.name);
+                scope.conv_val(val);
+            } else {
+                scope.conv_val(val);
+                scope.new_symbol(&mut val.name);
+            }
         }
     }
 
