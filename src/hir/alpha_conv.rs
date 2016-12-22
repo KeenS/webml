@@ -101,13 +101,13 @@ impl <'a>Scope<'a> {
                 scope.conv_expr(ret);
             }
             ,
-            &mut Fun{ref mut  param, ref mut body, ..} => {
+            &mut Fun{ref mut param, ref mut body, ..} => {
                 let mut scope = self.new_scope();
-                scope.new_symbol(param);
+                scope.new_symbol(&mut param.1);
                 scope.conv_expr(body);
             },
             &mut Closure {ref mut envs, ..} => {
-                for &mut (ref mut var, _) in envs.iter_mut() {
+                for &mut (_, ref mut var) in envs.iter_mut() {
                     self.rename(var);
                 }
             }

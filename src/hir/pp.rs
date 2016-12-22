@@ -46,7 +46,7 @@ impl PP for Expr {
             },
             &Fun{ref body, ref param, ..} => {
                 write!(w, "fun ")?;
-                param.pp(w, indent)?;
+                param.1.pp(w, indent)?;
                 write!(w, " => ")?;
                 body.pp(&mut w, indent + 4)?;
             }

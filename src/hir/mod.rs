@@ -23,8 +23,8 @@ pub struct Val{pub ty: Ty, pub rec: bool, pub name: Symbol, pub expr: Expr}
 pub enum Expr {
     Binds{ty: Ty, binds: Vec<Val>, ret: Box<Expr>},
     PrimFun{ty: Ty, name: Symbol},
-    Fun{param_ty: Ty, param: Symbol, body_ty: Ty, body: Box<Expr>, /* captures */},
-    Closure{envs: Vec<(Symbol, Ty)>, param_ty: Ty, body_ty: Ty, fname: Symbol},
+    Fun{param: (Ty, Symbol), body_ty: Ty, body: Box<Expr>, /* captures */},
+    Closure{envs: Vec<(Ty, Symbol)>, param_ty: Ty, body_ty: Ty, fname: Symbol},
     App{ty: Ty, fun: Box<Expr>, arg: Box<Expr>},
     If {ty: Ty, cond: Box<Expr>, then: Box<Expr>, else_: Box<Expr>},
     // Seq{ty: TyDefer, exprs: Vec<Expr>},
@@ -60,8 +60,9 @@ impl Expr {
 
         match self {
             &Closure{ref param_ty, ref body_ty, ..} |
-            &Fun{ref param_ty, ref body_ty, ..} => Ty::Fun(Box::new(param_ty.clone()),
-                                                      Box::new(body_ty.clone())),
+            &Fun{param: (ref param_ty, _), ref body_ty, ..} =>
+                Ty::Fun(Box::new(param_ty.clone()),
+                        Box::new(body_ty.clone())),
             &Binds{ref ty, ..} |
             &PrimFun{ref ty, ..} |
             &App{ref ty, ..} |
@@ -109,8 +110,7 @@ impl AST2HIR {
                 .app1(ty.force("internal typing error"), self.conv_expr(*r)),
             E::Fun{param_ty, param, body_ty, body} =>
                 Expr::Fun {
-                    param_ty: param_ty.defined().expect("internal typing error"),
-                    param: param,
+                    param: (param_ty.defined().expect("internal typing error"), param),
                     body_ty: body_ty.defined().expect("internal typing error"),
                     body: Box::new(self.conv_expr(*body)),
 

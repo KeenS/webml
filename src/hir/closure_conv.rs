@@ -69,8 +69,9 @@ impl ClosureConv {
                     ret: ret,
                 }
             },
-            Fun{param_ty, param, body_ty, mut body} => {
+            Fun{param, body_ty, mut body} => {
                 body = Box::new(self.conv_expr(cls, *body));
+                let (param_ty, param) = param;
                 let mut frees = Vec::new();
                 self.analyze_free_expr(&mut frees, &param, &body);
                 let fname = self.new_fname();
@@ -81,8 +82,7 @@ impl ClosureConv {
                     fname: fname.clone(),
                 };
                 let anonfun = Fun {
-                    param_ty: param_ty,
-                    param: param,
+                    param: (param_ty, param),
                     body_ty: body_ty,
                     body: body
                 };
@@ -126,11 +126,11 @@ impl ClosureConv {
     }
 
 
-    fn analyze_free_val<'b, 'c>(&'b mut self, frees: &mut Vec<(Symbol, Ty)>, bound: &Symbol, val: &'c Val) {
+    fn analyze_free_val<'b, 'c>(&'b mut self, frees: &mut Vec<(Ty, Symbol)>, bound: &Symbol, val: &'c Val) {
         self.analyze_free_expr(frees, bound, &val.expr);
     }
 
-    fn analyze_free_expr<'b, 'c>(&'b mut self, frees: &mut Vec<(Symbol, Ty)>, bound: &Symbol, expr: &'c Expr) {
+    fn analyze_free_expr<'b, 'c>(&'b mut self, frees: &mut Vec<(Ty, Symbol)>, bound: &Symbol, expr: &'c Expr) {
         use hir::Expr::*;
         match expr {
             &Binds{ref binds, ref ret, ..} => {
@@ -153,13 +153,13 @@ impl ClosureConv {
             }
             &Sym{ref name, ref ty} => {
                 if ! (self.is_in_scope(name) ||  bound == name) {
-                    frees.push((name.clone(), ty.clone()))
+                    frees.push((ty.clone(), name.clone()))
                 }
             }
             &Closure{ref envs, ..} => {
-                for &(ref name, ref ty) in envs {
+                for &(ref ty, ref name) in envs {
                     if ! (self.is_in_scope(name) ||  bound == name) {
-                        frees.push((name.clone(), ty.clone()))
+                        frees.push((ty.clone(), name.clone()))
                     }
                 }
             },
