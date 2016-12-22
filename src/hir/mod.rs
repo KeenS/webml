@@ -1,13 +1,13 @@
 pub mod pp;
 pub mod flat_let;
 pub mod rename;
-pub mod closure_conv;
+pub mod unnest_func;
 pub mod flat_expr;
 
 pub use self::rename::Rename;
 pub use self::flat_let::FlatLet;
 pub use self::flat_expr::FlatExpr;
-pub use self::closure_conv::ClosureConv;
+pub use self::unnest_func::UnnestFunc;
 
 use ast;
 use prim::*;

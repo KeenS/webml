@@ -51,8 +51,7 @@ val x = 1";
         TyEnv::new(),
         hir::AST2HIR,
         hir::Rename::new(),
-        // TODO: val hoisting
-        !hir::ClosureConv::new(),
+        !hir::UnnestFunc::new(),
         hir::FlatExpr::new(),
         hir::FlatLet::new(),
 //        !mir::HIR2MIR::new(),

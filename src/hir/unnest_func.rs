@@ -4,14 +4,14 @@ use prim::*;
 use hir::*;
 use pass::Pass;
 
-pub struct ClosureConv {
+pub struct UnnestFunc {
     globals: HashSet<Symbol>,
     id: usize,
 }
 
-impl ClosureConv {
+impl UnnestFunc {
     pub fn new() -> Self {
-        ClosureConv {
+        UnnestFunc {
             globals: HashSet::new(),
             id: 0,
         }
@@ -172,7 +172,7 @@ impl ClosureConv {
     }
 }
 
-impl Pass<HIR> for ClosureConv {
+impl Pass<HIR> for UnnestFunc {
     type Target = HIR;
     type Err = TypeError;
     fn trans(&mut self, hir: HIR) -> ::std::result::Result<Self::Target, Self::Err> {
