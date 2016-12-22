@@ -27,6 +27,7 @@ fn take_binds(mut expr: Expr) -> (Expr, Vec<Val>) {
             (expr, cbinds)
         },
         x @ Fun{..} |
+        x @ Closure{..} |
         x @ PrimFun{..} |
         x @ Sym{..} |
         x @ Lit{..} => (x, Vec::new())
@@ -84,6 +85,7 @@ impl FlatLet {
                 else_ = Box::new(self.flat_expr(*else_));
                 If {ty: ty, cond: cond, then: then, else_: else_}
             }
+            x @ Closure{..} |
             x @ PrimFun{..} |
             x @ Sym{..} |
             x @ Lit{..} => x

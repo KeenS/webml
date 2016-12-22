@@ -50,6 +50,16 @@ impl PP for Expr {
                 write!(w, " => ")?;
                 body.pp(&mut w, indent + 4)?;
             }
+            &Closure{ref envs, ref fname, ..} => {
+                write!(w, "<closure ")?;
+                fname.pp(w, indent)?;
+                write!(w, " (")?;
+                for &(ref var, _) in envs.iter() {
+                    var.pp(w, indent)?;
+                    write!(w, ", ")?;
+                }
+                write!(w, ")>")?;
+            }
             &App{ref fun, ref arg, ..} => {
                 write!(w, "(")?;
                 fun.pp(w, indent)?;

@@ -69,6 +69,7 @@ impl FlatExpr {
                 else_ = Box::new(self.flat_expr(*else_));
                 If {ty: ty, cond: cond, then: then, else_: else_}
             }
+            x @ Closure{..} |
             x @ PrimFun{..} |
             x @ Sym{..} |
             x @ Lit{..} => x

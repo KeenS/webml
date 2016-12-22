@@ -106,6 +106,11 @@ impl <'a>Scope<'a> {
                 scope.new_symbol(param);
                 scope.conv_expr(body);
             },
+            &mut Closure {ref mut envs, ..} => {
+                for &mut (ref mut var, _) in envs.iter_mut() {
+                    self.rename(var);
+                }
+            }
             &mut App{ref mut fun, ref mut arg, ..} => {
                 self.conv_expr(fun);
                 self.conv_expr(arg);

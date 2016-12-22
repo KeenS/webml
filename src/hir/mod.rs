@@ -1,13 +1,13 @@
 pub mod pp;
 pub mod flat_let;
 pub mod alpha_conv;
+pub mod closure_conv;
 pub mod flat_expr;
-pub mod inline;
 
 pub use self::alpha_conv::AlphaConv;
 pub use self::flat_let::FlatLet;
 pub use self::flat_expr::FlatExpr;
-pub use self::inline::Inline;
+pub use self::closure_conv::ClosureConv;
 
 use ast;
 use prim::*;
@@ -23,7 +23,8 @@ pub struct Val{pub ty: Ty, pub rec: bool, pub name: Symbol, pub expr: Expr}
 pub enum Expr {
     Binds{ty: Ty, binds: Vec<Val>, ret: Box<Expr>},
     PrimFun{ty: Ty, name: Symbol},
-    Fun{param_ty: Ty, param: Symbol, body_ty: Ty, body: Box<Expr>},
+    Fun{param_ty: Ty, param: Symbol, body_ty: Ty, body: Box<Expr>, /* captures */},
+    Closure{envs: Vec<(Symbol, Ty)>, param_ty: Ty, body_ty: Ty, fname: Symbol},
     App{ty: Ty, fun: Box<Expr>, arg: Box<Expr>},
     If {ty: Ty, cond: Box<Expr>, then: Box<Expr>, else_: Box<Expr>},
     // Seq{ty: TyDefer, exprs: Vec<Expr>},
@@ -58,6 +59,7 @@ impl Expr {
         use hir::Expr::*;
 
         match self {
+            &Closure{ref param_ty, ref body_ty, ..} |
             &Fun{ref param_ty, ref body_ty, ..} => Ty::Fun(Box::new(param_ty.clone()),
                                                       Box::new(body_ty.clone())),
             &Binds{ref ty, ..} |

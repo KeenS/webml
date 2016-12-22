@@ -13,6 +13,7 @@ val d = fn x => fn y => x + y
 val e = if true then b else c
 val f = let val d = 1 in d + c end
 val g = d 1 2
+val h = let val y = 1 in fn x => x + y end
 val a = x + 2
 ";
 
@@ -42,17 +43,21 @@ val x = 1
 
 ";
 
+    let input3 = b"val f = fn x => fn y => x + y
+val x = 1";
+
     let mut passes = compile_pass![
         parse,
         TyEnv::new(),
         hir::AST2HIR,
-        !hir::AlphaConv::new(),
+        hir::AlphaConv::new(),
         // TODO: val hoisting
-        !hir::FlatExpr::new(),
-        !hir::FlatLet::new(),
-//        !hir::Inline::new(),
+        !hir::ClosureConv::new(),
+        hir::FlatExpr::new(),
+        hir::FlatLet::new(),
+//        !mir::HIR2MIR::new(),
     ];
 
-    passes.trans(input2).unwrap();
+    passes.trans(input1).unwrap();
 
 }
