@@ -80,11 +80,19 @@ impl FlatExpr {
                     ret: ret,
                 }
             }
-            If {mut cond, mut then, mut else_, ty} => {
-                cond = Box::new(self.flat_expr(*cond));
-                then = Box::new(self.flat_expr(*then));
-                else_ = Box::new(self.flat_expr(*else_));
-                If {ty: ty, cond: cond, then: then, else_: else_}
+            If {cond, then, else_, ty} => {
+                let (cond, condval) = self.flat_make_val(*cond);
+                let (then, thenval) = self.flat_make_val(*then);
+                let (else_, elseval) = self.flat_make_val(*else_);
+                let then = Box::new(Binds {ty: ty.clone(), binds: vec![thenval], ret: then});
+                let else_ = Box::new(Binds {ty: ty.clone(), binds: vec![elseval], ret: else_});
+                let e = If {ty: ty.clone(), cond: cond, then: then, else_: else_};
+                let (ret, retval) = self.make_val(e);
+                Binds {
+                    ty: ty,
+                    binds: vec![condval, retval],
+                    ret: ret
+                }
             }
             x @ Closure{..} |
             x @ PrimFun{..} |
