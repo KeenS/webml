@@ -1,5 +1,7 @@
 pub mod pp;
+mod unalias;
 
+pub use self::unalias::UnAlias;
 use pass::Pass;
 use prim::*;
 

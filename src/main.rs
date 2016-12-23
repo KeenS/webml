@@ -14,6 +14,7 @@ val e = if true then b else c
 val f = let val d = 1 in d + c end
 val g = d 1 2
 val h = let val y = 1 in fn x => x + y end
+fun i x = if x then let val y = 1 in y end else let val y = 2 in y end
 val a = x + 2
 ";
 
@@ -53,8 +54,9 @@ val x = 1";
         hir::Rename::new(),
         hir::UnnestFunc::new(),
         hir::FlatExpr::new(),
-        !hir::FlatLet::new(),
-        !mir::HIR2MIR::new(),
+        hir::FlatLet::new(),
+        mir::HIR2MIR::new(),
+        !mir::UnAlias::new(),
     ];
 
     passes.trans(input1).unwrap();

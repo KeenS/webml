@@ -27,7 +27,6 @@ impl PP for Function {
         write!(w, ") -> ")?;
         self.body_ty.pp(w, 0)?;
         write!(w, " = {{\n")?;
-//        self.body[0].pp(w, indent)?;
         for ebb in self.body.iter() {
             ebb.pp(w, indent)?;
         }
