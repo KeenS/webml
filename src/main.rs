@@ -51,10 +51,10 @@ val x = 1";
         TyEnv::new(),
         hir::AST2HIR,
         hir::Rename::new(),
-        !hir::UnnestFunc::new(),
+        hir::UnnestFunc::new(),
         hir::FlatExpr::new(),
-        hir::FlatLet::new(),
-//        !mir::HIR2MIR::new(),
+        !hir::FlatLet::new(),
+        !mir::HIR2MIR::new(),
     ];
 
     passes.trans(input1).unwrap();
