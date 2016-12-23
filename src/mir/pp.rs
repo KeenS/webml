@@ -127,7 +127,9 @@ impl PP for Op  {
                 write!(w, "{}{}: ", space, var.0)?;
                 (EbbTy::Cls{param: Box::new(param_ty.clone()),
                             ret: Box::new(ret_ty.clone())}).pp(w, indent)?;
-                write!(w, " := __close(")?;
+                write!(w, " := ")?;
+                fun.pp(w, indent)?;
+                write!(w, ".__close(")?;
                 for &(ref var_ty, ref var) in env.iter() {
                     var.pp(w, 0)?;
                     write!(w, ": ")?;
