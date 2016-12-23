@@ -24,7 +24,7 @@ impl PP for Function {
             param_ty.pp(w, 0)?;
             write!(w, ", ")?;
         }
-        write!(w, ") ->")?;
+        write!(w, ") -> ")?;
         self.body_ty.pp(w, 0)?;
         write!(w, " {{\n")?;
 //        self.body[0].pp(w, indent)?;
