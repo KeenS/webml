@@ -1,20 +1,52 @@
 use std::collections::HashSet;
+use std::ops::{Deref, DerefMut, Drop};
 
 use prim::*;
 use hir::*;
 use pass::Pass;
 
 pub struct UnnestFunc {
-    globals: HashSet<Symbol>,
+    tables: Vec<HashSet<Symbol>>,
+    pos: usize,
     id: usize,
 }
 
-impl UnnestFunc {
-    pub fn new() -> Self {
-        UnnestFunc {
-            globals: HashSet::new(),
-            id: 0,
+struct Scope<'a>(&'a mut UnnestFunc);
+
+impl <'a>Deref for Scope<'a> {
+    type Target = UnnestFunc;
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl <'a>DerefMut for Scope<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl <'a>Drop for Scope<'a> {
+    fn drop(&mut self) {
+        self.pos -= 1;
+    }
+}
+
+impl <'a>Scope<'a> {
+    fn new(inner: &'a mut UnnestFunc) -> Self {
+        let pos = inner.pos;
+        if inner.tables.len() <= pos {
+            inner.tables.push(HashSet::new())
+        } else {
+            inner.tables[pos].clear();
         }
+
+        inner.pos += 1;
+        Scope(inner)
+    }
+
+    fn new_scope(&mut self) -> Scope {
+        Scope::new(self)
     }
 
     fn new_fname(&mut self) -> Symbol {
@@ -24,11 +56,23 @@ impl UnnestFunc {
     }
 
     fn add_scope(&mut self, symbol: Symbol) {
-        self.globals.insert(symbol.clone());
+        let pos = self.pos - 1;
+        self.tables[pos].insert(symbol);
+        self.id += 1;
+
     }
 
     fn is_in_scope(&mut self, symbol: &Symbol) -> bool {
-        self.globals.contains(symbol)
+        let pos = self.pos;
+        for table in self.tables[0..pos].iter_mut().rev() {
+            match table.contains(symbol) {
+                true => {
+                    return true
+                },
+                false => (),
+            }
+        }
+        false
     }
 
     fn conv_hir(&mut self, mut hir: HIR) -> HIR {
@@ -132,7 +176,13 @@ impl UnnestFunc {
             &Binds{ref binds, ref ret, ..} => {
                 let mut scope = self;
                 for bind in binds.iter() {
-                    scope.analyze_free_val(frees, bound, bind);
+                    if bind.rec {
+                        scope.add_scope(bind.name.clone());
+                        scope.analyze_free_val(frees, bound, bind);
+                    } else {
+                        scope.analyze_free_val(frees, bound, bind);
+                        scope.add_scope(bind.name.clone());
+                    }
                 }
                 scope.analyze_free_expr(frees, bound, ret);
             } ,
@@ -168,10 +218,26 @@ impl UnnestFunc {
     }
 }
 
+
+impl UnnestFunc {
+    pub fn new() -> Self {
+        UnnestFunc {
+            tables: Vec::new(),
+            pos: 0,
+            id: 0,
+        }
+    }
+
+    fn scope<'a>(&'a mut self) -> Scope<'a> {
+        Scope::new(self)
+    }
+
+}
+
 impl Pass<HIR> for UnnestFunc {
     type Target = HIR;
     type Err = TypeError;
     fn trans(&mut self, hir: HIR) -> ::std::result::Result<Self::Target, Self::Err> {
-        Ok(self.conv_hir(hir))
+        Ok(self.scope().conv_hir(hir))
     }
 }
