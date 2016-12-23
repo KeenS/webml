@@ -46,14 +46,14 @@ impl FlatExpr {
             },
             Op{ty, name, mut l, mut r} => {
                 let l_ = self.flat_expr(*l);
-                let r_ = self.flat_expr(*r);
-                let lsym = self.gensym();
                 let lty = l_.ty().clone();
+                let lsym = self.gensym();
+                l = Box::new(Sym{ty: lty.clone(), name: lsym.clone()});
+                let r_ = self.flat_expr(*r);
                 let rsym = self.gensym();
                 let rty = r_.ty().clone();
-                let retsym = self.gensym();
-                l = Box::new(Sym{ty: lty.clone(), name: lsym.clone()});
                 r = Box::new(Sym{ty: rty.clone(), name: rsym.clone()});
+                let retsym = self.gensym();
                 Binds{
                     ty: ty.clone(),
                     binds: vec![
@@ -65,17 +65,26 @@ impl FlatExpr {
                 }
             }
             Fun{mut body, param, body_ty, captures} => {
-                body = Box::new(self.flat_expr(*body));
+                let body_ = self.flat_expr(*body);
+                let bodysym = self.gensym();
+
+                body = Box::new(Binds {
+                    ty: body_ty.clone(),
+                    binds: vec![
+                        Val{ty: body_ty.clone(), rec: false, name: bodysym.clone(), expr: body_}
+                    ],
+                    ret: Box::new(Sym{ty: body_ty.clone(), name: bodysym})
+                });
                 Fun{body: body, param: param, body_ty: body_ty, captures: captures}
             }
             App{mut fun, mut arg, ty} => {
                 let fun_ = self.flat_expr(*fun);
-                let arg_ = self.flat_expr(*arg);
                 let funsym = self.gensym();
                 let fun_ty = fun_.ty().clone();
+                fun = Box::new(Sym{ty: fun_ty.clone(), name: funsym.clone()});
+                let arg_ = self.flat_expr(*arg);
                 let argsym = self.gensym();
                 let arg_ty = arg_.ty().clone();
-                fun = Box::new(Sym{ty: fun_ty.clone(), name: funsym.clone()});
                 arg = Box::new(Sym{ty: arg_ty.clone(), name: argsym.clone()});
                 let retsym = self.gensym();
                 Binds{
