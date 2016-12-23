@@ -49,8 +49,13 @@ impl PP for Expr {
                 write!(w, " {} ", name.0)?;
                 r.pp(w, indent)?;
             },
-            &Fun{ref body, ref param, ..} => {
-                write!(w, "fun ")?;
+            &Fun{ref body, ref param, ref captures, ..} => {
+                write!(w, "fun (")?;
+                for &(_, ref cap) in captures {
+                    cap.pp(w, indent)?;
+                    write!(w, ", ")?;
+                }
+                write!(w, ") ")?;
                 param.1.pp(w, indent)?;
                 write!(w, " => ")?;
                 body.pp(&mut w, indent + 4)?;
