@@ -18,7 +18,7 @@ impl PP for Function {
     fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
         let indent = indent + 4;
         write!(w, "fn {}(", self.name.0)?;
-        for &(ref param, ref param_ty) in self.body[0].params.iter() {
+        for &(ref param_ty, ref param) in self.body[0].params.iter() {
             param.pp(w, 0)?;
             write!(w, ": ")?;
             param_ty.pp(w, 0)?;
@@ -72,7 +72,7 @@ impl PP for EBB  {
         let space = Self::nspaces(indent);
         write!(w, "{}{}(", space, self.name.0)?;
         let indent = indent + 4;
-        for &(ref param, ref param_ty) in self.params.iter() {
+        for &(ref param_ty, ref param) in self.params.iter() {
             param.pp(w, indent)?;
             write!(w, ": ")?;
             param_ty.pp(w, indent)?;
@@ -128,13 +128,13 @@ impl PP for Op  {
                 (EbbTy::Cls{param: Box::new(param_ty.clone()),
                             ret: Box::new(ret_ty.clone())}).pp(w, indent)?;
                 write!(w, " := __close(")?;
-                for &(ref var, ref var_ty) in env.iter() {
+                for &(ref var_ty, ref var) in env.iter() {
                     var.pp(w, 0)?;
                     write!(w, ": ")?;
                     var_ty.pp(w, 0)?;
                     write!(w, ", ")?;
                 };
-                write!(w, ")");
+                write!(w, ")")?;
 
             },
             &Call{ref var, ref ty, ref fun, ref args} => {
@@ -145,7 +145,7 @@ impl PP for Op  {
                     arg.pp(w, 0)?;
                     write!(w, ", ")?;
                 };
-                write!(w, ")");
+                write!(w, ")")?;
             },
             &Branch{ref cond, ref then, ref else_} => {
                 write!(w, "{}jump if {} then {} else {}", space, cond.0, then.0, else_.0)?;
@@ -156,7 +156,7 @@ impl PP for Op  {
                     arg.pp(w, 0)?;
                     write!(w, ", ")?;
                 };
-                write!(w, ")");
+                write!(w, ")")?;
 
             },
             &Ret{ref value, ref ty} => {
