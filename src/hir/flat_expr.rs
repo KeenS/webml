@@ -32,69 +32,52 @@ impl FlatExpr {
     fn flat_expr(&mut self, expr: Expr) -> Expr {
         use hir::Expr::*;
         match expr {
-            Binds{mut binds, mut ret, ty} => {
+            Binds{mut binds, ret, ty} => {
                 binds = binds.into_iter().map(|mut val| {
                     val.expr = self.flat_expr(val.expr);
                     val
                 }).collect();
-                let retsym = self.gensym();
-                let ret_ = self.flat_expr(*ret);
-                let retty = ret_.ty();
-                binds.push(Val{ty: retty.clone(), rec: false, name: retsym.clone(), expr: ret_});
-                ret = Box::new(Sym{ty: retty, name: retsym.clone()});
+                let (ret, retval) = self.flat_make_val(*ret);
+                binds.push(retval);
                 Binds {binds: binds, ret: ret, ty: ty}
             },
-            Op{ty, name, mut l, mut r} => {
-                let l_ = self.flat_expr(*l);
-                let lty = l_.ty().clone();
-                let lsym = self.gensym();
-                l = Box::new(Sym{ty: lty.clone(), name: lsym.clone()});
-                let r_ = self.flat_expr(*r);
-                let rsym = self.gensym();
-                let rty = r_.ty().clone();
-                r = Box::new(Sym{ty: rty.clone(), name: rsym.clone()});
-                let retsym = self.gensym();
+            Op{ty, name, l, r} => {
+                let (l, lval) = self.flat_make_val(*l);
+                let (r, rval) = self.flat_make_val(*r);
+                let (ret, retval) = self.make_val(Op{ty: ty.clone(), name: name, l: l, r: r});
                 Binds{
                     ty: ty.clone(),
                     binds: vec![
-                        Val{ty: lty, rec: false, name: lsym, expr: l_},
-                        Val{ty: rty, rec: false, name: rsym, expr: r_},
-                        Val{ty: ty.clone(), rec: false, name: retsym.clone(), expr: Op{ty: ty.clone(), name: name, l: l, r: r}},
+                        lval,
+                        rval,
+                        retval,
                     ],
-                    ret: Box::new(Sym{ty: ty, name:retsym})
+                    ret: ret,
                 }
             }
             Fun{mut body, param, body_ty, captures} => {
-                let body_ = self.flat_expr(*body);
-                let bodysym = self.gensym();
-
+                let (ret, bodyval) = self.flat_make_val(*body);
                 body = Box::new(Binds {
                     ty: body_ty.clone(),
                     binds: vec![
-                        Val{ty: body_ty.clone(), rec: false, name: bodysym.clone(), expr: body_}
+                        bodyval
                     ],
-                    ret: Box::new(Sym{ty: body_ty.clone(), name: bodysym})
+                    ret: ret
                 });
                 Fun{body: body, param: param, body_ty: body_ty, captures: captures}
             }
-            App{mut fun, mut arg, ty} => {
-                let fun_ = self.flat_expr(*fun);
-                let funsym = self.gensym();
-                let fun_ty = fun_.ty().clone();
-                fun = Box::new(Sym{ty: fun_ty.clone(), name: funsym.clone()});
-                let arg_ = self.flat_expr(*arg);
-                let argsym = self.gensym();
-                let arg_ty = arg_.ty().clone();
-                arg = Box::new(Sym{ty: arg_ty.clone(), name: argsym.clone()});
-                let retsym = self.gensym();
+            App{fun, arg, ty} => {
+                let (fun, funval) = self.flat_make_val(*fun);
+                let (arg, argval) = self.flat_make_val(*arg);
+                let (ret, retval) = self.make_val(App{fun: fun, arg: arg, ty: ty.clone()});
                 Binds{
                     ty: ty.clone(),
                     binds: vec![
-                        Val{ty: fun_ty, rec: false, name: funsym, expr: fun_},
-                        Val{ty: arg_ty, rec: false, name: argsym, expr: arg_},
-                        Val{ty: ty.clone(), rec: false, name: retsym.clone(), expr: App{fun: fun, arg: arg, ty: ty.clone()}},
+                        funval,
+                        argval,
+                        retval,
                     ],
-                    ret: Box::new(Sym{name: retsym, ty: ty})
+                    ret: ret,
                 }
             }
             If {mut cond, mut then, mut else_, ty} => {
@@ -109,6 +92,20 @@ impl FlatExpr {
             x @ Lit{..} => x
 
         }
+    }
+    // because self.make_val(self.flat_expr(expr)) doesn't pass borrow checker, we need this util
+    fn flat_make_val(&mut self, expr: Expr) -> (Box<Expr>, Val) {
+        let expr = self.flat_expr(expr);
+        self.make_val(expr)
+    }
+
+    fn make_val(&mut self, expr: Expr) -> (Box<Expr>, Val) {
+        let name = self.gensym();
+        let ty = expr.ty().clone();
+        let val = Val{ty: ty.clone(), rec: false, name: name.clone(), expr: expr};
+        let sym = Expr::Sym{name: name, ty: ty};
+        (Box::new(sym), val)
+
     }
 }
 
