@@ -1,7 +1,5 @@
 pub mod pp;
 
-use std::collections::{HashMap, HashSet};
-
 use pass::Pass;
 use prim::*;
 
@@ -51,11 +49,6 @@ impl MIR {
     pub fn add(&mut self, f: Function) {
         self.0.push(f)
     }
-}
-
-enum Either<L, R>{
-    L(L),
-    R(R)
 }
 
 pub struct MIRBuilder(MIR);
@@ -169,9 +162,7 @@ impl EBBBuilder {
 
 
 pub struct HIR2MIR {
-//    functions: HashMap<Symbol, Rc<Function>>
-    // needs symbol table for each functions
-    // needs mir/function builder
+    id: usize,
 }
 
 
@@ -192,21 +183,19 @@ impl From<Ty> for EbbTy {
 
 impl HIR2MIR {
     pub fn new() -> Self {
-        HIR2MIR{}
+        HIR2MIR{id: 0}
     }
 
-    fn add_scope(&mut self, name: Symbol) {
-    }
-
-    fn is_bound(&mut self, name: Symbol) -> bool {
-        true
+    fn genlabel(&mut self, name: &str) -> Symbol {
+        let name = format!("{}@{}", name, self.id);
+        self.id += 1;
+        Symbol(name)
     }
 
     fn trans_hir(&mut self, hir: hir::HIR) -> MIR {
-        use hir::Expr::*;
         // TODO: make anonymous
         let mut mainbuilder = FunctionBuilder::new(Symbol("main".to_string()), EbbTy::Int);
-        let mut mainebuilder = EBBBuilder::new(Symbol("entry".to_string()), Vec::new());
+        let mut mainebuilder = EBBBuilder::new(self.genlabel("entry"), Vec::new());
         let mut funs = Vec::new();
 
         for val in hir.0.into_iter() {
@@ -223,11 +212,11 @@ impl HIR2MIR {
         use hir::Expr::*;
         let hir::Val {ty: ty_, name, expr, ..} = val;
         match expr {
-            Fun{mut body, param, body_ty, mut captures} => {
+            Fun{body, param, body_ty, mut captures} => {
 //                assert_eq!(body_ty, ty_);
                 captures.push(param);
                 let captures = captures.into_iter().map(|(ty, var)| (EbbTy::from(ty), var)).collect();
-                let mut eb_ = EBBBuilder::new(Symbol("entry".to_string()), captures);
+                let eb_ = EBBBuilder::new(Symbol("entry".to_string()), captures);
                 let mut fb = FunctionBuilder::new(name, EbbTy::from(body_ty.clone()));
                 let ebb = self.trans_expr(&mut fb, eb_, body_ty, *body);
                 fb.add_ebb(ebb);
@@ -249,9 +238,9 @@ impl HIR2MIR {
                 eb
             },
             If {ty, cond, then, else_} => {
-                let thenlabel = Symbol("then@xx".to_string());
-                let elselabel = Symbol("else@xx".to_string());
-                let joinlabel = Symbol("join@xx".to_string());
+                let thenlabel = self.genlabel("then");
+                let elselabel = self.genlabel("else");
+                let joinlabel = self.genlabel("join");
                 let (eb, var) = self.trans_expr_block(fb, eb, Ty::Bool, *cond);
                 let ebb  = eb.branch(var, thenlabel.clone(), elselabel.clone());
                 fb.add_ebb(ebb);
