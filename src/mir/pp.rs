@@ -17,7 +17,7 @@ impl PP for MIR {
 impl PP for Function {
     fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
         let indent = indent + 4;
-        write!(w, "fn {}(", self.name.0)?;
+        write!(w, "fun {}: (", self.name.0)?;
         for &(ref param_ty, ref param) in self.body[0].params.iter() {
             param.pp(w, 0)?;
             write!(w, ": ")?;
@@ -26,7 +26,7 @@ impl PP for Function {
         }
         write!(w, ") -> ")?;
         self.body_ty.pp(w, 0)?;
-        write!(w, " {{\n")?;
+        write!(w, " = {{\n")?;
 //        self.body[0].pp(w, indent)?;
         for ebb in self.body.iter() {
             ebb.pp(w, indent)?;
@@ -150,7 +150,7 @@ impl PP for Op  {
                 write!(w, ")")?;
             },
             &Branch{ref cond, ref then, ref else_} => {
-                write!(w, "{}jump if {} then {} else {}", space, cond.0, then.0, else_.0)?;
+                write!(w, "{}if {} then {}() else {}()", space, cond.0, then.0, else_.0)?;
             },
             &Jump{ref target, ref args} => {
                 write!(w, "{}{}(", space, target.0)?;
