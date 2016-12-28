@@ -5,3 +5,4 @@ version = "0.1.0"
 
 [dependencies]
 nom = "2.0.1"
+web-assembler = { git = "https://github.com/KeenS/WebAssembler-rs"}

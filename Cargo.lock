@@ -3,6 +3,7 @@ name = "webml"
 version = "0.1.0"
 dependencies = [
  "nom 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)",
+ "web-assembler 0.1.0 (git+https://github.com/KeenS/WebAssembler-rs)",
 ]
 
 [[package]]
@@ -10,5 +11,11 @@ name = "nom"
 version = "2.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
+[[package]]
+name = "web-assembler"
+version = "0.1.0"
+source = "git+https://github.com/KeenS/WebAssembler-rs#c3752887ae3b80e233ebc9882a4d60f888a65a9c"
+
 [metadata]
 "checksum nom 2.0.1 (registry+https://github.com/rust-lang/crates.io-index)" = "ffc564b2727f758993db55d4ffed0d84bbd7f387a66509516768c8f786bb0b10"
+"checksum web-assembler 0.1.0 (git+https://github.com/KeenS/WebAssembler-rs)" = "<none>"

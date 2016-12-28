@@ -15,6 +15,7 @@ val f = let val d = 1 in d + c end
 val g = d 1 2
 val h = let val y = 1 in fn x => x + y end
 fun i x = if x then let val y = 1 in y end else let val y = 2 in y end
+fun j y = if y then 1 else j false end
 val a = x + 2
 ";
 
@@ -44,7 +45,7 @@ val x = 1
 
 ";
 
-    let input3 = b"val f = fn x => fn y => x + y
+    let input3 = b"fun j y = if y then 1 else j false end
 val x = 1";
 
     let mut passes = compile_pass![
@@ -59,6 +60,6 @@ val x = 1";
         !mir::UnAlias::new(),
     ];
 
-    passes.trans(input1).unwrap();
+    passes.trans(input3).unwrap();
 
 }

@@ -8,6 +8,7 @@ pub mod pass;
 pub mod ast;
 pub mod hir;
 pub mod mir;
+pub mod backend;
 
 pub use prim::TypeError;
 pub use pass::{Pass, Chain};
