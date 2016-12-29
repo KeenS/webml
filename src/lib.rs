@@ -1,5 +1,7 @@
 #[macro_use]
 extern crate nom;
+#[macro_use]
+extern crate web_assembler;
 
 pub mod util;
 pub mod prim;

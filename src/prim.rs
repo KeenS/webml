@@ -115,7 +115,7 @@ pub type Result<T> = ::std::result::Result<T, TypeError>;
 pub struct Symbol(pub String);
 
 impl PP for Symbol {
-    fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()>{
+    fn pp(&self, mut w: &mut io::Write, _indent: usize) -> io::Result<()>{
         write!(w, "{}", self.0)?;
         Ok(())
     }
@@ -129,7 +129,7 @@ pub enum Literal {
 }
 
 impl PP for Literal {
-    fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()>{
+    fn pp(&self, mut w: &mut io::Write, _indent: usize) -> io::Result<()>{
         use self::Literal::*;
         match self {
             &Int(ref v) => {

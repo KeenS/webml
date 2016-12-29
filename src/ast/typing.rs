@@ -1,5 +1,3 @@
-use nom;
-
 use std::collections::HashMap;
 use std::ops::{Drop, Deref, DerefMut};
 
