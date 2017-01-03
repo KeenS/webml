@@ -33,8 +33,8 @@ impl MIR2WASM {
         });
         // TODO:
         //  * [ ] symbol to local_variable
-        //  * [ ] how to solve join point
-        //  * [ ] how to handle loop
-        //  * [ ] how to handle jump
+        //  * [ ] how to solve join point -> ebbs that have more than 1 incomings. branch point is dominant ebb.
+        //  * [ ] how to handle loop -> strong connected components
+        //  * [ ] how to handle jump -> jump other than loop or branch/join can be compacted. ignorable.
     }
 }
