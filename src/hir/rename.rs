@@ -13,26 +13,26 @@ pub struct Rename {
 
 struct Scope<'a>(&'a mut Rename);
 
-impl <'a>Deref for Scope<'a> {
+impl<'a> Deref for Scope<'a> {
     type Target = Rename;
     fn deref(&self) -> &Self::Target {
         &self.0
     }
 }
 
-impl <'a>DerefMut for Scope<'a> {
+impl<'a> DerefMut for Scope<'a> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.0
     }
 }
 
-impl <'a>Drop for Scope<'a> {
+impl<'a> Drop for Scope<'a> {
     fn drop(&mut self) {
         self.pos -= 1;
     }
 }
 
-impl <'a>Scope<'a> {
+impl<'a> Scope<'a> {
     fn new(inner: &'a mut Rename) -> Self {
         let pos = inner.pos;
         if inner.tables.len() <= pos {
@@ -64,17 +64,17 @@ impl <'a>Scope<'a> {
             match table.get(symbol) {
                 Some(new_name) => {
                     symbol.0 = new_name.clone();
-                    return
-                },
-                None => {},
+                    return;
+                }
+                None => {}
             }
         }
     }
 
 
-    fn rename_hir<'b , 'c>(&'b mut self, hir: &'c mut  HIR) {
+    fn rename_hir<'b, 'c>(&'b mut self, hir: &'c mut HIR) {
         let mut scope = self;
-        for val in  hir.0.iter_mut() {
+        for val in hir.0.iter_mut() {
             if val.rec {
                 scope.new_symbol(&mut val.name);
                 scope.rename_val(val);
@@ -92,48 +92,46 @@ impl <'a>Scope<'a> {
     fn rename_expr<'b, 'c>(&'b mut self, expr: &'c mut Expr) {
         use hir::Expr::*;
         match expr {
-            &mut Binds{ref mut binds, ref mut ret, ..} => {
+            &mut Binds { ref mut binds, ref mut ret, .. } => {
                 let mut scope = self;
-                for bind in  binds.iter_mut() {
+                for bind in binds.iter_mut() {
                     scope.rename_val(bind);
                     scope.new_symbol(&mut bind.name);
                 }
                 scope.rename_expr(ret);
             }
-            ,
-            &mut Op{ref mut l, ref mut r, ..} => {
+            &mut Op { ref mut l, ref mut r, .. } => {
                 self.rename_expr(l);
                 self.rename_expr(r);
-            },
-            &mut Fun{ref mut param, ref mut body, ..} => {
+            }
+            &mut Fun { ref mut param, ref mut body, .. } => {
                 let mut scope = self.new_scope();
                 scope.new_symbol(&mut param.1);
                 scope.rename_expr(body);
-            },
-            &mut Closure {ref mut envs, ..} => {
+            }
+            &mut Closure { ref mut envs, .. } => {
                 for &mut (_, ref mut var) in envs.iter_mut() {
                     self.rename(var);
                 }
             }
-            &mut App{ref mut fun, ref mut arg, ..} => {
+            &mut App { ref mut fun, ref mut arg, .. } => {
                 self.rename_expr(fun);
                 self.rename_expr(arg);
-            },
-            &mut If {ref mut cond, ref mut then, ref mut else_, ..} => {
+            }
+            &mut If { ref mut cond, ref mut then, ref mut else_, .. } => {
                 self.rename_expr(cond);
                 self.rename_expr(then);
                 self.rename_expr(else_);
             }
 
-            &mut Sym{ref mut name, ..} => {
+            &mut Sym { ref mut name, .. } => {
                 self.rename(name);
             }
-            &mut Lit{..} |
-            &mut PrimFun{..} => ()
+            &mut Lit { .. } |
+            &mut PrimFun { .. } => (),
 
         }
     }
-
 }
 
 

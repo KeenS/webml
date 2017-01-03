@@ -17,14 +17,13 @@ impl PP for HIR {
 
 impl PP for Val {
     fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
-        let rec = if self.rec { "rec "} else {""};
+        let rec = if self.rec { "rec " } else { "" };
         write!(w, "{}val{} {}: ", Self::nspaces(indent), rec, self.name.0)?;
         self.ty.pp(w, indent)?;
         write!(w, " = ")?;
         self.expr.pp(w, indent + 4)?;
         Ok(())
     }
-
 }
 
 
@@ -32,9 +31,9 @@ impl PP for Expr {
     fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
         use hir::Expr::*;
         match self {
-            &Binds{ref binds, ref ret, ..} => {
+            &Binds { ref binds, ref ret, .. } => {
                 let ind = Self::nspaces(indent);
-                let nextind = Self::nspaces(indent+4);
+                let nextind = Self::nspaces(indent + 4);
                 write!(w, "let\n")?;
                 for val in binds {
                     val.pp(w, indent + 4)?;
@@ -43,13 +42,13 @@ impl PP for Expr {
                 write!(w, "{}in\n{}", ind, nextind)?;
                 ret.pp(w, indent + 4)?;
                 write!(w, "\n{}end", ind)?;
-            },
-            &Op{ref name, ref l, ref r, ..} => {
+            }
+            &Op { ref name, ref l, ref r, .. } => {
                 l.pp(w, indent)?;
                 write!(w, " {} ", name.0)?;
                 r.pp(w, indent)?;
-            },
-            &Fun{ref body, ref param, ref captures, ..} => {
+            }
+            &Fun { ref body, ref param, ref captures, .. } => {
                 write!(w, "fun (")?;
                 for &(_, ref cap) in captures {
                     cap.pp(w, indent)?;
@@ -59,8 +58,8 @@ impl PP for Expr {
                 param.1.pp(w, indent)?;
                 write!(w, " => ")?;
                 body.pp(&mut w, indent + 4)?;
-            },
-            &Closure{ref envs, ref fname, ..} => {
+            }
+            &Closure { ref envs, ref fname, .. } => {
                 write!(w, "<closure ")?;
                 fname.pp(w, indent)?;
                 write!(w, " (")?;
@@ -69,14 +68,14 @@ impl PP for Expr {
                     write!(w, ", ")?;
                 }
                 write!(w, ")>")?;
-            },
-            &App{ref fun, ref arg, ..} => {
+            }
+            &App { ref fun, ref arg, .. } => {
                 write!(w, "(")?;
                 fun.pp(w, indent)?;
                 write!(w, ") ")?;
                 arg.pp(w, indent + 4)?;
-            },
-            &If {ref cond, ref then, ref else_, ..} => {
+            }
+            &If { ref cond, ref then, ref else_, .. } => {
                 let ind = Self::nspaces(indent);
                 write!(w, "if ")?;
                 cond.pp(w, indent + 4)?;
@@ -84,18 +83,17 @@ impl PP for Expr {
                 then.pp(w, indent + 4)?;
                 write!(w, "\n{}else ", ind)?;
                 else_.pp(w, indent + 4)?;
-            },
-            &PrimFun{ref name, ..} => {
+            }
+            &PrimFun { ref name, .. } => {
                 name.pp(w, indent)?;
-            },
-            &Sym{ref name, ..} => {
+            }
+            &Sym { ref name, .. } => {
                 name.pp(w, indent)?;
-            },
-            &Lit{ref value, ..} => {
+            }
+            &Lit { ref value, .. } => {
                 value.pp(w, indent)?;
-            },
+            }
         }
         Ok(())
     }
-
 }

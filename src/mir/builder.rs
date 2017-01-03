@@ -23,7 +23,7 @@ type EbbId = usize;
 
 impl FunctionBuilder {
     pub fn new(name: Symbol, body_ty: EbbTy) -> Self {
-        FunctionBuilder(Function{
+        FunctionBuilder(Function {
             name: name,
             body_ty: body_ty,
             body: Vec::new(),
@@ -65,47 +65,92 @@ impl EBBBuilder {
     }
 
     pub fn lit(&mut self, var: Symbol, ty: EbbTy, value: Literal) -> &mut Self {
-        self.push(Op::Lit{var: var, ty: ty, value: value});
+        self.push(Op::Lit {
+            var: var,
+            ty: ty,
+            value: value,
+        });
         self
     }
 
     pub fn alias(&mut self, var: Symbol, ty: EbbTy, sym: Symbol) -> &mut Self {
-        self.push(Op::Alias{var: var, ty: ty, sym: sym});
+        self.push(Op::Alias {
+            var: var,
+            ty: ty,
+            sym: sym,
+        });
         self
     }
 
     pub fn add(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
-        self.push(Op::Add{var: var, ty: ty, l: l, r: r});
+        self.push(Op::Add {
+            var: var,
+            ty: ty,
+            l: l,
+            r: r,
+        });
         self
     }
 
     pub fn mul(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
-        self.push(Op::Mul{var: var, ty: ty, l: l, r: r});
+        self.push(Op::Mul {
+            var: var,
+            ty: ty,
+            l: l,
+            r: r,
+        });
         self
     }
 
-    pub fn closure(&mut self, var: Symbol, param_ty: EbbTy, ret_ty: EbbTy, fun: Symbol, env: Vec<(EbbTy, Symbol)>) -> &mut Self {
-        self.push(Op::Closure{var: var, param_ty: param_ty, ret_ty: ret_ty, fun: fun, env: env});
+    pub fn closure(&mut self,
+                   var: Symbol,
+                   param_ty: EbbTy,
+                   ret_ty: EbbTy,
+                   fun: Symbol,
+                   env: Vec<(EbbTy, Symbol)>)
+                   -> &mut Self {
+        self.push(Op::Closure {
+            var: var,
+            param_ty: param_ty,
+            ret_ty: ret_ty,
+            fun: fun,
+            env: env,
+        });
         self
     }
 
     pub fn call(&mut self, var: Symbol, ty: EbbTy, fun: Symbol, args: Vec<Symbol>) -> &mut Self {
-        self.push(Op::Call{var: var, ty: ty, fun: fun, args: args});
+        self.push(Op::Call {
+            var: var,
+            ty: ty,
+            fun: fun,
+            args: args,
+        });
         self
     }
 
     pub fn branch(mut self, cond: Symbol, then: Symbol, else_: Symbol) -> EBB {
-        self.push(Op::Branch {cond: cond, then: then, else_: else_});
+        self.push(Op::Branch {
+            cond: cond,
+            then: then,
+            else_: else_,
+        });
         self.0
     }
 
     pub fn jump(mut self, target: Symbol, args: Vec<Symbol>) -> EBB {
-        self.push(Op::Jump {target: target, args: args});
+        self.push(Op::Jump {
+            target: target,
+            args: args,
+        });
         self.0
     }
 
     pub fn ret(mut self, value: Symbol, ty: EbbTy) -> EBB {
-        self.push(Op::Ret {value: value, ty: ty});
+        self.push(Op::Ret {
+            value: value,
+            ty: ty,
+        });
         self.0
     }
 }

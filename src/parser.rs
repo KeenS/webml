@@ -35,7 +35,12 @@ named!(bind_fun <Val>, do_parse!(
         ({
             let expr =  params.into_iter().rev().fold(
                 e, |acc, param|
-                Expr::Fun{param_ty: TyDefer::empty(), param: param, body_ty: TyDefer::empty(), body: Box::new(acc)}
+                Expr::Fun{
+                    param_ty: TyDefer::empty(),
+                    param: param,
+                    body_ty: TyDefer::empty(),
+                    body: Box::new(acc)
+                }
             );
             Val{ty: TyDefer::empty(), rec: true, name: name, expr: expr}
         })
@@ -80,14 +85,24 @@ named!(expr_fun <Expr>, do_parse!(
         tag!("=>") >>
         opt!(multispace) >>
         body: expr >>
-        (Expr::Fun {param_ty: TyDefer::empty(), param: param, body_ty: TyDefer::empty(), body: Box::new(body)})
+        (Expr::Fun {
+            param_ty: TyDefer::empty(),
+            param: param,
+            body_ty: TyDefer::empty(),
+            body: Box::new(body)
+        })
 ));
 
 named!(expr_if <Expr>, do_parse!(
     tag!("if") >> multispace >> cond: expr >> multispace >>
         tag!("then") >> multispace >> then: expr >> multispace >>
         tag!("else") >> multispace >> else_: expr >>
-        (Expr::If {ty: TyDefer::empty(), cond: Box::new(cond), then: Box::new(then), else_: Box::new(else_)})
+        (Expr::If {
+            ty: TyDefer::empty(),
+            cond: Box::new(cond),
+            then: Box::new(then),
+            else_: Box::new(else_)
+        })
 ));
 
 named!(expr1_app <Expr>, do_parse!(
@@ -98,7 +113,11 @@ named!(expr1_app <Expr>, do_parse!(
             let init = Expr::App {ty: TyDefer::empty(), fun: Box::new(fun), arg: Box::new(arg)};
             rest.into_iter()
                 .flat_map(|v| v.into_iter())
-                .fold(init, |acc, elm| Expr::App {ty: TyDefer::empty(), fun: Box::new(acc), arg: Box::new(elm)})
+                .fold(init, |acc, elm| Expr::App {
+                    ty: TyDefer::empty(),
+                    fun: Box::new(acc),
+                    arg: Box::new(elm)
+                })
           })
 ));
 
@@ -120,9 +139,14 @@ named!(expr1_mul <Expr>, do_parse!(
         (Expr::Mul {ty: TyDefer::empty(), l: Box::new(e1), r: Box::new(e2)})
 ));
 
-named!(expr0_sym <Expr>, map!(symbol, |s| Expr::Sym{ty: TyDefer::empty(), name: s}));
-named!(expr0_int <Expr>, map!(digit, |s| Expr::Lit{ty: TyDefer::empty(), value: Literal::Int(from_utf8(s).expect("internal error: failed to parse integer literal")
-                                                                 .parse().expect("internal error: failed to parse integer literal"))}));
+named!(expr0_sym <Expr>, map!(symbol, |s| Expr::Sym{
+    ty: TyDefer::empty(),
+    name: s
+}));
+named!(expr0_int <Expr>, map!(digit, |s| Expr::Lit{
+    ty: TyDefer::empty(),
+    value: Literal::Int(from_utf8(s).expect("internal error: failed to parse integer literal")
+                        .parse().expect("internal error: failed to parse integer literal"))}));
 named!(expr0_bool <Expr>, alt!(
     map!(tag!("true"),  |_| Expr::Lit{ty: TyDefer::empty(), value: Literal::Bool(true)}) |
     map!(tag!("false"), |_| Expr::Lit{ty: TyDefer::empty(), value: Literal::Bool(false)})));

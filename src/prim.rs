@@ -24,17 +24,17 @@ impl Ty {
 }
 
 impl PP for Ty {
-    fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()>{
+    fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
         use self::Ty::*;
         match self {
             &Unit => write!(w, "()")?,
             &Bool => write!(w, "bool")?,
-            &Int  => write!(w, "int")?,
+            &Int => write!(w, "int")?,
             &Fun(ref t1, ref t2) => {
                 t1.pp(w, indent)?;
                 write!(w, " -> ")?;
                 t2.pp(w, indent)?;
-            },
+            }
         }
         Ok(())
     }
@@ -75,7 +75,7 @@ impl TyDefer {
 
 #[derive(Debug)]
 pub enum TypeError {
-    MisMatch{expected: Ty, actual: Ty},
+    MisMatch { expected: Ty, actual: Ty },
     CannotInfer,
     FreeVar,
     NotFunction(ast::Expr),
@@ -92,11 +92,11 @@ impl Error for TypeError {
     fn description(&self) -> &str {
         use self::TypeError::*;
         match self {
-            &MisMatch{..} => "type mismatches against expected type",
+            &MisMatch { .. } => "type mismatches against expected type",
             &CannotInfer => "cannot infer the type",
             &FreeVar => "free variable is found",
             &NotFunction(_) => "not a function",
-            &ParseError(_) => "parse error"
+            &ParseError(_) => "parse error",
         }
     }
 }
@@ -115,7 +115,7 @@ pub type Result<T> = ::std::result::Result<T, TypeError>;
 pub struct Symbol(pub String);
 
 impl PP for Symbol {
-    fn pp(&self, mut w: &mut io::Write, _indent: usize) -> io::Result<()>{
+    fn pp(&self, mut w: &mut io::Write, _indent: usize) -> io::Result<()> {
         write!(w, "{}", self.0)?;
         Ok(())
     }
@@ -129,13 +129,13 @@ pub enum Literal {
 }
 
 impl PP for Literal {
-    fn pp(&self, mut w: &mut io::Write, _indent: usize) -> io::Result<()>{
+    fn pp(&self, mut w: &mut io::Write, _indent: usize) -> io::Result<()> {
         use self::Literal::*;
         match self {
             &Int(ref v) => {
                 write!(w, "{}", v)?;
 
-            },
+            }
             &Bool(ref v) => {
                 write!(w, "{}", v)?;
             }

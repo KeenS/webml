@@ -8,8 +8,9 @@ pub trait Pass<T> {
     fn trans(&mut self, t: T) -> Result<Self::Target, Self::Err>;
 }
 
-impl <In, Out, Err, F> Pass<In> for F
-    where F: Fn(In) -> Result<Out, Err> {
+impl<In, Out, Err, F> Pass<In> for F
+    where F: Fn(In) -> Result<Out, Err>
+{
     type Target = Out;
     type Err = Err;
     fn trans(&mut self, t: In) -> Result<Self::Target, Self::Err> {
@@ -20,9 +21,9 @@ impl <In, Out, Err, F> Pass<In> for F
 
 pub struct DebugPass<T>(pub T);
 
-impl <T, In, Out, Err> Pass<In> for DebugPass<T>
+impl<T, In, Out, Err> Pass<In> for DebugPass<T>
     where T: Pass<In, Target = Out, Err = Err>,
-          Out: Debug,
+          Out: Debug
 {
     type Target = Out;
     type Err = Err;
@@ -36,9 +37,9 @@ impl <T, In, Out, Err> Pass<In> for DebugPass<T>
 
 pub struct PPPass<T>(pub T);
 
-impl <T, In, Out, Err> Pass<In> for PPPass<T>
+impl<T, In, Out, Err> Pass<In> for PPPass<T>
     where T: Pass<In, Target = Out, Err = Err>,
-          Out: PP,
+          Out: PP
 {
     type Target = Out;
     type Err = Err;
@@ -53,10 +54,10 @@ impl <T, In, Out, Err> Pass<In> for PPPass<T>
 
 pub struct Chain<F, S>(pub F, pub S);
 
-impl <F, FE, S, SE, T, In, Out> Pass<In> for Chain<F, S>
+impl<F, FE, S, SE, T, In, Out> Pass<In> for Chain<F, S>
     where F: Pass<In, Target = T, Err = FE>,
           SE: From<FE>,
-          S: Pass<T, Target = Out, Err = SE>,
+          S: Pass<T, Target = Out, Err = SE>
 {
     type Target = Out;
     type Err = SE;

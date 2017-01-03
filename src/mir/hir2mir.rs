@@ -16,16 +16,19 @@ impl From<Ty> for EbbTy {
             Ty::Unit => EbbTy::Unit,
             Ty::Bool => EbbTy::Bool,
             Ty::Int => EbbTy::Int,
-            Ty::Fun(arg, ret) => EbbTy::Ebb{
-                params: vec![EbbTy::from(*arg)],
-                ret: Box::new(EbbTy::from(*ret))},
+            Ty::Fun(arg, ret) => {
+                EbbTy::Ebb {
+                    params: vec![EbbTy::from(*arg)],
+                    ret: Box::new(EbbTy::from(*ret)),
+                }
+            }
         }
     }
 }
 
 impl HIR2MIR {
     pub fn new() -> Self {
-        HIR2MIR{id: 0}
+        HIR2MIR { id: 0 }
     }
 
     fn genlabel(&mut self, name: &str) -> Symbol {
@@ -42,7 +45,7 @@ impl HIR2MIR {
 
         for val in hir.0.into_iter() {
             mainebuilder = self.trans_val(&mut funs, &mut mainbuilder, mainebuilder, val);
-        };
+        }
         let ebb = mainebuilder.ret(Symbol("exit".to_string()), EbbTy::Int);
         mainbuilder.add_ebb(ebb);
         let main = mainbuilder.build();
@@ -50,14 +53,20 @@ impl HIR2MIR {
         MIR(funs)
     }
 
-    fn trans_val(&mut self, funs: &mut Vec<Function>, fb: &mut FunctionBuilder, mut eb: EBBBuilder, val: hir::Val) -> EBBBuilder {
+    fn trans_val(&mut self,
+                 funs: &mut Vec<Function>,
+                 fb: &mut FunctionBuilder,
+                 mut eb: EBBBuilder,
+                 val: hir::Val)
+                 -> EBBBuilder {
         use hir::Expr::*;
-        let hir::Val {ty: ty_, name, expr, ..} = val;
+        let hir::Val { ty: ty_, name, expr, .. } = val;
         match expr {
-            Fun{body, param, body_ty, mut captures} => {
-//                assert_eq!(body_ty, ty_);
+            Fun { body, param, body_ty, mut captures } => {
+                //                assert_eq!(body_ty, ty_);
                 captures.push(param);
-                let captures = captures.into_iter().map(|(ty, var)| (EbbTy::from(ty), var)).collect();
+                let captures =
+                    captures.into_iter().map(|(ty, var)| (EbbTy::from(ty), var)).collect();
                 let eb_ = EBBBuilder::new(Symbol("entry".to_string()), captures);
                 let mut fb = FunctionBuilder::new(name, EbbTy::from(body_ty.clone()));
                 let ebb = self.trans_expr(&mut fb, eb_, body_ty, *body);
@@ -66,25 +75,24 @@ impl HIR2MIR {
                 funs.push(function);
                 eb
             }
-            e @ Sym{..} |
-            e @ Binds{..} => {
+            e @ Sym { .. } | e @ Binds { .. } => {
                 let (mut eb, var) = self.trans_expr_block(fb, eb, ty_.clone(), e);
                 eb.alias(name, EbbTy::from(ty_), var);
                 eb
-            },
-            App{ty, fun, arg} => {
+            }
+            App { ty, fun, arg } => {
                 assert_eq!(ty, ty_);
                 let arg = force_symbol(*arg);
                 let fun = force_symbol(*fun);
                 eb.call(name, EbbTy::from(ty), fun, vec![arg]);
                 eb
-            },
-            If {ty, cond, then, else_} => {
+            }
+            If { ty, cond, then, else_ } => {
                 let thenlabel = self.genlabel("then");
                 let elselabel = self.genlabel("else");
                 let joinlabel = self.genlabel("join");
                 let (eb, var) = self.trans_expr_block(fb, eb, Ty::Bool, *cond);
-                let ebb  = eb.branch(var, thenlabel.clone(), elselabel.clone());
+                let ebb = eb.branch(var, thenlabel.clone(), elselabel.clone());
                 fb.add_ebb(ebb);
 
                 let eb = EBBBuilder::new(thenlabel, Vec::new());
@@ -100,26 +108,28 @@ impl HIR2MIR {
                 let eb = EBBBuilder::new(joinlabel, vec![(EbbTy::from(ty), name)]);
                 eb
             }
-                ,
-            Op{ty, name: name_, l, r} => {
+            Op { ty, name: name_, l, r } => {
                 assert_eq!(ty, ty_);
                 let l = force_symbol(*l);
                 let r = force_symbol(*r);
                 match name_.0.as_ref() {
                     "+" => eb.add(name, EbbTy::from(ty), l, r),
                     "*" => eb.mul(name, EbbTy::from(ty), l, r),
-                    _ => panic!("internal error")
+                    _ => panic!("internal error"),
                 };
                 eb
-            },
-            Closure{envs, param_ty, body_ty, fname} => {
+            }
+            Closure { envs, param_ty, body_ty, fname } => {
                 let envs = envs.into_iter().map(|(ty, var)| (EbbTy::from(ty), var)).collect();
-                eb.closure(name, EbbTy::from(param_ty), EbbTy::from(body_ty), fname,  envs);
+                eb.closure(name,
+                           EbbTy::from(param_ty),
+                           EbbTy::from(body_ty),
+                           fname,
+                           envs);
                 eb
             }
-            PrimFun{..} =>
-                panic!("internal error: primfun"),
-            Lit{ty, value} => {
+            PrimFun { .. } => panic!("internal error: primfun"),
+            Lit { ty, value } => {
                 assert_eq!(ty, ty_);
                 eb.lit(name, EbbTy::from(ty), value);
                 eb
@@ -128,10 +138,15 @@ impl HIR2MIR {
 
     }
 
-    fn trans_expr(&mut self, fb: &mut FunctionBuilder, mut eb: EBBBuilder, ty_: Ty, expr: hir::Expr) -> EBB {
+    fn trans_expr(&mut self,
+                  fb: &mut FunctionBuilder,
+                  mut eb: EBBBuilder,
+                  ty_: Ty,
+                  expr: hir::Expr)
+                  -> EBB {
         use hir::Expr::*;
         match expr {
-            Binds{ty, binds, ret} => {
+            Binds { ty, binds, ret } => {
                 assert_eq!(ty, ty_);
                 let mut funs = Vec::new();
                 for val in binds {
@@ -139,41 +154,45 @@ impl HIR2MIR {
                 }
                 assert_eq!(funs.len(), 0);
                 eb.ret(force_symbol(*ret), EbbTy::from(ty))
-            },
-            Sym{ty, name} => {
+            }
+            Sym { ty, name } => {
                 assert_eq!(ty, ty_);
                 eb.ret(name, EbbTy::from(ty))
-            },
+            }
             _ => panic!("internal error"),
         }
     }
 
-    fn trans_expr_block(&mut self, fb: &mut FunctionBuilder, mut eb: EBBBuilder, ty_: Ty, expr: hir::Expr) -> (EBBBuilder, Symbol) {
+    fn trans_expr_block(&mut self,
+                        fb: &mut FunctionBuilder,
+                        mut eb: EBBBuilder,
+                        ty_: Ty,
+                        expr: hir::Expr)
+                        -> (EBBBuilder, Symbol) {
         use hir::Expr::*;
         match expr {
-            Binds{ty, binds, ret} => {
+            Binds { ty, binds, ret } => {
                 assert_eq!(ty, ty_);
                 let mut funs = Vec::new();
                 for val in binds {
                     eb = self.trans_val(&mut funs, fb, eb, val)
-                };
+                }
                 assert_eq!(funs.len(), 0);
                 (eb, force_symbol(*ret))
-            },
-            Sym{ty, name} => {
+            }
+            Sym { ty, name } => {
                 assert_eq!(ty, ty_);
                 (eb, name)
-            },
+            }
             _ => panic!("internal error"),
         }
     }
-
 }
 
 fn force_symbol(e: hir::Expr) -> Symbol {
     match e {
-        hir::Expr::Sym{name, ..} => name,
-        _ => panic!("not a symbol")
+        hir::Expr::Sym { name, .. } => name,
+        _ => panic!("not a symbol"),
     }
 }
 

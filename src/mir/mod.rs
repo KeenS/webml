@@ -28,16 +28,45 @@ pub struct EBB {
 
 #[derive(Debug, Clone)]
 pub enum Op {
-    Lit{var: Symbol, ty: EbbTy, value: Literal},
-    Alias{var: Symbol, ty: EbbTy, sym: Symbol},
-    Add{var: Symbol, ty: EbbTy, l: Symbol, r: Symbol},
-    Mul{var: Symbol, ty: EbbTy, l: Symbol, r: Symbol},
-    Closure{var: Symbol, param_ty: EbbTy, ret_ty: EbbTy, fun: Symbol, env: Vec<(EbbTy, Symbol)>},
+    Lit {
+        var: Symbol,
+        ty: EbbTy,
+        value: Literal,
+    },
+    Alias { var: Symbol, ty: EbbTy, sym: Symbol },
+    Add {
+        var: Symbol,
+        ty: EbbTy,
+        l: Symbol,
+        r: Symbol,
+    },
+    Mul {
+        var: Symbol,
+        ty: EbbTy,
+        l: Symbol,
+        r: Symbol,
+    },
+    Closure {
+        var: Symbol,
+        param_ty: EbbTy,
+        ret_ty: EbbTy,
+        fun: Symbol,
+        env: Vec<(EbbTy, Symbol)>,
+    },
     // TODO: separate closure call and direct call
-    Call{var: Symbol, ty: EbbTy, fun: Symbol, args: Vec<Symbol>},
-    Branch {cond: Symbol, then: Symbol, else_: Symbol},
-    Jump {target: Symbol, args: Vec<Symbol>},
-    Ret {value: Symbol, ty: EbbTy}
+    Call {
+        var: Symbol,
+        ty: EbbTy,
+        fun: Symbol,
+        args: Vec<Symbol>,
+    },
+    Branch {
+        cond: Symbol,
+        then: Symbol,
+        else_: Symbol,
+    },
+    Jump { target: Symbol, args: Vec<Symbol> },
+    Ret { value: Symbol, ty: EbbTy },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -45,8 +74,8 @@ pub enum EbbTy {
     Unit,
     Int,
     Bool,
-    Cls{param: Box<EbbTy>, ret: Box<EbbTy>},
-    Ebb{params: Vec<EbbTy>, ret: Box<EbbTy>}
+    Cls { param: Box<EbbTy>, ret: Box<EbbTy> },
+    Ebb { params: Vec<EbbTy>, ret: Box<EbbTy> },
 }
 
 impl MIR {
@@ -54,4 +83,3 @@ impl MIR {
         self.0.push(f)
     }
 }
-
