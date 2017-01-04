@@ -1,7 +1,9 @@
 #[macro_use]
 extern crate nom;
+extern crate petgraph;
 #[macro_use]
 extern crate web_assembler;
+
 
 pub mod util;
 pub mod prim;
