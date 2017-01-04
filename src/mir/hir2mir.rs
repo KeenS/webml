@@ -92,17 +92,17 @@ impl HIR2MIR {
                 let elselabel = self.genlabel("else");
                 let joinlabel = self.genlabel("join");
                 let (eb, var) = self.trans_expr_block(fb, eb, Ty::Bool, *cond);
-                let ebb = eb.branch(var, thenlabel.clone(), elselabel.clone());
+                let ebb = eb.branch(var, thenlabel.clone(), true, elselabel.clone(), true);
                 fb.add_ebb(ebb);
 
                 let eb = EBBBuilder::new(thenlabel, Vec::new());
                 let (eb, var) = self.trans_expr_block(fb, eb, ty.clone(), *then);
-                let ebb = eb.jump(joinlabel.clone(), vec![var]);
+                let ebb = eb.jump(joinlabel.clone(), true, vec![var]);
                 fb.add_ebb(ebb);
 
                 let eb = EBBBuilder::new(elselabel, Vec::new());
                 let (eb, var) = self.trans_expr_block(fb, eb, ty.clone(), *else_);
-                let ebb = eb.jump(joinlabel.clone(), vec![var]);
+                let ebb = eb.jump(joinlabel.clone(), true, vec![var]);
                 fb.add_ebb(ebb);
 
                 let eb = EBBBuilder::new(joinlabel, vec![(EbbTy::from(ty), name)]);

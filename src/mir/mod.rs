@@ -2,6 +2,7 @@ pub mod pp;
 mod unalias;
 mod builder;
 mod hir2mir;
+pub mod cfg;
 
 pub use self::hir2mir::HIR2MIR;
 pub use self::unalias::UnAlias;
@@ -63,9 +64,15 @@ pub enum Op {
     Branch {
         cond: Symbol,
         then: Symbol,
+        tforward: bool,
         else_: Symbol,
+        eforward: bool,
     },
-    Jump { target: Symbol, args: Vec<Symbol> },
+    Jump {
+        target: Symbol,
+        forward: bool,
+        args: Vec<Symbol>,
+    },
     Ret { value: Symbol, ty: EbbTy },
 }
 

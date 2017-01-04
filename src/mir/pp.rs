@@ -148,7 +148,7 @@ impl PP for Op {
                 }
                 write!(w, ")")?;
             }
-            &Branch { ref cond, ref then, ref else_ } => {
+            &Branch { ref cond, ref then, ref else_, .. } => {
                 write!(w,
                        "{}if {} then {}() else {}()",
                        space,
@@ -156,7 +156,7 @@ impl PP for Op {
                        then.0,
                        else_.0)?;
             }
-            &Jump { ref target, ref args } => {
+            &Jump { ref target, ref args, .. } => {
                 write!(w, "{}{}(", space, target.0)?;
                 for arg in args.iter() {
                     arg.pp(w, 0)?;

@@ -129,18 +129,27 @@ impl EBBBuilder {
         self
     }
 
-    pub fn branch(mut self, cond: Symbol, then: Symbol, else_: Symbol) -> EBB {
+    pub fn branch(mut self,
+                  cond: Symbol,
+                  then: Symbol,
+                  tforward: bool,
+                  else_: Symbol,
+                  eforward: bool)
+                  -> EBB {
         self.push(Op::Branch {
             cond: cond,
             then: then,
+            tforward: tforward,
             else_: else_,
+            eforward: eforward,
         });
         self.0
     }
 
-    pub fn jump(mut self, target: Symbol, args: Vec<Symbol>) -> EBB {
+    pub fn jump(mut self, target: Symbol, forward: bool, args: Vec<Symbol>) -> EBB {
         self.push(Op::Jump {
             target: target,
+            forward: forward,
             args: args,
         });
         self.0
