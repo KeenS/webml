@@ -17,7 +17,7 @@ impl Function {
                 .expect("internal error");
             done.insert(ebb_idx);
             let node = graph.add_node(ebb_idx);
-            for next in self.body[ebb_idx].next_ebbs().iter() {
+            for &(next, _) in self.body[ebb_idx].next_ebbs().iter() {
                 let next_idx = self.find_ebb(next)
                     // this is safe because jump target must be in the function
                     .expect("internal error");
@@ -40,12 +40,14 @@ impl Function {
 
 
 impl EBB {
-    pub fn next_ebbs(&self) -> Vec<&Symbol> {
+    pub fn next_ebbs(&self) -> Vec<(&Symbol, bool)> {
         use mir::Op::*;
         let last = self.body.len() - 1;
         match &self.body[last] {
-            &Branch { ref then, ref else_, .. } => vec![then, else_],
-            &Jump { ref target, .. } => vec![target],
+            &Branch { ref then, tforward, ref else_, eforward, .. } => {
+                vec![(then, tforward), (else_, eforward)]
+            }
+            &Jump { ref target, forward, .. } => vec![(target, forward)],
             &Ret { .. } => vec![],
             _ => unreachable!(),
         }

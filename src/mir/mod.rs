@@ -2,10 +2,12 @@ pub mod pp;
 mod unalias;
 mod builder;
 mod hir2mir;
+mod block_arrange;
 pub mod cfg;
 
 pub use self::hir2mir::HIR2MIR;
 pub use self::unalias::UnAlias;
+pub use self::block_arrange::BlockArrange;
 use prim::*;
 
 #[derive(Debug, Clone)]
