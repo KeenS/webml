@@ -55,7 +55,9 @@ val x = 1";
         hir::FlatExpr::new(),
         hir::FlatLet::new(),
         mir::HIR2MIR::new(),
-        !mir::UnAlias::new(),
+        mir::UnAlias::new(),
+        mir::BlockArrange::new(),
+        backend::MIR2WASM::new(),
     ];
 
     passes.trans(input1).unwrap();
