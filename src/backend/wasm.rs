@@ -92,106 +92,107 @@ impl MIR2WASM {
         let mut symbol_table = self.make_symbol_table(&mut fb, body.as_ref());
 
 
-        let fb = fb.code(|cb, params| {
-            for (&(_, ref p), i) in body[0].params.iter().zip(params) {
-                symbol_table.insert(p, i.clone());
-            }
+        // let fb = fb.code(|cb, params| {
+        //     for (&(_, ref p), i) in body[0].params.iter().zip(params) {
+        //         symbol_table.insert(p, i.clone());
+        //     }
 
 
-            let body = self.alloc_loop_block_break(&body);
+        //     let body = self.alloc_loop_block_break(&body);
 
 
-            println!("fn {}", name.0);
-            println!("{:?}", symbol_table);
-            for c in body {
-                print_control(&c);
-            }
-            println!("");
+        //     println!("fn {}", name.0);
+        //     println!("{:?}", symbol_table);
+        //     for c in body {
+        //         print_control(&c);
+        //     }
+        //     println!("");
 
-            let scope = Vec::new();
-            for c in body {
-                match c {
-                    Control::Block(name) => {
-                        scope.push(name);
-                        cb.block(BlockType(None));
-                    },
-                    Control::BlockEnd(name) => {
-                        let top = scope.pop().unwrap();
-                        assert_eq!(name, top);
-                        cb.end();
-                    }
-                    Control::Loop(name) => {
-                        scope.push(name);
-                        cb.loop_(BlockType(None));
-                    },
-                    Control::LoopEnd(name) => {
-                        let top = scope.pop().unwrap();
-                        assert_eq!(name, top);
-                        cb.end();
-                    },
-                    Control::Ebb(e) => {
-                        use mir::Op::*;
-                        for op in e.body {
-                            match op {
-                                Lit {var, value, ..} => {
-                                    match value {
-                                        Literal::Bool(b) => cb.constant(b as i32),
-                                        Literal::Int(i) => cb.constant(i),
-                                    };
-                                    cb.set_local(symbol_table[&var]);
-                                },
-                                Alias {var, sym, ..} => {
-                                    cb.get_local(symbol_table[&sym]);
-                                    cb.set_local(symbol_table[&var]);
-                                },
-                                Add {var, l, r, ..} => {
-                                    cb.get_local(symbol_table[&l]);
-                                    cb.get_local(symbol_table[&r]);
-                                    // FIXME: adjust argument type (bit size)
-                                    cb.i64_add();
-                                },
-                                Mul {var, l, r, ..} => {
-                                    cb.get_local(symbol_table[&l]);
-                                    cb.get_local(symbol_table[&r]);
-                                    // FIXME: adjust argument type (bit size)
-                                    cb.i64_mul();
-                                },
-                                Closure {
-                                    var: Symbol,
-                                    param_ty: EbbTy,
-                                    ret_ty: EbbTy,
-                                    fun: Symbol,
-                                    env: Vec<(EbbTy, Symbol)>,
-                                },
-                                Call {
-                                    var: Symbol,
-                                    ty: EbbTy,
-                                    fun: Symbol,
-                                    args: Vec<Symbol>,
-                                },
-                                Branch {cond, then, else_} => {
-                                    cb.get_local(symbol_table([&cond]));
-                                    let then_depth = scope.rindex(then);
-                                    let else_depth = scope.rindex(else_);
-                                    cb.br_if(then_depth);
-                                    cb.br(else_depth);
-                                },
-                                Jump {
-                                    target: Symbol,
-                                    forward: bool,
-                                    args: Vec<Symbol>,
-                                },
-                                Ret { value: Symbol } => {
-                                    cb.get_local(symbol_table([&value]));
-                                    cb.return_();
-                                },
+        //     let scope = Vec::new();
+        //     for c in body {
+        //         match c {
+        //             Control::Block(name) => {
+        //                 scope.push(name);
+        //                 cb.block(BlockType(None));
+        //             },
+        //             Control::BlockEnd(name) => {
+        //                 let top = scope.pop().unwrap();
+        //                 assert_eq!(name, top);
+        //                 cb.end();
+        //             }
+        //             Control::Loop(name) => {
+        //                 scope.push(name);
+        //                 cb.loop_(BlockType(None));
+        //             },
+        //             Control::LoopEnd(name) => {
+        //                 let top = scope.pop().unwrap();
+        //                 assert_eq!(name, top);
+        //                 cb.end();
+        //             },
+        //             Control::Ebb(e) => {
+        //                 use mir::Op::*;
+        //                 for op in e.body {
+        //                     match op {
+        //                         Lit {var, value, ..} => {
+        //                             match value {
+        //                                 Literal::Bool(b) => cb.constant(b as i32),
+        //                                 Literal::Int(i) => cb.constant(i),
+        //                             };
+        //                             cb.set_local(symbol_table[&var]);
+        //                         },
+        //                         Alias {var, sym, ..} => {
+        //                             cb.get_local(symbol_table[&sym]);
+        //                             cb.set_local(symbol_table[&var]);
+        //                         },
+        //                         Add {var, l, r, ..} => {
+        //                             cb.get_local(symbol_table[&l]);
+        //                             cb.get_local(symbol_table[&r]);
+        //                             // FIXME: adjust argument type (bit size)
+        //                             cb.i64_add();
+        //                         },
+        //                         Mul {var, l, r, ..} => {
+        //                             cb.get_local(symbol_table[&l]);
+        //                             cb.get_local(symbol_table[&r]);
+        //                             // FIXME: adjust argument type (bit size)
+        //                             cb.i64_mul();
+        //                         },
+        //                         Closure {
+        //                             var: Symbol,
+        //                             param_ty: EbbTy,
+        //                             ret_ty: EbbTy,
+        //                             fun: Symbol,
+        //                             env: Vec<(EbbTy, Symbol)>,
+        //                         },
+        //                         Call {
+        //                             var: Symbol,
+        //                             ty: EbbTy,
+        //                             fun: Symbol,
+        //                             args: Vec<Symbol>,
+        //                         },
+        //                         Branch {cond, then, else_} => {
+        //                             cb.get_local(symbol_table([&cond]));
+        //                             let then_depth = scope.rindex(then);
+        //                             let else_depth = scope.rindex(else_);
+        //                             cb.br_if(then_depth);
+        //                             cb.br(else_depth);
+        //                         },
+        //                         Jump {
+        //                             target: Symbol,
+        //                             forward: bool,
+        //                             args: Vec<Symbol>,
+        //                         },
+        //                         Ret { value: Symbol } => {
+        //                             cb.get_local(symbol_table([&value]));
+        //                             cb.return_();
+        //                         },
 
-                            }}
-                    }
-                }
-            }
-            cb
-        });
+        //                     }}
+        //             }
+        //         }
+        //     }
+        //     cb
+        // })
+            ;
 
 
         // TODO:
@@ -206,7 +207,7 @@ impl MIR2WASM {
     fn make_symbol_table<'a>(&self, fb: &mut FunctionBuilder, v: &'a [mir::EBB]) -> HashMap<&'a Symbol, LocalIndex> {
         let mut symbol_table = HashMap::<&'a Symbol, LocalIndex>::new();
 
-        let params = v[0].params.iter().map(|&(_, var)| var).collect::<Vec<_>>();
+        let params = v[0].params.iter().map(|&(_, ref var)| var).collect::<Vec<_>>();
 
         macro_rules! intern {
             ($ty: expr, $var: expr) => {{
@@ -218,7 +219,7 @@ impl MIR2WASM {
 
         for ebb in v {
             for &(ref ty, ref param) in ebb.params.iter() {
-                intern!(ebbty_to_valuetype(ty), param);
+                intern!(ebbty_to_valuetype(ty), &param);
             }
             for op in ebb.body.iter() {
                 match op {
@@ -227,10 +228,10 @@ impl MIR2WASM {
                     &mir::Op::Add {ref var, ref ty, ..} |
                     &mir::Op::Mul {ref var, ref ty, ..} |
                     &mir::Op::Call {ref var, ref ty, ..} => {
-                        intern!(ebbty_to_valuetype(ty), var);
+                        intern!(ebbty_to_valuetype(ty), &var);
                     },
-                    &mir::Op::Closure {ref var, ref param_ty, ret_ty, ..}  => {
-                        intern!(Pointer, var);
+                    &mir::Op::Closure {ref var, ref param_ty, ref ret_ty, ..}  => {
+                        intern!(Pointer, &var);
                     }
                     _ => ()
                 }
