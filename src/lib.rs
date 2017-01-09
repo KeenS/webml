@@ -12,6 +12,7 @@ pub mod pass;
 pub mod ast;
 pub mod hir;
 pub mod mir;
+pub mod lir;
 pub mod backend;
 
 pub use prim::TypeError;
