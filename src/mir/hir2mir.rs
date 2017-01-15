@@ -46,6 +46,7 @@ impl HIR2MIR {
         for val in hir.0.into_iter() {
             mainebuilder = self.trans_val(&mut funs, &mut mainbuilder, mainebuilder, val);
         }
+        mainebuilder.lit(Symbol("exit".to_string()), EbbTy::Int, Literal::Int(0));
         let ebb = mainebuilder.ret(Symbol("exit".to_string()), EbbTy::Int);
         mainbuilder.add_ebb(ebb);
         let main = mainbuilder.build();

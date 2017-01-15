@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use pass::Pass;
 use prim::*;
 use lir::*;
 use mir;
@@ -7,6 +8,10 @@ use mir;
 pub struct MIR2LIR;
 
 impl MIR2LIR {
+    pub fn new() -> Self {
+        MIR2LIR
+    }
+
     fn ebbty_to_lty<'a>(&self, ty: &mir::EbbTy) -> LTy {
         use mir::EbbTy::*;
         match ty {
@@ -175,5 +180,14 @@ impl MIR2LIR {
             tbl.insert(&ebb.name, params);
         }
         tbl
+    }
+}
+
+impl Pass<mir::MIR> for MIR2LIR {
+    type Target = LIR;
+    type Err = TypeError;
+
+    fn trans(&mut self, mir: mir::MIR) -> ::std::result::Result<Self::Target, Self::Err> {
+        Ok(self.trans_mir(mir))
     }
 }

@@ -1,5 +1,7 @@
 pub mod mir2lir;
+pub mod pp;
 
+pub use self::mir2lir::MIR2LIR;
 use prim::*;
 
 #[derive(Debug, Clone)]
@@ -9,7 +11,7 @@ pub enum LTy {
 }
 
 impl LTy {
-    pub fn size(&self) -> u32{
+    pub fn size(&self) -> u32 {
         use self::LTy::*;
         match self {
             &I32 => 4,
