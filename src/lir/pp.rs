@@ -27,9 +27,8 @@ impl PP for Function {
         self.ret_ty.pp(w, 0)?;
         write!(w, " = {{\n")?;
         for op in self.body.iter() {
-            write!(w, "{}", Self::nspaces(indent));
+            write!(w, "{}", Self::nspaces(indent))?;
             op.pp(w, indent)?;
-            write!(w, "\n");
         }
         write!(w, "}}\n")?;
         Ok(())
@@ -78,7 +77,18 @@ impl PP for LTy {
     }
 }
 
-
+impl PP for Block {
+    fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
+        write!(w, "{}:\n", (self.name.0).0);
+        let indent = indent + 4;
+        for op in self.body.iter() {
+            write!(w, "{}", Self::nspaces(indent))?;
+            op.pp(w, indent)?;
+            write!(w, "\n")?;
+        }
+        Ok(())
+    }
+}
 impl PP for Op {
     fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
         use lir::Op::*;

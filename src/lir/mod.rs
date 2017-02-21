@@ -49,7 +49,13 @@ pub struct Function {
     pub nparams: u32,
     pub regs: Vec<LTy>,
     pub ret_ty: LTy,
-    pub body: Vec<Op>,
+    pub body: Vec<Block>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Block {
+    name: Label,
+    body: Vec<Op>,
 }
 
 

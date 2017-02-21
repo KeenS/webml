@@ -40,8 +40,9 @@ impl MIR2LIR {
         macro_rules! reg {
             ($var: expr) => {symbol_table[&$var].clone()}
         }
-        let mut ops = Vec::new();
+        let mut blocks = Vec::new();
         for ebb in body.iter() {
+            let mut ops = Vec::new();
             for op in ebb.body.iter() {
                 match op {
                     &m::Lit { ref var, ref value, .. } => {
@@ -109,6 +110,10 @@ impl MIR2LIR {
 
                 }
             }
+            blocks.push(Block {
+                name: Label(ebb.name.clone()),
+                body: ops,
+            })
         }
 
         let mut regs = symbol_table.values().collect::<Vec<_>>();
@@ -120,7 +125,7 @@ impl MIR2LIR {
             nparams: nparams,
             regs: regs,
             ret_ty: ret_ty,
-            body: ops,
+            body: blocks,
         }
 
     }
