@@ -122,8 +122,13 @@ impl MIR2LIR {
                          ref args,
                          ..
                      } => {
+                        // FIXME: distinguish call function and call closure
                         let args = args.iter().map(|a| reg!(a)).collect();
-                        ops.push(Call(reg!(var), F(fun.clone()), args));
+                        match symbol_table.get(fun) {
+                            Some(r) => ops.push(Call(reg!(var), R(r.clone()), args)),
+                            None => ops.push(Call(reg!(var), F(fun.clone()), args)),
+                        }
+
                     }
                     &m::Branch {
                          ref cond,

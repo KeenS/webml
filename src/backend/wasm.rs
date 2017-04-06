@@ -1,12 +1,12 @@
-extern crate web_assembler;
+extern crate web_assembler as wasm;
 
 use std::collections::{HashSet, HashMap};
 
 use prim::*;
 use pass::Pass;
 use lir;
-use self::web_assembler::builder::*;
-use self::web_assembler::*;
+use self::wasm::builder::*;
+use self::wasm::*;
 
 #[derive(Debug, Clone)]
 enum Control<'a> {
@@ -28,6 +28,8 @@ fn lty_to_valuetype(t: &lir::LTy) -> ValueType {
 
 pub struct LIR2WASM {
     md: ModuleBuilder,
+    alloc_fun: FunctionSpaceIndex,
+    function_table: HashMap<Symbol, u32>
 }
 
 // may vary over environment
@@ -35,12 +37,27 @@ const Pointer: ValueType = ValueType::I64;
 
 impl LIR2WASM {
     pub fn new() -> Self {
+        let mut md =  ModuleBuilder::new();
+        let fun_index = md.add_type(FuncType{
+            params: vec![ValueType::I64],
+            ret: Some(ValueType::I64)
+        });
+        let alloc_fun = md.import("wasm-rt", "alloc", fun_index);
+
         LIR2WASM {
-            md: ModuleBuilder::new()
+            md: md,
+            alloc_fun: alloc_fun.into(),
+            function_table: HashMap::new(),
         }
     }
 
     pub fn trans_lir(&mut self, l: lir::LIR) -> Module {
+        self.function_table = l.0.iter()
+            .enumerate()
+            .map(|(i, s)| (s.name.clone(), i as u32))
+            .collect();
+
+        println!("{:?}", self.function_table);
         for f in l.0 {
             self.trans_function(f);
         }
@@ -58,7 +75,6 @@ impl LIR2WASM {
         let mut fb = FunctionBuilder::new(FuncType {
             params: tys,
             ret: match ret_ty {
-                Unit => None,
                 ty => Some(lty_to_valuetype(&ty)),
             },
         });
@@ -80,7 +96,11 @@ impl LIR2WASM {
             }
 
             macro_rules! fun {
-                ($funname: expr) => (0)
+                ($funname: expr) => {{
+                    println!("{:?}", $funname);
+                    let findex = FunctionIndex(self.function_table[$funname]);
+                    Into::<FunctionSpaceIndex>::into(findex)
+                }}
             }
 
 
@@ -120,7 +140,7 @@ impl LIR2WASM {
                                     cb = match *value {
                                         I(i) => cb.constant(i as i32),
                                         R(ref r) => cb.get_local(reg!(r)),
-                                        F(ref s) => cb.constant(fun!(s)),
+                                        F(ref s) => cb.constant(*fun!(s) as i32),
                                     };
                                     cb = cb
                                         .get_local(reg!(addr.0))
@@ -163,7 +183,7 @@ impl LIR2WASM {
                                     cb = match *value {
                                         I(i) => cb.constant(i as i64),
                                         R(ref r) => cb.get_local(reg!(r)),
-                                        F(ref s) => cb.constant(fun!(s))
+                                        F(ref s) => cb.constant(*fun!(s) as i32)
                                     };
                                     cb = cb
                                         .get_local(reg!(addr.0))
@@ -177,15 +197,37 @@ impl LIR2WASM {
                                 },
 
                                 HeapAlloc(ref reg, ref value) => {
-                                    println!("not implemented alloc({:?}, {:?})", reg, value);
-                                },
-                                StackAlloc(ref reg, size) => unimplemented!(),
+                                    cb = match *value {
+                                        I(i) => cb.constant(i as i64),
+                                        R(ref r) => cb.get_local(reg!(r)),
+                                        F(_) => panic!("unsupported operation")
+                                    };
 
+                                    cb = cb
+                                        .call(self.alloc_fun)
+                                        .set_local(reg!(reg))
+                                },
+                                StackAlloc(ref reg, size) => {
+                                    // allocating to heap, not stack
+                                    cb = cb
+                                        .constant(size as i32)
+                                        .call(self.alloc_fun)
+                                        .set_local(reg!(reg))
+                                },
                                 Call(ref reg, ref fun, ref args) => {
                                     for arg in args.iter() {
                                         cb = cb.get_local(reg!(arg))
                                     }
-                                    cb = cb.call(fun!(fun))
+                                    cb = match *fun {
+                                        I(_) => panic!("unsupported operation"),
+                                        R(ref r) => {
+                                            unimplemented!();
+                                            cb.call_indirect(*reg!(r), false)
+                                        },
+                                        F(ref f) => cb.call(fun!(f)),
+                                    };
+
+                                    cb = cb
                                         .set_local(reg!(reg));
                                 },
                                 Jump(ref label) => {

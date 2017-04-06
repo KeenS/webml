@@ -63,7 +63,7 @@ val x = 1";
                                    mir::UnAlias::new(),
                                    mir::BlockArrange::new(),
                                    !lir::MIR2LIR::new(),
-                                   ?backend::LIR2WASM::new()];
+                                   backend::LIR2WASM::new()];
 
     let module = passes.trans(input1).unwrap();
     let mut code = Vec::new();
