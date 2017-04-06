@@ -92,19 +92,31 @@ impl<'a> Scope<'a> {
     fn rename_expr<'b, 'c>(&'b mut self, expr: &'c mut Expr) {
         use hir::Expr::*;
         match expr {
-            &mut Binds { ref mut binds, ref mut ret, .. } => {
-                let mut scope = self;
+            &mut Binds {
+                     ref mut binds,
+                     ref mut ret,
+                     ..
+                 } => {
+                let mut scope = self.new_scope();
                 for bind in binds.iter_mut() {
                     scope.rename_val(bind);
                     scope.new_symbol(&mut bind.name);
                 }
                 scope.rename_expr(ret);
             }
-            &mut Op { ref mut l, ref mut r, .. } => {
+            &mut Op {
+                     ref mut l,
+                     ref mut r,
+                     ..
+                 } => {
                 self.rename_expr(l);
                 self.rename_expr(r);
             }
-            &mut Fun { ref mut param, ref mut body, .. } => {
+            &mut Fun {
+                     ref mut param,
+                     ref mut body,
+                     ..
+                 } => {
                 let mut scope = self.new_scope();
                 scope.new_symbol(&mut param.1);
                 scope.rename_expr(body);
@@ -114,11 +126,20 @@ impl<'a> Scope<'a> {
                     self.rename(var);
                 }
             }
-            &mut App { ref mut fun, ref mut arg, .. } => {
+            &mut App {
+                     ref mut fun,
+                     ref mut arg,
+                     ..
+                 } => {
                 self.rename_expr(fun);
                 self.rename_expr(arg);
             }
-            &mut If { ref mut cond, ref mut then, ref mut else_, .. } => {
+            &mut If {
+                     ref mut cond,
+                     ref mut then,
+                     ref mut else_,
+                     ..
+                 } => {
                 self.rename_expr(cond);
                 self.rename_expr(then);
                 self.rename_expr(else_);
