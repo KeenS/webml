@@ -4,251 +4,215 @@ use std::collections::{HashSet, HashMap};
 
 use prim::*;
 use pass::Pass;
-use mir;
+use lir;
 use self::web_assembler::builder::*;
 use self::web_assembler::*;
 
 #[derive(Debug, Clone)]
 enum Control<'a> {
-    Ebb(&'a mir::EBB),
-    Loop(&'a Symbol),
-    LoopEnd(&'a Symbol),
-    Block(&'a Symbol),
-    BlockEnd(&'a Symbol),
+    Body(&'a lir::Block),
+    Loop(&'a lir::Label),
+    LoopEnd(&'a lir::Label),
+    Block(&'a lir::Label),
+    BlockEnd(&'a lir::Label),
 }
 
-fn print_control<'a>(c: &Control<'a>) {
-    use self::Control::*;
-    match c {
-        &Ebb(ref e) => {
-            println!("EBB{}", e.next_ebbs().iter().map(|&(name, _)| format!(" break {}", name.0)).collect::<String>())
-        },
-        &Loop(ref name) => {
-            println!("loop: {}", name.0);
-        }
-        &LoopEnd(ref name) => {
-            println!("loopend: {}", name.0);
-        }
-        &Block(ref name) => {
-            println!("block: {}", name.0);
-        }
-        &BlockEnd(ref name) => {
-            println!("blockend: {}", name.0);
-        }
-    }
-}
-
-fn ebbty_to_valuetype(t: &mir::EbbTy) -> ValueType {
-    use mir::EbbTy::*;
+fn lty_to_valuetype(t: &lir::LTy) -> ValueType {
+    use lir::LTy::*;
     match t {
-        &Unit => ValueType::I32,
-        &Int => ValueType::I64,
-        &Bool => ValueType::I32,
-        &Cls {..} => Pointer,
-        &Ebb {..} => Pointer,
+        &I32 => ValueType::I32,
+        &I64 => ValueType::I64,
 
     }
 }
 
-pub struct MIR2WASM {
+pub struct LIR2WASM {
     md: ModuleBuilder,
 }
 
 // may vary over environment
 const Pointer: ValueType = ValueType::I64;
 
-impl MIR2WASM {
+impl LIR2WASM {
     pub fn new() -> Self {
-        MIR2WASM {
+        LIR2WASM {
             md: ModuleBuilder::new()
         }
     }
 
-    pub fn trans_mir(&mut self, m: mir::MIR) -> () {
-        for f in m.0 {
+    pub fn trans_lir(&mut self, l: lir::LIR) -> Module {
+        for f in l.0 {
             self.trans_function(f);
         }
+        let mut ret = ModuleBuilder::new();
+        // FIXME:
+        ::std::mem::swap(&mut self.md, &mut ret);
+        ret.build()
     }
 
-    fn trans_function(&mut self, f: mir::Function) {
-        use mir::EbbTy::*;
-        let mir::Function { body, body_ty, name } = f;
+    fn trans_function(&mut self, f: lir::Function) {
+        use lir::Value::*;
+        let lir::Function { name, nparams, regs, ret_ty, body } = f;
+        let mut tys = regs.iter().map(|reg| lty_to_valuetype(reg)).collect::<Vec<_>>();
+        let regtys = tys.split_off(nparams as usize);
         let mut fb = FunctionBuilder::new(FuncType {
-            params: body[0]
-                .params
-                .iter()
-                .map(|&(ref ty, _)|
-                     // fixme: unit param only fun should be non-param fun
-                     ebbty_to_valuetype(ty)
-                )
-                .collect(),
-            ret: match body_ty {
+            params: tys,
+            ret: match ret_ty {
                 Unit => None,
-                ty => Some(ebbty_to_valuetype(&ty)),
+                ty => Some(lty_to_valuetype(&ty)),
             },
         });
 
-        // without params
-        let mut symbol_table = self.make_symbol_table(&mut fb, body.as_ref());
+        let mut locals = fb.new_locals(regtys);
 
+        let fb = fb.code(|mut cb, params| {
+            let body = self.alloc_loop_block_break(&body);
+            let mut params = params.to_vec();
+            params.append(&mut locals);
+            let mut scope = Vec::new();
 
-        // let fb = fb.code(|cb, params| {
-        //     for (&(_, ref p), i) in body[0].params.iter().zip(params) {
-        //         symbol_table.insert(p, i.clone());
-        //     }
-
-
-        //     let body = self.alloc_loop_block_break(&body);
-
-
-        //     println!("fn {}", name.0);
-        //     println!("{:?}", symbol_table);
-        //     for c in body {
-        //         print_control(&c);
-        //     }
-        //     println!("");
-
-        //     let scope = Vec::new();
-        //     for c in body {
-        //         match c {
-        //             Control::Block(name) => {
-        //                 scope.push(name);
-        //                 cb.block(BlockType(None));
-        //             },
-        //             Control::BlockEnd(name) => {
-        //                 let top = scope.pop().unwrap();
-        //                 assert_eq!(name, top);
-        //                 cb.end();
-        //             }
-        //             Control::Loop(name) => {
-        //                 scope.push(name);
-        //                 cb.loop_(BlockType(None));
-        //             },
-        //             Control::LoopEnd(name) => {
-        //                 let top = scope.pop().unwrap();
-        //                 assert_eq!(name, top);
-        //                 cb.end();
-        //             },
-        //             Control::Ebb(e) => {
-        //                 use mir::Op::*;
-        //                 for op in e.body {
-        //                     match op {
-        //                         Lit {var, value, ..} => {
-        //                             match value {
-        //                                 Literal::Bool(b) => cb.constant(b as i32),
-        //                                 Literal::Int(i) => cb.constant(i),
-        //                             };
-        //                             cb.set_local(symbol_table[&var]);
-        //                         },
-        //                         Alias {var, sym, ..} => {
-        //                             cb.get_local(symbol_table[&sym]);
-        //                             cb.set_local(symbol_table[&var]);
-        //                         },
-        //                         Add {var, l, r, ..} => {
-        //                             cb.get_local(symbol_table[&l]);
-        //                             cb.get_local(symbol_table[&r]);
-        //                             // FIXME: adjust argument type (bit size)
-        //                             cb.i64_add();
-        //                         },
-        //                         Mul {var, l, r, ..} => {
-        //                             cb.get_local(symbol_table[&l]);
-        //                             cb.get_local(symbol_table[&r]);
-        //                             // FIXME: adjust argument type (bit size)
-        //                             cb.i64_mul();
-        //                         },
-        //                         Closure {
-        //                             var: Symbol,
-        //                             param_ty: EbbTy,
-        //                             ret_ty: EbbTy,
-        //                             fun: Symbol,
-        //                             env: Vec<(EbbTy, Symbol)>,
-        //                         },
-        //                         Call {
-        //                             var: Symbol,
-        //                             ty: EbbTy,
-        //                             fun: Symbol,
-        //                             args: Vec<Symbol>,
-        //                         },
-        //                         Branch {cond, then, else_} => {
-        //                             cb.get_local(symbol_table([&cond]));
-        //                             let then_depth = scope.rindex(then);
-        //                             let else_depth = scope.rindex(else_);
-        //                             cb.br_if(then_depth);
-        //                             cb.br(else_depth);
-        //                         },
-        //                         Jump {
-        //                             target: Symbol,
-        //                             forward: bool,
-        //                             args: Vec<Symbol>,
-        //                         },
-        //                         Ret { value: Symbol } => {
-        //                             cb.get_local(symbol_table([&value]));
-        //                             cb.return_();
-        //                         },
-
-        //                     }}
-        //             }
-        //         }
-        //     }
-        //     cb
-        // })
-            ;
-
-
-        // TODO:
-        //  * [ ] symbol to local_variable
-        //  * [ ] how to solve join point -> ebbs that have more than 1 incomings. branch point is dominant ebb.
-        //  * [ ] how to handle loop -> strong connected components
-        //  * [ ] how to handle jump -> jump other than loop or branch/join can be compacted. ignorable.
-        // forward jump: block & break
-        // backward jupm: loop & break
-    }
-
-    fn make_symbol_table<'a>(&self, fb: &mut FunctionBuilder, v: &'a [mir::EBB]) -> HashMap<&'a Symbol, LocalIndex> {
-        let mut symbol_table = HashMap::<&'a Symbol, LocalIndex>::new();
-
-        let params = v[0].params.iter().map(|&(_, ref var)| var).collect::<Vec<_>>();
-
-        macro_rules! intern {
-            ($ty: expr, $var: expr) => {{
-                if !params.contains($var) {
-                    symbol_table.entry($var).or_insert_with(|| fb.new_local($ty));
-                }
-            }}
-        }
-
-        for ebb in v {
-            for &(ref ty, ref param) in ebb.params.iter() {
-                intern!(ebbty_to_valuetype(ty), &param);
+            macro_rules! reg {
+                ($reg: expr) => (params[$reg.1 as usize])
             }
-            for op in ebb.body.iter() {
-                match op {
-                    &mir::Op::Lit {ref var, ref ty, ..} |
-                    &mir::Op::Alias {ref var, ref ty, .. } |
-                    &mir::Op::Add {ref var, ref ty, ..} |
-                    &mir::Op::Mul {ref var, ref ty, ..} |
-                    &mir::Op::Call {ref var, ref ty, ..} => {
-                        intern!(ebbty_to_valuetype(ty), &var);
+
+            macro_rules! label {
+                ($label: expr) => (scope.iter().rposition(|x| *x == $label).expect("internal error") as u32)
+            }
+
+            macro_rules! fun {
+                ($funname: expr) => (0)
+            }
+
+
+            for c in body {
+                match c {
+                    Control::Block(name) => {
+                        scope.push(name);
+                        cb = cb.block(BlockType(None));
                     },
-                    &mir::Op::Closure {ref var, ref param_ty, ref ret_ty, ..}  => {
-                        intern!(Pointer, &var);
+                    Control::BlockEnd(name) => {
+                        let top = scope.pop().unwrap();
+                        assert_eq!(name, top);
+                        cb = cb.end();
                     }
-                    _ => ()
+                    Control::Loop(name) => {
+                        scope.push(name);
+                        cb = cb.loop_(BlockType(None));
+                    },
+                    Control::LoopEnd(name) => {
+                        let top = scope.pop().unwrap();
+                        assert_eq!(name, top);
+                        cb = cb.end();
+                    },
+                    Control::Body(b) => {
+                        use lir::Op::*;
+                        for op in b.body.iter() {
+                            match *op {
+                                ConstI32(ref reg, c) => {
+                                    cb = cb.constant(c as i32)
+                                        .set_local(reg!(reg))
+                                },
+                                MoveI32(ref reg1, ref reg2) => {
+                                    cb = cb.get_local(reg!(reg1))
+                                        .set_local(reg!(reg2))
+                                },
+                                StoreI32(ref addr, ref value) => {
+                                    cb = match *value {
+                                        I(i) => cb.constant(i as i32),
+                                        R(ref r) => cb.get_local(reg!(r)),
+                                        F(ref s) => cb.constant(fun!(s)),
+                                    };
+                                    cb = cb
+                                        .get_local(reg!(addr.0))
+                                        .i32_store(addr.1);
+                                },
+                                LoadI32(ref reg, ref addr) => {
+                                    cb = cb
+                                        .get_local(reg!(addr.0))
+                                        .i32_load(addr.1)
+                                        .set_local(reg!(reg));
+
+                                },
+                                JumpIfI32(ref reg, ref label) => {
+                                    cb = cb
+                                        .get_local(reg!(reg))
+                                        .br_if(label!(label));
+                                },
+
+                                ConstI64(ref reg, c) => {
+                                    cb = cb.constant(c as i32)
+                                        .set_local(reg!(reg))
+                                },
+                                MoveI64(ref reg1, ref reg2) => {
+                                    cb = cb.get_local(reg!(reg1))
+                                        .set_local(reg!(reg2))
+                                },
+                                AddI64(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .i64_add()
+                                        .set_local(reg!(reg1))
+                                },
+                                MulI64(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .i64_mul()
+                                        .set_local(reg!(reg1))
+                                },
+                                StoreI64(ref addr, ref value) => {
+                                    cb = match *value {
+                                        I(i) => cb.constant(i as i64),
+                                        R(ref r) => cb.get_local(reg!(r)),
+                                        F(ref s) => cb.constant(fun!(s))
+                                    };
+                                    cb = cb
+                                        .get_local(reg!(addr.0))
+                                        .i64_store(addr.1);
+                                },
+                                LoadI64(ref reg, ref addr) => {
+                                    cb = cb
+                                        .get_local(reg!(addr.0))
+                                        .i64_load(addr.1)
+                                        .set_local(reg!(reg));
+                                },
+
+                                HeapAlloc(ref reg, ref value) => {
+                                    println!("not implemented alloc({:?}, {:?})", reg, value);
+                                },
+                                StackAlloc(ref reg, size) => unimplemented!(),
+
+                                Call(ref reg, ref fun, ref args) => {
+                                    for arg in args.iter() {
+                                        cb = cb.get_local(reg!(arg))
+                                    }
+                                    cb = cb.call(fun!(fun))
+                                        .set_local(reg!(reg));
+                                },
+                                Jump(ref label) => {
+                                    cb = cb.br(label!(label));
+                                },
+                                Ret(ref reg) => {
+                                    cb = cb.get_local(reg!(reg))
+                                        .return_()
+                                },
+
+                            }
+                        }
+                    }
                 }
             }
-        }
-        symbol_table
+            cb
+        });
+        self.md.new_function(fb.build());
     }
 
     /// allocate block and loop scopes for jump -> break transformation.
     /// Forward jump will be block + break, and backword jump will be loop + break in following transformation.
-    fn alloc_loop_block_break<'a>(&mut self, v: &'a [mir::EBB]) -> Vec<Control<'a>> {
-        // assumes EBBs are already arranged
-
+    fn alloc_loop_block_break<'a>(&mut self, v: &'a [lir::Block]) -> Vec<Control<'a>> {
         // 1. calculate minimum coverings of loops, blocks and insert them
-        // 2. adjust interleavings (lift down loopends and liftup blocks)
+        // 2. adjust interleavings (lift down loopends and lift up blocks)
 
-        let ret = v.iter().map(Control::Ebb).collect();
+        let ret = v.into_iter().map(Control::Body).collect();
         let ret = self.insert_loop_block(ret);
         let ret = self.adjust_loop_block(ret);
         ret
@@ -264,23 +228,38 @@ impl MIR2WASM {
     fn insert_loop<'a>(&mut self, v: Vec<Control<'a>>) -> Vec<Control<'a>> {
         let mut ret = Vec::new();
         let mut loop_targets = HashSet::new();
+        let mut labels = HashSet::new();
+        for c in v.iter() {
+            match *c {
+                Control::Body(ref block) => {
+                    labels.insert(&block.name);
+
+                    for label in block.branches().into_iter() {
+                        if labels.contains(&label) {
+                            loop_targets.insert(label);
+                        }
+                    }
+                },
+                _ => ()
+            }
+        }
+
+        let mut closed_loops = HashSet::new();
+        // note: iterating reverse order
         for c in v.into_iter().rev() {
             match c {
-                Control::Ebb(ebb) => {
-                    // note: iterating reverse order
-                    let name = &ebb.name;
+                Control::Body(block) => {
+                    let name = &block.name;
 
                     // loopend
-                    for (name, forward) in ebb.next_ebbs() {
-                        if ! forward{
-                            if ! loop_targets.contains(name) {
-                                loop_targets.insert(name);
-                                ret.push(Control::LoopEnd(name))
-                            }
+                    for label in block.branches().into_iter() {
+                        if loop_targets.contains(&label) && ! closed_loops.contains(&label) {
+                            ret.push(Control::LoopEnd(&label));
+                            closed_loops.insert(label);
                         }
                     }
                     // ebb
-                    ret.push(Control::Ebb(ebb));
+                    ret.push(Control::Body(block));
 
                     // loop
                     if loop_targets.contains(name) {
@@ -297,10 +276,28 @@ impl MIR2WASM {
     fn insert_block<'a>(&mut self, v: Vec<Control<'a>>) -> Vec<Control<'a>> {
         let mut ret = Vec::new();
         let mut block_targets = HashSet::new();
+        let mut labels = HashSet::new();
+        for c in v.iter() {
+            match *c {
+                Control::Body(ref block) => {
+                    labels.insert(&block.name);
+
+                    for label in block.branches().into_iter() {
+                        if ! labels.contains(&label) {
+                            block_targets.insert(label);
+                        }
+                    }
+                },
+                _ => ()
+            }
+        }
+
+        let mut opened_blocks = HashSet::new();
+
         for c in v.into_iter() {
             match c {
-                Control::Ebb(ebb) => {
-                    let name = &ebb.name;
+                Control::Body(block) => {
+                    let name = &block.name;
 
                     // blockend
                     if block_targets.contains(name) {
@@ -308,15 +305,15 @@ impl MIR2WASM {
                     }
 
                     // block
-                    for (name, forward) in ebb.next_ebbs() {
-                        if forward && ! block_targets.contains(name) {
-                            ret.push(Control::Block(name));
-                            block_targets.insert(name);
+                    for label in block.branches().into_iter() {
+                        if block_targets.contains(&label) && ! opened_blocks.contains(&label){
+                            ret.push(Control::Block(&label));
+                            opened_blocks.insert(label);
                         }
                     }
 
                     // ebb
-                    ret.push(Control::Ebb(ebb));
+                    ret.push(Control::Body(block));
                 },
                 c => ret.push(c),
             }
@@ -332,35 +329,35 @@ impl MIR2WASM {
 
 
     fn adjust_loop<'a>(&mut self, v: Vec<Control<'a>>) -> Vec<Control<'a>> {
-        let mut tmp = Vec::new();
+        let mut ret = Vec::new();
         let mut scope = Vec::new();
         let mut defers = HashMap::new();
         for c in v.into_iter() {
             match c {
                 Control::Loop(name) => {
                     scope.push(name);
-                    tmp.push(c);
+                    ret.push(c);
                 },
                 Control::LoopEnd(name) => {
                     let last_name = scope.pop().unwrap();
                     if name == last_name  {
-                        tmp.push(c);
+                        ret.push(c);
                         for d in defers.remove(&name).unwrap() {
                             let ds = self.resolve_defers(d, &mut defers).into_iter().map(Control::LoopEnd);
-                            tmp.extend(ds);
+                            ret.extend(ds);
                         }
                     } else {
                         defers.entry(last_name).or_insert(Vec::new()).push(name);
                         scope.push(last_name);
                     }
                 },
-                Control::Ebb(_) |
+                Control::Body(_) |
                 Control::Block(_) |
-                Control::BlockEnd(_) => tmp.push(c),
+                Control::BlockEnd(_) => ret.push(c),
             }
         }
 
-        tmp
+        ret
     }
 
     fn adjust_block<'a>(&mut self, v: Vec<Control<'a>>) -> Vec<Control<'a>> {
@@ -394,7 +391,7 @@ impl MIR2WASM {
         tmp.into_iter().rev().collect()
     }
 
-    fn resolve_defers<'a>(&mut self, name: &'a Symbol, defers: &mut HashMap<&'a Symbol, Vec<&'a Symbol>>) -> Vec<&'a Symbol>{
+    fn resolve_defers<'a>(&mut self, name: &'a lir::Label, defers: &mut HashMap<&'a lir::Label, Vec<&'a lir::Label>>) -> Vec<&'a lir::Label>{
         let mut ret = Vec::new();
         ret.push(name);
         for d in defers.remove(&name).iter().flat_map(|v|v.iter()) {
@@ -405,11 +402,11 @@ impl MIR2WASM {
 
 }
 
-impl Pass<mir::MIR> for MIR2WASM {
-    type Target = ();
+impl Pass<lir::LIR> for LIR2WASM {
+    type Target = Module;
     type Err = TypeError;
 
-    fn trans(&mut self, mir: mir::MIR) -> ::std::result::Result<Self::Target, Self::Err> {
-        Ok(self.trans_mir(mir))
+    fn trans(&mut self, lir: lir::LIR) -> ::std::result::Result<Self::Target, Self::Err> {
+        Ok(self.trans_lir(lir))
     }
 }

@@ -22,11 +22,11 @@ impl LTy {
 
 #[derive(Debug, Clone)]
 pub struct Reg(pub LTy, pub u32);
-#[derive(Debug, Clone)]
-pub struct Label(Symbol);
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
+pub struct Label(pub Symbol);
 
 #[derive(Debug, Clone)]
-pub struct Addr(Reg, u32);
+pub struct Addr(pub Reg, pub u32);
 
 #[derive(Debug, Clone)]
 pub enum Value {
@@ -54,8 +54,8 @@ pub struct Function {
 
 #[derive(Debug, Clone)]
 pub struct Block {
-    name: Label,
-    body: Vec<Op>,
+    pub name: Label,
+    pub body: Vec<Op>,
 }
 
 
@@ -80,4 +80,18 @@ pub enum Op {
     Call(Reg, Value, Vec<Reg>),
     Jump(Label),
     Ret(Reg),
+}
+
+
+impl Block {
+    pub fn branches(&self) -> Vec<&Label> {
+        use self::Op::*;
+        self.body.iter().filter_map(|op| {
+            match *op {
+                Jump(ref label) => Some(label),
+                JumpIfI32(_, ref label) => Some(label),
+                _ => None,
+            }
+        }).collect()
+    }
 }

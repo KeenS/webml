@@ -30,7 +30,7 @@ impl<T, In, Out, Err> Pass<In> for DebugPass<T>
 
     fn trans(&mut self, i: In) -> Result<Self::Target, Self::Err> {
         let o = self.0.trans(i)?;
-        println!("{:?}", o);
+        println!("{:#?}", o);
         Ok(o)
     }
 }

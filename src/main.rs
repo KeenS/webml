@@ -1,7 +1,11 @@
 #[macro_use]
 extern crate webml;
+extern crate web_assembler as wasm;
 use webml::*;
 use webml::pass::{DebugPass, PPPass};
+use wasm::Dump;
+use std::fs::File;
+use std::io::Write;
 
 fn main() {
     let input1 = b"val x = 1
@@ -46,20 +50,25 @@ val x = 1
     let input3 = b"fun j y = if y then 1 else j false end
 val x = 1";
 
-    let mut passes = compile_pass![
-        parse,
-        TyEnv::new(),
-        hir::AST2HIR,
-        hir::Rename::new(),
-        hir::UnnestFunc::new(),
-        hir::FlatExpr::new(),
-        hir::FlatLet::new(),
-        mir::HIR2MIR::new(),
-        mir::UnAlias::new(),
-        mir::BlockArrange::new(),
-        !lir::MIR2LIR::new(),
-    ];
+    let input4 = b"fun add x = 1 + x;";
 
-    passes.trans(input1).unwrap();
+    let mut passes = compile_pass![parse,
+                                   TyEnv::new(),
+                                   hir::AST2HIR,
+                                   hir::Rename::new(),
+                                   hir::UnnestFunc::new(),
+                                   hir::FlatExpr::new(),
+                                   hir::FlatLet::new(),
+                                   mir::HIR2MIR::new(),
+                                   mir::UnAlias::new(),
+                                   mir::BlockArrange::new(),
+                                   !lir::MIR2LIR::new(),
+                                   ?backend::LIR2WASM::new()];
+
+    let module = passes.trans(input1).unwrap();
+    let mut code = Vec::new();
+    module.dump(&mut code);
+    let mut out = File::create("out.wasm").unwrap();
+    out.write(&code).unwrap();
 
 }

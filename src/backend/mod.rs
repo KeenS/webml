@@ -1,2 +1,2 @@
 pub mod wasm;
-pub use self::wasm::MIR2WASM;
+pub use self::wasm::LIR2WASM;
