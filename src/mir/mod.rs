@@ -75,13 +75,14 @@ pub enum Op {
         forward: bool,
         args: Vec<Symbol>,
     },
-    Ret { value: Symbol, ty: EbbTy },
+    Ret { value: Option<Symbol>, ty: EbbTy },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EbbTy {
     Unit,
     Int,
+    Float,
     Bool,
     Cls { param: Box<EbbTy>, ret: Box<EbbTy> },
     Ebb { params: Vec<EbbTy>, ret: Box<EbbTy> },

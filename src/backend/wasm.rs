@@ -17,18 +17,26 @@ enum Control<'a> {
     BlockEnd(&'a lir::Label),
 }
 
-fn lty_to_valuetype(t: &lir::LTy) -> ValueType {
-    use lir::LTy::*;
-    match t {
-        &I32 => ValueType::I32,
-        &I64 => ValueType::I64,
 
+fn lty_to_valuetype_opt(t: &lir::LTy) -> Option<ValueType> {
+    use lir::LTy::*;
+    match *t {
+        Unit => None,
+        I32 => Some(ValueType::I32),
+        I64 => Some(ValueType::I64),
+        F32 => Some(ValueType::F32),
+        F64 => Some(ValueType::F64),
     }
+}
+
+fn lty_to_valuetype(t: &lir::LTy) -> ValueType {
+    lty_to_valuetype_opt(t).unwrap_or(ValueType::I32)
 }
 
 pub struct LIR2WASM {
     md: ModuleBuilder,
     alloc_fun: FunctionSpaceIndex,
+    print_fun: FunctionSpaceIndex,
     function_table: HashMap<Symbol, u32>
 }
 
@@ -38,15 +46,23 @@ const Pointer: ValueType = ValueType::I64;
 impl LIR2WASM {
     pub fn new() -> Self {
         let mut md =  ModuleBuilder::new();
-        let fun_index = md.add_type(FuncType{
+
+        let alloc_fun_index = md.add_type(FuncType{
             params: vec![ValueType::I64],
             ret: Some(ValueType::I64)
         });
-        let alloc_fun = md.import("wasm-rt", "alloc", fun_index);
+        let alloc_fun = md.import("webml-rt", "alloc", alloc_fun_index);
+
+        let print_fun_index = md.add_type(FuncType{
+            params: vec![ValueType::F64],
+            ret: None
+        });
+        let print_fun = md.import("webml-rt", "print", print_fun_index);
 
         LIR2WASM {
             md: md,
             alloc_fun: alloc_fun.into(),
+            print_fun: print_fun.into(),
             function_table: HashMap::new(),
         }
     }
@@ -57,7 +73,6 @@ impl LIR2WASM {
             .map(|(i, s)| (s.name.clone(), i as u32))
             .collect();
 
-        println!("{:?}", self.function_table);
         for f in l.0 {
             self.trans_function(f);
         }
@@ -75,7 +90,7 @@ impl LIR2WASM {
         let mut fb = FunctionBuilder::new(FuncType {
             params: tys,
             ret: match ret_ty {
-                ty => Some(lty_to_valuetype(&ty)),
+                ty => lty_to_valuetype_opt(&ty),
             },
         });
 
@@ -97,7 +112,6 @@ impl LIR2WASM {
 
             macro_rules! fun {
                 ($funname: expr) => {{
-                    println!("{:?}", $funname);
                     let findex = FunctionIndex(self.function_table[$funname]);
                     Into::<FunctionSpaceIndex>::into(findex)
                 }}
@@ -132,17 +146,16 @@ impl LIR2WASM {
                                     cb = cb.constant(c as i32)
                                         .set_local(reg!(reg))
                                 },
-                                MoveI32(ref reg1, ref reg2) => {
+                                MoveI32(ref reg1, ref reg2) |
+                                MoveI64(ref reg1, ref reg2) |
+                                MoveF32(ref reg1, ref reg2) |
+                                MoveF64(ref reg1, ref reg2) => {
                                     cb = cb.get_local(reg!(reg1))
                                         .set_local(reg!(reg2))
                                 },
                                 StoreI32(ref addr, ref value) => {
-                                    cb = match *value {
-                                        I(i) => cb.constant(i as i32),
-                                        R(ref r) => cb.get_local(reg!(r)),
-                                        F(ref s) => cb.constant(*fun!(s) as i32),
-                                    };
                                     cb = cb
+                                        .get_local(reg!(value))
                                         .get_local(reg!(addr.0))
                                         .i32_store(addr.1);
                                 },
@@ -160,12 +173,8 @@ impl LIR2WASM {
                                 },
 
                                 ConstI64(ref reg, c) => {
-                                    cb = cb.constant(c as i32)
+                                    cb = cb.constant(c as i64)
                                         .set_local(reg!(reg))
-                                },
-                                MoveI64(ref reg1, ref reg2) => {
-                                    cb = cb.get_local(reg!(reg1))
-                                        .set_local(reg!(reg2))
                                 },
                                 AddI64(ref reg1, ref reg2, ref reg3) => {
                                     cb = cb.get_local(reg!(reg2))
@@ -179,20 +188,78 @@ impl LIR2WASM {
                                         .i64_mul()
                                         .set_local(reg!(reg1))
                                 },
-                                StoreI64(ref addr, ref value) => {
-                                    cb = match *value {
-                                        I(i) => cb.constant(i as i64),
-                                        R(ref r) => cb.get_local(reg!(r)),
-                                        F(ref s) => cb.constant(*fun!(s) as i32)
-                                    };
-                                    cb = cb
-                                        .get_local(reg!(addr.0))
-                                        .i64_store(addr.1);
-                                },
                                 LoadI64(ref reg, ref addr) => {
                                     cb = cb
                                         .get_local(reg!(addr.0))
                                         .i64_load(addr.1)
+                                        .set_local(reg!(reg));
+                                },
+
+                                StoreI64(ref addr, ref value) => {
+                                    cb = cb
+                                        .get_local(reg!(value))
+                                        .get_local(reg!(addr.0))
+                                        .i64_store(addr.1);
+                                },
+
+
+                                ConstF64(ref reg, c) => {
+                                    cb = cb.constant(c)
+                                        .set_local(reg!(reg))
+                                },
+                                AddF64(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .f64_add()
+                                        .set_local(reg!(reg1))
+                                },
+                                MulF64(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .f64_mul()
+                                        .set_local(reg!(reg1))
+                                },
+                                StoreF64(ref addr, ref value) => {
+                                    cb = cb
+                                        .get_local(reg!(value))
+                                        .get_local(reg!(addr.0))
+                                        .f64_store(addr.1);
+                                },
+
+                                LoadF64(ref reg, ref addr) => {
+                                    cb = cb
+                                        .get_local(reg!(addr.0))
+                                        .f64_load(addr.1)
+                                        .set_local(reg!(reg));
+                                },
+
+                                ConstF32(ref reg, c) => {
+                                    cb = cb.constant(c)
+                                        .set_local(reg!(reg))
+                                },
+                                AddF32(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .f32_add()
+                                        .set_local(reg!(reg1))
+                                },
+                                MulF32(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .f32_mul()
+                                        .set_local(reg!(reg1))
+                                },
+
+                                StoreF32(ref addr, ref value) => {
+                                    cb = cb
+                                        .get_local(reg!(value))
+                                        .get_local(reg!(addr.0))
+                                        .f32_store(addr.1);
+                                },
+                                LoadF32(ref reg, ref addr) => {
+                                    cb = cb
+                                        .get_local(reg!(addr.0))
+                                        .f32_load(addr.1)
                                         .set_local(reg!(reg));
                                 },
 
@@ -214,27 +281,49 @@ impl LIR2WASM {
                                         .call(self.alloc_fun)
                                         .set_local(reg!(reg))
                                 },
-                                Call(ref reg, ref fun, ref args) => {
+                                StoreFnPtr(ref addr, ref value) => {
+                                    cb = cb
+                                        .constant(*fun!(value) as i64)
+                                        .get_local(reg!(addr.0))
+                                        .i64_store(addr.1);
+                                },
+
+                                ClosureCall(ref reg, ref fun, ref args) => {
                                     for arg in args.iter() {
                                         cb = cb.get_local(reg!(arg))
                                     }
-                                    cb = match *fun {
-                                        I(_) => panic!("unsupported operation"),
-                                        R(ref r) => {
-                                            unimplemented!();
-                                            cb.call_indirect(*reg!(r), false)
-                                        },
-                                        F(ref f) => cb.call(fun!(f)),
-                                    };
 
                                     cb = cb
+                                        .get_local(reg!(fun))
+                                        .call_indirect(0, false)
+                                        // if ret ty isn't unit
                                         .set_local(reg!(reg));
+                                    unimplemented!();
+                                },
+                                FunCall(ref reg, ref fun, ref args) => {
+                                    for arg in args.iter() {
+                                        cb = cb.get_local(reg!(arg))
+                                    }
+                                    // prim funs
+                                    if fun.0 == "print" {
+                                        cb = cb.call(self.print_fun)
+                                            // the ret ty of print is unit
+                                    } else {
+                                        cb = cb.call(fun!(fun))
+                                        // if ret ty isn't unit
+                                            .set_local(reg!(reg));
+                                    }
+
                                 },
                                 Jump(ref label) => {
                                     cb = cb.br(label!(label));
                                 },
                                 Ret(ref reg) => {
-                                    cb = cb.get_local(reg!(reg))
+                                    cb = match *reg {
+                                        Some(ref r) => cb.get_local(reg!(r)),
+                                        None => cb,
+                                    };
+                                    cb = cb
                                         .return_()
                                 },
 
@@ -245,6 +334,8 @@ impl LIR2WASM {
             }
             cb
         });
+        self.md.start(FunctionIndex(self.function_table[&Symbol("main".into())]));
+//        self.md.start(FunctionIndex(0));
         self.md.new_function(fb.build());
     }
 

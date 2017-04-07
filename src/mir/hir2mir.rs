@@ -16,6 +16,7 @@ impl From<Ty> for EbbTy {
             Ty::Unit => EbbTy::Unit,
             Ty::Bool => EbbTy::Bool,
             Ty::Int => EbbTy::Int,
+            Ty::Float => EbbTy::Float,
             Ty::Fun(arg, ret) => {
                 EbbTy::Ebb {
                     params: vec![EbbTy::from(*arg)],
@@ -39,15 +40,14 @@ impl HIR2MIR {
 
     fn trans_hir(&mut self, hir: hir::HIR) -> MIR {
         // TODO: make anonymous
-        let mut mainbuilder = FunctionBuilder::new(Symbol("main".to_string()), EbbTy::Int);
+        let mut mainbuilder = FunctionBuilder::new(Symbol("main".to_string()), EbbTy::Unit);
         let mut mainebuilder = EBBBuilder::new(self.genlabel("entry"), Vec::new());
         let mut funs = Vec::new();
 
         for val in hir.0.into_iter() {
             mainebuilder = self.trans_val(&mut funs, &mut mainbuilder, mainebuilder, val);
         }
-        mainebuilder.lit(Symbol("exit".to_string()), EbbTy::Int, Literal::Int(0));
-        let ebb = mainebuilder.ret(Symbol("exit".to_string()), EbbTy::Int);
+        let ebb = mainebuilder.ret(None, EbbTy::Unit);
         mainbuilder.add_ebb(ebb);
         let main = mainbuilder.build();
         funs.push(main);
@@ -61,13 +61,25 @@ impl HIR2MIR {
                  val: hir::Val)
                  -> EBBBuilder {
         use hir::Expr::*;
-        let hir::Val { ty: ty_, name, expr, .. } = val;
+        let hir::Val {
+            ty: ty_,
+            name,
+            expr,
+            ..
+        } = val;
         match expr {
-            Fun { body, param, body_ty, mut captures } => {
+            Fun {
+                body,
+                param,
+                body_ty,
+                mut captures,
+            } => {
                 //                assert_eq!(body_ty, ty_);
                 captures.push(param);
-                let captures =
-                    captures.into_iter().map(|(ty, var)| (EbbTy::from(ty), var)).collect();
+                let captures = captures
+                    .into_iter()
+                    .map(|(ty, var)| (EbbTy::from(ty), var))
+                    .collect();
                 let eb_ = EBBBuilder::new(Symbol("entry".to_string()), captures);
                 let mut fb = FunctionBuilder::new(name, EbbTy::from(body_ty.clone()));
                 let ebb = self.trans_expr(&mut fb, eb_, body_ty, *body);
@@ -88,7 +100,12 @@ impl HIR2MIR {
                 eb.call(name, EbbTy::from(ty), fun, vec![arg]);
                 eb
             }
-            If { ty, cond, then, else_ } => {
+            If {
+                ty,
+                cond,
+                then,
+                else_,
+            } => {
                 let thenlabel = self.genlabel("then");
                 let elselabel = self.genlabel("else");
                 let joinlabel = self.genlabel("join");
@@ -109,7 +126,12 @@ impl HIR2MIR {
                 let eb = EBBBuilder::new(joinlabel, vec![(EbbTy::from(ty), name)]);
                 eb
             }
-            Op { ty, name: name_, l, r } => {
+            Op {
+                ty,
+                name: name_,
+                l,
+                r,
+            } => {
                 assert_eq!(ty, ty_);
                 let l = force_symbol(*l);
                 let r = force_symbol(*r);
@@ -120,8 +142,15 @@ impl HIR2MIR {
                 };
                 eb
             }
-            Closure { envs, param_ty, body_ty, fname } => {
-                let envs = envs.into_iter().map(|(ty, var)| (EbbTy::from(ty), var)).collect();
+            Closure {
+                envs,
+                param_ty,
+                body_ty,
+                fname,
+            } => {
+                let envs = envs.into_iter()
+                    .map(|(ty, var)| (EbbTy::from(ty), var))
+                    .collect();
                 eb.closure(name,
                            EbbTy::from(param_ty),
                            EbbTy::from(body_ty),
@@ -129,7 +158,19 @@ impl HIR2MIR {
                            envs);
                 eb
             }
-            PrimFun { .. } => panic!("internal error: primfun"),
+            PrimFun {
+                param_ty,
+                ret_ty,
+                name: fname,
+            } => {
+                eb.alias(name,
+                         EbbTy::Ebb {
+                             params: vec![EbbTy::from(param_ty)],
+                             ret: Box::new(EbbTy::from(ret_ty)),
+                         },
+                         fname);
+                eb
+            }
             Lit { ty, value } => {
                 assert_eq!(ty, ty_);
                 eb.lit(name, EbbTy::from(ty), value);

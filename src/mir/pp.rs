@@ -40,17 +40,21 @@ impl PP for EbbTy {
     fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
         use mir::EbbTy::*;
         let indent = indent + 4;
-        match self {
-            &Unit => write!(w, "()")?,
-            &Bool => write!(w, "bool")?,
-            &Int => write!(w, "int")?,
-            &Cls { ref param, ref ret } => {
+        match *self {
+            Unit => write!(w, "()")?,
+            Bool => write!(w, "bool")?,
+            Int => write!(w, "int")?,
+            Float => write!(w, "float")?,
+            Cls { ref param, ref ret } => {
                 write!(w, "fn(")?;
                 param.pp(w, indent)?;
                 write!(w, ") -> ")?;
                 ret.pp(w, indent)?;
             }
-            &Ebb { ref params, ref ret } => {
+            Ebb {
+                ref params,
+                ref ret,
+            } => {
                 write!(w, "fn(")?;
                 for param in params {
                     param.pp(w, indent)?;
@@ -90,19 +94,32 @@ impl PP for Op {
         let space = Self::nspaces(indent);
         let indent = indent + 4;
         match self {
-            &Lit { ref var, ref ty, ref value } => {
+            &Lit {
+                 ref var,
+                 ref ty,
+                 ref value,
+             } => {
                 write!(w, "{}{}: ", space, var.0)?;
                 ty.pp(w, indent)?;
                 write!(w, " := ")?;
                 value.pp(w, indent)?;
             }
-            &Alias { ref var, ref ty, ref sym } => {
+            &Alias {
+                 ref var,
+                 ref ty,
+                 ref sym,
+             } => {
                 write!(w, "{}{}: ", space, var.0)?;
                 ty.pp(w, indent)?;
                 write!(w, " := ")?;
                 sym.pp(w, indent)?;
             }
-            &Add { ref var, ref ty, ref l, ref r } => {
+            &Add {
+                 ref var,
+                 ref ty,
+                 ref l,
+                 ref r,
+             } => {
                 write!(w, "{}{}: ", space, var.0)?;
                 ty.pp(w, indent)?;
                 write!(w, " := ")?;
@@ -111,7 +128,12 @@ impl PP for Op {
                 r.pp(w, indent)?;
 
             }
-            &Mul { ref var, ref ty, ref l, ref r } => {
+            &Mul {
+                 ref var,
+                 ref ty,
+                 ref l,
+                 ref r,
+             } => {
                 write!(w, "{}{}: ", space, var.0)?;
                 ty.pp(w, indent)?;
                 write!(w, " := ")?;
@@ -120,12 +142,18 @@ impl PP for Op {
                 r.pp(w, indent)?;
 
             }
-            &Closure { ref var, ref param_ty, ref ret_ty, ref fun, ref env } => {
+            &Closure {
+                 ref var,
+                 ref param_ty,
+                 ref ret_ty,
+                 ref fun,
+                 ref env,
+             } => {
                 write!(w, "{}{}: ", space, var.0)?;
                 (EbbTy::Cls {
-                        param: Box::new(param_ty.clone()),
-                        ret: Box::new(ret_ty.clone()),
-                    }).pp(w, indent)?;
+                         param: Box::new(param_ty.clone()),
+                         ret: Box::new(ret_ty.clone()),
+                     }).pp(w, indent)?;
                 write!(w, " := ")?;
                 fun.pp(w, indent)?;
                 write!(w, ".__close(")?;
@@ -138,7 +166,12 @@ impl PP for Op {
                 write!(w, ")")?;
 
             }
-            &Call { ref var, ref ty, ref fun, ref args } => {
+            &Call {
+                 ref var,
+                 ref ty,
+                 ref fun,
+                 ref args,
+             } => {
                 write!(w, "{}{}: ", space, var.0)?;
                 ty.pp(w, indent)?;
                 write!(w, " := {}(", fun.0)?;
@@ -148,7 +181,12 @@ impl PP for Op {
                 }
                 write!(w, ")")?;
             }
-            &Branch { ref cond, ref then, ref else_, .. } => {
+            &Branch {
+                 ref cond,
+                 ref then,
+                 ref else_,
+                 ..
+             } => {
                 write!(w,
                        "{}if {} then {}() else {}()",
                        space,
@@ -156,7 +194,11 @@ impl PP for Op {
                        then.0,
                        else_.0)?;
             }
-            &Jump { ref target, ref args, .. } => {
+            &Jump {
+                 ref target,
+                 ref args,
+                 ..
+             } => {
                 write!(w, "{}{}(", space, target.0)?;
                 for arg in args.iter() {
                     arg.pp(w, 0)?;
@@ -166,7 +208,11 @@ impl PP for Op {
 
             }
             &Ret { ref value, ref ty } => {
-                write!(w, "{}ret {}: ", space, value.0)?;
+                match *value {
+                    Some(ref v) => write!(w, "{}ret {}: ", space, v.0)?,
+                    None => write!(w, "{}ret: ", space)?,
+                }
+
                 ty.pp(w, indent)?;
             }
         };

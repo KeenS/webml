@@ -14,12 +14,13 @@ impl MIR2LIR {
 
     fn ebbty_to_lty<'a>(&self, ty: &mir::EbbTy) -> LTy {
         use mir::EbbTy::*;
-        match ty {
-            &Unit => LTy::I32,
-            &Int => LTy::I64,
-            &Bool => LTy::I32,
-            &Cls { .. } => PTR,
-            &Ebb { .. } => PTR,
+        match *ty {
+            Unit => LTy::Unit,
+            Int => LTy::I64,
+            Float => LTy::F64,
+            Bool => LTy::I32,
+            Cls { .. } => PTR,
+            Ebb { .. } => PTR,
 
         }
     }
@@ -56,6 +57,7 @@ impl MIR2LIR {
                         match value {
                             &Literal::Bool(b) => ops.push(ConstI32(reg!(var), b as u32)),
                             &Literal::Int(i) => ops.push(ConstI64(reg!(var), i as u64)),
+                            &Literal::Float(f) => ops.push(ConstF64(reg!(var), f as f64)),
                         }
                     }
                     &m::Alias {
@@ -64,11 +66,15 @@ impl MIR2LIR {
                          ref sym,
                      } => {
                         match ty {
-                            &mir::EbbTy::Unit |
+                            &mir::EbbTy::Unit => {
+                                // do nothing
+                                ()
+                            }
                             &mir::EbbTy::Bool => ops.push(MoveI32(reg!(var), reg!(sym))),
                             &mir::EbbTy::Int |
                             &mir::EbbTy::Cls { .. } |
                             &mir::EbbTy::Ebb { .. } => ops.push(MoveI64(reg!(var), reg!(sym))),
+                            &mir::EbbTy::Float => ops.push(MoveF64(reg!(var), reg!(sym))),
                         }
                     }
                     &m::Add {
@@ -77,8 +83,13 @@ impl MIR2LIR {
                          ref l,
                          ref r,
                      } => {
-                        assert_eq!(ty, &mir::EbbTy::Int);
-                        ops.push(AddI64(reg!(var), reg!(l), reg!(r)));
+                        if ty == &mir::EbbTy::Int {
+                            ops.push(AddI64(reg!(var), reg!(l), reg!(r)));
+                        } else {
+                            assert_eq!(ty, &mir::EbbTy::Float);
+                            ops.push(AddF64(reg!(var), reg!(l), reg!(r)));
+
+                        }
                     }
                     &m::Mul {
                          ref var,
@@ -86,8 +97,13 @@ impl MIR2LIR {
                          ref l,
                          ref r,
                      } => {
-                        assert_eq!(ty, &mir::EbbTy::Int);
-                        ops.push(MulI64(reg!(var), reg!(l), reg!(r)));
+                        if ty == &mir::EbbTy::Int {
+                            ops.push(MulI64(reg!(var), reg!(l), reg!(r)));
+                        } else {
+                            assert_eq!(ty, &mir::EbbTy::Float);
+                            ops.push(MulF64(reg!(var), reg!(l), reg!(r)));
+
+                        }
                     }
                     &m::Closure {
                          ref var,
@@ -101,17 +117,19 @@ impl MIR2LIR {
                             .map(|&(ref ty, _)| self.ebbty_to_lty(ty).size())
                             .sum();
                         ops.push(HeapAlloc(reg.clone(), I(size as i32)));
-                        ops.push(StoreI64(Addr(reg.clone(), 0), F(fun.clone())));
+                        ops.push(StoreFnPtr(Addr(reg.clone(), 0), fun.clone()));
                         let mut acc = PTR.size();
                         for &(ref ty, ref var) in env.iter() {
                             let ty = self.ebbty_to_lty(ty);
                             match ty {
-                                LTy::I32 => {
-                                    ops.push(StoreI32(Addr(reg.clone(), acc), R(reg!(var))))
+                                LTy::Unit => {
+                                    // do nothing
+                                    ()
                                 }
-                                LTy::I64 => {
-                                    ops.push(StoreI64(Addr(reg.clone(), acc), R(reg!(var))))
-                                }
+                                LTy::I32 => ops.push(StoreI32(Addr(reg.clone(), acc), reg!(var))),
+                                LTy::I64 => ops.push(StoreI64(Addr(reg.clone(), acc), reg!(var))),
+                                LTy::F32 => ops.push(StoreF32(Addr(reg.clone(), acc), reg!(var))),
+                                LTy::F64 => ops.push(StoreF64(Addr(reg.clone(), acc), reg!(var))),
                             }
                             acc += ty.size();
                         }
@@ -125,8 +143,8 @@ impl MIR2LIR {
                         // FIXME: distinguish call function and call closure
                         let args = args.iter().map(|a| reg!(a)).collect();
                         match symbol_table.get(fun) {
-                            Some(r) => ops.push(Call(reg!(var), R(r.clone()), args)),
-                            None => ops.push(Call(reg!(var), F(fun.clone()), args)),
+                            Some(r) => ops.push(ClosureCall(reg!(var), r.clone(), args)),
+                            None => ops.push(FunCall(reg!(var), fun.clone(), args)),
                         }
 
                     }
@@ -146,14 +164,23 @@ impl MIR2LIR {
                      } => {
                         let params = &target_table[target];
                         for (p, a) in params.iter().zip(args) {
-                            match &p.0 {
-                                &LTy::I32 => ops.push(MoveI32(p.clone(), reg!(a))),
-                                &LTy::I64 => ops.push(MoveI64(p.clone(), reg!(a))),
+                            match p.0 {
+                                LTy::Unit => {
+                                    // do nothing
+                                    ()
+                                }
+                                LTy::I32 => ops.push(MoveI32(p.clone(), reg!(a))),
+                                LTy::I64 => ops.push(MoveI64(p.clone(), reg!(a))),
+                                LTy::F32 => ops.push(MoveF32(p.clone(), reg!(a))),
+                                LTy::F64 => ops.push(MoveF64(p.clone(), reg!(a))),
                             }
                         }
                         ops.push(Jump(Label(target.clone())))
                     }
-                    &m::Ret { ref value, .. } => ops.push(Ret(reg!(value))),
+                    &m::Ret { ref value, ref ty } => {
+                        println!("{:?}: {:?}", value, ty);
+                        ops.push(Ret(value.as_ref().map(|v| reg!(v))));
+                    }
 
                 }
             }

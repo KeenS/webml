@@ -40,18 +40,34 @@ impl UnAlias {
                     self.alias(var.clone(), sym.clone());
                     continue;
                 }
-                &mut Add { ref mut l, ref mut r, .. } |
-                &mut Mul { ref mut l, ref mut r, .. } => {
+                &mut Add {
+                         ref mut l,
+                         ref mut r,
+                         ..
+                     } |
+                &mut Mul {
+                         ref mut l,
+                         ref mut r,
+                         ..
+                     } => {
                     self.resolv_alias(l);
                     self.resolv_alias(r);
                 }
-                &mut Closure { ref mut fun, ref mut env, .. } => {
+                &mut Closure {
+                         ref mut fun,
+                         ref mut env,
+                         ..
+                     } => {
                     self.resolv_alias(fun);
                     for &mut (_, ref mut var) in env.iter_mut() {
                         self.resolv_alias(var);
                     }
                 }
-                &mut Call { ref mut fun, ref mut args, .. } => {
+                &mut Call {
+                         ref mut fun,
+                         ref mut args,
+                         ..
+                     } => {
                     self.resolv_alias(fun);
                     for arg in args.iter_mut() {
                         self.resolv_alias(arg);
@@ -62,7 +78,9 @@ impl UnAlias {
                         self.resolv_alias(arg);
                     }
                 }
-                &mut Ret { ref mut value, .. } => self.resolv_alias(value),
+                &mut Ret { ref mut value, .. } => {
+                    value.as_mut().map(|v| self.resolv_alias(v));
+                }
                 &mut Lit { .. } => (),
                 &mut Branch { ref mut cond, .. } => self.resolv_alias(cond),
             }

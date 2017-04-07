@@ -50,7 +50,10 @@ val x = 1
     let input3 = b"fun j y = if y then 1 else j false end
 val x = 1";
 
-    let input4 = b"fun add x = 1 + x;";
+    let input4 = b"fun add x = 1.0 + x
+val x = print (add 2.0)
+val y = 1
+";
 
     let mut passes = compile_pass![parse,
                                    TyEnv::new(),
@@ -61,11 +64,11 @@ val x = 1";
                                    hir::FlatLet::new(),
                                    mir::HIR2MIR::new(),
                                    mir::UnAlias::new(),
-                                   mir::BlockArrange::new(),
+                                   !mir::BlockArrange::new(),
                                    !lir::MIR2LIR::new(),
                                    backend::LIR2WASM::new()];
 
-    let module = passes.trans(input1).unwrap();
+    let module = passes.trans(input4).unwrap();
     let mut code = Vec::new();
     module.dump(&mut code);
     let mut out = File::create("out.wasm").unwrap();

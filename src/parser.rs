@@ -1,4 +1,5 @@
 use std::str::from_utf8;
+use std::str::FromStr;
 use nom::*;
 use prim::*;
 use ast::*;
@@ -63,6 +64,7 @@ named!(expr1 <Expr>, alt!(
 
 named!(expr0 <Expr>, alt!(
     expr0_paren |
+    expr0_float |
     expr0_int   |
     expr0_bool  |
     expr0_sym
@@ -147,6 +149,23 @@ named!(expr0_int <Expr>, map!(digit, |s| Expr::Lit{
     ty: TyDefer::empty(),
     value: Literal::Int(from_utf8(s).expect("internal error: failed to parse integer literal")
                         .parse().expect("internal error: failed to parse integer literal"))}));
+named!(expr0_float <Expr>, map!(unsigned_float, |s| Expr::Lit{
+    ty: TyDefer::empty(),
+    value: Literal::Float(s)}));
+
+
+named!(unsigned_float <f64>,
+    map_res!(
+        map_res!(
+            recognize!(
+                alt!(
+                    delimited!(digit, complete!(tag!(".")), opt!(complete!(digit))) |
+                    digit
+                )
+            ),
+            from_utf8
+        ),
+        FromStr::from_str));
 named!(expr0_bool <Expr>, alt!(
     map!(tag!("true"),  |_| Expr::Lit{ty: TyDefer::empty(), value: Literal::Bool(true)}) |
     map!(tag!("false"), |_| Expr::Lit{ty: TyDefer::empty(), value: Literal::Bool(false)})));

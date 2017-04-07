@@ -37,7 +37,11 @@ pub enum Expr {
         l: Box<Expr>,
         r: Box<Expr>,
     },
-    PrimFun { ty: Ty, name: Symbol },
+    PrimFun {
+        param_ty: Ty,
+        ret_ty: Ty,
+        name: Symbol,
+    },
     Fun {
         param: (Ty, Symbol),
         body_ty: Ty,
@@ -79,13 +83,23 @@ impl Expr {
         use hir::Expr::*;
 
         match self {
-            &Closure { ref param_ty, ref body_ty, .. } |
-            &Fun { param: (ref param_ty, _), ref body_ty, .. } => {
-                Ty::Fun(Box::new(param_ty.clone()), Box::new(body_ty.clone()))
-            }
+            &Closure {
+                 ref param_ty,
+                 ref body_ty,
+                 ..
+             } |
+            &PrimFun {
+                 ref param_ty,
+                 ret_ty: ref body_ty,
+                 ..
+             } |
+            &Fun {
+                 param: (ref param_ty, _),
+                 ref body_ty,
+                 ..
+             } => Ty::Fun(Box::new(param_ty.clone()), Box::new(body_ty.clone())),
             &Op { ref ty, .. } |
             &Binds { ref ty, .. } |
-            &PrimFun { ref ty, .. } |
             &App { ref ty, .. } |
             &If { ref ty, .. } |
             &Sym { ref ty, .. } |

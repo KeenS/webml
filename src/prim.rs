@@ -13,6 +13,7 @@ pub enum Ty {
     Unit,
     Bool,
     Int,
+    Float,
     Fun(Box<Ty>, Box<Ty>),
 }
 
@@ -26,11 +27,12 @@ impl Ty {
 impl PP for Ty {
     fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
         use self::Ty::*;
-        match self {
-            &Unit => write!(w, "()")?,
-            &Bool => write!(w, "bool")?,
-            &Int => write!(w, "int")?,
-            &Fun(ref t1, ref t2) => {
+        match *self {
+            Unit => write!(w, "()")?,
+            Bool => write!(w, "bool")?,
+            Int => write!(w, "int")?,
+            Float => write!(w, "float")?,
+            Fun(ref t1, ref t2) => {
                 t1.pp(w, indent)?;
                 write!(w, " -> ")?;
                 t2.pp(w, indent)?;
@@ -125,6 +127,7 @@ impl PP for Symbol {
 #[derive(Debug, Clone)]
 pub enum Literal {
     Int(i64),
+    Float(f64),
     Bool(bool),
 }
 
@@ -133,6 +136,10 @@ impl PP for Literal {
         use self::Literal::*;
         match self {
             &Int(ref v) => {
+                write!(w, "{}", v)?;
+
+            }
+            &Float(ref v) => {
                 write!(w, "{}", v)?;
 
             }
