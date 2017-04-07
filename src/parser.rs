@@ -159,8 +159,7 @@ named!(unsigned_float <f64>,
         map_res!(
             recognize!(
                 alt!(
-                    delimited!(digit, complete!(tag!(".")), opt!(complete!(digit))) |
-                    digit
+                    delimited!(digit, complete!(tag!(".")), opt!(complete!(digit)))
                 )
             ),
             from_utf8
