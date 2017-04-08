@@ -177,8 +177,7 @@ impl MIR2LIR {
                         }
                         ops.push(Jump(Label(target.clone())))
                     }
-                    &m::Ret { ref value, ref ty } => {
-                        println!("{:?}: {:?}", value, ty);
+                    &m::Ret { ref value, .. } => {
                         ops.push(Ret(value.as_ref().map(|v| reg!(v))));
                     }
 

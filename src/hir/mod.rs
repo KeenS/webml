@@ -97,7 +97,7 @@ impl Expr {
                  param: (ref param_ty, _),
                  ref body_ty,
                  ..
-             } => Ty::Fun(Box::new(param_ty.clone()), Box::new(body_ty.clone())),
+             } => Ty::fun(param_ty.clone(), body_ty.clone()),
             &Op { ref ty, .. } |
             &Binds { ref ty, .. } |
             &App { ref ty, .. } |

@@ -110,7 +110,7 @@ named!(expr_if <Expr>, do_parse!(
 named!(expr1_app <Expr>, do_parse!(
     fun: expr0 >> multispace >>
         arg: expr0 >>
-        rest: opt!(do_parse!(multispace >> ret: separated_list!(multispace, expr0) >> (ret))) >>
+       rest: opt!(do_parse!(multispace >> ret: separated_list!(multispace, expr0) >> (ret))) >>
         ({
             let init = Expr::App {ty: TyDefer::empty(), fun: Box::new(fun), arg: Box::new(arg)};
             rest.into_iter()

@@ -19,8 +19,8 @@ impl From<Ty> for EbbTy {
             Ty::Float => EbbTy::Float,
             Ty::Fun(arg, ret) => {
                 EbbTy::Ebb {
-                    params: vec![EbbTy::from(*arg)],
-                    ret: Box::new(EbbTy::from(*ret)),
+                    params: vec![EbbTy::from(arg.force("internal typing error"))],
+                    ret: Box::new(EbbTy::from(ret.force("internal typing error"))),
                 }
             }
         }

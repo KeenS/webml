@@ -4,7 +4,8 @@ use std::ops::{Deref, DerefMut};
 use std::error::Error;
 use std::fmt;
 use std::io;
-
+use std::cell::{RefCell, Ref, RefMut};
+use std::rc::Rc;
 use ast;
 use util::PP;
 
@@ -14,13 +15,14 @@ pub enum Ty {
     Bool,
     Int,
     Float,
-    Fun(Box<Ty>, Box<Ty>),
+    Fun(TyDefer, TyDefer),
 }
 
 
 impl Ty {
     pub fn fun(param: Ty, ret: Ty) -> Ty {
-        Ty::Fun(Box::new(param), Box::new(ret))
+        Ty::Fun(TyDefer(Rc::new(RefCell::new(Some(param)))),
+                TyDefer(Rc::new(RefCell::new(Some(ret)))))
     }
 }
 
@@ -33,9 +35,13 @@ impl PP for Ty {
             Int => write!(w, "int")?,
             Float => write!(w, "float")?,
             Fun(ref t1, ref t2) => {
-                t1.pp(w, indent)?;
+                t1.clone()
+                    .force("type not settled in pp")
+                    .pp(w, indent)?;
                 write!(w, " -> ")?;
-                t2.pp(w, indent)?;
+                t2.clone()
+                    .force("type not settled in pp")
+                    .pp(w, indent)?;
             }
         }
         Ok(())
@@ -44,33 +50,46 @@ impl PP for Ty {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 
-pub struct TyDefer(pub Option<Ty>);
+pub struct TyDefer(pub Rc<RefCell<Option<Ty>>>);
 
-impl Deref for TyDefer {
-    type Target = Option<Ty>;
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
+// impl Deref for TyDefer {
+//     type Target = Option<Ty>;
+//     fn deref(&self) -> &Self::Target {
+//         self.0.deref().borrow()
+//     }
+// }
 
-impl DerefMut for TyDefer {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
+// impl DerefMut for TyDefer {
+//     fn deref_mut(&mut self) -> &mut Self::Target {
+//         self.0.borrow_mut()
+//     }
+// }
 
 
 impl TyDefer {
+    pub fn get_mut(&mut self) -> RefMut<Option<Ty>> {
+        self.0.borrow_mut()
+    }
+
+    pub fn get(&self) -> Ref<Option<Ty>> {
+        self.0.borrow()
+    }
+
+
+    pub fn new(t: Option<Ty>) -> Self {
+        TyDefer(Rc::new(RefCell::new(t)))
+    }
+
     pub fn empty() -> Self {
-        TyDefer(None)
+        Self::new(None)
     }
 
     pub fn defined(&self) -> Option<Ty> {
-        self.clone().0
+        self.0.deref().clone().into_inner()
     }
 
     pub fn force(self, message: &str) -> Ty {
-        self.0.expect(message)
+        self.0.deref().clone().into_inner().expect(message)
     }
 }
 
