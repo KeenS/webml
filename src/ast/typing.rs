@@ -196,10 +196,11 @@ impl<'a> Scope<'a> {
                 match fun_ty.get_mut().deref_mut() {
                     &mut Some(Ty::Fun(ref mut param, ref mut ret)) => {
                         self.infer_expr(arg, param)?;
-                        //                        unify(ty, ret)?;
+                        unify(given, ret)?;
                     }
                     _ => return Err(TypeError::NotFunction(fun.deref_mut().clone())),
-                }
+                };
+
                 unify(ty, given)?;
                 Ok(())
             }
