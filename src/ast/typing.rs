@@ -75,18 +75,6 @@ impl<'a> Scope<'a> {
         Scope::new(self)
     }
 
-
-    fn get(&self, name: &str) -> Option<&TyDefer> {
-        for env in self.envs[0..self.position].iter().rev() {
-            match env.get(name) {
-                found @ Some(_) => return found,
-                _ => (),
-            }
-        }
-        None
-
-    }
-
     fn get_mut(&mut self, name: &str) -> Option<&mut TyDefer> {
         let range = 0..self.position;
         for env in self.envs[range].iter_mut().rev() {

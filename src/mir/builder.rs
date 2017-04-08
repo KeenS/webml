@@ -1,25 +1,9 @@
 use mir::*;
 use prim::*;
 
-pub struct MIRBuilder(MIR);
-
-impl MIRBuilder {
-    pub fn new() -> Self {
-        MIRBuilder(MIR(Vec::new()))
-    }
-
-    pub fn add_function(&mut self, f: Function) {
-        (self.0).0.push(f);
-    }
-
-    pub fn build(self) -> MIR {
-        self.0
-    }
-}
 
 pub struct FunctionBuilder(Function);
 
-type EbbId = usize;
 
 impl FunctionBuilder {
     pub fn new(name: Symbol, body_ty: EbbTy) -> Self {
@@ -28,10 +12,6 @@ impl FunctionBuilder {
                             body_ty: body_ty,
                             body: Vec::new(),
                         })
-    }
-
-    pub fn entry(&mut self) -> &mut EBB {
-        &mut self.0.body[0]
     }
 
     pub fn add_ebb(&mut self, ebb: EBB) {
@@ -52,11 +32,6 @@ impl EBBBuilder {
                        params: params,
                        body: Vec::new(),
                    })
-    }
-
-    pub fn add_param(&mut self, param: (EbbTy, Symbol)) -> &mut Self {
-        self.0.params.push(param);
-        self
     }
 
 

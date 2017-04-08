@@ -40,23 +40,14 @@ pub struct LIR2WASM {
     function_table: HashMap<Symbol, u32>
 }
 
-// may vary over environment
-const Pointer: ValueType = ValueType::I64;
-
 impl LIR2WASM {
     pub fn new() -> Self {
         let mut md =  ModuleBuilder::new();
 
-        let alloc_fun_index = md.add_type(FuncType{
-            params: vec![ValueType::I64],
-            ret: Some(ValueType::I64)
-        });
+        let alloc_fun_index = md.add_type(funtype!((i64) -> i64));
         let alloc_fun = md.import("webml-rt", "alloc", alloc_fun_index);
 
-        let print_fun_index = md.add_type(FuncType{
-            params: vec![ValueType::F64],
-            ret: None
-        });
+        let print_fun_index = md.add_type(funtype!((f64)));
         let print_fun = md.import("webml-rt", "print", print_fun_index);
 
         LIR2WASM {
@@ -84,7 +75,7 @@ impl LIR2WASM {
 
     fn trans_function(&mut self, f: lir::Function) {
         use lir::Value::*;
-        let lir::Function { name, nparams, regs, ret_ty, body } = f;
+        let lir::Function { nparams, regs, ret_ty, body, .. } = f;
         let mut tys = regs.iter().map(|reg| lty_to_valuetype(reg)).collect::<Vec<_>>();
         let regtys = tys.split_off(nparams as usize);
         let mut fb = FunctionBuilder::new(FuncType {
@@ -298,6 +289,7 @@ impl LIR2WASM {
                                         .call_indirect(0, false)
                                         // if ret ty isn't unit
                                         .set_local(reg!(reg));
+                                    let _cb = cb;
                                     unimplemented!();
                                 },
                                 FunCall(ref reg, ref fun, ref args) => {
@@ -335,7 +327,6 @@ impl LIR2WASM {
             cb
         });
         self.md.start(FunctionIndex(self.function_table[&Symbol("main".into())]));
-//        self.md.start(FunctionIndex(0));
         self.md.new_function(fb.build());
     }
 

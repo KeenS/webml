@@ -1,6 +1,6 @@
 use nom;
 
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
 use std::error::Error;
 use std::fmt;
 use std::io;
@@ -51,20 +51,6 @@ impl PP for Ty {
 #[derive(Debug, Clone, PartialEq, Eq)]
 
 pub struct TyDefer(pub Rc<RefCell<Option<Ty>>>);
-
-// impl Deref for TyDefer {
-//     type Target = Option<Ty>;
-//     fn deref(&self) -> &Self::Target {
-//         self.0.deref().borrow()
-//     }
-// }
-
-// impl DerefMut for TyDefer {
-//     fn deref_mut(&mut self) -> &mut Self::Target {
-//         self.0.borrow_mut()
-//     }
-// }
-
 
 impl TyDefer {
     pub fn get_mut(&mut self) -> RefMut<Option<Ty>> {

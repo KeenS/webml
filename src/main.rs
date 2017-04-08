@@ -2,13 +2,14 @@
 extern crate webml;
 extern crate web_assembler as wasm;
 use webml::*;
+#[allow(unused_imports)]
 use webml::pass::{DebugPass, PPPass};
 use wasm::Dump;
 use std::fs::File;
 use std::io::Write;
 
 fn main() {
-    let input1 = b"val x = 1
+    let _input1 = b"val x = 1
 val y=false
 val z = y
 val b = 1 + 2 * 3 + 4
@@ -21,7 +22,7 @@ val h = let val y = 1 in fn x => x + y end
 val a = x + 2
 ";
 
-    let input2 = b"
+    let _input2 = b"
 val a = let
   val b = let
     val c = 1
@@ -47,13 +48,13 @@ val x = 1
 
 ";
 
-    let input3 = b"
+    let _input3 = b"
 fun j y = if y then 1.0 else (j true)
 val x = (j false)
 val z = (print x)
 val a = 1";
 
-    let input4 = b"
+    let _input4 = b"
 fun addi x = 1 + x
 fun add x = 1.0 + x
 val x = print (add 2.0)
@@ -73,7 +74,7 @@ val z = 1;
                                    lir::MIR2LIR::new(),
                                    backend::LIR2WASM::new()];
 
-    let module = passes.trans(input3).unwrap();
+    let module = passes.trans(_input3).unwrap();
     let mut code = Vec::new();
     module.dump(&mut code);
     let mut out = File::create("out.wasm").unwrap();

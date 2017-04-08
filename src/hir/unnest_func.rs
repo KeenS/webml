@@ -45,10 +45,6 @@ impl<'a> Scope<'a> {
         Scope(inner)
     }
 
-    fn new_scope(&mut self) -> Scope {
-        Scope::new(self)
-    }
-
     fn new_fname(&mut self, name: Option<Symbol>) -> Symbol {
         let new_name = match name {
             None => format!("<anonfun>@{}", self.id),

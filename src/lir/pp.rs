@@ -39,19 +39,19 @@ impl PP for Function {
 }
 
 impl PP for Reg {
-    fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp(&self, mut w: &mut io::Write, _indent: usize) -> io::Result<()> {
         write!(w, "r{:?}", self.1)
     }
 }
 
 impl PP for Label {
-    fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp(&self, mut w: &mut io::Write, _indent: usize) -> io::Result<()> {
         write!(w, "{}", (self.0).0)
     }
 }
 
 impl PP for Addr {
-    fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp(&self, mut w: &mut io::Write, _indent: usize) -> io::Result<()> {
         write!(w, "[r{}+{}]", (self.0).1, self.1)
     }
 }
@@ -69,9 +69,8 @@ impl PP for Value {
 
 
 impl PP for LTy {
-    fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp(&self, mut w: &mut io::Write, _indent: usize) -> io::Result<()> {
         use lir::LTy::*;
-        let indent = indent + 4;
         match *self {
             Unit => write!(w, "()")?,
             I32 => write!(w, "i32")?,
@@ -85,7 +84,7 @@ impl PP for LTy {
 
 impl PP for Block {
     fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
-        write!(w, "{}:\n", (self.name.0).0);
+        write!(w, "{}:\n", (self.name.0).0)?;
         let indent = indent + 4;
         for op in self.body.iter() {
             write!(w, "{}", Self::nspaces(indent))?;

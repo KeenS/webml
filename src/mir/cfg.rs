@@ -1,7 +1,7 @@
 use std::collections::{VecDeque, HashSet};
 use prim::*;
 
-use super::{MIR, Function, EBB, Op};
+use super::{Function, EBB};
 use petgraph::graph::Graph;
 
 
@@ -44,10 +44,18 @@ impl EBB {
         use mir::Op::*;
         let last = self.body.len() - 1;
         match &self.body[last] {
-            &Branch { ref then, tforward, ref else_, eforward, .. } => {
-                vec![(then, tforward), (else_, eforward)]
-            }
-            &Jump { ref target, forward, .. } => vec![(target, forward)],
+            &Branch {
+                 ref then,
+                 tforward,
+                 ref else_,
+                 eforward,
+                 ..
+             } => vec![(then, tforward), (else_, eforward)],
+            &Jump {
+                 ref target,
+                 forward,
+                 ..
+             } => vec![(target, forward)],
             &Ret { .. } => vec![],
             _ => unreachable!(),
         }
