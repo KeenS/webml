@@ -107,7 +107,7 @@ impl LIR2WASM {
             }
 
             macro_rules! label {
-                ($label: expr) => (scope.iter().rposition(|x| *x == $label).expect("internal error") as u32)
+                ($label: expr) => (scope.iter().rev().position(|x| *x == $label).expect("internal error") as u32)
             }
 
             macro_rules! fun {
