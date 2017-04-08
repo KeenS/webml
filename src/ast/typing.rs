@@ -26,50 +26,36 @@ impl<'a> DerefMut for Scope<'a> {
     }
 }
 
-macro_rules! assert_or_set {
-    ($expected: expr, $actual: expr) => {
-        match ($expected as &mut Option<Ty>, $actual as &Option<Ty>) {
-            (&mut Some(ref expected), &Some(ref actual)) => {
-                if expected == actual {
-                    ()
-                } else {
-                    return Err(TypeError::MisMatch{
-                        expected: expected.clone(),
-                        actual: actual.clone()
-                    })
+fn unify(t1: &mut TyDefer, t2: &mut TyDefer) -> Result<()> {
+    match (t1.get_mut().deref_mut(), t2.get_mut().deref_mut()) {
+        (&mut Some(ref mut t1), &mut Some(ref mut t2)) => {
+            if t1 == t2 {
+                Ok(())
+            } else {
+                match (t1, t2) {
+                    (&mut Ty::Fun(ref mut p1, ref mut b1),
+                     &mut Ty::Fun(ref mut p2, ref mut b2)) => {
+                        unify(p1, p2)?;
+                        unify(b1, b2)?;
+                        Ok(())
+                    }
+                    (t1, t2) => {
+                        Err(TypeError::MisMatch {
+                                expected: t1.clone(),
+                                actual: t2.clone(),
+                            })
+                    }
                 }
-            },
-            (var @ &mut None, actual @ &Some(_)) => {
-                *var = actual.clone();
-                ()
-            },
-            _ => {
-                return Err(TypeError::CannotInfer)
             }
         }
-    }
-}
-
-macro_rules! check_or_set {
-    ($expected: expr, $actual: expr) => {
-        match ($expected as &mut Option<Ty>, $actual as &Option<Ty>) {
-            (&mut Some(ref expected), &Some(ref actual)) => {
-                if expected == actual {
-                    ()
-                } else {
-                    return Err(TypeError::MisMatch{
-                        expected: expected.clone(),
-                        actual: actual.clone()
-                    })
-                }
-            },
-            (var @ &mut None, actual @ &Some(_)) => {
-                *var = actual.clone();
-                ()
-            },
-            (_, &None) => ()
+        (unknown @ &mut None, concrete @ &mut Some(_)) |
+        (concrete @ &mut Some(_), unknown @ &mut None) => {
+            *unknown = concrete.clone();
+            Ok(())
         }
+        _ => return Err(TypeError::CannotInfer),
     }
+
 }
 
 
@@ -133,22 +119,19 @@ impl<'a> Scope<'a> {
                      ref mut name,
                      ref mut expr,
                  } = val;
-        let body_ty;
         if *rec {
             self.insert(name.0.clone(), ty.clone());
-            body_ty = self.infer_expr(expr, &None)?;
+            self.infer_expr(expr, ty)?;
 
         } else {
-            body_ty = self.infer_expr(expr, &None)?;
+            self.infer_expr(expr, ty)?;
             self.insert(name.0.clone(), ty.clone());
         }
-        assert_or_set!(ty, &body_ty);
-        self.insert(name.0.clone(), ty.clone());
         Ok(())
     }
 
 
-    fn infer_expr(&mut self, expr: &mut ast::Expr, given: &Option<Ty>) -> Result<TyDefer> {
+    fn infer_expr(&mut self, expr: &mut ast::Expr, given: &mut TyDefer) -> Result<()> {
         use ast::Expr::*;
         match expr {
             &mut Binds {
@@ -156,15 +139,13 @@ impl<'a> Scope<'a> {
                      ref mut binds,
                      ref mut ret,
                  } => {
-                check_or_set!(ty, given);
                 let mut scope = self.scope();
                 for mut bind in binds {
                     scope.infer_val(&mut bind)?;
                 }
-                let ret_ty = scope.infer_expr(ret, ty)?;
-                assert_or_set!(ty, &ret_ty);
-
-                Ok(ret_ty)
+                scope.infer_expr(ret, ty)?;
+                unify(ty, given)?;
+                Ok(())
             }
             &mut Add {
                      ref mut ty,
@@ -176,21 +157,16 @@ impl<'a> Scope<'a> {
                      ref mut l,
                      ref mut r,
                  } => {
-                check_or_set!(ty, given);
-                println!("{:?}, {:?}, {:?}", ty, l, r);
-                let lty = self.infer_expr(l, &Some(Ty::Int))
+                let mut lty = TyDefer::new(Some(Ty::Int));
+                self.infer_expr(l, &mut lty)
                     .or_else(|_| {
-                                 println!("called: {:?}", l);
-                                 let ret = self.infer_expr(l, &Some(Ty::Float));
-                                 println!("ret: {:?}", ret);
-                                 ret
-
+                                 *lty.get_mut() = Some(Ty::Float);
+                                 self.infer_expr(l, &mut lty)
                              })?;
-                println!("{:?}", lty);
-                let rty = self.infer_expr(r, &lty.0)?;
-                println!("{:?}", rty);
-                assert_or_set!(ty, &rty.0);
-                Ok(ty.clone())
+                self.infer_expr(r, &mut lty)?;
+                unify(&mut lty, given)?;
+                unify(ty, given)?;
+                Ok(())
             }
             &mut Fun {
                      ref mut param_ty,
@@ -198,33 +174,34 @@ impl<'a> Scope<'a> {
                      ref mut body_ty,
                      ref mut body,
                  } => {
-                // check_or_set!(ty, given);
                 let mut scope = self.scope();
                 scope.insert(param.0.clone(), param_ty.clone());
 
-                let body_ty_ = scope.infer_expr(body, &body_ty)?;
-                let param_ty_ = scope.get(&param.0).and_then(|ty| ty.deref().clone());
-                assert_or_set!(param_ty, &param_ty_);
-                assert_or_set!(body_ty, &body_ty_);
-                let param_ty = param_ty.deref().deref().clone();
-                let body_ty = body_ty.deref().deref().clone();
-                let fn_ty = param_ty.and_then(|p| body_ty.map(|b| Ty::fun(p, b)));
-                Ok(TyDefer(fn_ty))
+                scope.infer_expr(body, body_ty)?;
+                let mut fn_ty = match (param_ty.defined(), body_ty.defined()) {
+                    (Some(p), Some(b)) => TyDefer::new(Some(Ty::fun(p, b))),
+                    _ => TyDefer::new(None),
+                };
+                unify(&mut fn_ty, given)?;
+
+                Ok(())
             }
             &mut App {
                      ref mut ty,
                      ref mut fun,
                      ref mut arg,
                  } => {
-                check_or_set!(ty, given);
-                let fun_ty = self.infer_expr(fun, &None)?;
-                let (param_ty, ret_ty) = match fun_ty.deref() {
-                    &Some(Ty::Fun(ref param, ref ret)) => (param, ret),
+                let mut fun_ty = TyDefer::new(Some(Ty::Fun(TyDefer::new(None), ty.clone())));
+                self.infer_expr(fun, &mut fun_ty)?;
+                match fun_ty.get_mut().deref_mut() {
+                    &mut Some(Ty::Fun(ref mut param, ref mut ret)) => {
+                        self.infer_expr(arg, param)?;
+                        //                        unify(ty, ret)?;
+                    }
                     _ => return Err(TypeError::NotFunction(fun.deref_mut().clone())),
-                };
-                let _arg_ty = self.infer_expr(arg, &Some(param_ty.deref().clone()))?;
-                assert_or_set!(ty, &Some(ret_ty.deref().clone()));
-                Ok(TyDefer(Some(ret_ty.deref().clone())))
+                }
+                unify(ty, given)?;
+                Ok(())
             }
             &mut If {
                      ref mut cond,
@@ -232,95 +209,62 @@ impl<'a> Scope<'a> {
                      ref mut then,
                      ref mut else_,
                  } => {
-                check_or_set!(ty, given);
-                let _cond_ty = self.infer_expr(cond, &Some(Ty::Bool))?;
-                let then_ty_ = self.infer_expr(then, given)?;
-                let else_ty_ = self.infer_expr(else_, &then_ty_)?;
-                let then_ty_ = self.infer_expr(then, &else_ty_)?;
-                let ret_ty = match (then_ty_.defined(), else_ty_.defined()) {
-                    (Some(tty), Some(ety)) => {
-                        if tty == ety {
-                            tty
-                        } else {
-                            return Err(TypeError::MisMatch {
-                                           expected: tty,
-                                           actual: ety,
-                                       });
-                        }
-                    }
-                    _ => return Err(TypeError::CannotInfer),
-                };
-                assert_or_set!(ty, &Some(ret_ty));
-
-                Ok(ty.clone())
+                let _cond_ty = self.infer_expr(cond, &mut TyDefer::new(Some(Ty::Bool)))?;
+                self.infer_expr(then, given)?;
+                self.infer_expr(else_, given)?;
+                unify(ty, given)?;
+                Ok(())
             }
             &mut Sym {
                      ref mut ty,
                      ref mut name,
                  } => {
-                check_or_set!(ty, given);
-                let ty_ = self.infer_symbol(name, given)?;
-                assert_or_set!(ty, ty_.deref());
-                Ok(ty_)
+                self.infer_symbol(name, given)?;
+                unify(ty, given)?;
+                Ok(())
             }
             &mut Lit {
                      ref mut ty,
                      ref mut value,
                  } => {
-                //                check_or_set!(ty, given);
-                let ty_ = self.infer_literal(value, given)?;
-                assert_or_set!(ty, ty_.deref());
-                Ok(ty_)
+                self.infer_literal(value, given)?;
+                unify(ty, given)?;
+                Ok(())
             }
         }
 
     }
 
-    fn infer_symbol(&mut self, sym: &mut Symbol, given: &Option<Ty>) -> Result<TyDefer> {
+    fn infer_symbol(&mut self, sym: &mut Symbol, given: &mut TyDefer) -> Result<()> {
         match self.get_mut(&sym.0) {
-            Some(t) => {
-                match (t.deref_mut(), given) {
-                    (&mut Some(ref t), &Some(ref g)) => {
-                        if t == g {
-                            return Ok(TyDefer(Some(t.clone())));
-                        } else {
-                            return Err(TypeError::MisMatch {
-                                           expected: g.clone(),
-                                           actual: t.clone(),
-                                       });
-                        }
-                    }
-                    (&mut Some(ref t), &None) => return Ok(TyDefer(Some(t.clone()))),
-                    (x @ &mut None, g @ &Some(_)) => {
-                        *x = g.clone();
-                        return Ok(TyDefer(g.clone()));
-                    }
-                    _ => return Err(TypeError::CannotInfer),
-                }
-            }
+            Some(t) => unify(t, given),
             None => {
                 if &sym.0 == "print" {
-                    return Ok(TyDefer(Some(Ty::fun(Ty::Float, Ty::Unit))));
+                    *given.get_mut() = Some(Ty::fun(Ty::Float, Ty::Unit));
+                    Ok(())
                 } else {
-                    return Err(TypeError::FreeVar);
+                    Err(TypeError::FreeVar)
                 }
             }
-        };
+        }
     }
 
-    fn infer_literal(&mut self, lit: &mut Literal, given: &Option<Ty>) -> Result<TyDefer> {
+    fn infer_literal(&mut self, lit: &mut Literal, given: &mut TyDefer) -> Result<()> {
         use prim::Literal::*;
         let ty = match lit {
             &mut Int(_) => Ty::Int,
             &mut Float(_) => Ty::Float,
             &mut Bool(_) => Ty::Bool,
         };
-        match (ty, given) {
-            (Ty::Int, &Some(Ty::Int)) => Ok(TyDefer(Some(Ty::Int))),
-            (Ty::Bool, &Some(Ty::Bool)) => Ok(TyDefer(Some(Ty::Bool))),
-            (Ty::Float, &Some(Ty::Float)) => Ok(TyDefer(Some(Ty::Float))),
-            (ty, &None) => Ok(TyDefer(Some(ty))),
-            (ref ty, &Some(ref exp)) => {
+        match (ty, given.get_mut().deref_mut()) {
+            (Ty::Int, &mut Some(Ty::Int)) => Ok(()),
+            (Ty::Bool, &mut Some(Ty::Bool)) => Ok(()),
+            (Ty::Float, &mut Some(Ty::Float)) => Ok(()),
+            (ty, g @ &mut None) => {
+                *g = Some(ty.clone());
+                Ok(())
+            }
+            (ref ty, &mut Some(ref exp)) => {
                 Err(TypeError::MisMatch {
                         expected: exp.clone(),
                         actual: ty.clone(),
