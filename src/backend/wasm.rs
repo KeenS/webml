@@ -150,8 +150,8 @@ impl LIR2WASM {
                                 MoveI64(ref reg1, ref reg2) |
                                 MoveF32(ref reg1, ref reg2) |
                                 MoveF64(ref reg1, ref reg2) => {
-                                    cb = cb.get_local(reg!(reg1))
-                                        .set_local(reg!(reg2))
+                                    cb = cb.get_local(reg!(reg2))
+                                        .set_local(reg!(reg1))
                                 },
                                 StoreI32(ref addr, ref value) => {
                                     cb = cb
