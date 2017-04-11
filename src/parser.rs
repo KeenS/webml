@@ -179,6 +179,5 @@ named!(symbol <&str, Symbol>, do_parse!(
 
 pub fn parse(input: &str) -> ::std::result::Result<AST, Err<&str>> {
     let iresult = top(input);
-    println!("{:?}", iresult);
     iresult.to_result()
 }
