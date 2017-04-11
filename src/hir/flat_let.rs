@@ -1,4 +1,3 @@
-use prim::*;
 use hir::*;
 use pass::Pass;
 
