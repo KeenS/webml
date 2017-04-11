@@ -7,7 +7,8 @@ use ast::*;
 named!(top < AST >, do_parse!(
     opt!(multispace) >>
         tops: separated_list!(multispace, bind) >>
-        opt!(multispace) >> eof!() >>
+        opt!(multispace) >>
+        eof!() >>
         (AST(tops))
 ));
 
@@ -47,7 +48,7 @@ named!(bind_fun <Val>, do_parse!(
         })
 ));
 
-named!(expr <Expr>, alt!(
+named!(expr <Expr>, alt_complete!(
     expr_bind |
     expr_fun  |
     expr_if   |
@@ -55,14 +56,14 @@ named!(expr <Expr>, alt!(
     expr1
 ));
 
-named!(expr1 <Expr>, alt!(
+named!(expr1 <Expr>, alt_complete!(
     expr1_app |
     expr1_mul |
     expr0
 
 ));
 
-named!(expr0 <Expr>, alt!(
+named!(expr0 <Expr>, alt_complete!(
     expr0_paren |
     expr0_float |
     expr0_int   |
@@ -109,12 +110,12 @@ named!(expr_if <Expr>, do_parse!(
 
 named!(expr1_app <Expr>, do_parse!(
     fun: expr0 >> multispace >>
-        arg: expr0 >>
-       rest: opt!(do_parse!(multispace >> ret: separated_list!(multispace, expr0) >> (ret))) >>
+        args: separated_nonempty_list!(multispace, expr0) >>
         ({
+            let mut rest = args.into_iter();
+            let arg = rest.next().unwrap();
             let init = Expr::App {ty: TyDefer::empty(), fun: Box::new(fun), arg: Box::new(arg)};
             rest.into_iter()
-                .flat_map(|v| v.into_iter())
                 .fold(init, |acc, elm| Expr::App {
                     ty: TyDefer::empty(),
                     fun: Box::new(acc),
@@ -178,13 +179,15 @@ named!(expr0_paren <Expr>, do_parse!(
     (e))
 );
 
-named!(symbol <Symbol>, map_res!(
-    alphanumeric, |s| match s as &[u8] {
-        b"val" | b"fun" | b"fn" | b"let" | b"in" | b"end" | b"if" | b"then" | b"else" => {
-            Err(ErrorKind::IsNot) as  ::std::result::Result<Symbol, ErrorKind>
-        },
-        s => Ok(Symbol(from_utf8(s).expect("failed to parse UTF-8 value").to_string()))
-    }));
+named!(symbol <Symbol>, do_parse!(
+    map_res!(peek!(alphanumeric),
+             |s| match s as &[u8] {
+                 b"val" | b"fun" | b"fn" | b"let" | b"in" | b"end" | b"if" | b"then" | b"else" => {
+                     Err(ErrorKind::IsNot) as  ::std::result::Result<&[u8], ErrorKind>
+                 },
+                 s => Ok(s)
+             }) >>
+        sym: alphanumeric >> (Symbol(from_utf8(sym).expect("failed to parse UTF-8 value").to_string()))));
 
 pub fn parse(input: &[u8]) -> ::std::result::Result<AST, Err<&[u8]>> {
     let iresult = top(input);
