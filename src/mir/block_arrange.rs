@@ -15,7 +15,10 @@ impl BlockArrange {
     }
 
     fn arrange_mir(&mut self, mir: MIR) -> MIR {
-        MIR(mir.0.into_iter().map(|f| self.arrange_fun(f)).collect())
+        MIR(mir.0
+                .into_iter()
+                .map(|f| self.arrange_fun(f))
+                .collect())
     }
 
     fn arrange_fun(&mut self, mut fun: Function) -> Function {
@@ -48,11 +51,10 @@ fn visit(ret: &mut Vec<EBB>,
     blocks
 }
 
-impl Pass<MIR> for BlockArrange {
+impl<E> Pass<MIR, E> for BlockArrange {
     type Target = MIR;
-    type Err = TypeError;
 
-    fn trans(&mut self, mir: MIR) -> ::std::result::Result<Self::Target, Self::Err> {
+    fn trans(&mut self, mir: MIR) -> ::std::result::Result<Self::Target, E> {
         Ok(self.arrange_mir(mir))
     }
 }

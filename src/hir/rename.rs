@@ -170,10 +170,10 @@ impl Rename {
     }
 }
 
-impl Pass<HIR> for Rename {
+impl<E> Pass<HIR, E> for Rename {
     type Target = HIR;
-    type Err = TypeError;
-    fn trans(&mut self, mut hir: HIR) -> ::std::result::Result<Self::Target, Self::Err> {
+
+    fn trans(&mut self, mut hir: HIR) -> ::std::result::Result<Self::Target, E> {
         self.scope().rename_hir(&mut hir);
         Ok(hir)
     }

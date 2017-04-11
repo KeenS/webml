@@ -7,7 +7,7 @@ use ast::*;
 named!(top < AST >, do_parse!(
     opt!(multispace) >>
         tops: separated_list!(multispace, bind) >>
-        opt!(multispace) >>
+        opt!(multispace) >> eof!() >>
         (AST(tops))
 ));
 
@@ -186,7 +186,7 @@ named!(symbol <Symbol>, map_res!(
         s => Ok(Symbol(from_utf8(s).expect("failed to parse UTF-8 value").to_string()))
     }));
 
-pub fn parse(input: &[u8]) -> ::std::result::Result<AST, ErrorKind> {
+pub fn parse(input: &[u8]) -> ::std::result::Result<AST, Err<&[u8]>> {
     let iresult = top(input);
     iresult.to_result()
 }

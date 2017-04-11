@@ -3,7 +3,7 @@ extern crate webml;
 extern crate web_assembler as wasm;
 use webml::*;
 #[allow(unused_imports)]
-use webml::pass::{DebugPass, PPPass};
+use webml::pass::{DebugPass, PPPass, ConvError};
 use wasm::Dump;
 use std::fs::File;
 use std::io::Write;
@@ -58,10 +58,10 @@ val a = 1";
 fun addi x = 1 + x
 fun add x = 1.0 + x
 val x = print (add 2.0)
-val z = 1;
+val z = 1
 ";
 
-    let mut passes = compile_pass![parse,
+    let mut passes = compile_pass![ConvError::new(parse),
                                    TyEnv::new(),
                                    hir::AST2HIR,
                                    hir::Rename::new(),
@@ -70,14 +70,15 @@ val z = 1;
                                    hir::FlatLet::new(),
                                    mir::HIR2MIR::new(),
                                    mir::UnAlias::new(),
-                                   mir::BlockArrange::new(),
+                                   !mir::BlockArrange::new(),
                                    lir::MIR2LIR::new(),
                                    backend::LIR2WASM::new()];
 
-    let module = passes.trans(_input3).unwrap();
+    let module: Result<wasm::Module, TypeError> = passes.trans(_input4);
+
+    let module = module.unwrap();
     let mut code = Vec::new();
     module.dump(&mut code);
     let mut out = File::create("out.wasm").unwrap();
     out.write(&code).unwrap();
-
 }

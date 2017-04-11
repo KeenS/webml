@@ -265,11 +265,10 @@ impl MIR2LIR {
     }
 }
 
-impl Pass<mir::MIR> for MIR2LIR {
+impl<E> Pass<mir::MIR, E> for MIR2LIR {
     type Target = LIR;
-    type Err = TypeError;
 
-    fn trans(&mut self, mir: mir::MIR) -> ::std::result::Result<Self::Target, Self::Err> {
+    fn trans(&mut self, mir: mir::MIR) -> ::std::result::Result<Self::Target, E> {
         Ok(self.trans_mir(mir))
     }
 }

@@ -1,4 +1,4 @@
-use ::ast;
+use ast;
 use pass::Pass;
 use prim::*;
 use hir::{HIR, Expr, Val};
@@ -7,7 +7,10 @@ pub struct AST2HIR;
 
 impl AST2HIR {
     fn conv_ast(&self, ast: ast::AST) -> HIR {
-        HIR(ast.0.into_iter().map(|val| self.conv_val(val)).collect())
+        HIR(ast.0
+                .into_iter()
+                .map(|val| self.conv_val(val))
+                .collect())
     }
 
     fn conv_val(&self, val: ast::Val) -> Val {
@@ -45,7 +48,12 @@ impl AST2HIR {
                     r: Box::new(self.conv_expr(*r)),
                 }
             }
-            E::Fun { param_ty, param, body_ty, body } => {
+            E::Fun {
+                param_ty,
+                param,
+                body_ty,
+                body,
+            } => {
                 Expr::Fun {
                     param: (param_ty.force("internal typing error"), param),
                     body_ty: body_ty.force("internal typing error"),
@@ -54,9 +62,15 @@ impl AST2HIR {
                 }
             }
             E::App { ty, fun, arg } => {
-                self.conv_expr(*fun).app1(ty.force("internal typing error"), self.conv_expr(*arg))
+                self.conv_expr(*fun)
+                    .app1(ty.force("internal typing error"), self.conv_expr(*arg))
             }
-            E::If { ty, cond, then, else_ } => {
+            E::If {
+                ty,
+                cond,
+                then,
+                else_,
+            } => {
                 Expr::If {
                     ty: ty.force("internal typing error"),
                     cond: Box::new(self.conv_expr(*cond)),
@@ -80,11 +94,10 @@ impl AST2HIR {
     }
 }
 
-impl Pass<ast::AST> for AST2HIR {
+impl<E> Pass<ast::AST, E> for AST2HIR {
     type Target = HIR;
-    type Err = TypeError;
 
-    fn trans(&mut self, ast: ast::AST) -> ::std::result::Result<Self::Target, Self::Err> {
+    fn trans(&mut self, ast: ast::AST) -> ::std::result::Result<Self::Target, E> {
         Ok(self.conv_ast(ast))
     }
 }

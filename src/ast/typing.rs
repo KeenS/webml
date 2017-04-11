@@ -26,7 +26,7 @@ impl<'a> DerefMut for Scope<'a> {
     }
 }
 
-fn unify(t1: &mut TyDefer, t2: &mut TyDefer) -> Result<()> {
+fn unify<'a>(t1: &mut TyDefer, t2: &mut TyDefer) -> Result<'a, ()> {
     match (t1.get_mut().deref_mut(), t2.get_mut().deref_mut()) {
         (&mut Some(ref mut t1), &mut Some(ref mut t2)) => {
             if t1 == t2 {
@@ -92,7 +92,7 @@ impl<'a> Scope<'a> {
         self.envs[pos].insert(k, v)
     }
 
-    fn infer_ast(&mut self, ast: &mut ast::AST) -> Result<()> {
+    fn infer_ast<'b, 'r>(&'b mut self, ast: &mut ast::AST) -> Result<'r, ()> {
         for mut val in ast.0.iter_mut() {
             self.infer_val(&mut val)?;
         }
@@ -100,7 +100,7 @@ impl<'a> Scope<'a> {
     }
 
 
-    fn infer_val(&mut self, val: &mut ast::Val) -> Result<()> {
+    fn infer_val<'b, 'r>(&'b mut self, val: &mut ast::Val) -> Result<'r, ()> {
         let &mut ast::Val {
                      ref mut ty,
                      ref rec,
@@ -119,7 +119,10 @@ impl<'a> Scope<'a> {
     }
 
 
-    fn infer_expr(&mut self, expr: &mut ast::Expr, given: &mut TyDefer) -> Result<()> {
+    fn infer_expr<'b, 'r>(&'b mut self,
+                          expr: &mut ast::Expr,
+                          given: &mut TyDefer)
+                          -> Result<'r, ()> {
         use ast::Expr::*;
         match expr {
             &mut Binds {
@@ -224,7 +227,7 @@ impl<'a> Scope<'a> {
 
     }
 
-    fn infer_symbol(&mut self, sym: &mut Symbol, given: &mut TyDefer) -> Result<()> {
+    fn infer_symbol<'b, 'r>(&'b mut self, sym: &mut Symbol, given: &mut TyDefer) -> Result<'r, ()> {
         match self.get_mut(&sym.0) {
             Some(t) => unify(t, given),
             None => {
@@ -238,7 +241,10 @@ impl<'a> Scope<'a> {
         }
     }
 
-    fn infer_literal(&mut self, lit: &mut Literal, given: &mut TyDefer) -> Result<()> {
+    fn infer_literal<'b, 'r>(&'b mut self,
+                             lit: &mut Literal,
+                             given: &mut TyDefer)
+                             -> Result<'r, ()> {
         use prim::Literal::*;
         let ty = match lit {
             &mut Int(_) => Ty::Int,
@@ -284,7 +290,7 @@ impl TyEnv {
         Scope::new(self)
     }
 
-    pub fn infer(&mut self, ast: &mut ast::AST) -> Result<()> {
+    pub fn infer<'a, 'b>(&'a mut self, ast: &mut ast::AST) -> Result<'b, ()> {
         let mut scope = self.scope();
         scope.infer_ast(ast)?;
         Ok(())
@@ -293,10 +299,10 @@ impl TyEnv {
 
 
 use pass::Pass;
-impl Pass<ast::AST> for TyEnv {
+impl<'a> Pass<ast::AST, TypeError<'a>> for TyEnv {
     type Target = ast::AST;
-    type Err = TypeError;
-    fn trans(&mut self, mut ast: ast::AST) -> Result<Self::Target> {
+
+    fn trans<'b>(&'b mut self, mut ast: ast::AST) -> Result<'a, Self::Target> {
         self.infer(&mut ast)?;
         Ok(ast)
     }

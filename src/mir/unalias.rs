@@ -106,11 +106,10 @@ impl UnAlias {
     }
 }
 
-impl Pass<MIR> for UnAlias {
+impl<E> Pass<MIR, E> for UnAlias {
     type Target = MIR;
-    type Err = TypeError;
 
-    fn trans(&mut self, mir: MIR) -> ::std::result::Result<Self::Target, Self::Err> {
+    fn trans(&mut self, mir: MIR) -> ::std::result::Result<Self::Target, E> {
         Ok(self.conv_mir(mir))
     }
 }

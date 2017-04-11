@@ -239,11 +239,10 @@ fn force_symbol(e: hir::Expr) -> Symbol {
 }
 
 
-impl Pass<hir::HIR> for HIR2MIR {
+impl<E> Pass<hir::HIR, E> for HIR2MIR {
     type Target = MIR;
-    type Err = TypeError;
 
-    fn trans(&mut self, hir: hir::HIR) -> ::std::result::Result<Self::Target, Self::Err> {
+    fn trans(&mut self, hir: hir::HIR) -> ::std::result::Result<Self::Target, E> {
         Ok(self.trans_hir(hir))
     }
 }

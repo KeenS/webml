@@ -11,7 +11,12 @@ fn take_binds(mut expr: Expr) -> (Expr, Vec<Val>) {
             expr = *ret;
             (expr, binds)
         }
-        Op { ty, name, mut l, mut r } => {
+        Op {
+            ty,
+            name,
+            mut l,
+            mut r,
+        } => {
             let (l_, mut lbinds) = take_binds(*l);
             let (r_, mut rbinds) = take_binds(*r);
             l = Box::new(l_);
@@ -25,7 +30,11 @@ fn take_binds(mut expr: Expr) -> (Expr, Vec<Val>) {
             };
             (expr, lbinds)
         }
-        App { mut fun, mut arg, ty } => {
+        App {
+            mut fun,
+            mut arg,
+            ty,
+        } => {
             let (f, mut fbinds) = take_binds(*fun);
             let (a, mut abinds) = take_binds(*arg);
             fun = Box::new(f);
@@ -38,7 +47,12 @@ fn take_binds(mut expr: Expr) -> (Expr, Vec<Val>) {
             };
             (expr, fbinds)
         }
-        If { mut cond, then, else_, ty } => {
+        If {
+            mut cond,
+            then,
+            else_,
+            ty,
+        } => {
             let (c, cbinds) = take_binds(*cond);
             cond = Box::new(c);
             let expr = If {
@@ -65,7 +79,10 @@ impl FlatLet {
 
 
     pub fn flat_hir(&mut self, mut hir: HIR) -> HIR {
-        hir.0 = hir.0.into_iter().map(|val| self.flat_val(val)).collect();
+        hir.0 = hir.0
+            .into_iter()
+            .map(|val| self.flat_val(val))
+            .collect();
         hir
     }
 
@@ -77,7 +94,11 @@ impl FlatLet {
     fn flat_expr(&mut self, expr: Expr) -> Expr {
         use hir::Expr::*;
         match expr {
-            Binds { mut binds, mut ret, ty } => {
+            Binds {
+                mut binds,
+                mut ret,
+                ty,
+            } => {
                 let mut vec = Vec::new();
                 for mut val in binds.into_iter() {
                     val.expr = self.flat_expr(val.expr);
@@ -97,7 +118,12 @@ impl FlatLet {
                     ty: ty,
                 }
             }
-            Op { ty, name, mut l, mut r } => {
+            Op {
+                ty,
+                name,
+                mut l,
+                mut r,
+            } => {
                 l = Box::new(self.flat_expr(*l));
                 r = Box::new(self.flat_expr(*r));
                 Op {
@@ -107,7 +133,12 @@ impl FlatLet {
                     r: r,
                 }
             }
-            Fun { mut body, param, body_ty, captures } => {
+            Fun {
+                mut body,
+                param,
+                body_ty,
+                captures,
+            } => {
                 body = Box::new(self.flat_expr(*body));
                 Fun {
                     body: body,
@@ -116,7 +147,11 @@ impl FlatLet {
                     captures: captures,
                 }
             }
-            App { mut fun, mut arg, ty } => {
+            App {
+                mut fun,
+                mut arg,
+                ty,
+            } => {
                 fun = Box::new(self.flat_expr(*fun));
                 arg = Box::new(self.flat_expr(*arg));
                 App {
@@ -125,7 +160,12 @@ impl FlatLet {
                     ty: ty,
                 }
             }
-            If { mut cond, mut then, mut else_, ty } => {
+            If {
+                mut cond,
+                mut then,
+                mut else_,
+                ty,
+            } => {
                 cond = Box::new(self.flat_expr(*cond));
                 then = Box::new(self.flat_expr(*then));
                 else_ = Box::new(self.flat_expr(*else_));
@@ -146,11 +186,10 @@ impl FlatLet {
 }
 
 
-impl Pass<HIR> for FlatLet {
+impl<E> Pass<HIR, E> for FlatLet {
     type Target = HIR;
-    type Err = TypeError;
 
-    fn trans(&mut self, hir: HIR) -> ::std::result::Result<Self::Target, Self::Err> {
+    fn trans(&mut self, hir: HIR) -> ::std::result::Result<Self::Target, E> {
         Ok(self.flat_hir(hir))
     }
 }

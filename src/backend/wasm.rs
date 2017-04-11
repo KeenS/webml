@@ -526,11 +526,10 @@ impl LIR2WASM {
 
 }
 
-impl Pass<lir::LIR> for LIR2WASM {
+impl<E> Pass<lir::LIR, E> for LIR2WASM {
     type Target = Module;
-    type Err = TypeError;
 
-    fn trans(&mut self, lir: lir::LIR) -> ::std::result::Result<Self::Target, Self::Err> {
+    fn trans(&mut self, lir: lir::LIR) -> ::std::result::Result<Self::Target, E> {
         Ok(self.trans_lir(lir))
     }
 }

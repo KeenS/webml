@@ -18,7 +18,10 @@ impl FlatExpr {
     }
 
     pub fn flat_hir(&mut self, mut hir: HIR) -> HIR {
-        hir.0 = hir.0.into_iter().map(|val| self.flat_val(val)).collect();
+        hir.0 = hir.0
+            .into_iter()
+            .map(|val| self.flat_val(val))
+            .collect();
         hir
     }
 
@@ -31,11 +34,12 @@ impl FlatExpr {
         use hir::Expr::*;
         match expr {
             Binds { mut binds, ret, ty } => {
-                binds = binds.into_iter()
+                binds = binds
+                    .into_iter()
                     .map(|mut val| {
-                        val.expr = self.flat_expr(val.expr);
-                        val
-                    })
+                             val.expr = self.flat_expr(val.expr);
+                             val
+                         })
                     .collect();
                 let (ret, retval) = self.flat_make_val(*ret);
                 binds.push(retval);
@@ -49,24 +53,29 @@ impl FlatExpr {
                 let (l, lval) = self.flat_make_val(*l);
                 let (r, rval) = self.flat_make_val(*r);
                 let (ret, retval) = self.make_val(Op {
-                    ty: ty.clone(),
-                    name: name,
-                    l: l,
-                    r: r,
-                });
+                                                      ty: ty.clone(),
+                                                      name: name,
+                                                      l: l,
+                                                      r: r,
+                                                  });
                 Binds {
                     ty: ty.clone(),
                     binds: vec![lval, rval, retval],
                     ret: ret,
                 }
             }
-            Fun { mut body, param, body_ty, captures } => {
+            Fun {
+                mut body,
+                param,
+                body_ty,
+                captures,
+            } => {
                 let (ret, bodyval) = self.flat_make_val(*body);
                 body = Box::new(Binds {
-                    ty: body_ty.clone(),
-                    binds: vec![bodyval],
-                    ret: ret,
-                });
+                                    ty: body_ty.clone(),
+                                    binds: vec![bodyval],
+                                    ret: ret,
+                                });
                 Fun {
                     body: body,
                     param: param,
@@ -78,30 +87,35 @@ impl FlatExpr {
                 let (fun, funval) = self.flat_make_val(*fun);
                 let (arg, argval) = self.flat_make_val(*arg);
                 let (ret, retval) = self.make_val(App {
-                    fun: fun,
-                    arg: arg,
-                    ty: ty.clone(),
-                });
+                                                      fun: fun,
+                                                      arg: arg,
+                                                      ty: ty.clone(),
+                                                  });
                 Binds {
                     ty: ty.clone(),
                     binds: vec![funval, argval, retval],
                     ret: ret,
                 }
             }
-            If { cond, then, else_, ty } => {
+            If {
+                cond,
+                then,
+                else_,
+                ty,
+            } => {
                 let (cond, condval) = self.flat_make_val(*cond);
                 let (then, thenval) = self.flat_make_val(*then);
                 let (else_, elseval) = self.flat_make_val(*else_);
                 let then = Box::new(Binds {
-                    ty: ty.clone(),
-                    binds: vec![thenval],
-                    ret: then,
-                });
+                                        ty: ty.clone(),
+                                        binds: vec![thenval],
+                                        ret: then,
+                                    });
                 let else_ = Box::new(Binds {
-                    ty: ty.clone(),
-                    binds: vec![elseval],
-                    ret: else_,
-                });
+                                         ty: ty.clone(),
+                                         binds: vec![elseval],
+                                         ret: else_,
+                                     });
                 let e = If {
                     ty: ty.clone(),
                     cond: cond,
@@ -137,21 +151,17 @@ impl FlatExpr {
             name: name.clone(),
             expr: expr,
         };
-        let sym = Expr::Sym {
-            name: name,
-            ty: ty,
-        };
+        let sym = Expr::Sym { name: name, ty: ty };
         (Box::new(sym), val)
 
     }
 }
 
 
-impl Pass<HIR> for FlatExpr {
+impl<E> Pass<HIR, E> for FlatExpr {
     type Target = HIR;
-    type Err = TypeError;
 
-    fn trans(&mut self, hir: HIR) -> ::std::result::Result<Self::Target, Self::Err> {
+    fn trans(&mut self, hir: HIR) -> ::std::result::Result<Self::Target, E> {
         Ok(self.flat_hir(hir))
     }
 }

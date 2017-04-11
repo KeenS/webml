@@ -81,21 +81,23 @@ impl TyDefer {
 
 
 #[derive(Debug)]
-pub enum TypeError {
+pub enum TypeError<'a> {
     MisMatch { expected: Ty, actual: Ty },
     CannotInfer,
     FreeVar,
     NotFunction(ast::Expr),
-    ParseError(nom::ErrorKind),
+    ParseError(nom::Err<&'a str>),
 }
 
-impl fmt::Display for TypeError {
+
+
+impl<'a> fmt::Display for TypeError<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         fmt::Debug::fmt(self, f)
     }
 }
 
-impl Error for TypeError {
+impl<'a> Error for TypeError<'a> {
     fn description(&self) -> &str {
         use self::TypeError::*;
         match self {
@@ -109,13 +111,26 @@ impl Error for TypeError {
 }
 
 
-impl From<nom::ErrorKind> for TypeError {
-    fn from(e: nom::ErrorKind) -> TypeError {
-        TypeError::ParseError(e)
+impl<'a> From<nom::Err<&'a [u8]>> for TypeError<'a> {
+    fn from(e: nom::Err<&'a [u8]>) -> Self {
+        fn conv<'b>(e: nom::Err<&'b [u8]>) -> nom::Err<&'b str> {
+            use std::str::from_utf8;
+            use nom::Err::*;
+            match e {
+                Code(e) => Code(e),
+                Node(kind, box_err) => Node(kind, Box::new(conv(*box_err))),
+                Position(kind, slice) => Position(kind, from_utf8(slice).unwrap()),
+                NodePosition(kind, slice, box_err) => {
+                    NodePosition(kind, from_utf8(slice).unwrap(), Box::new(conv(*box_err)))
+                }
+            }
+        }
+
+        TypeError::ParseError(conv(e))
     }
 }
 
-pub type Result<T> = ::std::result::Result<T, TypeError>;
+pub type Result<'a, T> = ::std::result::Result<T, TypeError<'a>>;
 
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

@@ -354,10 +354,10 @@ impl UnnestFunc {
     }
 }
 
-impl Pass<HIR> for UnnestFunc {
+impl<E> Pass<HIR, E> for UnnestFunc {
     type Target = HIR;
-    type Err = TypeError;
-    fn trans(&mut self, hir: HIR) -> ::std::result::Result<Self::Target, Self::Err> {
+
+    fn trans(&mut self, hir: HIR) -> ::std::result::Result<Self::Target, E> {
         Ok(self.scope().conv_hir(hir))
     }
 }
