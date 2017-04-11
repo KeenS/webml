@@ -9,7 +9,7 @@ use std::fs::File;
 use std::io::Write;
 
 fn main() {
-    let _input1 = b"val x = 1
+    let _input1 = "val x = 1
 val y=false
 val z = y
 val b = 1 + 2 * 3 + 4
@@ -22,7 +22,7 @@ val h = let val y = 1 in fn x => x + y end
 val a = x + 2
 ";
 
-    let _input2 = b"
+    let _input2 = "
 val a = let
   val b = let
     val c = 1
@@ -44,17 +44,16 @@ in
    j
   end) 2
 end
-val x = 1
 
 ";
 
-    let _input3 = b"
-fun j y = if y then 1.0 else (j true)
-val x = (j false)
-val z = (print x)
+    let _input3 = "
+fun j y = if y then 1.0 else j true
+val x = j false
+val z = print x
 val a = 1";
 
-    let _input4 = b"
+    let _input4 = "
 fun addi x = 1 + x
 fun add x = 1.0 + x
 val x = print (add 2.0)
@@ -74,7 +73,7 @@ val z = 1
                                    lir::MIR2LIR::new(),
                                    backend::LIR2WASM::new()];
 
-    let module: Result<wasm::Module, TypeError> = passes.trans(_input4);
+    let module: Result<wasm::Module, TypeError> = passes.trans(_input3);
 
     let module = module.unwrap();
     let mut code = Vec::new();

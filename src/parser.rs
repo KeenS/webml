@@ -1,37 +1,35 @@
-use std::str::from_utf8;
-use std::str::FromStr;
 use nom::*;
 use prim::*;
 use ast::*;
 
-named!(top < AST >, do_parse!(
+named!(top <&str, AST >, do_parse!(
     opt!(multispace) >>
         tops: separated_list!(multispace, bind) >>
-        opt!(multispace) >>
+        opt!(complete!(multispace)) >>
         eof!() >>
         (AST(tops))
 ));
 
-named!(bind <Val>, alt!(bind_val | bind_fun));
+named!(bind <&str, Val>, alt_complete!(bind_val | bind_fun));
 
 
-named!(bind_val <Val>, do_parse!(
-    tag!("val") >>
+named!(bind_val <&str, Val>, do_parse!(
+    tag_s!("val") >>
         multispace >>
         name: symbol >>
         opt!(multispace) >>
-        tag!("=") >>
+        tag_s!("=") >>
         opt!(multispace) >>
         e: expr >>
         (Val{ty: TyDefer::empty(), rec: false, name: name, expr: e})
 ));
 
-named!(bind_fun <Val>, do_parse!(
-    tag!("fun") >> multispace >>
+named!(bind_fun <&str, Val>, do_parse!(
+    tag_s!("fun") >> multispace >>
         name: symbol >> multispace >>
         params: separated_nonempty_list!(multispace, symbol) >>
         opt!(multispace) >>
-        tag!("=") >>
+        tag_s!("=") >>
         opt!(multispace) >>
         e: expr >>
         ({
@@ -48,7 +46,7 @@ named!(bind_fun <Val>, do_parse!(
         })
 ));
 
-named!(expr <Expr>, alt_complete!(
+named!(expr <&str, Expr>, alt_complete!(
     expr_bind |
     expr_fun  |
     expr_if   |
@@ -56,14 +54,14 @@ named!(expr <Expr>, alt_complete!(
     expr1
 ));
 
-named!(expr1 <Expr>, alt_complete!(
+named!(expr1 <&str, Expr>, alt_complete!(
     expr1_app |
     expr1_mul |
     expr0
 
 ));
 
-named!(expr0 <Expr>, alt_complete!(
+named!(expr0 <&str, Expr>, alt_complete!(
     expr0_paren |
     expr0_float |
     expr0_int   |
@@ -72,20 +70,20 @@ named!(expr0 <Expr>, alt_complete!(
 ));
 
 
-named!(expr_bind <Expr>, do_parse!(
-    tag!("let") >> multispace >>
+named!(expr_bind <&str, Expr>, do_parse!(
+    tag_s!("let") >> multispace >>
         binds: separated_list!(multispace, bind) >> multispace >>
-        tag!("in") >> multispace >>
-        ret: expr >> multispace >> tag!("end") >>
+        tag_s!("in") >> multispace >>
+        ret: expr >> multispace >> tag_s!("end") >>
         (Expr::Binds {ty: TyDefer::empty(), binds: binds, ret: Box::new(ret)})
 ));
 
-named!(expr_fun <Expr>, do_parse!(
+named!(expr_fun <&str, Expr>, do_parse!(
     tag!("fn") >>
         multispace >>
         param: symbol >>
         opt!(multispace) >>
-        tag!("=>") >>
+        tag_s!("=>") >>
         opt!(multispace) >>
         body: expr >>
         (Expr::Fun {
@@ -96,10 +94,10 @@ named!(expr_fun <Expr>, do_parse!(
         })
 ));
 
-named!(expr_if <Expr>, do_parse!(
-    tag!("if") >> multispace >> cond: expr >> multispace >>
-        tag!("then") >> multispace >> then: expr >> multispace >>
-        tag!("else") >> multispace >> else_: expr >>
+named!(expr_if <&str, Expr>, do_parse!(
+    tag_s!("if") >> multispace >> cond: expr >> multispace >>
+        tag_s!("then") >> multispace >> then: expr >> multispace >>
+        tag_s!("else") >> multispace >> else_: expr >>
         (Expr::If {
             ty: TyDefer::empty(),
             cond: Box::new(cond),
@@ -108,7 +106,7 @@ named!(expr_if <Expr>, do_parse!(
         })
 ));
 
-named!(expr1_app <Expr>, do_parse!(
+named!(expr1_app <&str, Expr>, do_parse!(
     fun: expr0 >> multispace >>
         args: separated_nonempty_list!(multispace, expr0) >>
         ({
@@ -124,53 +122,43 @@ named!(expr1_app <Expr>, do_parse!(
           })
 ));
 
-named!(expr_add <Expr>, do_parse!(
+named!(expr_add <&str, Expr>, do_parse!(
     e1: expr1 >>
         opt!(multispace) >>
-        tag!("+") >>
+        tag_s!("+") >>
         opt!(multispace) >>
         e2: expr >>
         (Expr::Add {ty: TyDefer::empty(), l: Box::new(e1), r: Box::new(e2)})
 ));
 
-named!(expr1_mul <Expr>, do_parse!(
+named!(expr1_mul <&str, Expr>, do_parse!(
     e1: expr0 >>
         opt!(multispace) >>
-        tag!("*") >>
+        tag_s!("*") >>
         opt!(multispace) >>
         e2: expr1 >>
         (Expr::Mul {ty: TyDefer::empty(), l: Box::new(e1), r: Box::new(e2)})
 ));
 
-named!(expr0_sym <Expr>, map!(symbol, |s| Expr::Sym{
+named!(expr0_sym <&str, Expr>, map!(symbol, |s| Expr::Sym{
     ty: TyDefer::empty(),
     name: s
 }));
-named!(expr0_int <Expr>, map!(digit, |s| Expr::Lit{
+
+named!(expr0_int <&str, Expr>, map!(digit, |s: &str| Expr::Lit{
     ty: TyDefer::empty(),
-    value: Literal::Int(from_utf8(s).expect("internal error: failed to parse integer literal")
-                        .parse().expect("internal error: failed to parse integer literal"))}));
-named!(expr0_float <Expr>, map!(unsigned_float, |s| Expr::Lit{
+    value: Literal::Int(s.parse().unwrap())}));
+
+named!(expr0_float <&str, Expr>, map!(double_s, |s| Expr::Lit{
     ty: TyDefer::empty(),
     value: Literal::Float(s)}));
 
 
-named!(unsigned_float <f64>,
-    map_res!(
-        map_res!(
-            recognize!(
-                alt!(
-                    delimited!(digit, complete!(tag!(".")), opt!(complete!(digit)))
-                )
-            ),
-            from_utf8
-        ),
-        FromStr::from_str));
-named!(expr0_bool <Expr>, alt!(
+named!(expr0_bool <&str, Expr>, alt!(
     map!(tag!("true"),  |_| Expr::Lit{ty: TyDefer::empty(), value: Literal::Bool(true)}) |
     map!(tag!("false"), |_| Expr::Lit{ty: TyDefer::empty(), value: Literal::Bool(false)})));
 
-named!(expr0_paren <Expr>, do_parse!(
+named!(expr0_paren <&str, Expr>, do_parse!(
     tag!("(") >>
          opt!(multispace) >>
          e: expr >>
@@ -179,17 +167,18 @@ named!(expr0_paren <Expr>, do_parse!(
     (e))
 );
 
-named!(symbol <Symbol>, do_parse!(
+named!(symbol <&str, Symbol>, do_parse!(
     map_res!(peek!(alphanumeric),
-             |s| match s as &[u8] {
-                 b"val" | b"fun" | b"fn" | b"let" | b"in" | b"end" | b"if" | b"then" | b"else" => {
-                     Err(ErrorKind::IsNot) as  ::std::result::Result<&[u8], ErrorKind>
+             |s| match s as &str {
+                 "val" | "fun" | "fn" | "let" | "in" | "end" | "if" | "then" | "else" => {
+                     Err(ErrorKind::IsNot) as  ::std::result::Result<&str, ErrorKind>
                  },
                  s => Ok(s)
              }) >>
-        sym: alphanumeric >> (Symbol(from_utf8(sym).expect("failed to parse UTF-8 value").to_string()))));
+        sym: alphanumeric >> (Symbol(sym.to_string()))));
 
-pub fn parse(input: &[u8]) -> ::std::result::Result<AST, Err<&[u8]>> {
+pub fn parse(input: &str) -> ::std::result::Result<AST, Err<&str>> {
     let iresult = top(input);
+    println!("{:?}", iresult);
     iresult.to_result()
 }
