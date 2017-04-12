@@ -287,7 +287,6 @@ impl LIR2WASM {
                                         .set_local(reg!(reg))
                                 },
                                 StoreFnPtr(ref addr, ref value) => {
-                                    println!("{:?}", value);
                                     cb = cb
                                         .constant(*fun!(value) as i64)
                                         .get_local(reg!(addr.0))
