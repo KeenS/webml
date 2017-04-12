@@ -53,6 +53,10 @@ impl UnAlias {
                     self.resolv_alias(l);
                     self.resolv_alias(r);
                 }
+                &mut Proj { ref mut tuple, .. } => {
+                    self.resolv_alias(tuple);
+                }
+
                 &mut Closure {
                          ref mut fun,
                          ref mut env,

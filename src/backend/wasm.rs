@@ -26,11 +26,24 @@ fn lty_to_valuetype_opt(t: &lir::LTy) -> Option<ValueType> {
         I64 => Some(ValueType::I64),
         F32 => Some(ValueType::F32),
         F64 => Some(ValueType::F64),
+        FPtr => Some(ValueType::I32),
+        Ptr => Some(ValueType::I32),
     }
 }
 
 fn lty_to_valuetype(t: &lir::LTy) -> ValueType {
     lty_to_valuetype_opt(t).unwrap_or(ValueType::I32)
+}
+
+fn tys_to_ptrbits(tys: &[lir::LTy]) -> u32 {
+    let mut bits = 0;
+    for ty in tys {
+        bits <<= 1;
+        if ty.is_ptr() {
+            bits |= 1;
+        }
+    }
+    bits
 }
 
 pub struct LIR2WASM {
@@ -44,11 +57,11 @@ impl LIR2WASM {
     pub fn new() -> Self {
         let mut md =  ModuleBuilder::new();
 
-        let alloc_fun_index = md.add_type(funtype!((i64) -> i64));
+        let alloc_fun_index = md.add_type(funtype!((i32, i32) -> i32));
         let alloc_fun = md.import("webml-rt", "alloc", alloc_fun_index);
 
         let print_fun_index = md.add_type(funtype!((f64)));
-        let print_fun = md.import("webml-rt", "print", print_fun_index);
+        let print_fun = md.import("js-ffi", "print", print_fun_index);
 
         LIR2WASM {
             md: md,
@@ -254,25 +267,27 @@ impl LIR2WASM {
                                         .set_local(reg!(reg));
                                 },
 
-                                HeapAlloc(ref reg, ref value) => {
+                                HeapAlloc(ref reg, ref value, ref tys) => {
                                     cb = match *value {
                                         I(i) => cb.constant(i as i64),
                                         R(ref r) => cb.get_local(reg!(r)),
-                                        F(_) => panic!("unsupported operation")
                                     };
 
                                     cb = cb
+                                        .constant(tys_to_ptrbits(tys) as i32)
                                         .call(self.alloc_fun)
                                         .set_local(reg!(reg))
                                 },
-                                StackAlloc(ref reg, size) => {
+                                StackAlloc(ref reg, size, ref tys) => {
                                     // allocating to heap, not stack
                                     cb = cb
                                         .constant(size as i32)
+                                        .constant(tys_to_ptrbits(tys) as i32)
                                         .call(self.alloc_fun)
                                         .set_local(reg!(reg))
                                 },
                                 StoreFnPtr(ref addr, ref value) => {
+                                    println!("{:?}", value);
                                     cb = cb
                                         .constant(*fun!(value) as i64)
                                         .get_local(reg!(addr.0))
@@ -286,11 +301,21 @@ impl LIR2WASM {
 
                                     cb = cb
                                         .get_local(reg!(fun))
+                                        // load ptr to captured env
+                                        .i64_load(8);
+                                    // load the rest args
+                                    for arg in args.iter() {
+                                        cb = cb.get_local(reg!(arg))
+                                    }
+
+                                    cb =
+                                        cb
+                                        .get_local(reg!(fun))
+                                        // load function
+                                        .i64_load(0)
                                         .call_indirect(0, false)
                                         // if ret ty isn't unit
                                         .set_local(reg!(reg));
-                                    let _cb = cb;
-                                    unimplemented!();
                                 },
                                 FunCall(ref reg, ref fun, ref args) => {
                                     for arg in args.iter() {
@@ -299,7 +324,7 @@ impl LIR2WASM {
                                     // prim funs
                                     if fun.0 == "print" {
                                         cb = cb.call(self.print_fun)
-                                            // the ret ty of print is unit
+                                        // the ret ty of print is unit
                                     } else {
                                         cb = cb.call(fun!(fun))
                                         // if ret ty isn't unit

@@ -11,6 +11,8 @@ pub enum LTy {
     F32,
     F64,
     Unit,
+    Ptr,
+    FPtr,
 }
 
 impl LTy {
@@ -19,7 +21,21 @@ impl LTy {
         match *self {
             I32 | F32 => 4,
             I64 | F64 => 8,
+            // pointer size is 4
+            FPtr | Ptr => 4,
             Unit => 0,
+        }
+    }
+
+    pub fn is_ptr(&self) -> bool {
+        use self::LTy::*;
+        match *self {
+            Ptr | FPtr => true,
+            I32 |
+            I64 |
+            F32 |
+            F64 |
+            Unit => false
         }
     }
 }
@@ -39,10 +55,8 @@ pub enum Value {
     // register
     R(Reg),
     // function pointer
-    F(Symbol),
+//    F(Symbol),
 }
-
-pub const PTR: LTy = LTy::I64;
 
 #[derive(Debug, Clone)]
 pub struct LIR(pub Vec<Function>);
@@ -92,8 +106,8 @@ pub enum Op {
     StoreF64(Addr, Reg),
     LoadF64(Reg, Addr),
 
-    HeapAlloc(Reg, Value),
-    StackAlloc(Reg, u32),
+    HeapAlloc(Reg, Value, Vec<LTy>),
+    StackAlloc(Reg, u32, Vec<LTy>),
 
     StoreFnPtr(Addr, Symbol),
     FunCall(Reg, Symbol, Vec<Reg>),

@@ -62,7 +62,6 @@ impl PP for Value {
         match self {
             &I(ref i) => write!(w, "{}", i),
             &R(ref r) => r.pp(w, indent),
-            &F(ref f) => f.pp(w, indent),
         }
     }
 }
@@ -77,6 +76,8 @@ impl PP for LTy {
             I64 => write!(w, "i64")?,
             F32 => write!(w, "f32")?,
             F64 => write!(w, "f64")?,
+            Ptr => write!(w, "ptr")?,
+            FPtr => write!(w, "fptr")?,
         }
         Ok(())
     }
@@ -220,19 +221,21 @@ impl PP for Op {
                 write!(w, " * ")?;
                 r3.pp(w, indent)?;
             }
-            HeapAlloc(ref reg, ref value) => {
+            HeapAlloc(ref reg, ref value, ref tys) => {
                 reg.pp(w, indent)?;
                 write!(w, ": ")?;
                 reg.0.pp(w, indent)?;
                 write!(w, " <- heapalloc(")?;
                 value.pp(w, indent)?;
+                write!(w, ", ")?;
+                write!(w, "{:?}", tys.as_slice())?;
                 write!(w, ")")?;
             }
-            StackAlloc(ref reg, ref value) => {
+            StackAlloc(ref reg, ref value, ref tys) => {
                 reg.pp(w, indent)?;
                 write!(w, ": ")?;
                 reg.0.pp(w, indent)?;
-                write!(w, " <- stackalloc({})", value)?;
+                write!(w, " <- stackalloc({}, {:?})", value, tys)?;
             }
             ClosureCall(ref reg, ref name, ref args) => {
                 reg.pp(w, indent)?;

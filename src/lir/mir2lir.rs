@@ -19,8 +19,9 @@ impl MIR2LIR {
             Int => LTy::I64,
             Float => LTy::F64,
             Bool => LTy::I32,
-            Cls { .. } => PTR,
-            Ebb { .. } => PTR,
+            Tuple(_) => LTy::Ptr,
+            Cls { .. } => LTy::Ptr,
+            Ebb { .. } => LTy::FPtr,
 
         }
     }
@@ -73,6 +74,7 @@ impl MIR2LIR {
                             }
                             &mir::EbbTy::Bool => ops.push(MoveI32(reg!(var), reg!(sym))),
                             &mir::EbbTy::Int |
+                            &mir::EbbTy::Tuple(_) |
                             &mir::EbbTy::Cls { .. } |
                             &mir::EbbTy::Ebb { .. } => ops.push(MoveI64(reg!(var), reg!(sym))),
                             &mir::EbbTy::Float => ops.push(MoveF64(reg!(var), reg!(sym))),
@@ -106,24 +108,57 @@ impl MIR2LIR {
 
                         }
                     }
+                    &m::Proj {
+                         ref var,
+                         ref ty,
+                         ref index,
+                         ref tuple,
+                     } => {
+                        loop {
+                            let ctor = match self.ebbty_to_lty(ty) {
+                                LTy::F32 => LoadF32,
+                                LTy::F64 => LoadF64,
+                                LTy::I32 => LoadI32,
+                                LTy::I64 => LoadI64,
+                                LTy::Ptr => LoadI64,
+                                LTy::FPtr => LoadI64,
+                                LTy::Unit => // do nothing
+                                    break,
+                            };
+                            ops.push(ctor(reg!(var), Addr(reg!(tuple), *index)));
+                            break;
+                        }
+
+                    }
                     &m::Closure {
                          ref var,
                          ref fun,
                          ref env,
                          ..
                      } => {
+                        // closure looks like on memory:
+                        //   64      64    ...
+                        // +-----------------------
+                        // | fptr | arg1 | ...
+                        // +-----------------------
+
                         let reg = reg!(var);
-                        let mut size: u32 = PTR.size();
+                        let mut size: u32 = LTy::Ptr.size();
                         size += env.iter()
                             .map(|&(ref ty, _)| self.ebbty_to_lty(ty).size())
                             .sum();
-                        ops.push(HeapAlloc(reg.clone(), I(size as i32)));
+                        let mut tys = vec![LTy::FPtr, LTy::I32];
+                        for &(ref ty, _) in env.iter() {
+                            tys.push(self.ebbty_to_lty(ty));
+                        }
+                        ops.push(HeapAlloc(reg.clone(), I(size as i32), tys));
                         ops.push(StoreFnPtr(Addr(reg.clone(), 0), fun.clone()));
-                        let mut acc = PTR.size();
+                        let mut acc = LTy::FPtr.size();
                         for &(ref ty, ref var) in env.iter() {
                             let ty = self.ebbty_to_lty(ty);
                             match ty {
                                 LTy::Unit => {
+                                    // FIXME: remove unit from closure
                                     // do nothing
                                     ()
                                 }
@@ -131,8 +166,10 @@ impl MIR2LIR {
                                 LTy::I64 => ops.push(StoreI64(Addr(reg.clone(), acc), reg!(var))),
                                 LTy::F32 => ops.push(StoreF32(Addr(reg.clone(), acc), reg!(var))),
                                 LTy::F64 => ops.push(StoreF64(Addr(reg.clone(), acc), reg!(var))),
+                                LTy::Ptr => ops.push(StoreI32(Addr(reg.clone(), acc), reg!(var))),
+                                LTy::FPtr => ops.push(StoreI32(Addr(reg.clone(), acc), reg!(var))),
                             }
-                            acc += ty.size();
+                            acc += 8;
                         }
                     }
                     &m::Call {
@@ -141,7 +178,6 @@ impl MIR2LIR {
                          ref args,
                          ..
                      } => {
-                        // FIXME: distinguish call function and call closure
                         let args = args.iter().map(|a| reg!(a)).collect();
                         match symbol_table.get(fun) {
                             Some(r) => ops.push(ClosureCall(reg!(var), r.clone(), args)),
@@ -174,6 +210,8 @@ impl MIR2LIR {
                                 LTy::I64 => ops.push(MoveI64(p.clone(), reg!(a))),
                                 LTy::F32 => ops.push(MoveF32(p.clone(), reg!(a))),
                                 LTy::F64 => ops.push(MoveF64(p.clone(), reg!(a))),
+                                LTy::Ptr => ops.push(MoveI32(p.clone(), reg!(a))),
+                                LTy::FPtr => ops.push(MoveI32(p.clone(), reg!(a))),
                             }
                         }
                         ops.push(Jump(Label(target.clone())))
@@ -235,11 +273,12 @@ impl MIR2LIR {
                     &mir::Op::Alias { ref var, ref ty, .. } |
                     &mir::Op::Add { ref var, ref ty, .. } |
                     &mir::Op::Mul { ref var, ref ty, .. } |
+                    &mir::Op::Proj { ref var, ref ty, .. } |
                     &mir::Op::Call { ref var, ref ty, .. } => {
                         intern!(self.ebbty_to_lty(ty), var);
                     }
                     &mir::Op::Closure { ref var, .. } => {
-                        intern!(PTR, var);
+                        intern!(LTy::Ptr, var);
                     }
                     _ => (),
                 }

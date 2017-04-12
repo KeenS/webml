@@ -63,6 +63,13 @@ pub enum Op {
         fun: Symbol,
         args: Vec<Symbol>,
     },
+    Proj {
+        var: Symbol,
+        ty: EbbTy,
+        index: u32,
+        tuple: Symbol,
+    },
+
     Branch {
         cond: Symbol,
         then: Symbol,
@@ -84,7 +91,12 @@ pub enum EbbTy {
     Int,
     Float,
     Bool,
-    Cls { param: Box<EbbTy>, ret: Box<EbbTy> },
+    Tuple(Vec<EbbTy>),
+    Cls {
+        closures: Vec<EbbTy>,
+        param: Box<EbbTy>,
+        ret: Box<EbbTy>,
+    },
     Ebb { params: Vec<EbbTy>, ret: Box<EbbTy> },
 }
 

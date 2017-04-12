@@ -171,7 +171,7 @@ impl<'a> Scope<'a> {
                 let fty = anonfun.ty();
                 cls.push(Val {
                              ty: anonfun.ty(),
-                             rec: false,
+                             rec: true,
                              name: fname.clone(),
                              expr: anonfun,
                          });

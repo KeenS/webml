@@ -73,16 +73,31 @@ impl HIR2MIR {
                 body,
                 param,
                 body_ty,
-                mut captures,
+                captures,
+                make_closure,
             } => {
                 //                assert_eq!(body_ty, ty_);
-                captures.push(param);
-                let captures = captures
-                    .into_iter()
-                    .map(|(ty, var)| (EbbTy::from(ty), var))
-                    .collect();
-                let eb_ = EBBBuilder::new(Symbol("entry".to_string()), captures);
-                let mut fb = FunctionBuilder::new(name, EbbTy::from(body_ty.clone()));
+                let param = (from(param.0), param.1);
+                let mut eb_;
+                // assuming all the flags are set
+                if make_closure.unwrap() {
+                    // make closured function
+                    let (tuples, vars): (Vec<_>, Vec<_>) = captures
+                        .into_iter()
+                        .map(|(ty, var)| (from(ty), var))
+                        .unzip();
+                    let closure = Symbol("env".to_string());
+                    eb_ = EBBBuilder::new(Symbol("entry".to_string()),
+                                          vec![(EbbTy::Tuple(tuples.clone()), closure.clone()),
+                                               param]);
+                    for (i, (v, ty)) in vars.into_iter().zip(tuples).enumerate() {
+                        eb_.proj(v, ty, i as u32, closure.clone());
+                    }
+                } else {
+                    // make pure function
+                    eb_ = EBBBuilder::new(Symbol("entry".to_string()), vec![param]);
+                }
+                let mut fb = FunctionBuilder::new(name, from(body_ty.clone()));
                 let ebb = self.trans_expr(&mut fb, eb_, body_ty, *body);
                 fb.add_ebb(ebb);
                 let function = fb.build();

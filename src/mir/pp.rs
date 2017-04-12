@@ -45,8 +45,25 @@ impl PP for EbbTy {
             Bool => write!(w, "bool")?,
             Int => write!(w, "int")?,
             Float => write!(w, "float")?,
-            Cls { ref param, ref ret } => {
-                write!(w, "fn(")?;
+            Tuple(ref tys) => {
+                write!(w, "(")?;
+                for t in tys {
+                    t.pp(w, indent)?;
+                    write!(w, ", ")?;
+                }
+                write!(w, ")")?;
+            }
+            Cls {
+                ref closures,
+                ref param,
+                ref ret,
+            } => {
+                write!(w, "closure_fn<")?;
+                for c in closures {
+                    c.pp(w, indent)?;
+                    write!(w, ", ")?;
+                }
+                write!(w, ">(")?;
                 param.pp(w, indent)?;
                 write!(w, ") -> ")?;
                 ret.pp(w, indent)?;
@@ -151,6 +168,7 @@ impl PP for Op {
              } => {
                 write!(w, "{}{}: ", space, var.0)?;
                 (EbbTy::Cls {
+                         closures: env.iter().map(|&(ref ty, _)| ty.clone()).collect(),
                          param: Box::new(param_ty.clone()),
                          ret: Box::new(ret_ty.clone()),
                      }).pp(w, indent)?;
@@ -180,6 +198,17 @@ impl PP for Op {
                     write!(w, ", ")?;
                 }
                 write!(w, ")")?;
+            }
+            &Proj {
+                 ref var,
+                 ref ty,
+                 ref index,
+                 ref tuple,
+             } => {
+                write!(w, "{}{}: ", space, var.0)?;
+                ty.pp(w, indent)?;
+                write!(w, " := #{} ", index)?;
+                tuple.pp(w, indent)?;
             }
             &Branch {
                  ref cond,

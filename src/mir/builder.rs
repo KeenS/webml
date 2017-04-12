@@ -104,6 +104,16 @@ impl EBBBuilder {
         self
     }
 
+    pub fn proj(&mut self, var: Symbol, ty: EbbTy, index: u32, tuple: Symbol) -> &mut Self {
+        self.push(Op::Proj {
+                      var: var,
+                      ty: ty,
+                      index: index,
+                      tuple: tuple,
+                  });
+        self
+    }
+
     pub fn branch(mut self,
                   cond: Symbol,
                   then: Symbol,
