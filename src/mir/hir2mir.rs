@@ -2,30 +2,31 @@ use mir::*;
 use super::builder::*;
 use prim::*;
 use pass::Pass;
+use hir;
 
 pub struct HIR2MIR {
     id: usize,
 }
 
 
-use hir;
 
-impl From<Ty> for EbbTy {
-    fn from(ty: Ty) -> Self {
-        match ty {
-            Ty::Unit => EbbTy::Unit,
-            Ty::Bool => EbbTy::Bool,
-            Ty::Int => EbbTy::Int,
-            Ty::Float => EbbTy::Float,
-            Ty::Fun(arg, ret) => {
-                EbbTy::Ebb {
-                    params: vec![EbbTy::from(arg.force("internal typing error"))],
-                    ret: Box::new(EbbTy::from(ret.force("internal typing error"))),
-                }
+fn from(ty: hir::HTy) -> EbbTy {
+    use hir::HTy::*;
+    match ty {
+        Unit => EbbTy::Unit,
+        Bool => EbbTy::Bool,
+        Int => EbbTy::Int,
+        Float => EbbTy::Float,
+        Fun(arg, ret) => {
+            EbbTy::Cls {
+                closures: vec![],
+                param: Box::new(from(*arg)),
+                ret: Box::new(from(*ret)),
             }
         }
     }
 }
+
 
 impl HIR2MIR {
     pub fn new() -> Self {
@@ -90,14 +91,14 @@ impl HIR2MIR {
             }
             e @ Sym { .. } | e @ Binds { .. } => {
                 let (mut eb, var) = self.trans_expr_block(fb, eb, ty_.clone(), e);
-                eb.alias(name, EbbTy::from(ty_), var);
+                eb.alias(name, from(ty_), var);
                 eb
             }
             App { ty, fun, arg } => {
                 assert_eq!(ty, ty_);
                 let arg = force_symbol(*arg);
                 let fun = force_symbol(*fun);
-                eb.call(name, EbbTy::from(ty), fun, vec![arg]);
+                eb.call(name, from(ty), fun, vec![arg]);
                 eb
             }
             If {
@@ -109,7 +110,7 @@ impl HIR2MIR {
                 let thenlabel = self.genlabel("then");
                 let elselabel = self.genlabel("else");
                 let joinlabel = self.genlabel("join");
-                let (eb, var) = self.trans_expr_block(fb, eb, Ty::Bool, *cond);
+                let (eb, var) = self.trans_expr_block(fb, eb, hir::HTy::Bool, *cond);
                 let ebb = eb.branch(var, thenlabel.clone(), true, elselabel.clone(), true);
                 fb.add_ebb(ebb);
 
@@ -123,7 +124,7 @@ impl HIR2MIR {
                 let ebb = eb.jump(joinlabel.clone(), true, vec![var]);
                 fb.add_ebb(ebb);
 
-                let eb = EBBBuilder::new(joinlabel, vec![(EbbTy::from(ty), name)]);
+                let eb = EBBBuilder::new(joinlabel, vec![(from(ty), name)]);
                 eb
             }
             Op {
@@ -136,8 +137,8 @@ impl HIR2MIR {
                 let l = force_symbol(*l);
                 let r = force_symbol(*r);
                 match name_.0.as_ref() {
-                    "+" => eb.add(name, EbbTy::from(ty), l, r),
-                    "*" => eb.mul(name, EbbTy::from(ty), l, r),
+                    "+" => eb.add(name, from(ty), l, r),
+                    "*" => eb.mul(name, from(ty), l, r),
                     _ => panic!("internal error"),
                 };
                 eb
@@ -149,13 +150,9 @@ impl HIR2MIR {
                 fname,
             } => {
                 let envs = envs.into_iter()
-                    .map(|(ty, var)| (EbbTy::from(ty), var))
+                    .map(|(ty, var)| (from(ty), var))
                     .collect();
-                eb.closure(name,
-                           EbbTy::from(param_ty),
-                           EbbTy::from(body_ty),
-                           fname,
-                           envs);
+                eb.closure(name, from(param_ty), from(body_ty), fname, envs);
                 eb
             }
             PrimFun {
@@ -165,15 +162,15 @@ impl HIR2MIR {
             } => {
                 eb.alias(name,
                          EbbTy::Ebb {
-                             params: vec![EbbTy::from(param_ty)],
-                             ret: Box::new(EbbTy::from(ret_ty)),
+                             params: vec![from(param_ty)],
+                             ret: Box::new(from(ret_ty)),
                          },
                          fname);
                 eb
             }
             Lit { ty, value } => {
                 assert_eq!(ty, ty_);
-                eb.lit(name, EbbTy::from(ty), value);
+                eb.lit(name, from(ty), value);
                 eb
             }
         }
@@ -183,7 +180,7 @@ impl HIR2MIR {
     fn trans_expr(&mut self,
                   fb: &mut FunctionBuilder,
                   mut eb: EBBBuilder,
-                  ty_: Ty,
+                  ty_: hir::HTy,
                   expr: hir::Expr)
                   -> EBB {
         use hir::Expr::*;
@@ -195,11 +192,11 @@ impl HIR2MIR {
                     eb = self.trans_val(&mut funs, fb, eb, val);
                 }
                 assert_eq!(funs.len(), 0);
-                eb.ret(force_symbol(*ret), EbbTy::from(ty))
+                eb.ret(force_symbol(*ret), from(ty))
             }
             Sym { ty, name } => {
                 assert_eq!(ty, ty_);
-                eb.ret(name, EbbTy::from(ty))
+                eb.ret(name, from(ty))
             }
             _ => panic!("internal error"),
         }
@@ -208,7 +205,7 @@ impl HIR2MIR {
     fn trans_expr_block(&mut self,
                         fb: &mut FunctionBuilder,
                         mut eb: EBBBuilder,
-                        ty_: Ty,
+                        ty_: hir::HTy,
                         expr: hir::Expr)
                         -> (EBBBuilder, Symbol) {
         use hir::Expr::*;

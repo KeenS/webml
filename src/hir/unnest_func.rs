@@ -117,6 +117,7 @@ impl<'a> Scope<'a> {
                             None
                         };
                         bind.expr = self.conv_expr(cls, bind.expr, bind_name);
+                        bind.rec = false;
                         bind
 
                     })
@@ -149,6 +150,7 @@ impl<'a> Scope<'a> {
                 body_ty,
                 mut body,
                 mut captures,
+                ..
             } => {
                 assert_eq!(captures.len(), 0);
                 body = Box::new(self.conv_expr(cls, *body, None));
@@ -158,12 +160,13 @@ impl<'a> Scope<'a> {
                 let fname = self.new_fname(bind_name.clone());
                 self.rename(&mut body, &bind_name, &fname);
                 captures.extend(frees.clone());
-                let is_closure = captures.len() != 0;
+                let is_closure = captures.len() != 0 || bind_name.is_none();
                 let anonfun = Fun {
                     param: (param_ty.clone(), param),
                     body_ty: body_ty.clone(),
                     body: body,
                     captures: captures,
+                    make_closure: Some(is_closure),
                 };
                 let fty = anonfun.ty();
                 cls.push(Val {
@@ -225,14 +228,14 @@ impl<'a> Scope<'a> {
     }
 
     fn analyze_free_val<'b, 'c>(&'b mut self,
-                                frees: &mut Vec<(Ty, Symbol)>,
+                                frees: &mut Vec<(HTy, Symbol)>,
                                 bound: &Symbol,
                                 val: &'c Val) {
         self.analyze_free_expr(frees, bound, &val.expr);
     }
 
     fn analyze_free_expr<'b, 'c>(&'b mut self,
-                                 frees: &mut Vec<(Ty, Symbol)>,
+                                 frees: &mut Vec<(HTy, Symbol)>,
                                  bound: &Symbol,
                                  expr: &'c Expr) {
         use hir::Expr::*;

@@ -19,7 +19,8 @@ val e = if true then b else c
 val f = let val d = 1 in d + c end
 val g = d 1 2
 val h = let val y = 1 in fn x => x + y end
-val a = x + 2
+val i = let val two = 2 fun cls1 x = x + 1 fun cls2  x = x + two in if true then cls1 else cls2 end
+val a = i 2
 ";
 
     let _input2 = "
@@ -65,6 +66,7 @@ val z = 1
                                    hir::AST2HIR,
                                    hir::Rename::new(),
                                    hir::UnnestFunc::new(),
+                                   hir::ForceClosure::new(),
                                    hir::FlatExpr::new(),
                                    hir::FlatLet::new(),
                                    mir::HIR2MIR::new(),
@@ -73,7 +75,7 @@ val z = 1
                                    lir::MIR2LIR::new(),
                                    backend::LIR2WASM::new()];
 
-    let module: Result<wasm::Module, TypeError> = passes.trans(_input3);
+    let module: Result<wasm::Module, TypeError> = passes.trans(_input1);
 
     let module = module.unwrap();
     let mut code = Vec::new();

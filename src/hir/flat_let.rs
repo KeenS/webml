@@ -137,6 +137,7 @@ impl FlatLet {
                 param,
                 body_ty,
                 captures,
+                make_closure,
             } => {
                 body = Box::new(self.flat_expr(*body));
                 Fun {
@@ -144,6 +145,7 @@ impl FlatLet {
                     param: param,
                     body_ty: body_ty,
                     captures: captures,
+                    make_closure: make_closure,
                 }
             }
             App {

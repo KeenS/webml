@@ -48,6 +48,7 @@ impl MIR2LIR {
         macro_rules! reg {
             ($var: expr) => {symbol_table[&$var].clone()}
         }
+
         let mut blocks = Vec::new();
         for ebb in body.iter() {
             let mut ops = Vec::new();

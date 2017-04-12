@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::ops::{Drop, Deref, DerefMut};
 
-use ast;
+use ast::*;
 use prim::*;
 
 #[derive(Debug)]

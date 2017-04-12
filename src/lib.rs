@@ -15,7 +15,7 @@ pub mod mir;
 pub mod lir;
 pub mod backend;
 
-pub use prim::TypeError;
 pub use pass::{Pass, Chain};
 pub use parser::parse;
 pub use ast::typing::TyEnv;
+pub use ast::TypeError;

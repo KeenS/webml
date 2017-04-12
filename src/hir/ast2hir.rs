@@ -1,9 +1,24 @@
 use ast;
 use pass::Pass;
 use prim::*;
-use hir::{HIR, Expr, Val};
+use hir::{HIR, Expr, Val, HTy};
 
 pub struct AST2HIR;
+
+fn force_into(ty: ast::Ty) -> HTy {
+    use ast::Ty::*;
+    match ty {
+        Unit => HTy::Unit,
+        Bool => HTy::Bool,
+        Int => HTy::Int,
+        Float => HTy::Float,
+        Fun(arg, ret) => HTy::fun(conv_ty(arg), conv_ty(ret)),
+    }
+}
+
+fn conv_ty(ty: ast::TyDefer) -> HTy {
+    force_into(ty.force("internal typing error"))
+}
 
 impl AST2HIR {
     fn conv_ast(&self, ast: ast::AST) -> HIR {
@@ -15,7 +30,7 @@ impl AST2HIR {
 
     fn conv_val(&self, val: ast::Val) -> Val {
         Val {
-            ty: val.ty.force("internal typing error"),
+            ty: conv_ty(val.ty),
             rec: val.rec,
             name: val.name,
             expr: self.conv_expr(val.expr),
@@ -27,14 +42,14 @@ impl AST2HIR {
         match expr {
             E::Binds { ty, binds, ret } => {
                 Expr::Binds {
-                    ty: ty.force("internal typing error"),
+                    ty: conv_ty(ty),
                     binds: binds.into_iter().map(|b| self.conv_val(b)).collect(),
                     ret: Box::new(self.conv_expr(*ret)),
                 }
             }
             E::Add { ty, l, r } => {
                 Expr::Op {
-                    ty: ty.force("internal typing error"),
+                    ty: conv_ty(ty),
                     name: Symbol("+".to_string()),
                     l: Box::new(self.conv_expr(*l)),
                     r: Box::new(self.conv_expr(*r)),
@@ -42,7 +57,7 @@ impl AST2HIR {
             }
             E::Mul { ty, l, r } => {
                 Expr::Op {
-                    ty: ty.force("internal typing error"),
+                    ty: conv_ty(ty),
                     name: Symbol("*".to_string()),
                     l: Box::new(self.conv_expr(*l)),
                     r: Box::new(self.conv_expr(*r)),
@@ -55,15 +70,16 @@ impl AST2HIR {
                 body,
             } => {
                 Expr::Fun {
-                    param: (param_ty.force("internal typing error"), param),
-                    body_ty: body_ty.force("internal typing error"),
+                    param: (conv_ty(param_ty), param),
+                    body_ty: conv_ty(body_ty),
                     body: Box::new(self.conv_expr(*body)),
                     captures: Vec::new(),
+                    make_closure: None,
                 }
             }
             E::App { ty, fun, arg } => {
                 self.conv_expr(*fun)
-                    .app1(ty.force("internal typing error"), self.conv_expr(*arg))
+                    .app1(conv_ty(ty), self.conv_expr(*arg))
             }
             E::If {
                 ty,
@@ -72,7 +88,7 @@ impl AST2HIR {
                 else_,
             } => {
                 Expr::If {
-                    ty: ty.force("internal typing error"),
+                    ty: conv_ty(ty),
                     cond: Box::new(self.conv_expr(*cond)),
                     then: Box::new(self.conv_expr(*then)),
                     else_: Box::new(self.conv_expr(*else_)),
@@ -80,13 +96,13 @@ impl AST2HIR {
             }
             E::Sym { ty, name } => {
                 Expr::Sym {
-                    ty: ty.force("internal typing error"),
+                    ty: conv_ty(ty),
                     name: name,
                 }
             }
             E::Lit { ty, value } => {
                 Expr::Lit {
-                    ty: ty.force("internal typing error"),
+                    ty: conv_ty(ty),
                     value: value,
                 }
             }
