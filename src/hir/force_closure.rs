@@ -1,94 +1,115 @@
 use std::collections::HashSet;
 
 use hir::*;
+use hir::util::Traverse;
 use pass::Pass;
 
-
-pub struct ForceClosure {
-    functions: HashSet<Symbol>,
+struct Trav<'a> {
+    t: &'a mut ForceClosure,
+    bound: bool,
 }
 
-
-impl ForceClosure {
-    pub fn new() -> Self {
-        ForceClosure { functions: HashSet::new() }
+impl<'a> Trav<'a> {
+    fn new(t: &'a mut ForceClosure, bound: bool) -> Self {
+        Trav { t: t, bound: bound }
     }
 
-
-    fn conv_hir(&mut self, hir: &mut HIR) {
-        for val in hir.0.iter_mut() {
-            self.register_top_val(val)
-        }
-
-        for val in hir.0.iter_mut() {
-            self.conv_top_val(val)
-        }
+    fn to(&mut self, bound: bool) -> &mut Self {
+        self.bound = bound;
+        self
     }
 
-    fn conv_top_val(&mut self, val: &mut Val) {
-        self.conv_expr(&mut val.expr, true);
+    fn bound(&self) -> bool {
+        self.bound
     }
 
-    fn register_top_val(&mut self, val: &mut Val) {
-        let mut bound_name = None;
-        if val.rec {
-            bound_name = Some(&val.name);
-        }
-        self.register_functions(&mut val.expr, bound_name);
+    fn with_bound<F: FnOnce(&mut Self)>(&mut self, bound: bool, f: F) {
+        let prev = self.bound();
+        self.to(bound);
+        f(self);
+        self.to(prev);
+    }
+}
+
+impl<'a> Traverse for Trav<'a> {
+    fn traverse_binds(&mut self, _ty: &mut HTy, binds: &mut Vec<Val>, ret: &mut Box<Expr>) {
+        self.with_bound(true, |this| for bind in binds.iter_mut() {
+            this.traverse_expr(&mut bind.expr);
+        });
+        self.traverse_expr(ret);
     }
 
-    fn conv_expr(&mut self, expr: &mut Expr, bound: bool) {
+    fn traverse_expr(&mut self, expr: &mut Expr) {
         use hir::Expr::*;
         let assign;
         match *expr {
             Binds {
+                ref mut ty,
                 ref mut binds,
                 ref mut ret,
-                ..
             } => {
-                for bind in binds.iter_mut() {
-                    self.conv_expr(&mut bind.expr, true);
-                }
-                self.conv_expr(ret, bound);
+                self.traverse_binds(ty, binds, ret);
                 return;
             }
             Op {
+                ref mut ty,
+                ref mut name,
                 ref mut l,
                 ref mut r,
-                ..
             } => {
-                self.conv_expr(l.as_mut(), false);
-                self.conv_expr(r, false);
+                self.traverse_op(ty, name, l, r);
                 return;
             }
-
-            Fun { ref mut body, .. } => {
-                self.conv_expr(body, false);
+            PrimFun {
+                ref mut param_ty,
+                ref mut ret_ty,
+                ref mut name,
+            } => {
+                self.traverse_primfun(param_ty, ret_ty, name);
+                return;
+            }
+            Fun {
+                ref mut param,
+                ref mut body_ty,
+                ref mut body,
+                ref mut captures,
+                ref mut make_closure,
+            } => {
+                self.traverse_fun(param, body_ty, body, captures, make_closure);
+                return;
+            }
+            Closure {
+                ref mut envs,
+                ref mut param_ty,
+                ref mut body_ty,
+                ref mut fname,
+            } => {
+                self.traverse_closure(envs, param_ty, body_ty, fname);
                 return;
             }
             App {
+                ref mut ty,
                 ref mut fun,
                 ref mut arg,
-                ..
             } => {
-                self.conv_expr(fun, false);
-                self.conv_expr(arg, false);
+                self.traverse_app(ty, fun, arg);
                 return;
             }
             If {
+                ref mut ty,
                 ref mut cond,
                 ref mut then,
                 ref mut else_,
-                ..
             } => {
-                self.conv_expr(cond, bound);
-                self.conv_expr(then, bound);
-                self.conv_expr(else_, bound);
+                self.traverse_if(ty, cond, then, else_);
                 return;
             }
 
-            Sym { ref name, ref ty } => {
-                if !bound || !self.functions.contains(name) {
+            Sym {
+                ref mut ty,
+                ref mut name,
+            } => {
+                if !self.bound() || !self.t.functions.contains(name) {
                     return;
                 }
                 match *ty {
@@ -102,75 +123,149 @@ impl ForceClosure {
                     }
                     _ => return,
                 }
+
             }
-            Closure { .. } | Lit { .. } | PrimFun { .. } => return,
+            Lit {
+                ref mut ty,
+                ref mut value,
+            } => {
+                self.traverse_lit(ty, value);
+                return;
+            }
 
         }
         *expr = assign;
     }
 
-    fn register_functions(&mut self, expr: &mut Expr, bound_name: Option<&Symbol>) {
-        use hir::Expr::*;
-        match *expr {
-            Binds {
-                ref mut binds,
-                ref mut ret,
-                ..
-            } => {
-                for bind in binds.iter_mut() {
-                    let mut bound_name = None;
-                    if bind.rec {
-                        bound_name = Some(&bind.name);
-                    }
-                    self.register_functions(&mut bind.expr, bound_name);
-                }
-                self.register_functions(ret, None);
-                return;
-            }
-            Op {
-                ref mut l,
-                ref mut r,
-                ..
-            } => {
-                self.register_functions(l.as_mut(), None);
-                self.register_functions(r, None);
-                return;
-            }
 
-            Fun { ref mut body, .. } => {
-                match bound_name {
-                    Some(name) => {
-                        self.functions.insert(name.clone());
-                    }
-                    None => (),
-                };
-                self.register_functions(body, None);
-                return;
-            }
-            App {
-                ref mut fun,
-                ref mut arg,
-                ..
-            } => {
-                self.register_functions(fun, None);
-                self.register_functions(arg, None);
-                return;
-            }
-            If {
-                ref mut cond,
-                ref mut then,
-                ref mut else_,
-                ..
-            } => {
-                self.register_functions(cond, None);
-                self.register_functions(then, None);
-                self.register_functions(else_, None);
-                return;
-            }
+    fn traverse_op(&mut self,
+                   _ty: &mut HTy,
+                   _name: &mut Symbol,
+                   l: &mut Box<Expr>,
+                   r: &mut Box<Expr>) {
+        self.with_bound(false, |this| {
+            this.traverse_expr(l);
+            this.traverse_expr(r);
+        });
+    }
 
-            Sym { .. } | Closure { .. } | Lit { .. } | PrimFun { .. } => return,
+    fn traverse_fun(&mut self,
+                    _param: &mut (HTy, Symbol),
+                    _body_ty: &mut HTy,
+                    body: &mut Box<Expr>,
+                    _captures: &mut Vec<(HTy, Symbol)>,
+                    _make_closure: &mut Option<bool>) {
+        self.with_bound(false, |this| this.traverse_expr(body))
+    }
 
+    fn traverse_app(&mut self, _ty: &mut HTy, fun: &mut Box<Expr>, arg: &mut Box<Expr>) {
+        self.with_bound(false, |this| {
+            this.traverse_expr(fun);
+            this.traverse_expr(arg);
+
+        });
+    }
+}
+
+struct Reg<'a> {
+    t: &'a mut ForceClosure,
+    bound_name: Option<Symbol>,
+}
+
+impl<'a> Reg<'a> {
+    fn new(t: &'a mut ForceClosure, bound_name: Option<Symbol>) -> Self {
+        Reg {
+            t: t,
+            bound_name: bound_name,
         }
+    }
+
+    fn with_bound_name<F: FnOnce(&mut Self)>(&mut self, bound_name: Option<Symbol>, f: F) {
+        let prev = self.bound_name.take();
+        self.bound_name = bound_name;
+        f(self);
+        self.bound_name = prev;
+    }
+}
+
+
+impl<'a> Traverse for Reg<'a> {
+    fn traverse_val(&mut self, val: &mut Val) {
+        self.bound_name = None;
+        if val.rec {
+            self.bound_name = Some(val.name.clone());
+        }
+        self.traverse_expr(&mut val.expr);
+    }
+
+    fn traverse_binds(&mut self, _ty: &mut HTy, binds: &mut Vec<Val>, ret: &mut Box<Expr>) {
+        for bind in binds.iter_mut() {
+            let mut bound_name = None;
+            if bind.rec {
+                bound_name = Some(bind.name.clone());
+            }
+            self.with_bound_name(bound_name, |this| this.traverse_expr(&mut bind.expr));
+        }
+        self.with_bound_name(None, |this| { this.traverse_expr(ret); });
+    }
+
+
+    fn traverse_op(&mut self,
+                   _ty: &mut HTy,
+                   _name: &mut Symbol,
+                   l: &mut Box<Expr>,
+                   r: &mut Box<Expr>) {
+        self.with_bound_name(None, |this| {
+            this.traverse_expr(l);
+            this.traverse_expr(r);
+
+        });
+    }
+
+
+    fn traverse_fun(&mut self,
+                    _param: &mut (HTy, Symbol),
+                    _body_ty: &mut HTy,
+                    body: &mut Box<Expr>,
+                    _captures: &mut Vec<(HTy, Symbol)>,
+                    _make_closure: &mut Option<bool>) {
+        match self.bound_name {
+            Some(ref name) => {
+                self.t.functions.insert(name.clone());
+            }
+            None => (),
+        };
+        self.with_bound_name(None, |this| { this.traverse_expr(body); });
+    }
+
+    fn traverse_app(&mut self, _ty: &mut HTy, fun: &mut Box<Expr>, arg: &mut Box<Expr>) {
+        self.with_bound_name(None, |this| {
+            this.traverse_expr(fun);
+            this.traverse_expr(arg);
+        })
+    }
+
+
+    fn traverse_if(&mut self,
+                   _ty: &mut HTy,
+                   cond: &mut Box<Expr>,
+                   then: &mut Box<Expr>,
+                   else_: &mut Box<Expr>) {
+        self.with_bound_name(None, |this| {
+            this.traverse_expr(cond);
+            this.traverse_expr(then);
+            this.traverse_expr(else_);
+        });
+    }
+}
+
+pub struct ForceClosure {
+    functions: HashSet<Symbol>,
+}
+
+impl ForceClosure {
+    pub fn new() -> Self {
+        ForceClosure { functions: HashSet::new() }
     }
 }
 
@@ -178,7 +273,8 @@ impl<E> Pass<HIR, E> for ForceClosure {
     type Target = HIR;
 
     fn trans(&mut self, mut hir: HIR) -> ::std::result::Result<Self::Target, E> {
-        self.conv_hir(&mut hir);
+        Reg::new(self, None).traverse_hir(&mut hir);
+        Trav::new(self, false).traverse_hir(&mut hir);
         Ok(hir)
     }
 }

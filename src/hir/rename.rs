@@ -4,6 +4,7 @@ use std::ops::{Deref, DerefMut, Drop};
 use prim::*;
 use hir::*;
 use pass::Pass;
+use hir::util::Traverse;
 
 pub struct Rename {
     tables: Vec<HashMap<Symbol, String>>,
@@ -155,6 +156,61 @@ impl<'a> Scope<'a> {
     }
 }
 
+impl<'a> util::Traverse for Scope<'a> {
+    fn traverse_hir<'b, 'c>(&'b mut self, hir: &'c mut HIR) {
+        let mut scope = self;
+        for val in hir.0.iter_mut() {
+            if val.rec {
+                scope.new_symbol(&mut val.name);
+                scope.traverse_val(val);
+            } else {
+                scope.traverse_val(val);
+                scope.new_symbol(&mut val.name);
+            }
+        }
+    }
+
+    fn traverse_val<'b, 'c>(&'b mut self, val: &'c mut Val) {
+        self.traverse_expr(&mut val.expr);
+    }
+
+    fn traverse_binds(&mut self, _ty: &mut HTy, binds: &mut Vec<Val>, ret: &mut Box<Expr>) {
+        let mut scope = self.new_scope();
+        for bind in binds.iter_mut() {
+            scope.traverse_val(bind);
+            scope.new_symbol(&mut bind.name);
+        }
+        scope.traverse_expr(ret);
+    }
+
+    fn traverse_fun(&mut self,
+                    param: &mut (HTy, Symbol),
+                    _body_ty: &mut HTy,
+                    body: &mut Box<Expr>,
+                    _captures: &mut Vec<(HTy, Symbol)>,
+                    _make_closure: &mut Option<bool>) {
+
+        let mut scope = self.new_scope();
+        scope.new_symbol(&mut param.1);
+        scope.traverse_expr(body);
+    }
+
+    fn traverse_closure(&mut self,
+                        envs: &mut Vec<(HTy, Symbol)>,
+                        _param_ty: &mut HTy,
+                        _body_ty: &mut HTy,
+                        _fname: &mut Symbol) {
+
+        for &mut (_, ref mut var) in envs.iter_mut() {
+            self.rename(var);
+        }
+    }
+
+    fn traverse_sym(&mut self, _ty: &mut HTy, name: &mut Symbol) {
+        self.rename(name);
+    }
+}
+
 
 impl Rename {
     pub fn new() -> Self {
@@ -174,7 +230,7 @@ impl<E> Pass<HIR, E> for Rename {
     type Target = HIR;
 
     fn trans(&mut self, mut hir: HIR) -> ::std::result::Result<Self::Target, E> {
-        self.scope().rename_hir(&mut hir);
+        self.scope().traverse_hir(&mut hir);
         Ok(hir)
     }
 }

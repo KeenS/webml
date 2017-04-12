@@ -5,6 +5,7 @@ pub mod rename;
 pub mod unnest_func;
 pub mod flat_expr;
 pub mod force_closure;
+pub mod util;
 
 pub use self::ast2hir::AST2HIR;
 pub use self::rename::Rename;
@@ -18,7 +19,7 @@ use prim::*;
 #[derive(Debug)]
 pub struct HIR(pub Vec<Val>);
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Val {
     pub ty: HTy,
     pub rec: bool,
@@ -26,7 +27,7 @@ pub struct Val {
     pub expr: Expr,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum Expr {
     Binds {
         ty: HTy,
