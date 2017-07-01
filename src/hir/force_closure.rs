@@ -105,6 +105,14 @@ impl<'a> Traverse for Trav<'a> {
                 return;
             }
 
+            Tuple {
+                ref mut tys,
+                ref mut tuple,
+            } => {
+                self.traverse_tuple(tys, tuple);
+                return;
+            }
+
             Sym {
                 ref mut ty,
                 ref mut name,
@@ -138,23 +146,27 @@ impl<'a> Traverse for Trav<'a> {
     }
 
 
-    fn traverse_op(&mut self,
-                   _ty: &mut HTy,
-                   _name: &mut Symbol,
-                   l: &mut Box<Expr>,
-                   r: &mut Box<Expr>) {
+    fn traverse_op(
+        &mut self,
+        _ty: &mut HTy,
+        _name: &mut Symbol,
+        l: &mut Box<Expr>,
+        r: &mut Box<Expr>,
+    ) {
         self.with_bound(false, |this| {
             this.traverse_expr(l);
             this.traverse_expr(r);
         });
     }
 
-    fn traverse_fun(&mut self,
-                    _param: &mut (HTy, Symbol),
-                    _body_ty: &mut HTy,
-                    body: &mut Box<Expr>,
-                    _captures: &mut Vec<(HTy, Symbol)>,
-                    _make_closure: &mut Option<bool>) {
+    fn traverse_fun(
+        &mut self,
+        _param: &mut (HTy, Symbol),
+        _body_ty: &mut HTy,
+        body: &mut Box<Expr>,
+        _captures: &mut Vec<(HTy, Symbol)>,
+        _make_closure: &mut Option<bool>,
+    ) {
         self.with_bound(false, |this| this.traverse_expr(body))
     }
 
@@ -210,11 +222,13 @@ impl<'a> Traverse for Reg<'a> {
     }
 
 
-    fn traverse_op(&mut self,
-                   _ty: &mut HTy,
-                   _name: &mut Symbol,
-                   l: &mut Box<Expr>,
-                   r: &mut Box<Expr>) {
+    fn traverse_op(
+        &mut self,
+        _ty: &mut HTy,
+        _name: &mut Symbol,
+        l: &mut Box<Expr>,
+        r: &mut Box<Expr>,
+    ) {
         self.with_bound_name(None, |this| {
             this.traverse_expr(l);
             this.traverse_expr(r);
@@ -223,12 +237,14 @@ impl<'a> Traverse for Reg<'a> {
     }
 
 
-    fn traverse_fun(&mut self,
-                    _param: &mut (HTy, Symbol),
-                    _body_ty: &mut HTy,
-                    body: &mut Box<Expr>,
-                    _captures: &mut Vec<(HTy, Symbol)>,
-                    _make_closure: &mut Option<bool>) {
+    fn traverse_fun(
+        &mut self,
+        _param: &mut (HTy, Symbol),
+        _body_ty: &mut HTy,
+        body: &mut Box<Expr>,
+        _captures: &mut Vec<(HTy, Symbol)>,
+        _make_closure: &mut Option<bool>,
+    ) {
         match self.bound_name {
             Some(ref name) => {
                 self.t.functions.insert(name.clone());
@@ -246,11 +262,13 @@ impl<'a> Traverse for Reg<'a> {
     }
 
 
-    fn traverse_if(&mut self,
-                   _ty: &mut HTy,
-                   cond: &mut Box<Expr>,
-                   then: &mut Box<Expr>,
-                   else_: &mut Box<Expr>) {
+    fn traverse_if(
+        &mut self,
+        _ty: &mut HTy,
+        cond: &mut Box<Expr>,
+        then: &mut Box<Expr>,
+        else_: &mut Box<Expr>,
+    ) {
         self.with_bound_name(None, |this| {
             this.traverse_expr(cond);
             this.traverse_expr(then);

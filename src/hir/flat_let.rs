@@ -62,6 +62,14 @@ fn take_binds(mut expr: Expr) -> (Expr, Vec<Val>) {
             };
             (expr, cbinds)
         }
+        Tuple { tys, tuple } => {
+            let (tuple, bindss): (_, Vec<_>) = tuple.into_iter().map(take_binds).unzip();
+            let expr = Tuple {
+                tys: tys,
+                tuple: tuple,
+            };
+            (expr, bindss.into_iter().flat_map(Vec::into_iter).collect())
+        }
         x @ Fun { .. } |
         x @ Closure { .. } |
         x @ PrimFun { .. } |
@@ -78,10 +86,7 @@ impl FlatLet {
 
 
     pub fn flat_hir(&mut self, mut hir: HIR) -> HIR {
-        hir.0 = hir.0
-            .into_iter()
-            .map(|val| self.flat_val(val))
-            .collect();
+        hir.0 = hir.0.into_iter().map(|val| self.flat_val(val)).collect();
         hir
     }
 
@@ -175,6 +180,13 @@ impl FlatLet {
                     cond: cond,
                     then: then,
                     else_: else_,
+                }
+            }
+            Tuple { tys, tuple } => {
+                let tuple = tuple.into_iter().map(|t| self.flat_expr(t)).collect();
+                Tuple {
+                    tys: tys,
+                    tuple: tuple,
                 }
             }
             x @ Closure { .. } |

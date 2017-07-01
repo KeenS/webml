@@ -17,6 +17,7 @@ fn from(ty: hir::HTy) -> EbbTy {
         Bool => EbbTy::Bool,
         Int => EbbTy::Int,
         Float => EbbTy::Float,
+        Tuple(tys) => EbbTy::Tuple(tys.into_iter().map(from).collect()),
         Fun(arg, ret) => {
             EbbTy::Cls {
                 closures: vec![],
@@ -55,12 +56,13 @@ impl HIR2MIR {
         MIR(funs)
     }
 
-    fn trans_val(&mut self,
-                 funs: &mut Vec<Function>,
-                 fb: &mut FunctionBuilder,
-                 mut eb: EBBBuilder,
-                 val: hir::Val)
-                 -> EBBBuilder {
+    fn trans_val(
+        &mut self,
+        funs: &mut Vec<Function>,
+        fb: &mut FunctionBuilder,
+        mut eb: EBBBuilder,
+        val: hir::Val,
+    ) -> EBBBuilder {
         use hir::Expr::*;
         let hir::Val {
             ty: ty_,
@@ -87,9 +89,10 @@ impl HIR2MIR {
                         .map(|(ty, var)| (from(ty), var))
                         .unzip();
                     let closure = Symbol("env".to_string());
-                    eb_ = EBBBuilder::new(Symbol("entry".to_string()),
-                                          vec![(EbbTy::Tuple(tuples.clone()), closure.clone()),
-                                               param]);
+                    eb_ = EBBBuilder::new(
+                        Symbol("entry".to_string()),
+                        vec![(EbbTy::Tuple(tuples.clone()), closure.clone()), param],
+                    );
                     for (i, (v, ty)) in vars.into_iter().zip(tuples).enumerate() {
                         eb_.proj(v, ty, i as u32, closure.clone());
                     }
@@ -142,6 +145,12 @@ impl HIR2MIR {
                 let eb = EBBBuilder::new(joinlabel, vec![(from(ty), name)]);
                 eb
             }
+            Tuple { tys, tuple } => {
+                let tys = tys.into_iter().map(from).collect();
+                let tuple = tuple.into_iter().map(force_symbol).collect();
+                eb.tuple(name, tys, tuple);
+                eb
+            }
             Op {
                 ty,
                 name: name_,
@@ -164,9 +173,7 @@ impl HIR2MIR {
                 body_ty,
                 fname,
             } => {
-                let envs = envs.into_iter()
-                    .map(|(ty, var)| (from(ty), var))
-                    .collect();
+                let envs = envs.into_iter().map(|(ty, var)| (from(ty), var)).collect();
                 eb.closure(name, from(param_ty), from(body_ty), fname, envs);
                 eb
             }
@@ -175,12 +182,14 @@ impl HIR2MIR {
                 ret_ty,
                 name: fname,
             } => {
-                eb.alias(name,
-                         EbbTy::Ebb {
-                             params: vec![from(param_ty)],
-                             ret: Box::new(from(ret_ty)),
-                         },
-                         fname);
+                eb.alias(
+                    name,
+                    EbbTy::Ebb {
+                        params: vec![from(param_ty)],
+                        ret: Box::new(from(ret_ty)),
+                    },
+                    fname,
+                );
                 eb
             }
             Lit { ty, value } => {
@@ -192,12 +201,13 @@ impl HIR2MIR {
 
     }
 
-    fn trans_expr(&mut self,
-                  fb: &mut FunctionBuilder,
-                  mut eb: EBBBuilder,
-                  ty_: hir::HTy,
-                  expr: hir::Expr)
-                  -> EBB {
+    fn trans_expr(
+        &mut self,
+        fb: &mut FunctionBuilder,
+        mut eb: EBBBuilder,
+        ty_: hir::HTy,
+        expr: hir::Expr,
+    ) -> EBB {
         use hir::Expr::*;
         match expr {
             Binds { ty, binds, ret } => {
@@ -217,12 +227,13 @@ impl HIR2MIR {
         }
     }
 
-    fn trans_expr_block(&mut self,
-                        fb: &mut FunctionBuilder,
-                        mut eb: EBBBuilder,
-                        ty_: hir::HTy,
-                        expr: hir::Expr)
-                        -> (EBBBuilder, Symbol) {
+    fn trans_expr_block(
+        &mut self,
+        fb: &mut FunctionBuilder,
+        mut eb: EBBBuilder,
+        ty_: hir::HTy,
+        expr: hir::Expr,
+    ) -> (EBBBuilder, Symbol) {
         use hir::Expr::*;
         match expr {
             Binds { ty, binds, ret } => {

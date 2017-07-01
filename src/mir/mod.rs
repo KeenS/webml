@@ -63,6 +63,11 @@ pub enum Op {
         fun: Symbol,
         args: Vec<Symbol>,
     },
+    Tuple {
+        var: Symbol,
+        tys: Vec<EbbTy>,
+        tuple: Vec<Symbol>,
+    },
     Proj {
         var: Symbol,
         ty: EbbTy,

@@ -41,37 +41,42 @@ impl UnAlias {
                     continue;
                 }
                 &mut Add {
-                         ref mut l,
-                         ref mut r,
-                         ..
-                     } |
+                    ref mut l,
+                    ref mut r,
+                    ..
+                } |
                 &mut Mul {
-                         ref mut l,
-                         ref mut r,
-                         ..
-                     } => {
+                    ref mut l,
+                    ref mut r,
+                    ..
+                } => {
                     self.resolv_alias(l);
                     self.resolv_alias(r);
+                }
+                &mut Tuple { ref mut tuple, .. } => {
+                    for v in tuple.iter_mut() {
+                        self.resolv_alias(v);
+                    }
                 }
                 &mut Proj { ref mut tuple, .. } => {
                     self.resolv_alias(tuple);
                 }
 
                 &mut Closure {
-                         ref mut fun,
-                         ref mut env,
-                         ..
-                     } => {
+                    ref mut fun,
+                    ref mut env,
+                    ..
+                } => {
                     self.resolv_alias(fun);
                     for &mut (_, ref mut var) in env.iter_mut() {
                         self.resolv_alias(var);
                     }
                 }
                 &mut Call {
-                         ref mut fun,
-                         ref mut args,
-                         ..
-                     } => {
+                    ref mut fun,
+                    ref mut args,
+                    ..
+                } => {
                     self.resolv_alias(fun);
                     for arg in args.iter_mut() {
                         self.resolv_alias(arg);

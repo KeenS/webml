@@ -44,21 +44,21 @@ impl PP for Expr {
                 write!(w, "\n{}end", ind)?;
             }
             &Op {
-                 ref name,
-                 ref l,
-                 ref r,
-                 ..
-             } => {
+                ref name,
+                ref l,
+                ref r,
+                ..
+            } => {
                 l.pp(w, indent)?;
                 write!(w, " {} ", name.0)?;
                 r.pp(w, indent)?;
             }
             &Fun {
-                 ref body,
-                 ref param,
-                 ref captures,
-                 ..
-             } => {
+                ref body,
+                ref param,
+                ref captures,
+                ..
+            } => {
                 write!(w, "fun (")?;
                 for &(_, ref cap) in captures {
                     cap.pp(w, indent)?;
@@ -70,10 +70,10 @@ impl PP for Expr {
                 body.pp(&mut w, indent + 4)?;
             }
             &Closure {
-                 ref envs,
-                 ref fname,
-                 ..
-             } => {
+                ref envs,
+                ref fname,
+                ..
+            } => {
                 write!(w, "<closure ")?;
                 fname.pp(w, indent)?;
                 write!(w, " (")?;
@@ -90,11 +90,11 @@ impl PP for Expr {
                 arg.pp(w, indent + 4)?;
             }
             &If {
-                 ref cond,
-                 ref then,
-                 ref else_,
-                 ..
-             } => {
+                ref cond,
+                ref then,
+                ref else_,
+                ..
+            } => {
                 let ind = Self::nspaces(indent);
                 write!(w, "if ")?;
                 cond.pp(w, indent + 4)?;
@@ -102,6 +102,14 @@ impl PP for Expr {
                 then.pp(w, indent + 4)?;
                 write!(w, "\n{}else ", ind)?;
                 else_.pp(w, indent + 4)?;
+            }
+            &Tuple { ref tuple, .. } => {
+                write!(w, "(")?;
+                for t in tuple.iter() {
+                    t.pp(w, indent)?;
+                    write!(w, ", ")?;
+                }
+                write!(w, ")");
             }
             &PrimFun { ref name, .. } => {
                 name.pp(w, indent)?;
@@ -125,6 +133,14 @@ impl PP for HTy {
             Bool => write!(w, "bool")?,
             Int => write!(w, "int")?,
             Float => write!(w, "float")?,
+            Tuple(ref tys) => {
+                write!(w, "(")?;
+                for ty in tys.iter() {
+                    ty.pp(w, indent)?;
+                    write!(w, " * ")?;
+                }
+                write!(w, ")");
+            }
             Fun(ref t1, ref t2) => {
                 t1.pp(w, indent)?;
                 write!(w, " -> ")?;

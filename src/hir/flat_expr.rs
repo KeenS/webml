@@ -131,6 +131,24 @@ impl FlatExpr {
                     ret: ret,
                 }
             }
+            Tuple { tys, tuple } => {
+                let (tuple, vals) = tuple
+                    .into_iter()
+                    .map(|e| {
+                             let (t, val) = self.flat_make_val(e);
+                             (*t, val)
+                         })
+                    .unzip();
+                Binds {
+                    ty: HTy::Tuple(tys.clone()),
+                    binds: vals,
+                    ret: Box::new(Expr::Tuple {
+                                      tys: tys,
+                                      tuple: tuple,
+                                  }),
+                }
+
+            }
             x @ Closure { .. } |
             x @ PrimFun { .. } |
             x @ Sym { .. } |

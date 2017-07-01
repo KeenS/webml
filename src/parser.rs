@@ -62,6 +62,7 @@ named!(expr1 <&str, Expr>, alt_complete!(
 ));
 
 named!(expr0 <&str, Expr>, alt_complete!(
+    expr0_tuple |
     expr0_paren |
     expr0_float |
     expr0_int   |
@@ -165,6 +166,17 @@ named!(expr0_paren <&str, Expr>, do_parse!(
          opt!(multispace) >>
          tag!(")") >>
     (e))
+);
+
+named!(expr0_tuple <&str, Expr>, do_parse!(
+    tag!("(") >>
+        opt!(multispace) >>
+        e: many1!(do_parse!(e: expr >> opt!(multispace) >> tag!(",") >> opt!(multispace) >> (e))) >>
+        opt!(multispace) >>
+        tag!(")") >>
+        (
+            Expr::Tuple{ty: TyDefer::empty(), tuple: e}
+        ))
 );
 
 named!(symbol <&str, Symbol>, do_parse!(

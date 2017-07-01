@@ -58,7 +58,7 @@ pub enum Expr {
         then: Box<Expr>,
         else_: Box<Expr>,
     },
-    // Seq{ty: TyDefer, exprs: Vec<Expr>},
+    Tuple { ty: TyDefer, tuple: Vec<Expr> },
     Sym { ty: TyDefer, name: Symbol },
     Lit { ty: TyDefer, value: Literal },
 }
@@ -70,6 +70,7 @@ pub enum Ty {
     Int,
     Float,
     Fun(TyDefer, TyDefer),
+    Tuple(Vec<TyDefer>),
 }
 
 
@@ -79,8 +80,10 @@ pub struct TyDefer(pub Rc<RefCell<Option<Ty>>>);
 
 impl Ty {
     pub fn fun(param: Ty, ret: Ty) -> Ty {
-        Ty::Fun(TyDefer(Rc::new(RefCell::new(Some(param)))),
-                TyDefer(Rc::new(RefCell::new(Some(ret)))))
+        Ty::Fun(
+            TyDefer(Rc::new(RefCell::new(Some(param)))),
+            TyDefer(Rc::new(RefCell::new(Some(ret)))),
+        )
     }
 }
 
@@ -94,13 +97,17 @@ impl PP for Ty {
             Int => write!(w, "int")?,
             Float => write!(w, "float")?,
             Fun(ref t1, ref t2) => {
-                t1.clone()
-                    .force("type not settled in pp")
-                    .pp(w, indent)?;
+                t1.clone().force("type not settled in pp").pp(w, indent)?;
                 write!(w, " -> ")?;
-                t2.clone()
-                    .force("type not settled in pp")
-                    .pp(w, indent)?;
+                t2.clone().force("type not settled in pp").pp(w, indent)?;
+            }
+            Tuple(ref tys) => {
+                write!(w, "(")?;
+                for ty in tys.iter() {
+                    ty.clone().force("type not settled in pp").pp(w, indent)?;
+                    write!(w, ", ")?;
+                }
+                write!(w, ")")?;
             }
         }
         Ok(())

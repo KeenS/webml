@@ -69,7 +69,7 @@ pub enum Expr {
         then: Box<Expr>,
         else_: Box<Expr>,
     },
-    // Seq{ty: TyDefer, exprs: Vec<Expr>},
+    Tuple { tys: Vec<HTy>, tuple: Vec<Expr> },
     Sym { ty: HTy, name: Symbol },
     Lit { ty: HTy, value: Literal },
 }
@@ -80,6 +80,7 @@ pub enum HTy {
     Bool,
     Int,
     Float,
+    Tuple(Vec<HTy>),
     Fun(Box<HTy>, Box<HTy>),
 }
 
@@ -112,6 +113,7 @@ impl Expr {
                  ref body_ty,
                  ..
              } => HTy::fun(param_ty.clone(), body_ty.clone()),
+            &Tuple { ref tys, .. } => HTy::Tuple(tys.clone()),
             &Op { ref ty, .. } |
             &Binds { ref ty, .. } |
             &App { ref ty, .. } |

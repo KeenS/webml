@@ -92,12 +92,12 @@ impl<'a> Scope<'a> {
 
     fn rename_expr<'b, 'c>(&'b mut self, expr: &'c mut Expr) {
         use hir::Expr::*;
-        match expr {
-            &mut Binds {
-                     ref mut binds,
-                     ref mut ret,
-                     ..
-                 } => {
+        match *expr {
+            Binds {
+                ref mut binds,
+                ref mut ret,
+                ..
+            } => {
                 let mut scope = self.new_scope();
                 for bind in binds.iter_mut() {
                     scope.rename_val(bind);
@@ -105,52 +105,55 @@ impl<'a> Scope<'a> {
                 }
                 scope.rename_expr(ret);
             }
-            &mut Op {
-                     ref mut l,
-                     ref mut r,
-                     ..
-                 } => {
+            Op {
+                ref mut l,
+                ref mut r,
+                ..
+            } => {
                 self.rename_expr(l);
                 self.rename_expr(r);
             }
-            &mut Fun {
-                     ref mut param,
-                     ref mut body,
-                     ..
-                 } => {
+            Fun {
+                ref mut param,
+                ref mut body,
+                ..
+            } => {
                 let mut scope = self.new_scope();
                 scope.new_symbol(&mut param.1);
                 scope.rename_expr(body);
             }
-            &mut Closure { ref mut envs, .. } => {
+            Closure { ref mut envs, .. } => {
                 for &mut (_, ref mut var) in envs.iter_mut() {
                     self.rename(var);
                 }
             }
-            &mut App {
-                     ref mut fun,
-                     ref mut arg,
-                     ..
-                 } => {
+            App {
+                ref mut fun,
+                ref mut arg,
+                ..
+            } => {
                 self.rename_expr(fun);
                 self.rename_expr(arg);
             }
-            &mut If {
-                     ref mut cond,
-                     ref mut then,
-                     ref mut else_,
-                     ..
-                 } => {
+            If {
+                ref mut cond,
+                ref mut then,
+                ref mut else_,
+                ..
+            } => {
                 self.rename_expr(cond);
                 self.rename_expr(then);
                 self.rename_expr(else_);
             }
-
-            &mut Sym { ref mut name, .. } => {
+            Tuple { ref mut tuple, .. } => {
+                for t in tuple.iter_mut() {
+                    self.rename_expr(t)
+                }
+            }
+            Sym { ref mut name, .. } => {
                 self.rename(name);
             }
-            &mut Lit { .. } |
-            &mut PrimFun { .. } => (),
+            Lit { .. } | PrimFun { .. } => (),
 
         }
     }

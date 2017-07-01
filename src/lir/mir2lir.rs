@@ -27,10 +27,7 @@ impl MIR2LIR {
     }
 
     pub fn trans_mir(&self, mir: mir::MIR) -> LIR {
-        LIR(mir.0
-                .into_iter()
-                .map(|f| self.trans_function(f))
-                .collect())
+        LIR(mir.0.into_iter().map(|f| self.trans_function(f)).collect())
     }
 
     fn trans_function(&self, f: mir::Function) -> Function {
@@ -63,10 +60,10 @@ impl MIR2LIR {
                         }
                     }
                     &m::Alias {
-                         ref var,
-                         ref ty,
-                         ref sym,
-                     } => {
+                        ref var,
+                        ref ty,
+                        ref sym,
+                    } => {
                         match ty {
                             &mir::EbbTy::Unit => {
                                 // do nothing
@@ -81,11 +78,11 @@ impl MIR2LIR {
                         }
                     }
                     &m::Add {
-                         ref var,
-                         ref ty,
-                         ref l,
-                         ref r,
-                     } => {
+                        ref var,
+                        ref ty,
+                        ref l,
+                        ref r,
+                    } => {
                         if ty == &mir::EbbTy::Int {
                             ops.push(AddI64(reg!(var), reg!(l), reg!(r)));
                         } else {
@@ -95,11 +92,11 @@ impl MIR2LIR {
                         }
                     }
                     &m::Mul {
-                         ref var,
-                         ref ty,
-                         ref l,
-                         ref r,
-                     } => {
+                        ref var,
+                        ref ty,
+                        ref l,
+                        ref r,
+                    } => {
                         if ty == &mir::EbbTy::Int {
                             ops.push(MulI64(reg!(var), reg!(l), reg!(r)));
                         } else {
@@ -108,12 +105,17 @@ impl MIR2LIR {
 
                         }
                     }
+                    &m::Tuple {
+                        ref var,
+                        ref tys,
+                        ref tuple,
+                    } => unimplemented!(),
                     &m::Proj {
-                         ref var,
-                         ref ty,
-                         ref index,
-                         ref tuple,
-                     } => {
+                        ref var,
+                        ref ty,
+                        ref index,
+                        ref tuple,
+                    } => {
                         loop {
                             let ctor = match self.ebbty_to_lty(ty) {
                                 LTy::F32 => LoadF32,
@@ -131,11 +133,11 @@ impl MIR2LIR {
 
                     }
                     &m::Closure {
-                         ref var,
-                         ref fun,
-                         ref env,
-                         ..
-                     } => {
+                        ref var,
+                        ref fun,
+                        ref env,
+                        ..
+                    } => {
                         // closure looks like on memory:
                         //   64      64    ...
                         // +-----------------------
@@ -173,11 +175,11 @@ impl MIR2LIR {
                         }
                     }
                     &m::Call {
-                         ref var,
-                         ref fun,
-                         ref args,
-                         ..
-                     } => {
+                        ref var,
+                        ref fun,
+                        ref args,
+                        ..
+                    } => {
                         let args = args.iter().map(|a| reg!(a)).collect();
                         match symbol_table.get(fun) {
                             Some(r) => ops.push(ClosureCall(reg!(var), r.clone(), args)),
@@ -186,19 +188,19 @@ impl MIR2LIR {
 
                     }
                     &m::Branch {
-                         ref cond,
-                         ref then,
-                         ref else_,
-                         ..
-                     } => {
+                        ref cond,
+                        ref then,
+                        ref else_,
+                        ..
+                    } => {
                         ops.push(JumpIfI32(reg!(cond), Label(then.clone())));
                         ops.push(Jump(Label(else_.clone())))
                     }
                     &m::Jump {
-                         ref target,
-                         ref args,
-                         ..
-                     } => {
+                        ref target,
+                        ref args,
+                        ..
+                    } => {
                         let params = &target_table[target];
                         for (p, a) in params.iter().zip(args) {
                             match p.0 {
@@ -223,16 +225,14 @@ impl MIR2LIR {
                 }
             }
             blocks.push(Block {
-                            name: Label(ebb.name.clone()),
-                            body: ops,
-                        })
+                name: Label(ebb.name.clone()),
+                body: ops,
+            })
         }
 
         let mut regs = symbol_table.values().collect::<Vec<_>>();
         regs.sort_by_key(|r| r.1);
-        let regs = regs.into_iter()
-            .map(|r| r.0.clone())
-            .collect::<Vec<_>>();
+        let regs = regs.into_iter().map(|r| r.0.clone()).collect::<Vec<_>>();
 
         Function {
             name: name,
@@ -289,10 +289,11 @@ impl MIR2LIR {
         table
     }
 
-    fn make_target_table<'a>(&self,
-                             body: &'a [mir::EBB],
-                             symbol_table: &HashMap<&'a Symbol, Reg>)
-                             -> HashMap<&'a Symbol, Vec<Reg>> {
+    fn make_target_table<'a>(
+        &self,
+        body: &'a [mir::EBB],
+        symbol_table: &HashMap<&'a Symbol, Reg>,
+    ) -> HashMap<&'a Symbol, Vec<Reg>> {
         let mut tbl = HashMap::new();
         for ebb in body {
             let params = ebb.params

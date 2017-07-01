@@ -77,13 +77,13 @@ impl<'a> Scope<'a> {
         let mut vals = hir.0
             .into_iter()
             .map(|val| if val.rec {
-                     self.add_scope(val.name.clone());
-                     self.conv_top_val(&mut closures, val)
-                 } else {
-                     let val = self.conv_top_val(&mut closures, val);
-                     self.add_scope(val.name.clone());
-                     val
-                 })
+                self.add_scope(val.name.clone());
+                self.conv_top_val(&mut closures, val)
+            } else {
+                let val = self.conv_top_val(&mut closures, val);
+                self.add_scope(val.name.clone());
+                val
+            })
             .collect();
         closures.append(&mut vals);
         hir.0 = closures;
@@ -170,11 +170,11 @@ impl<'a> Scope<'a> {
                 };
                 let fty = anonfun.ty();
                 cls.push(Val {
-                             ty: anonfun.ty(),
-                             rec: true,
-                             name: fname.clone(),
-                             expr: anonfun,
-                         });
+                    ty: anonfun.ty(),
+                    rec: true,
+                    name: fname.clone(),
+                    expr: anonfun,
+                });
                 if is_closure {
                     Closure {
                         envs: frees,
@@ -218,7 +218,16 @@ impl<'a> Scope<'a> {
                     else_: else_,
                 }
             }
-
+            Tuple { tys, tuple } => {
+                let tuple = tuple
+                    .into_iter()
+                    .map(|t| self.conv_expr(cls, t, None))
+                    .collect();
+                Tuple {
+                    tys: tys,
+                    tuple: tuple,
+                }
+            }
             Sym { name, ty } => Sym { ty: ty, name: name },
             expr @ Closure { .. } |
             expr @ Lit { .. } |
@@ -227,17 +236,21 @@ impl<'a> Scope<'a> {
         }
     }
 
-    fn analyze_free_val<'b, 'c>(&'b mut self,
-                                frees: &mut Vec<(HTy, Symbol)>,
-                                bound: &Symbol,
-                                val: &'c Val) {
+    fn analyze_free_val<'b, 'c>(
+        &'b mut self,
+        frees: &mut Vec<(HTy, Symbol)>,
+        bound: &Symbol,
+        val: &'c Val,
+    ) {
         self.analyze_free_expr(frees, bound, &val.expr);
     }
 
-    fn analyze_free_expr<'b, 'c>(&'b mut self,
-                                 frees: &mut Vec<(HTy, Symbol)>,
-                                 bound: &Symbol,
-                                 expr: &'c Expr) {
+    fn analyze_free_expr<'b, 'c>(
+        &'b mut self,
+        frees: &mut Vec<(HTy, Symbol)>,
+        bound: &Symbol,
+        expr: &'c Expr,
+    ) {
         use hir::Expr::*;
         match expr {
             &Binds { ref binds, ref ret, .. } => {
@@ -263,14 +276,19 @@ impl<'a> Scope<'a> {
                 self.analyze_free_expr(frees, bound, arg);
             }
             &If {
-                 ref cond,
-                 ref then,
-                 ref else_,
-                 ..
-             } => {
+                ref cond,
+                ref then,
+                ref else_,
+                ..
+            } => {
                 self.analyze_free_expr(frees, bound, cond);
                 self.analyze_free_expr(frees, bound, then);
                 self.analyze_free_expr(frees, bound, else_);
+            }
+            &Tuple { ref tuple, .. } => {
+                for t in tuple.iter() {
+                    self.analyze_free_expr(frees, bound, t);
+                }
             }
             &Sym { ref name, ref ty } => {
                 if !(self.is_in_scope(name) || bound == name) {
@@ -331,7 +349,11 @@ impl<'a> Scope<'a> {
                 self.rename(then, from, to);
                 self.rename(else_, from, to);
             }
-
+            Tuple { ref mut tuple, .. } => {
+                for t in tuple.iter_mut() {
+                    self.rename(t, from, to);
+                }
+            }
             Sym { ref mut name, .. } => {
                 if from.is_some() && name == from.as_ref().unwrap() {
                     *name = to.clone()

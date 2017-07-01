@@ -39,11 +39,24 @@ fn unify<'a>(t1: &mut TyDefer, t2: &mut TyDefer) -> Result<'a, ()> {
                         unify(b1, b2)?;
                         Ok(())
                     }
+                    (&mut Ty::Tuple(ref mut tu1), &mut Ty::Tuple(ref mut tu2)) => {
+                        if tu1.len() != tu2.len() {
+                            return Err(TypeError::MisMatch {
+                                expected: Ty::Tuple(tu1.clone()),
+                                actual: Ty::Tuple(tu2.clone()),
+                            });
+                        } else {
+                            for (t1, t2) in tu1.iter_mut().zip(tu2) {
+                                unify(t1, t2)?
+                            }
+                            Ok(())
+                        }
+                    }
                     (t1, t2) => {
                         Err(TypeError::MisMatch {
-                                expected: t1.clone(),
-                                actual: t2.clone(),
-                            })
+                            expected: t1.clone(),
+                            actual: t2.clone(),
+                        })
                     }
                 }
             }
@@ -102,11 +115,11 @@ impl<'a> Scope<'a> {
 
     fn infer_val<'b, 'r>(&'b mut self, val: &mut ast::Val) -> Result<'r, ()> {
         let &mut ast::Val {
-                     ref mut ty,
-                     ref rec,
-                     ref mut name,
-                     ref mut expr,
-                 } = val;
+            ref mut ty,
+            ref rec,
+            ref mut name,
+            ref mut expr,
+        } = val;
         if *rec {
             self.insert(name.0.clone(), ty.clone());
             self.infer_expr(expr, ty)?;
@@ -119,17 +132,18 @@ impl<'a> Scope<'a> {
     }
 
 
-    fn infer_expr<'b, 'r>(&'b mut self,
-                          expr: &mut ast::Expr,
-                          given: &mut TyDefer)
-                          -> Result<'r, ()> {
+    fn infer_expr<'b, 'r>(
+        &'b mut self,
+        expr: &mut ast::Expr,
+        given: &mut TyDefer,
+    ) -> Result<'r, ()> {
         use ast::Expr::*;
         match expr {
             &mut Binds {
-                     ref mut ty,
-                     ref mut binds,
-                     ref mut ret,
-                 } => {
+                ref mut ty,
+                ref mut binds,
+                ref mut ret,
+            } => {
                 let mut scope = self.scope();
                 for mut bind in binds {
                     scope.infer_val(&mut bind)?;
@@ -139,32 +153,31 @@ impl<'a> Scope<'a> {
                 Ok(())
             }
             &mut Add {
-                     ref mut ty,
-                     ref mut l,
-                     ref mut r,
-                 } |
+                ref mut ty,
+                ref mut l,
+                ref mut r,
+            } |
             &mut Mul {
-                     ref mut ty,
-                     ref mut l,
-                     ref mut r,
-                 } => {
+                ref mut ty,
+                ref mut l,
+                ref mut r,
+            } => {
                 let mut lty = TyDefer::new(Some(Ty::Int));
-                self.infer_expr(l, &mut lty)
-                    .or_else(|_| {
-                                 *lty.get_mut() = Some(Ty::Float);
-                                 self.infer_expr(l, &mut lty)
-                             })?;
+                self.infer_expr(l, &mut lty).or_else(|_| {
+                    *lty.get_mut() = Some(Ty::Float);
+                    self.infer_expr(l, &mut lty)
+                })?;
                 self.infer_expr(r, &mut lty)?;
                 unify(&mut lty, given)?;
                 unify(ty, given)?;
                 Ok(())
             }
             &mut Fun {
-                     ref mut param_ty,
-                     ref mut param,
-                     ref mut body_ty,
-                     ref mut body,
-                 } => {
+                ref mut param_ty,
+                ref mut param,
+                ref mut body_ty,
+                ref mut body,
+            } => {
                 let mut scope = self.scope();
                 scope.insert(param.0.clone(), param_ty.clone());
 
@@ -178,10 +191,10 @@ impl<'a> Scope<'a> {
                 Ok(())
             }
             &mut App {
-                     ref mut ty,
-                     ref mut fun,
-                     ref mut arg,
-                 } => {
+                ref mut ty,
+                ref mut fun,
+                ref mut arg,
+            } => {
                 let mut fun_ty = TyDefer::new(Some(Ty::Fun(TyDefer::new(None), ty.clone())));
                 self.infer_expr(fun, &mut fun_ty)?;
                 match fun_ty.get_mut().deref_mut() {
@@ -196,29 +209,37 @@ impl<'a> Scope<'a> {
                 Ok(())
             }
             &mut If {
-                     ref mut cond,
-                     ref mut ty,
-                     ref mut then,
-                     ref mut else_,
-                 } => {
+                ref mut cond,
+                ref mut ty,
+                ref mut then,
+                ref mut else_,
+            } => {
                 let _cond_ty = self.infer_expr(cond, &mut TyDefer::new(Some(Ty::Bool)))?;
                 self.infer_expr(then, given)?;
                 self.infer_expr(else_, given)?;
                 unify(ty, given)?;
                 Ok(())
             }
+            &mut Tuple {
+                ref mut ty,
+                ref mut tuple,
+            } => {
+                self.infer_tuple(tuple, given)?;
+                unify(ty, given)?;
+                Ok(())
+            }
             &mut Sym {
-                     ref mut ty,
-                     ref mut name,
-                 } => {
+                ref mut ty,
+                ref mut name,
+            } => {
                 self.infer_symbol(name, given)?;
                 unify(ty, given)?;
                 Ok(())
             }
             &mut Lit {
-                     ref mut ty,
-                     ref mut value,
-                 } => {
+                ref mut ty,
+                ref mut value,
+            } => {
                 self.infer_literal(value, given)?;
                 unify(ty, given)?;
                 Ok(())
@@ -241,10 +262,11 @@ impl<'a> Scope<'a> {
         }
     }
 
-    fn infer_literal<'b, 'r>(&'b mut self,
-                             lit: &mut Literal,
-                             given: &mut TyDefer)
-                             -> Result<'r, ()> {
+    fn infer_literal<'b, 'r>(
+        &'b mut self,
+        lit: &mut Literal,
+        given: &mut TyDefer,
+    ) -> Result<'r, ()> {
         use prim::Literal::*;
         let ty = match lit {
             &mut Int(_) => Ty::Int,
@@ -261,11 +283,26 @@ impl<'a> Scope<'a> {
             }
             (ref ty, &mut Some(ref exp)) => {
                 Err(TypeError::MisMatch {
-                        expected: exp.clone(),
-                        actual: ty.clone(),
-                    })
+                    expected: exp.clone(),
+                    actual: ty.clone(),
+                })
             }
         }
+    }
+
+    fn infer_tuple<'b, 'r>(
+        &'b mut self,
+        tuple: &mut Vec<Expr>,
+        given: &mut TyDefer,
+    ) -> Result<'r, ()> {
+        let mut tys = vec![TyDefer::empty(); tuple.len()];
+
+        for (e, t) in tuple.iter_mut().zip(tys.iter_mut()) {
+            // ignoring the error of infering. Right, maybe.
+            self.infer_expr(e, t);
+        }
+        unify(&mut TyDefer::new(Some(Ty::Tuple(tys))), given)?;
+        Ok(())
     }
 }
 

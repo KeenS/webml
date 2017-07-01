@@ -56,6 +56,10 @@ pub trait Traverse {
                 ref mut then,
                 ref mut else_,
             } => self.traverse_if(ty, cond, then, else_),
+            Tuple {
+                ref mut tys,
+                ref mut tuple,
+            } => self.traverse_tuple(tys, tuple),
 
             Sym {
                 ref mut ty,
@@ -75,31 +79,37 @@ pub trait Traverse {
         self.traverse_expr(ret)
     }
 
-    fn traverse_op(&mut self,
-                   _ty: &mut HTy,
-                   _name: &mut Symbol,
-                   l: &mut Box<Expr>,
-                   r: &mut Box<Expr>) {
+    fn traverse_op(
+        &mut self,
+        _ty: &mut HTy,
+        _name: &mut Symbol,
+        l: &mut Box<Expr>,
+        r: &mut Box<Expr>,
+    ) {
         self.traverse_expr(l);
         self.traverse_expr(r)
     }
 
     fn traverse_primfun(&mut self, _param_ty: &mut HTy, _ret_ty: &mut HTy, _name: &mut Symbol) {}
 
-    fn traverse_fun(&mut self,
-                    _param: &mut (HTy, Symbol),
-                    _body_ty: &mut HTy,
-                    body: &mut Box<Expr>,
-                    _captures: &mut Vec<(HTy, Symbol)>,
-                    _make_closure: &mut Option<bool>) {
+    fn traverse_fun(
+        &mut self,
+        _param: &mut (HTy, Symbol),
+        _body_ty: &mut HTy,
+        body: &mut Box<Expr>,
+        _captures: &mut Vec<(HTy, Symbol)>,
+        _make_closure: &mut Option<bool>,
+    ) {
         self.traverse_expr(body)
     }
 
-    fn traverse_closure(&mut self,
-                        _envs: &mut Vec<(HTy, Symbol)>,
-                        _param_ty: &mut HTy,
-                        _body_ty: &mut HTy,
-                        _fname: &mut Symbol) {
+    fn traverse_closure(
+        &mut self,
+        _envs: &mut Vec<(HTy, Symbol)>,
+        _param_ty: &mut HTy,
+        _body_ty: &mut HTy,
+        _fname: &mut Symbol,
+    ) {
 
     }
 
@@ -108,14 +118,22 @@ pub trait Traverse {
         self.traverse_expr(arg);
     }
 
-    fn traverse_if(&mut self,
-                   _ty: &mut HTy,
-                   cond: &mut Box<Expr>,
-                   then: &mut Box<Expr>,
-                   else_: &mut Box<Expr>) {
+    fn traverse_if(
+        &mut self,
+        _ty: &mut HTy,
+        cond: &mut Box<Expr>,
+        then: &mut Box<Expr>,
+        else_: &mut Box<Expr>,
+    ) {
         self.traverse_expr(cond);
         self.traverse_expr(then);
         self.traverse_expr(else_);
+    }
+
+    fn traverse_tuple(&mut self, _tys: &mut Vec<HTy>, tuple: &mut Vec<Expr>) {
+        for t in tuple.iter_mut() {
+            self.traverse_expr(t)
+        }
     }
 
     fn traverse_sym(&mut self, _ty: &mut HTy, _name: &mut Symbol) {}

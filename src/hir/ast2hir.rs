@@ -12,7 +12,16 @@ fn force_into(ty: ast::Ty) -> HTy {
         Bool => HTy::Bool,
         Int => HTy::Int,
         Float => HTy::Float,
+        Tuple(tys) => HTy::Tuple(tys.into_iter().map(conv_ty).collect()),
         Fun(arg, ret) => HTy::fun(conv_ty(arg), conv_ty(ret)),
+    }
+}
+
+fn force_tuple(ty: ast::Ty) -> Vec<HTy> {
+    use ast::Ty::*;
+    match ty {
+        Tuple(tys) => tys.into_iter().map(conv_ty).collect(),
+        _ => panic!(),
     }
 }
 
@@ -22,10 +31,7 @@ fn conv_ty(ty: ast::TyDefer) -> HTy {
 
 impl AST2HIR {
     fn conv_ast(&self, ast: ast::AST) -> HIR {
-        HIR(ast.0
-                .into_iter()
-                .map(|val| self.conv_val(val))
-                .collect())
+        HIR(ast.0.into_iter().map(|val| self.conv_val(val)).collect())
     }
 
     fn conv_val(&self, val: ast::Val) -> Val {
@@ -77,10 +83,7 @@ impl AST2HIR {
                     make_closure: None,
                 }
             }
-            E::App { ty, fun, arg } => {
-                self.conv_expr(*fun)
-                    .app1(conv_ty(ty), self.conv_expr(*arg))
-            }
+            E::App { ty, fun, arg } => self.conv_expr(*fun).app1(conv_ty(ty), self.conv_expr(*arg)),
             E::If {
                 ty,
                 cond,
@@ -92,6 +95,12 @@ impl AST2HIR {
                     cond: Box::new(self.conv_expr(*cond)),
                     then: Box::new(self.conv_expr(*then)),
                     else_: Box::new(self.conv_expr(*else_)),
+                }
+            }
+            E::Tuple { ty, tuple } => {
+                Expr::Tuple {
+                    tys: force_tuple(ty.force("internal typing error")),
+                    tuple: tuple.into_iter().map(|e| self.conv_expr(e)).collect(),
                 }
             }
             E::Sym { ty, name } => {
