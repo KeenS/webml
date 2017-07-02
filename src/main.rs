@@ -6,76 +6,43 @@ use webml::*;
 use webml::pass::{DebugPass, PPPass, ConvError};
 use wasm::Dump;
 use std::fs::File;
-use std::io::Write;
+use std::io::{Write, Read, BufReader};
+use std::env;
 
 fn main() {
-    let _input1 = "val x = 1
-val y=false
-val z = y
-val b = 1 + 2 * 3 + 4
-val c = (1 + 2) * 3 + 4
-val d = fn x => fn y => x + y
-val e = if true then b else c
-val f = let val d = 1 in d + c end
-val g = d 1 2
-val h = let val y = 1 in fn x => x + y end
-val i = let val two = 2 fun cls1 x = x + 1 fun cls2  x = x + two in if true then cls1 else cls2 end
-val a = i 2
-";
 
-    let _input2 = "
-val a = let
-  val b = let
-    val c = 1
-    val d = 2
-  in
-    c + d * 3 + 4
-  end
-  val e = if let val f = true in f end
-          then let val g = true in g end
-          else let val h = false in h end
-in
- (let
-    val i = fn x => fn y => x + y
-  in
-    i
-  end) (let
-    val j = b + b
-  in
-   j
-  end) 2
-end
+    let filename = env::args().nth(1).unwrap_or(
+        "ml_example/example1.sml".to_string(),
+    );
 
-";
+    let input = {
+        let file =
+            File::open(filename.clone()).expect(&format!("input file {} doesn't exist", filename));
+        let mut br = BufReader::new(file);
+        let mut s = String::new();
+        br.read_to_string(&mut s).unwrap();
+        s
+    };
 
-    let _input3 = "
-fun j y = if y then 1.0 else j true
-val x = j false
-val z = print x
-val a = 1";
+    let mut passes =
+        compile_pass![
+        ConvError::new(parse),
+        TyEnv::new(),
+        hir::AST2HIR,
+        hir::Rename::new(),
+        hir::UnnestFunc::new(),
+        hir::ForceClosure::new(),
+        hir::FlatExpr::new(),
+        hir::FlatLet::new(),
+        mir::HIR2MIR::new(),
+        mir::UnAlias::new(),
+        mir::BlockArrange::new(),
+        !lir::MIR2LIR::new(),
+        backend::LIR2WASM::new(),
+    ];
 
-    let _input4 = "
-fun addi x = 1 + x
-fun add x = 1.0 + x
-val x = print (add 2.0)
-val z = 1
-";
 
-    let mut passes = compile_pass![ConvError::new(parse),
-                                   TyEnv::new(),
-                                   hir::AST2HIR,
-                                   hir::Rename::new(),
-                                   hir::UnnestFunc::new(),
-                                   hir::ForceClosure::new(),
-                                   hir::FlatExpr::new(),
-                                   hir::FlatLet::new(),
-                                   mir::HIR2MIR::new(),
-                                   mir::UnAlias::new(),
-                                   !mir::BlockArrange::new(),
-                                   lir::MIR2LIR::new(),
-                                   backend::LIR2WASM::new()];
-
-    let module: Result<wasm::Module, TypeError> = passes.trans(_input1);
+    let module: Result<wasm::Module, TypeError> = passes.trans(&input);
 
     let module = module.unwrap();
     let mut code = Vec::new();
