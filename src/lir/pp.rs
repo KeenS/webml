@@ -18,10 +18,7 @@ impl PP for Function {
     fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
         let indent = indent + 4;
         write!(w, "fun {}: (", self.name.0)?;
-        for (i, reg) in self.regs
-                .iter()
-                .enumerate()
-                .take(self.nparams as usize) {
+        for (i, reg) in self.regs.iter().enumerate().take(self.nparams as usize) {
             write!(w, "r{}: ", i)?;
             reg.pp(w, indent)?;
             write!(w, ", ")?;
@@ -269,9 +266,7 @@ impl PP for Op {
             }
             Ret(ref reg) => {
                 write!(w, "ret ")?;
-                reg.as_ref()
-                    .map(|r| r.pp(w, indent))
-                    .unwrap_or(Ok(()))?;
+                reg.as_ref().map(|r| r.pp(w, indent)).unwrap_or(Ok(()))?;
             }
         };
         Ok(())

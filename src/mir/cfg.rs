@@ -45,17 +45,17 @@ impl EBB {
         let last = self.body.len() - 1;
         match &self.body[last] {
             &Branch {
-                 ref then,
-                 tforward,
-                 ref else_,
-                 eforward,
-                 ..
-             } => vec![(then, tforward), (else_, eforward)],
+                ref then,
+                tforward,
+                ref else_,
+                eforward,
+                ..
+            } => vec![(then, tforward), (else_, eforward)],
             &Jump {
-                 ref target,
-                 forward,
-                 ..
-             } => vec![(target, forward)],
+                ref target,
+                forward,
+                ..
+            } => vec![(target, forward)],
             &Ret { .. } => vec![],
             _ => unreachable!(),
         }

@@ -186,23 +186,27 @@ impl<'a> util::Traverse for Scope<'a> {
         scope.traverse_expr(ret);
     }
 
-    fn traverse_fun(&mut self,
-                    param: &mut (HTy, Symbol),
-                    _body_ty: &mut HTy,
-                    body: &mut Box<Expr>,
-                    _captures: &mut Vec<(HTy, Symbol)>,
-                    _make_closure: &mut Option<bool>) {
+    fn traverse_fun(
+        &mut self,
+        param: &mut (HTy, Symbol),
+        _body_ty: &mut HTy,
+        body: &mut Box<Expr>,
+        _captures: &mut Vec<(HTy, Symbol)>,
+        _make_closure: &mut Option<bool>,
+    ) {
 
         let mut scope = self.new_scope();
         scope.new_symbol(&mut param.1);
         scope.traverse_expr(body);
     }
 
-    fn traverse_closure(&mut self,
-                        envs: &mut Vec<(HTy, Symbol)>,
-                        _param_ty: &mut HTy,
-                        _body_ty: &mut HTy,
-                        _fname: &mut Symbol) {
+    fn traverse_closure(
+        &mut self,
+        envs: &mut Vec<(HTy, Symbol)>,
+        _param_ty: &mut HTy,
+        _body_ty: &mut HTy,
+        _fname: &mut Symbol,
+    ) {
 
         for &mut (_, ref mut var) in envs.iter_mut() {
             self.rename(var);

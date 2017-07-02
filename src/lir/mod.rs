@@ -31,11 +31,7 @@ impl LTy {
         use self::LTy::*;
         match *self {
             Ptr | FPtr => true,
-            I32 |
-            I64 |
-            F32 |
-            F64 |
-            Unit => false
+            I32 | I64 | F32 | F64 | Unit => false,
         }
     }
 }
@@ -123,10 +119,10 @@ impl Block {
         self.body
             .iter()
             .filter_map(|op| match *op {
-                            Jump(ref label) => Some(label),
-                            JumpIfI32(_, ref label) => Some(label),
-                            _ => None,
-                        })
+                Jump(ref label) => Some(label),
+                JumpIfI32(_, ref label) => Some(label),
+                _ => None,
+            })
             .collect()
     }
 }

@@ -15,10 +15,7 @@ impl BlockArrange {
     }
 
     fn arrange_mir(&mut self, mir: MIR) -> MIR {
-        MIR(mir.0
-                .into_iter()
-                .map(|f| self.arrange_fun(f))
-                .collect())
+        MIR(mir.0.into_iter().map(|f| self.arrange_fun(f)).collect())
     }
 
     fn arrange_fun(&mut self, mut fun: Function) -> Function {
@@ -31,11 +28,12 @@ impl BlockArrange {
     }
 }
 
-fn visit(ret: &mut Vec<EBB>,
-         dones: &mut HashSet<Symbol>,
-         cur: EBB,
-         mut blocks: Vec<EBB>)
-         -> Vec<EBB> {
+fn visit(
+    ret: &mut Vec<EBB>,
+    dones: &mut HashSet<Symbol>,
+    cur: EBB,
+    mut blocks: Vec<EBB>,
+) -> Vec<EBB> {
     if !dones.contains(&cur.name) {
         dones.insert(cur.name.clone());
         for (next, forward) in cur.next_ebbs().into_iter().rev() {

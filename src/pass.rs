@@ -8,7 +8,8 @@ pub trait Pass<T, E> {
 }
 
 impl<In, Out, Err, F> Pass<In, Err> for F
-    where F: Fn(In) -> Result<Out, Err>
+where
+    F: Fn(In) -> Result<Out, Err>,
 {
     type Target = Out;
     fn trans(&mut self, t: In) -> Result<Self::Target, Err> {
@@ -20,8 +21,9 @@ impl<In, Out, Err, F> Pass<In, Err> for F
 pub struct DebugPass<T>(pub T);
 
 impl<T, In, Out, Err> Pass<In, Err> for DebugPass<T>
-    where T: Pass<In, Err, Target = Out>,
-          Out: Debug
+where
+    T: Pass<In, Err, Target = Out>,
+    Out: Debug,
 {
     type Target = Out;
 
@@ -35,8 +37,9 @@ impl<T, In, Out, Err> Pass<In, Err> for DebugPass<T>
 pub struct PPPass<T>(pub T);
 
 impl<T, In, Out, Err> Pass<In, Err> for PPPass<T>
-    where T: Pass<In, Err, Target = Out>,
-          Out: PP
+where
+    T: Pass<In, Err, Target = Out>,
+    Out: PP,
 {
     type Target = Out;
 
@@ -65,17 +68,18 @@ impl<F, FO, S, SO> Chain<F, FO, S, SO> {
 }
 
 impl<F, E, S, T, In, Out> Pass<In, E> for Chain<F, T, S, Out>
-    where F: Pass<In, E, Target = T>,
-          S: Pass<T, E, Target = Out>
+where
+    F: Pass<In, E, Target = T>,
+    S: Pass<T, E, Target = Out>,
 {
     type Target = Out;
 
     fn trans(&mut self, i: In) -> Result<Self::Target, E> {
         let &mut Chain {
-                     ref mut fst,
-                     ref mut snd,
-                     ..
-                 } = self;
+            ref mut fst,
+            ref mut snd,
+            ..
+        } = self;
         let t = fst.trans(i)?;
         let o = snd.trans(t)?;
         Ok(o)
@@ -99,8 +103,9 @@ impl<P, FE, O> ConvError<P, FE, O> {
 
 
 impl<In, FE, SE, O, P> Pass<In, SE> for ConvError<P, FE, O>
-    where P: Pass<In, FE, Target = O>,
-          SE: From<FE>
+where
+    P: Pass<In, FE, Target = O>,
+    SE: From<FE>,
 {
     type Target = O;
 

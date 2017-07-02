@@ -99,20 +99,20 @@ impl Expr {
 
         match self {
             &Closure {
-                 ref param_ty,
-                 ref body_ty,
-                 ..
-             } |
+                ref param_ty,
+                ref body_ty,
+                ..
+            } |
             &PrimFun {
-                 ref param_ty,
-                 ret_ty: ref body_ty,
-                 ..
-             } |
+                ref param_ty,
+                ret_ty: ref body_ty,
+                ..
+            } |
             &Fun {
-                 param: (ref param_ty, _),
-                 ref body_ty,
-                 ..
-             } => HTy::fun(param_ty.clone(), body_ty.clone()),
+                param: (ref param_ty, _),
+                ref body_ty,
+                ..
+            } => HTy::fun(param_ty.clone(), body_ty.clone()),
             &Tuple { ref tys, .. } => HTy::Tuple(tys.clone()),
             &Op { ref ty, .. } |
             &Binds { ref ty, .. } |

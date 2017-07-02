@@ -171,7 +171,10 @@ named!(expr0_paren <&str, Expr>, do_parse!(
 named!(expr0_tuple <&str, Expr>, do_parse!(
     tag!("(") >>
         opt!(multispace) >>
-        es: many1!(do_parse!(e: expr >> opt!(multispace) >> tag!(",") >> opt!(multispace) >> (e))) >>
+        es: many1!(do_parse!(
+            e: expr >> opt!(multispace)
+                >> tag!(",") >> opt!(multispace) >> (e))
+        ) >>
         e: expr >>  opt!(multispace) >>
         tag!(")") >>
         (
