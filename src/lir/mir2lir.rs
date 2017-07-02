@@ -109,7 +109,32 @@ impl MIR2LIR {
                         ref var,
                         ref tys,
                         ref tuple,
-                    } => unimplemented!(),
+                    } => {
+                        let reg = reg!(var);
+
+                        let tys: Vec<_> = tys.iter().map(|ty| self.ebbty_to_lty(ty)).collect();
+                        let size: u32 = tys.iter().map(|ty| ty.size()).sum();
+
+                        ops.push(HeapAlloc(reg.clone(), I(size as i32), tys.clone()));
+
+                        let mut acc = 0;
+                        for (var, ty) in tuple.iter().zip(tys) {
+                            match ty {
+                                LTy::Unit => {
+                                    // FIXME: remove unit from closure
+                                    // do nothing
+                                    ()
+                                }
+                                LTy::I32 => ops.push(StoreI32(Addr(reg.clone(), acc), reg!(var))),
+                                LTy::I64 => ops.push(StoreI64(Addr(reg.clone(), acc), reg!(var))),
+                                LTy::F32 => ops.push(StoreF32(Addr(reg.clone(), acc), reg!(var))),
+                                LTy::F64 => ops.push(StoreF64(Addr(reg.clone(), acc), reg!(var))),
+                                LTy::Ptr => ops.push(StoreI32(Addr(reg.clone(), acc), reg!(var))),
+                                LTy::FPtr => ops.push(StoreI32(Addr(reg.clone(), acc), reg!(var))),
+                            }
+                            acc += 8;
+                        }
+                    }
                     &m::Proj {
                         ref var,
                         ref ty,
@@ -149,7 +174,7 @@ impl MIR2LIR {
                         size += env.iter()
                             .map(|&(ref ty, _)| self.ebbty_to_lty(ty).size())
                             .sum();
-                        let mut tys = vec![LTy::FPtr, LTy::I32];
+                        let mut tys = vec![LTy::FPtr];
                         for &(ref ty, _) in env.iter() {
                             tys.push(self.ebbty_to_lty(ty));
                         }
