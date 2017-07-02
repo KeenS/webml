@@ -171,11 +171,15 @@ named!(expr0_paren <&str, Expr>, do_parse!(
 named!(expr0_tuple <&str, Expr>, do_parse!(
     tag!("(") >>
         opt!(multispace) >>
-        e: many1!(do_parse!(e: expr >> opt!(multispace) >> tag!(",") >> opt!(multispace) >> (e))) >>
-        opt!(multispace) >>
+        es: many1!(do_parse!(e: expr >> opt!(multispace) >> tag!(",") >> opt!(multispace) >> (e))) >>
+        e: expr >>  opt!(multispace) >>
         tag!(")") >>
         (
-            Expr::Tuple{ty: TyDefer::empty(), tuple: e}
+            {
+                let mut es = es;
+                es.push(e);
+                Expr::Tuple{ty: TyDefer::empty(), tuple: es}
+            }
         ))
 );
 
