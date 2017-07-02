@@ -18,10 +18,7 @@ impl FlatExpr {
     }
 
     pub fn flat_hir(&mut self, mut hir: HIR) -> HIR {
-        hir.0 = hir.0
-            .into_iter()
-            .map(|val| self.flat_val(val))
-            .collect();
+        hir.0 = hir.0.into_iter().map(|val| self.flat_val(val)).collect();
         hir
     }
 
@@ -37,9 +34,9 @@ impl FlatExpr {
                 binds = binds
                     .into_iter()
                     .map(|mut val| {
-                             val.expr = self.flat_expr(val.expr);
-                             val
-                         })
+                        val.expr = self.flat_expr(val.expr);
+                        val
+                    })
                     .collect();
                 let (ret, retval) = self.flat_make_val(*ret);
                 binds.push(retval);
@@ -53,11 +50,11 @@ impl FlatExpr {
                 let (l, lval) = self.flat_make_val(*l);
                 let (r, rval) = self.flat_make_val(*r);
                 let (ret, retval) = self.make_val(Op {
-                                                      ty: ty.clone(),
-                                                      name: name,
-                                                      l: l,
-                                                      r: r,
-                                                  });
+                    ty: ty.clone(),
+                    name: name,
+                    l: l,
+                    r: r,
+                });
                 Binds {
                     ty: ty.clone(),
                     binds: vec![lval, rval, retval],
@@ -73,10 +70,10 @@ impl FlatExpr {
             } => {
                 let (ret, bodyval) = self.flat_make_val(*body);
                 body = Box::new(Binds {
-                                    ty: body_ty.clone(),
-                                    binds: vec![bodyval],
-                                    ret: ret,
-                                });
+                    ty: body_ty.clone(),
+                    binds: vec![bodyval],
+                    ret: ret,
+                });
                 Fun {
                     body: body,
                     param: param,
@@ -89,10 +86,10 @@ impl FlatExpr {
                 let (fun, funval) = self.flat_make_val(*fun);
                 let (arg, argval) = self.flat_make_val(*arg);
                 let (ret, retval) = self.make_val(App {
-                                                      fun: fun,
-                                                      arg: arg,
-                                                      ty: ty.clone(),
-                                                  });
+                    fun: fun,
+                    arg: arg,
+                    ty: ty.clone(),
+                });
                 Binds {
                     ty: ty.clone(),
                     binds: vec![funval, argval, retval],
@@ -109,15 +106,15 @@ impl FlatExpr {
                 let (then, thenval) = self.flat_make_val(*then);
                 let (else_, elseval) = self.flat_make_val(*else_);
                 let then = Box::new(Binds {
-                                        ty: ty.clone(),
-                                        binds: vec![thenval],
-                                        ret: then,
-                                    });
+                    ty: ty.clone(),
+                    binds: vec![thenval],
+                    ret: then,
+                });
                 let else_ = Box::new(Binds {
-                                         ty: ty.clone(),
-                                         binds: vec![elseval],
-                                         ret: else_,
-                                     });
+                    ty: ty.clone(),
+                    binds: vec![elseval],
+                    ret: else_,
+                });
                 let e = If {
                     ty: ty.clone(),
                     cond: cond,
@@ -132,20 +129,22 @@ impl FlatExpr {
                 }
             }
             Tuple { tys, tuple } => {
-                let (tuple, vals) = tuple
+                let (tuple, mut vals): (Vec<_>, Vec<_>) = tuple
                     .into_iter()
                     .map(|e| {
-                             let (t, val) = self.flat_make_val(e);
-                             (*t, val)
-                         })
+                        let (t, val) = self.flat_make_val(e);
+                        (*t, val)
+                    })
                     .unzip();
+                let (ret, tupleval) = self.make_val(Tuple {
+                    tys: tys.clone(),
+                    tuple: tuple,
+                });
+                vals.push(tupleval);
                 Binds {
                     ty: HTy::Tuple(tys.clone()),
                     binds: vals,
-                    ret: Box::new(Expr::Tuple {
-                                      tys: tys,
-                                      tuple: tuple,
-                                  }),
+                    ret: ret,
                 }
 
             }
