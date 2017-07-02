@@ -121,7 +121,6 @@ impl MIR2LIR {
                         for (var, ty) in tuple.iter().zip(tys) {
                             match ty {
                                 LTy::Unit => {
-                                    // FIXME: remove unit from closure
                                     // do nothing
                                     ()
                                 }
@@ -302,6 +301,7 @@ impl MIR2LIR {
                     &mir::Op::Call { ref var, ref ty, .. } => {
                         intern!(self.ebbty_to_lty(ty), var);
                     }
+                    &mir::Op::Tuple { ref var, .. } |
                     &mir::Op::Closure { ref var, .. } => {
                         intern!(LTy::Ptr, var);
                     }
