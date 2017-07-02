@@ -257,7 +257,7 @@ impl HIR2MIR {
 fn force_symbol(e: hir::Expr) -> Symbol {
     match e {
         hir::Expr::Sym { name, .. } => name,
-        _ => panic!("not a symbol"),
+        e => panic!("not a symbol, {:?}", e),
     }
 }
 
