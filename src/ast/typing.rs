@@ -299,7 +299,7 @@ impl<'a> Scope<'a> {
 
         for (e, t) in tuple.iter_mut().zip(tys.iter_mut()) {
             // ignoring the error of infering. Right, maybe.
-            self.infer_expr(e, t);
+            let _res = self.infer_expr(e, t);
         }
         unify(&mut TyDefer::new(Some(Ty::Tuple(tys))), given)?;
         Ok(())
