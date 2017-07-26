@@ -180,6 +180,7 @@ impl MIR2LIR {
                             tys.push(self.ebbty_to_lty(ty));
                         }
                         ops.push(HeapAlloc(reg.clone(), I(size as i32), tys));
+                        // FIXME: explicitly take fun pointer
                         ops.push(StoreFnPtr(Addr(reg.clone(), 0), fun.clone()));
                         let mut acc = LTy::FPtr.size();
                         for &(ref ty, ref var) in env.iter() {
