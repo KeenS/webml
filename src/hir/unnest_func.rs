@@ -4,11 +4,12 @@ use std::ops::{Deref, DerefMut, Drop};
 use prim::*;
 use hir::*;
 use pass::Pass;
+use id::Id;
 
 pub struct UnnestFunc {
     tables: Vec<HashSet<Symbol>>,
     pos: usize,
-    id: usize,
+    id: Id,
 }
 
 struct Scope<'a>(&'a mut UnnestFunc);
@@ -47,18 +48,16 @@ impl<'a> Scope<'a> {
 
     fn new_fname(&mut self, name: Option<Symbol>) -> Symbol {
         let new_name = match name {
-            None => format!("<anonfun>@{}", self.id),
-            Some(name) => format!("<{}>@{}", name.0, self.id),
+            None => format!("<anonfun>"),
+            Some(name) => format!("<{}>", name.0),
         };
-        self.id += 1;
-        Symbol(new_name.to_string())
+        let id = self.id.next();
+        Symbol(new_name, id)
     }
 
     fn add_scope(&mut self, symbol: Symbol) {
         let pos = self.pos - 1;
         self.tables[pos].insert(symbol);
-        self.id += 1;
-
     }
 
     fn is_in_scope(&mut self, symbol: &Symbol) -> bool {
@@ -366,11 +365,11 @@ impl<'a> Scope<'a> {
 
 
 impl UnnestFunc {
-    pub fn new() -> Self {
+    pub fn new(id: Id) -> Self {
         UnnestFunc {
             tables: Vec::new(),
             pos: 0,
-            id: 0,
+            id,
         }
     }
 

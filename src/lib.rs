@@ -14,6 +14,7 @@ pub mod hir;
 pub mod mir;
 pub mod lir;
 pub mod backend;
+pub mod id;
 
 pub use pass::{Pass, Chain};
 pub use parser::parse;

@@ -5,7 +5,7 @@ use pass::Pass;
 use hir;
 
 pub struct HIR2MIR {
-    id: usize,
+    id: u64,
 }
 
 
@@ -35,14 +35,15 @@ impl HIR2MIR {
     }
 
     fn genlabel(&mut self, name: &str) -> Symbol {
-        let name = format!("{}@{}", name, self.id);
+        let name = format!("{}", name);
+        let id = self.id;
         self.id += 1;
-        Symbol(name)
+        Symbol(name, id)
     }
 
     fn trans_hir(&mut self, hir: hir::HIR) -> MIR {
         // TODO: make anonymous
-        let mut mainbuilder = FunctionBuilder::new(Symbol("main".to_string()), EbbTy::Unit);
+        let mut mainbuilder = FunctionBuilder::new(Symbol::new("main"), EbbTy::Unit);
         let mut mainebuilder = EBBBuilder::new(self.genlabel("entry"), Vec::new());
         let mut funs = Vec::new();
 
@@ -88,9 +89,9 @@ impl HIR2MIR {
                         .into_iter()
                         .map(|(ty, var)| (from(ty), var))
                         .unzip();
-                    let closure = Symbol("env".to_string());
+                    let closure = Symbol::new("env");
                     eb_ = EBBBuilder::new(
-                        Symbol("entry".to_string()),
+                        Symbol::new("entry"),
                         vec![(EbbTy::Tuple(tuples.clone()), closure.clone()), param],
                     );
                     for (i, (v, ty)) in vars.into_iter().zip(tuples).enumerate() {
@@ -98,7 +99,7 @@ impl HIR2MIR {
                     }
                 } else {
                     // make pure function
-                    eb_ = EBBBuilder::new(Symbol("entry".to_string()), vec![param]);
+                    eb_ = EBBBuilder::new(Symbol::new("entry"), vec![param]);
                 }
                 let mut fb = FunctionBuilder::new(name, from(body_ty.clone()));
                 let ebb = self.trans_expr(&mut fb, eb_, body_ty, *body);

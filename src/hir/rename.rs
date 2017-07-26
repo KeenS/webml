@@ -5,11 +5,12 @@ use prim::*;
 use hir::*;
 use pass::Pass;
 use hir::util::Traverse;
+use id::Id;
 
 pub struct Rename {
-    tables: Vec<HashMap<Symbol, String>>,
+    tables: Vec<HashMap<Symbol, u64>>,
     pos: usize,
-    id: usize,
+    id: Id,
 }
 
 struct Scope<'a>(&'a mut Rename);
@@ -53,18 +54,17 @@ impl<'a> Scope<'a> {
 
     fn new_symbol(&mut self, symbol: &mut Symbol) {
         let pos = self.pos - 1;
-        let new_name = format!("{}@{}", &symbol.0, self.id);
-        self.tables[pos].insert(symbol.clone(), new_name.clone());
-        self.id += 1;
-        symbol.0 = new_name;
+        let new_id = self.id.next();
+        self.tables[pos].insert(symbol.clone(), new_id);
+        symbol.1 = new_id;
     }
 
     fn rename(&mut self, symbol: &mut Symbol) {
         let pos = self.pos;
         for table in self.tables[0..pos].iter_mut().rev() {
             match table.get(symbol) {
-                Some(new_name) => {
-                    symbol.0 = new_name.clone();
+                Some(new_id) => {
+                    symbol.1 = *new_id;
                     return;
                 }
                 None => {}
@@ -220,11 +220,11 @@ impl<'a> util::Traverse for Scope<'a> {
 
 
 impl Rename {
-    pub fn new() -> Self {
+    pub fn new(id: Id) -> Self {
         Rename {
             tables: Vec::new(),
             pos: 0,
-            id: 0,
+            id,
         }
     }
 

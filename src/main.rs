@@ -24,20 +24,22 @@ fn main() {
         s
     };
 
+    let id = id::Id::new();
+
     let mut passes =
         compile_pass![
         ConvError::new(parse),
         TyEnv::new(),
         hir::AST2HIR,
-        hir::Rename::new(),
-        hir::UnnestFunc::new(),
+        hir::Rename::new(id.clone()),
+        hir::UnnestFunc::new(id.clone()),
         hir::ForceClosure::new(),
-        hir::FlatExpr::new(),
+        hir::FlatExpr::new(id.clone()),
         hir::FlatLet::new(),
         mir::HIR2MIR::new(),
-        mir::UnAlias::new(),
+        !mir::UnAlias::new(),
         mir::BlockArrange::new(),
-        !lir::MIR2LIR::new(),
+        lir::MIR2LIR::new(),
         backend::LIR2WASM::new(),
     ];
 

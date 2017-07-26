@@ -18,7 +18,9 @@ impl PP for HIR {
 impl PP for Val {
     fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
         let rec = if self.rec { "rec " } else { "" };
-        write!(w, "{}val{} {}: ", Self::nspaces(indent), rec, self.name.0)?;
+        write!(w, "{}val{} ", Self::nspaces(indent), rec)?;
+        self.name.pp(w, indent)?;
+        write!(w, ": ")?;
         self.ty.pp(w, indent)?;
         write!(w, " = ")?;
         self.expr.pp(w, indent + 4)?;
@@ -50,7 +52,9 @@ impl PP for Expr {
                 ..
             } => {
                 l.pp(w, indent)?;
-                write!(w, " {} ", name.0)?;
+                write!(w, " ")?;
+                name.pp(w, indent)?;
+                write!(w, " ")?;
                 r.pp(w, indent)?;
             }
             &Fun {
@@ -109,7 +113,7 @@ impl PP for Expr {
                     t.pp(w, indent)?;
                     write!(w, ", ")?;
                 }
-                write!(w, ")");
+                write!(w, ")")?;
             }
             &PrimFun { ref name, .. } => {
                 name.pp(w, indent)?;
@@ -139,7 +143,7 @@ impl PP for HTy {
                     ty.pp(w, indent)?;
                     write!(w, " * ")?;
                 }
-                write!(w, ")");
+                write!(w, ")")?;
             }
             Fun(ref t1, ref t2) => {
                 t1.pp(w, indent)?;

@@ -44,7 +44,9 @@ impl MIR2LIR {
         let symbol_table = self.make_symbol_table(body.as_ref());
         let target_table = self.make_target_table(body.as_ref(), &symbol_table);
         macro_rules! reg {
-            ($var: expr) => {symbol_table[&$var].clone()}
+            ($var: expr) => {
+                symbol_table[&$var].clone()
+            }
         }
 
         let mut blocks = Vec::new();

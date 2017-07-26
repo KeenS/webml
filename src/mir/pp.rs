@@ -17,7 +17,9 @@ impl PP for MIR {
 impl PP for Function {
     fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
         let indent = indent + 4;
-        write!(w, "fun {}: (", self.name.0)?;
+        write!(w, "fun ")?;
+        self.name.pp(w, indent)?;
+        write!(w, ": (")?;
         for &(ref param_ty, ref param) in self.body[0].params.iter() {
             param.pp(w, 0)?;
             write!(w, ": ")?;
@@ -88,7 +90,9 @@ impl PP for EbbTy {
 impl PP for EBB {
     fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
         let space = Self::nspaces(indent);
-        write!(w, "{}{}(", space, self.name.0)?;
+        write!(w, "{}", space)?;
+        self.name.pp(w, indent)?;
+        write!(w, "(")?;
         let indent = indent + 4;
         for &(ref param_ty, ref param) in self.params.iter() {
             param.pp(w, indent)?;
@@ -116,7 +120,9 @@ impl PP for Op {
                 ref ty,
                 ref value,
             } => {
-                write!(w, "{}{}: ", space, var.0)?;
+                write!(w, "{}", space)?;
+                var.pp(w, indent)?;
+                write!(w, ": ")?;
                 ty.pp(w, indent)?;
                 write!(w, " := ")?;
                 value.pp(w, indent)?;
@@ -126,7 +132,9 @@ impl PP for Op {
                 ref ty,
                 ref sym,
             } => {
-                write!(w, "{}{}: ", space, var.0)?;
+                write!(w, "{}", space)?;
+                var.pp(w, indent)?;
+                write!(w, ": ")?;
                 ty.pp(w, indent)?;
                 write!(w, " := ")?;
                 sym.pp(w, indent)?;
@@ -137,7 +145,9 @@ impl PP for Op {
                 ref l,
                 ref r,
             } => {
-                write!(w, "{}{}: ", space, var.0)?;
+                write!(w, "{}", space)?;
+                var.pp(w, indent)?;
+                write!(w, ": ")?;
                 ty.pp(w, indent)?;
                 write!(w, " := ")?;
                 l.pp(w, indent)?;
@@ -151,7 +161,9 @@ impl PP for Op {
                 ref l,
                 ref r,
             } => {
-                write!(w, "{}{}: ", space, var.0)?;
+                write!(w, "{}", space)?;
+                var.pp(w, indent)?;
+                write!(w, ": ")?;
                 ty.pp(w, indent)?;
                 write!(w, " := ")?;
                 l.pp(w, indent)?;
@@ -166,7 +178,9 @@ impl PP for Op {
                 ref fun,
                 ref env,
             } => {
-                write!(w, "{}{}: ", space, var.0)?;
+                write!(w, "{}", space)?;
+                var.pp(w, indent)?;
+                write!(w, ": ")?;
                 (EbbTy::Cls {
                      closures: env.iter().map(|&(ref ty, _)| ty.clone()).collect(),
                      param: Box::new(param_ty.clone()),
@@ -190,9 +204,13 @@ impl PP for Op {
                 ref fun,
                 ref args,
             } => {
-                write!(w, "{}{}: ", space, var.0)?;
+                write!(w, "{}", space)?;
+                var.pp(w, indent)?;
+                write!(w, ": ")?;
                 ty.pp(w, indent)?;
-                write!(w, " := {}(", fun.0)?;
+                write!(w, " := ")?;
+                fun.pp(w, indent)?;
+                write!(w, "(")?;
                 for arg in args.iter() {
                     arg.pp(w, 0)?;
                     write!(w, ", ")?;
@@ -204,7 +222,9 @@ impl PP for Op {
                 ref tys,
                 ref tuple,
             } => {
-                write!(w, "{}{}: (", space, var.0)?;
+                write!(w, "{}", space)?;
+                var.pp(w, indent)?;
+                write!(w, ": (")?;
                 for ty in tys.iter() {
                     ty.pp(w, indent)?;
                     write!(w, ", ")?;
@@ -223,7 +243,9 @@ impl PP for Op {
                 ref index,
                 ref tuple,
             } => {
-                write!(w, "{}{}: ", space, var.0)?;
+                write!(w, "{}", space)?;
+                var.pp(w, indent)?;
+                write!(w, ": ")?;
                 ty.pp(w, indent)?;
                 write!(w, " := #{} ", index)?;
                 tuple.pp(w, indent)?;
@@ -234,21 +256,22 @@ impl PP for Op {
                 ref else_,
                 ..
             } => {
-                write!(
-                    w,
-                    "{}if {} then {}() else {}()",
-                    space,
-                    cond.0,
-                    then.0,
-                    else_.0
-                )?;
+                write!(w, "{}if ", space,)?;
+                cond.pp(w, indent)?;
+                write!(w, " then ")?;
+                then.pp(w, indent)?;
+                write!(w, "() else ")?;
+                else_.pp(w, indent)?;
+                write!(w, "()")?;
             }
             &Jump {
                 ref target,
                 ref args,
                 ..
             } => {
-                write!(w, "{}{}(", space, target.0)?;
+                write!(w, "{}", space)?;
+                target.pp(w, indent)?;
+                write!(w, "(")?;
                 for arg in args.iter() {
                     arg.pp(w, 0)?;
                     write!(w, ", ")?;
@@ -258,7 +281,11 @@ impl PP for Op {
             }
             &Ret { ref value, ref ty } => {
                 match *value {
-                    Some(ref v) => write!(w, "{}ret {}: ", space, v.0)?,
+                    Some(ref v) => {
+                        write!(w, "{}ret ", space)?;
+                        v.pp(w, indent)?;
+                        write!(w, ": ")?
+                    }
                     None => write!(w, "{}ret: ", space)?,
                 }
 

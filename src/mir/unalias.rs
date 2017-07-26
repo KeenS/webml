@@ -110,7 +110,10 @@ impl UnAlias {
     fn resolv_alias(&mut self, sym: &mut Symbol) {
         match self.alias.get(sym) {
             None => (),
-            Some(orig) => sym.0 = orig.0.clone(),
+            Some(orig) => {
+                sym.0 = orig.0.clone();
+                sym.1 = orig.1;
+            }
         }
     }
 }

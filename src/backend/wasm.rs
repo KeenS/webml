@@ -338,7 +338,7 @@ impl LIR2WASM {
             cb
         });
         self.md.start(FunctionIndex(
-            self.function_table[&Symbol("main".into())],
+            self.function_table[&Symbol::new("main")],
         ));
         self.md.new_function(fb.build());
     }

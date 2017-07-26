@@ -3,17 +3,17 @@ use util::PP;
 
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub struct Symbol(pub String);
+pub struct Symbol(pub String, pub u64);
 
 impl Symbol {
     pub fn new<S: Into<String>>(s: S) -> Self {
-        Symbol(s.into())
+        Symbol(s.into(), 0)
     }
 }
 
 impl PP for Symbol {
     fn pp(&self, mut w: &mut io::Write, _indent: usize) -> io::Result<()> {
-        write!(w, "{}", self.0)?;
+        write!(w, "{}@{}", self.0, self.1)?;
         Ok(())
     }
 }

@@ -56,7 +56,7 @@ impl AST2HIR {
             E::Add { ty, l, r } => {
                 Expr::Op {
                     ty: conv_ty(ty),
-                    name: Symbol("+".to_string()),
+                    name: Symbol::new("+"),
                     l: Box::new(self.conv_expr(*l)),
                     r: Box::new(self.conv_expr(*r)),
                 }
@@ -64,7 +64,7 @@ impl AST2HIR {
             E::Mul { ty, l, r } => {
                 Expr::Op {
                     ty: conv_ty(ty),
-                    name: Symbol("*".to_string()),
+                    name: Symbol::new("*"),
                     l: Box::new(self.conv_expr(*l)),
                     r: Box::new(self.conv_expr(*r)),
                 }

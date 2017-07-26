@@ -1,20 +1,20 @@
 use prim::*;
 use hir::*;
 use pass::Pass;
+use id::Id;
 
 pub struct FlatExpr {
-    id: usize,
+    id: Id,
 }
 
 impl FlatExpr {
-    pub fn new() -> Self {
-        FlatExpr { id: 0 }
+    pub fn new(id: Id) -> Self {
+        Self { id }
     }
 
     pub fn gensym(&mut self) -> Symbol {
-        let name = format!("#g{}", self.id);
-        self.id += 1;
-        Symbol(name)
+        let id = self.id.next();
+        Symbol("#g".into(), id)
     }
 
     pub fn flat_hir(&mut self, mut hir: HIR) -> HIR {

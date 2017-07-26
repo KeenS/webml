@@ -194,7 +194,7 @@ named!(symbol <&str, Symbol>, do_parse!(
                  },
                  s => Ok(s)
              }) >>
-        sym: alphanumeric >> (Symbol(sym.to_string()))));
+        sym: alphanumeric >> (Symbol::new(sym.to_string()))));
 
 pub fn parse(input: &str) -> ::std::result::Result<AST, Err<&str>> {
     let iresult = top(input);
