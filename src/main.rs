@@ -37,8 +37,8 @@ fn main() {
         hir::FlatExpr::new(id.clone()),
         hir::FlatLet::new(),
         mir::HIR2MIR::new(),
-        !mir::UnAlias::new(),
-        mir::BlockArrange::new(),
+        mir::UnAlias::new(),
+        !mir::BlockArrange::new(),
         lir::MIR2LIR::new(),
         backend::LIR2WASM::new(),
     ];

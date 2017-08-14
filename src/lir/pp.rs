@@ -18,11 +18,14 @@ impl PP for Function {
     fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
         let indent = indent + 4;
         write!(w, "fun {}: (", self.name.0)?;
-        for (i, reg) in self.regs.iter().enumerate().take(self.nparams as usize) {
-            write!(w, "r{}: ", i)?;
-            reg.pp(w, indent)?;
-            write!(w, ", ")?;
-        }
+        inter_iter!{
+            self.regs.iter().enumerate().take(self.nparams as usize),
+            write!(w, ", ")?,
+            |(i, reg)| => {
+                write!(w, "r{}: ", i)?;
+                reg.pp(w, indent)?;
+            }
+        };
         write!(w, ") -> ")?;
         self.ret_ty.pp(w, 0)?;
         write!(w, " = {{\n")?;
@@ -241,10 +244,11 @@ impl PP for Op {
                 write!(w, " <- closure_call ")?;
                 name.pp(w, indent)?;
                 write!(w, "(")?;
-                for arg in args.iter() {
-                    arg.pp(w, indent)?;
-                    write!(w, ", ")?;
-                }
+                inter_iter!{
+                    args.iter(),
+                    write!(w, ", ")?,
+                    |arg| => arg.pp(w, indent)?
+                };
                 write!(w, ")")?;
             }
             FunCall(ref reg, ref name, ref args) => {
@@ -254,9 +258,10 @@ impl PP for Op {
                 write!(w, " <- call ")?;
                 name.pp(w, indent)?;
                 write!(w, "(")?;
-                for arg in args.iter() {
-                    arg.pp(w, indent)?;
-                    write!(w, ", ")?;
+                inter_iter!{
+                    args.iter(),
+                    write!(w, ", ")?,
+                    |arg| => arg.pp(w, indent)?
                 }
                 write!(w, ")")?;
             }

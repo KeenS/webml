@@ -20,11 +20,14 @@ impl PP for Function {
         write!(w, "fun ")?;
         self.name.pp(w, indent)?;
         write!(w, ": (")?;
-        for &(ref param_ty, ref param) in self.body[0].params.iter() {
-            param.pp(w, 0)?;
-            write!(w, ": ")?;
-            param_ty.pp(w, 0)?;
-            write!(w, ", ")?;
+        inter_iter! {
+            self.body[0].params.iter(),
+            write!(w, ", ")?,
+            |&(ref param_ty, ref param)| => {
+                param.pp(w, 0)?;
+                write!(w, ": ")?;
+                param_ty.pp(w, 0)?;
+            }
         }
         write!(w, ") -> ")?;
         self.body_ty.pp(w, 0)?;
@@ -49,9 +52,10 @@ impl PP for EbbTy {
             Float => write!(w, "float")?,
             Tuple(ref tys) => {
                 write!(w, "(")?;
-                for t in tys {
-                    t.pp(w, indent)?;
-                    write!(w, ", ")?;
+                inter_iter! {
+                    tys,
+                    write!(w, ", ")?,
+                    |t| => t.pp(w, indent)?
                 }
                 write!(w, ")")?;
             }
@@ -61,9 +65,10 @@ impl PP for EbbTy {
                 ref ret,
             } => {
                 write!(w, "closure_fn<")?;
-                for c in closures {
-                    c.pp(w, indent)?;
-                    write!(w, ", ")?;
+                inter_iter! {
+                    closures,
+                    write!(w, ", ")?,
+                    |c| => c.pp(w, indent)?
                 }
                 write!(w, ">(")?;
                 param.pp(w, indent)?;
@@ -75,9 +80,10 @@ impl PP for EbbTy {
                 ref ret,
             } => {
                 write!(w, "fn(")?;
-                for param in params {
-                    param.pp(w, indent)?;
-                    write!(w, ", ")?;
+                inter_iter! {
+                    params,
+                    write!(w, ", ")?,
+                    |param| => param.pp(w, indent)?
                 }
                 write!(w, ") -> ")?;
                 ret.pp(w, indent)?;
@@ -94,11 +100,14 @@ impl PP for EBB {
         self.name.pp(w, indent)?;
         write!(w, "(")?;
         let indent = indent + 4;
-        for &(ref param_ty, ref param) in self.params.iter() {
-            param.pp(w, indent)?;
-            write!(w, ": ")?;
-            param_ty.pp(w, indent)?;
-            write!(w, ", ")?;
+        inter_iter! {
+            self.params.iter(),
+            write!(w, ", ")?,
+            |&(ref param_ty, ref param)| => {
+                param.pp(w, indent)?;
+                write!(w, ": ")?;
+                param_ty.pp(w, indent)?;
+            }
         }
         write!(w, "):\n")?;
         for op in self.body.iter() {
@@ -189,11 +198,14 @@ impl PP for Op {
                 write!(w, " := ")?;
                 fun.pp(w, indent)?;
                 write!(w, ".__close(")?;
-                for &(ref var_ty, ref var) in env.iter() {
-                    var.pp(w, 0)?;
-                    write!(w, ": ")?;
-                    var_ty.pp(w, 0)?;
-                    write!(w, ", ")?;
+                inter_iter! {
+                    env.iter(),
+                    write!(w, ", ")?,
+                    |&(ref var_ty, ref var)| => {
+                        var.pp(w, 0)?;
+                        write!(w, ": ")?;
+                        var_ty.pp(w, 0)?;
+                    }
                 }
                 write!(w, ")")?;
 
@@ -211,9 +223,12 @@ impl PP for Op {
                 write!(w, " := ")?;
                 fun.pp(w, indent)?;
                 write!(w, "(")?;
-                for arg in args.iter() {
-                    arg.pp(w, 0)?;
-                    write!(w, ", ")?;
+                inter_iter!{
+                    args.iter(),
+                    write!(w, ", ")?,
+                    |arg| => {
+                        arg.pp(w, 0)?
+                    }
                 }
                 write!(w, ")")?;
             }
@@ -225,15 +240,19 @@ impl PP for Op {
                 write!(w, "{}", space)?;
                 var.pp(w, indent)?;
                 write!(w, ": (")?;
-                for ty in tys.iter() {
-                    ty.pp(w, indent)?;
-                    write!(w, ", ")?;
+                inter_iter!{
+                    tys.iter(),
+                    write!(w, ", ")?,
+                    |ty| => {
+                        ty.pp(w, indent)?
+                    }
                 }
                 write!(w, ") := ")?;
                 write!(w, "(")?;
-                for var in tuple.iter() {
-                    var.pp(w, 0)?;
-                    write!(w, ", ")?;
+                inter_iter!{
+                    tuple.iter(),
+                    write!(w, ", ")?,
+                    |var| => var.pp(w, 0)?
                 }
                 write!(w, ")")?;
             }
@@ -272,9 +291,12 @@ impl PP for Op {
                 write!(w, "{}", space)?;
                 target.pp(w, indent)?;
                 write!(w, "(")?;
-                for arg in args.iter() {
-                    arg.pp(w, 0)?;
-                    write!(w, ", ")?;
+                inter_iter!{
+                    args.iter(),
+                    write!(w, ", ")?,
+                    |arg| => {
+                        arg.pp(w, 0)?
+                    }
                 }
                 write!(w, ")")?;
 

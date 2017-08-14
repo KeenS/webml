@@ -5,6 +5,7 @@ extern crate petgraph;
 extern crate web_assembler;
 
 
+#[macro_use]
 pub mod util;
 pub mod prim;
 mod parser;

@@ -1,16 +1,15 @@
 pub mod typing;
+mod pp;
 
 use nom;
 
 use std::ops::Deref;
 use std::error::Error;
 use std::fmt;
-use std::io;
 use std::cell::{RefCell, Ref, RefMut};
 use std::rc::Rc;
 
 use ast;
-use util::PP;
 use prim::*;
 
 #[derive(Debug, Clone)]
@@ -88,31 +87,6 @@ impl Ty {
 }
 
 
-impl PP for Ty {
-    fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
-        use self::Ty::*;
-        match *self {
-            Unit => write!(w, "()")?,
-            Bool => write!(w, "bool")?,
-            Int => write!(w, "int")?,
-            Float => write!(w, "float")?,
-            Fun(ref t1, ref t2) => {
-                t1.clone().force("type not settled in pp").pp(w, indent)?;
-                write!(w, " -> ")?;
-                t2.clone().force("type not settled in pp").pp(w, indent)?;
-            }
-            Tuple(ref tys) => {
-                write!(w, "(")?;
-                for ty in tys.iter() {
-                    ty.clone().force("type not settled in pp").pp(w, indent)?;
-                    write!(w, ", ")?;
-                }
-                write!(w, ")")?;
-            }
-        }
-        Ok(())
-    }
-}
 
 
 impl TyDefer {

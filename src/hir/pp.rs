@@ -64,9 +64,12 @@ impl PP for Expr {
                 ..
             } => {
                 write!(w, "fun (")?;
-                for &(_, ref cap) in captures {
-                    cap.pp(w, indent)?;
-                    write!(w, ", ")?;
+                inter_iter! {
+                    captures,
+                    write!(w, ", ")?,
+                    |&(_, ref cap)| => {
+                        cap.pp(w, indent)?
+                    }
                 }
                 write!(w, ") ")?;
                 param.1.pp(w, indent)?;
@@ -81,9 +84,12 @@ impl PP for Expr {
                 write!(w, "<closure ")?;
                 fname.pp(w, indent)?;
                 write!(w, " (")?;
-                for &(_, ref var) in envs.iter() {
-                    var.pp(w, indent)?;
-                    write!(w, ", ")?;
+                inter_iter! {
+                    envs.iter(),
+                    write!(w, ", ")?,
+                    |&(_, ref var)| => {
+                        var.pp(w, indent)?
+                    }
                 }
                 write!(w, ")>")?;
             }
@@ -109,9 +115,12 @@ impl PP for Expr {
             }
             &Tuple { ref tuple, .. } => {
                 write!(w, "(")?;
-                for t in tuple.iter() {
-                    t.pp(w, indent)?;
-                    write!(w, ", ")?;
+                inter_iter! {
+                    tuple.iter(),
+                    write!(w, ", ")?,
+                    |t| => {
+                        t.pp(w, indent)?
+                    }
                 }
                 write!(w, ")")?;
             }
@@ -139,9 +148,12 @@ impl PP for HTy {
             Float => write!(w, "float")?,
             Tuple(ref tys) => {
                 write!(w, "(")?;
-                for ty in tys.iter() {
-                    ty.pp(w, indent)?;
-                    write!(w, " * ")?;
+                inter_iter! {
+                    tys.iter(),
+                    write!(w, " * ")?,
+                    |ty| => {
+                        ty.pp(w, indent)?
+                    }
                 }
                 write!(w, ")")?;
             }
