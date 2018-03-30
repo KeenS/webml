@@ -51,7 +51,6 @@ impl<'a> Scope<'a> {
         Scope::new(self)
     }
 
-
     fn new_symbol(&mut self, symbol: &mut Symbol) {
         let pos = self.pos - 1;
         let new_id = self.id.next();
@@ -71,97 +70,11 @@ impl<'a> Scope<'a> {
             }
         }
     }
-
-
-    fn rename_hir<'b, 'c>(&'b mut self, hir: &'c mut HIR) {
-        let mut scope = self;
-        for val in hir.0.iter_mut() {
-            if val.rec {
-                scope.new_symbol(&mut val.name);
-                scope.rename_val(val);
-            } else {
-                scope.rename_val(val);
-                scope.new_symbol(&mut val.name);
-            }
-        }
-    }
-
-    fn rename_val<'b, 'c>(&'b mut self, val: &'c mut Val) {
-        self.rename_expr(&mut val.expr);
-    }
-
-    fn rename_expr<'b, 'c>(&'b mut self, expr: &'c mut Expr) {
-        use hir::Expr::*;
-        match *expr {
-            Binds {
-                ref mut binds,
-                ref mut ret,
-                ..
-            } => {
-                let mut scope = self.new_scope();
-                for bind in binds.iter_mut() {
-                    scope.rename_val(bind);
-                    scope.new_symbol(&mut bind.name);
-                }
-                scope.rename_expr(ret);
-            }
-            Op {
-                ref mut l,
-                ref mut r,
-                ..
-            } => {
-                self.rename_expr(l);
-                self.rename_expr(r);
-            }
-            Fun {
-                ref mut param,
-                ref mut body,
-                ..
-            } => {
-                let mut scope = self.new_scope();
-                scope.new_symbol(&mut param.1);
-                scope.rename_expr(body);
-            }
-            Closure { ref mut envs, .. } => {
-                for &mut (_, ref mut var) in envs.iter_mut() {
-                    self.rename(var);
-                }
-            }
-            App {
-                ref mut fun,
-                ref mut arg,
-                ..
-            } => {
-                self.rename_expr(fun);
-                self.rename_expr(arg);
-            }
-            If {
-                ref mut cond,
-                ref mut then,
-                ref mut else_,
-                ..
-            } => {
-                self.rename_expr(cond);
-                self.rename_expr(then);
-                self.rename_expr(else_);
-            }
-            Tuple { ref mut tuple, .. } => {
-                for t in tuple.iter_mut() {
-                    self.rename_expr(t)
-                }
-            }
-            Sym { ref mut name, .. } => {
-                self.rename(name);
-            }
-            Lit { .. } | PrimFun { .. } => (),
-
-        }
-    }
 }
 
 impl<'a> util::Traverse for Scope<'a> {
     fn traverse_hir<'b, 'c>(&'b mut self, hir: &'c mut HIR) {
-        let mut scope = self;
+        let scope = self;
         for val in hir.0.iter_mut() {
             if val.rec {
                 scope.new_symbol(&mut val.name);
@@ -194,7 +107,6 @@ impl<'a> util::Traverse for Scope<'a> {
         _captures: &mut Vec<(HTy, Symbol)>,
         _make_closure: &mut Option<bool>,
     ) {
-
         let mut scope = self.new_scope();
         scope.new_symbol(&mut param.1);
         scope.traverse_expr(body);
@@ -207,7 +119,6 @@ impl<'a> util::Traverse for Scope<'a> {
         _body_ty: &mut HTy,
         _fname: &mut Symbol,
     ) {
-
         for &mut (_, ref mut var) in envs.iter_mut() {
             self.rename(var);
         }
@@ -217,7 +128,6 @@ impl<'a> util::Traverse for Scope<'a> {
         self.rename(name);
     }
 }
-
 
 impl Rename {
     pub fn new(id: Id) -> Self {

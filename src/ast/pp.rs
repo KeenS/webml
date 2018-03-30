@@ -4,7 +4,7 @@ use util::PP;
 use ast::*;
 
 impl PP for Ty {
-    fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
         use self::Ty::*;
         match *self {
             Unit => write!(w, "()")?,

@@ -4,7 +4,7 @@ use util::PP;
 use hir::*;
 
 impl PP for HIR {
-    fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
         for bind in &self.0 {
             bind.pp(w, indent)?;
             write!(w, "\n")?;
@@ -13,10 +13,8 @@ impl PP for HIR {
     }
 }
 
-
-
 impl PP for Val {
-    fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
         let rec = if self.rec { "rec " } else { "" };
         write!(w, "{}val{} ", Self::nspaces(indent), rec)?;
         self.name.pp(w, indent)?;
@@ -28,12 +26,13 @@ impl PP for Val {
     }
 }
 
-
 impl PP for Expr {
-    fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
         use hir::Expr::*;
         match self {
-            &Binds { ref binds, ref ret, .. } => {
+            &Binds {
+                ref binds, ref ret, ..
+            } => {
                 let ind = Self::nspaces(indent);
                 let nextind = Self::nspaces(indent + 4);
                 write!(w, "let\n")?;
@@ -74,7 +73,7 @@ impl PP for Expr {
                 write!(w, ") ")?;
                 param.1.pp(w, indent)?;
                 write!(w, " => ")?;
-                body.pp(&mut w, indent + 4)?;
+                body.pp(w, indent + 4)?;
             }
             &Closure {
                 ref envs,
@@ -93,7 +92,9 @@ impl PP for Expr {
                 }
                 write!(w, ")>")?;
             }
-            &App { ref fun, ref arg, .. } => {
+            &App {
+                ref fun, ref arg, ..
+            } => {
                 write!(w, "(")?;
                 fun.pp(w, indent)?;
                 write!(w, ") ")?;
@@ -139,7 +140,7 @@ impl PP for Expr {
 }
 
 impl PP for HTy {
-    fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
         use hir::HTy::*;
         match *self {
             Unit => write!(w, "()")?,

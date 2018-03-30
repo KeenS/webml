@@ -4,7 +4,7 @@ use util::PP;
 use lir::*;
 
 impl PP for LIR {
-    fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
         for fun in &self.0 {
             fun.pp(w, indent)?;
         }
@@ -12,10 +12,8 @@ impl PP for LIR {
     }
 }
 
-
-
 impl PP for Function {
-    fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
         let indent = indent + 4;
         write!(w, "fun {}: (", self.name.0)?;
         inter_iter!{
@@ -39,25 +37,25 @@ impl PP for Function {
 }
 
 impl PP for Reg {
-    fn pp(&self, mut w: &mut io::Write, _indent: usize) -> io::Result<()> {
+    fn pp(&self, w: &mut io::Write, _indent: usize) -> io::Result<()> {
         write!(w, "r{:?}", self.1)
     }
 }
 
 impl PP for Label {
-    fn pp(&self, mut w: &mut io::Write, _indent: usize) -> io::Result<()> {
+    fn pp(&self, w: &mut io::Write, _indent: usize) -> io::Result<()> {
         write!(w, "{}", (self.0).0)
     }
 }
 
 impl PP for Addr {
-    fn pp(&self, mut w: &mut io::Write, _indent: usize) -> io::Result<()> {
+    fn pp(&self, w: &mut io::Write, _indent: usize) -> io::Result<()> {
         write!(w, "[r{}+{}]", (self.0).1, self.1)
     }
 }
 
 impl PP for Value {
-    fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
         use lir::Value::*;
         match self {
             &I(ref i) => write!(w, "{}", i),
@@ -66,9 +64,8 @@ impl PP for Value {
     }
 }
 
-
 impl PP for LTy {
-    fn pp(&self, mut w: &mut io::Write, _indent: usize) -> io::Result<()> {
+    fn pp(&self, w: &mut io::Write, _indent: usize) -> io::Result<()> {
         use lir::LTy::*;
         match *self {
             Unit => write!(w, "()")?,
@@ -84,7 +81,7 @@ impl PP for LTy {
 }
 
 impl PP for Block {
-    fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
         write!(w, "{}:\n", (self.name.0).0)?;
         let indent = indent + 4;
         for op in self.body.iter() {
@@ -96,7 +93,7 @@ impl PP for Block {
     }
 }
 impl PP for Op {
-    fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
         use lir::Op::*;
         let indent = indent + 4;
         match *self {
@@ -106,20 +103,20 @@ impl PP for Op {
                 reg.0.pp(w, indent)?;
                 write!(w, " <- {}", i)?;
             }
-            MoveI32(ref r1, ref r2) |
-            MoveI64(ref r1, ref r2) |
-            MoveF32(ref r1, ref r2) |
-            MoveF64(ref r1, ref r2) => {
+            MoveI32(ref r1, ref r2)
+            | MoveI64(ref r1, ref r2)
+            | MoveF32(ref r1, ref r2)
+            | MoveF64(ref r1, ref r2) => {
                 r1.pp(w, indent)?;
                 write!(w, ": ")?;
                 r1.0.pp(w, indent)?;
                 write!(w, " <- ")?;
                 r2.pp(w, indent)?;
             }
-            StoreI32(ref addr, ref v) |
-            StoreI64(ref addr, ref v) |
-            StoreF32(ref addr, ref v) |
-            StoreF64(ref addr, ref v) => {
+            StoreI32(ref addr, ref v)
+            | StoreI64(ref addr, ref v)
+            | StoreF32(ref addr, ref v)
+            | StoreF64(ref addr, ref v) => {
                 addr.pp(w, indent)?;
                 write!(w, " <- ")?;
                 v.pp(w, indent)?;
@@ -129,16 +126,15 @@ impl PP for Op {
                 write!(w, " <- ")?;
                 f.pp(w, indent)?;
             }
-            LoadI32(ref reg, ref addr) |
-            LoadI64(ref reg, ref addr) |
-            LoadF32(ref reg, ref addr) |
-            LoadF64(ref reg, ref addr) => {
+            LoadI32(ref reg, ref addr)
+            | LoadI64(ref reg, ref addr)
+            | LoadF32(ref reg, ref addr)
+            | LoadF64(ref reg, ref addr) => {
                 reg.pp(w, indent)?;
                 write!(w, ": ")?;
                 reg.0.pp(w, indent)?;
                 write!(w, " <- ")?;
                 addr.pp(w, indent)?;
-
             }
             JumpIfI32(ref reg, ref label) => {
                 write!(w, "jump_if_zero ")?;
@@ -151,7 +147,6 @@ impl PP for Op {
                 write!(w, ": ")?;
                 reg.0.pp(w, indent)?;
                 write!(w, " <- {}", i)?;
-
             }
             AddI64(ref r1, ref r2, ref r3) => {
                 r1.pp(w, indent)?;
@@ -176,7 +171,6 @@ impl PP for Op {
                 write!(w, ": ")?;
                 reg.0.pp(w, indent)?;
                 write!(w, " <- {}", i)?;
-
             }
             AddF32(ref r1, ref r2, ref r3) => {
                 r1.pp(w, indent)?;
@@ -201,7 +195,6 @@ impl PP for Op {
                 write!(w, ": ")?;
                 reg.0.pp(w, indent)?;
                 write!(w, " <- {}", i)?;
-
             }
             AddF64(ref r1, ref r2, ref r3) => {
                 r1.pp(w, indent)?;

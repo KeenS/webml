@@ -1,7 +1,6 @@
 use std::io;
 use util::PP;
 
-
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Symbol(pub String, pub u64);
 
@@ -12,12 +11,11 @@ impl Symbol {
 }
 
 impl PP for Symbol {
-    fn pp(&self, mut w: &mut io::Write, _indent: usize) -> io::Result<()> {
+    fn pp(&self, w: &mut io::Write, _indent: usize) -> io::Result<()> {
         write!(w, "{}@{}", self.0, self.1)?;
         Ok(())
     }
 }
-
 
 #[derive(Debug, Clone)]
 pub enum Literal {
@@ -27,16 +25,14 @@ pub enum Literal {
 }
 
 impl PP for Literal {
-    fn pp(&self, mut w: &mut io::Write, _indent: usize) -> io::Result<()> {
+    fn pp(&self, w: &mut io::Write, _indent: usize) -> io::Result<()> {
         use self::Literal::*;
         match self {
             &Int(ref v) => {
                 write!(w, "{}", v)?;
-
             }
             &Float(ref v) => {
                 write!(w, "{}", v)?;
-
             }
             &Bool(ref v) => {
                 write!(w, "{}", v)?;

@@ -4,7 +4,7 @@ use util::PP;
 use mir::*;
 
 impl PP for MIR {
-    fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
         for fun in &self.0 {
             fun.pp(w, indent)?;
         }
@@ -12,10 +12,8 @@ impl PP for MIR {
     }
 }
 
-
-
 impl PP for Function {
-    fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
         let indent = indent + 4;
         write!(w, "fun ")?;
         self.name.pp(w, indent)?;
@@ -40,9 +38,8 @@ impl PP for Function {
     }
 }
 
-
 impl PP for EbbTy {
-    fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
         use mir::EbbTy::*;
         let indent = indent + 4;
         match *self {
@@ -94,7 +91,7 @@ impl PP for EbbTy {
 }
 
 impl PP for EBB {
-    fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
         let space = Self::nspaces(indent);
         write!(w, "{}", space)?;
         self.name.pp(w, indent)?;
@@ -119,7 +116,7 @@ impl PP for EBB {
 }
 
 impl PP for Op {
-    fn pp(&self, mut w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
         use mir::Op::*;
         let space = Self::nspaces(indent);
         let indent = indent + 4;
@@ -162,7 +159,6 @@ impl PP for Op {
                 l.pp(w, indent)?;
                 write!(w, " + ")?;
                 r.pp(w, indent)?;
-
             }
             &Mul {
                 ref var,
@@ -178,7 +174,6 @@ impl PP for Op {
                 l.pp(w, indent)?;
                 write!(w, " * ")?;
                 r.pp(w, indent)?;
-
             }
             &Closure {
                 ref var,
@@ -191,10 +186,10 @@ impl PP for Op {
                 var.pp(w, indent)?;
                 write!(w, ": ")?;
                 (EbbTy::Cls {
-                     closures: env.iter().map(|&(ref ty, _)| ty.clone()).collect(),
-                     param: Box::new(param_ty.clone()),
-                     ret: Box::new(ret_ty.clone()),
-                 }).pp(w, indent)?;
+                    closures: env.iter().map(|&(ref ty, _)| ty.clone()).collect(),
+                    param: Box::new(param_ty.clone()),
+                    ret: Box::new(ret_ty.clone()),
+                }).pp(w, indent)?;
                 write!(w, " := ")?;
                 fun.pp(w, indent)?;
                 write!(w, ".__close(")?;
@@ -208,7 +203,6 @@ impl PP for Op {
                     }
                 }
                 write!(w, ")")?;
-
             }
             &Call {
                 ref var,
@@ -299,7 +293,6 @@ impl PP for Op {
                     }
                 }
                 write!(w, ")")?;
-
             }
             &Ret { ref value, ref ty } => {
                 match *value {
