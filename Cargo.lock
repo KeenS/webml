@@ -35,10 +35,6 @@ dependencies = [
  "web-assembler 0.1.1",
 ]
 
-[[package]]
-name = "webml-rt"
-version = "0.1.0"
-
 [metadata]
 "checksum fixedbitset 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)" = "86d4de0081402f5e88cdac65c8dcdcc73118c1a7a465e2a05f0da05843a8ea33"
 "checksum nom 2.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "cf51a729ecf40266a2368ad335a5fdde43471f545a967109cd62146ecf8b66ff"
