@@ -22,7 +22,6 @@ impl MIR2LIR {
             Tuple(_) => LTy::Ptr,
             Cls { .. } => LTy::Ptr,
             Ebb { .. } => LTy::FPtr,
-
         }
     }
 
@@ -54,13 +53,13 @@ impl MIR2LIR {
             let mut ops = Vec::new();
             for op in ebb.body.iter() {
                 match op {
-                    &m::Lit { ref var, ref value, .. } => {
-                        match value {
-                            &Literal::Bool(b) => ops.push(ConstI32(reg!(var), b as u32)),
-                            &Literal::Int(i) => ops.push(ConstI64(reg!(var), i as u64)),
-                            &Literal::Float(f) => ops.push(ConstF64(reg!(var), f as f64)),
-                        }
-                    }
+                    &m::Lit {
+                        ref var, ref value, ..
+                    } => match value {
+                        &Literal::Bool(b) => ops.push(ConstI32(reg!(var), b as u32)),
+                        &Literal::Int(i) => ops.push(ConstI64(reg!(var), i as u64)),
+                        &Literal::Float(f) => ops.push(ConstF64(reg!(var), f as f64)),
+                    },
                     &m::Alias {
                         ref var,
                         ref ty,
@@ -72,10 +71,10 @@ impl MIR2LIR {
                                 ()
                             }
                             &mir::EbbTy::Bool => ops.push(MoveI32(reg!(var), reg!(sym))),
-                            &mir::EbbTy::Int |
-                            &mir::EbbTy::Tuple(_) |
-                            &mir::EbbTy::Cls { .. } |
-                            &mir::EbbTy::Ebb { .. } => ops.push(MoveI64(reg!(var), reg!(sym))),
+                            &mir::EbbTy::Int
+                            | &mir::EbbTy::Tuple(_)
+                            | &mir::EbbTy::Cls { .. }
+                            | &mir::EbbTy::Ebb { .. } => ops.push(MoveI64(reg!(var), reg!(sym))),
                             &mir::EbbTy::Float => ops.push(MoveF64(reg!(var), reg!(sym))),
                         }
                     }
@@ -90,7 +89,6 @@ impl MIR2LIR {
                         } else {
                             assert_eq!(ty, &mir::EbbTy::Float);
                             ops.push(AddF64(reg!(var), reg!(l), reg!(r)));
-
                         }
                     }
                     &m::Mul {
@@ -104,7 +102,6 @@ impl MIR2LIR {
                         } else {
                             assert_eq!(ty, &mir::EbbTy::Float);
                             ops.push(MulF64(reg!(var), reg!(l), reg!(r)));
-
                         }
                     }
                     &m::Tuple {
@@ -156,7 +153,6 @@ impl MIR2LIR {
                             ops.push(ctor(reg!(var), Addr(reg!(tuple), *index)));
                             break;
                         }
-
                     }
                     &m::Closure {
                         ref var,
@@ -174,7 +170,7 @@ impl MIR2LIR {
                         let mut size: u32 = LTy::Ptr.size();
                         size += env.iter()
                             .map(|&(ref ty, _)| self.ebbty_to_lty(ty).size())
-                            .sum();
+                            .sum::<u32>();
                         let mut tys = vec![LTy::FPtr];
                         for &(ref ty, _) in env.iter() {
                             tys.push(self.ebbty_to_lty(ty));
@@ -212,7 +208,6 @@ impl MIR2LIR {
                             Some(r) => ops.push(ClosureCall(reg!(var), r.clone(), args)),
                             None => ops.push(FunCall(reg!(var), fun.clone(), args)),
                         }
-
                     }
                     &m::Branch {
                         ref cond,
@@ -248,7 +243,6 @@ impl MIR2LIR {
                     &m::Ret { ref value, .. } => {
                         ops.push(Ret(value.as_ref().map(|v| reg!(v))));
                     }
-
                 }
             }
             blocks.push(Block {
@@ -268,7 +262,6 @@ impl MIR2LIR {
             ret_ty: ret_ty,
             body: blocks,
         }
-
     }
 
     fn make_symbol_table<'a>(&self, body: &'a [mir::EBB]) -> HashMap<&'a Symbol, Reg> {
@@ -296,23 +289,33 @@ impl MIR2LIR {
 
             for op in ebb.body.iter() {
                 match op {
-                    &mir::Op::Lit { ref var, ref ty, .. } |
-                    &mir::Op::Alias { ref var, ref ty, .. } |
-                    &mir::Op::Add { ref var, ref ty, .. } |
-                    &mir::Op::Mul { ref var, ref ty, .. } |
-                    &mir::Op::Proj { ref var, ref ty, .. } |
-                    &mir::Op::Call { ref var, ref ty, .. } => {
+                    &mir::Op::Lit {
+                        ref var, ref ty, ..
+                    }
+                    | &mir::Op::Alias {
+                        ref var, ref ty, ..
+                    }
+                    | &mir::Op::Add {
+                        ref var, ref ty, ..
+                    }
+                    | &mir::Op::Mul {
+                        ref var, ref ty, ..
+                    }
+                    | &mir::Op::Proj {
+                        ref var, ref ty, ..
+                    }
+                    | &mir::Op::Call {
+                        ref var, ref ty, ..
+                    } => {
                         intern!(self.ebbty_to_lty(ty), var);
                     }
-                    &mir::Op::Tuple { ref var, .. } |
-                    &mir::Op::Closure { ref var, .. } => {
+                    &mir::Op::Tuple { ref var, .. } | &mir::Op::Closure { ref var, .. } => {
                         intern!(LTy::Ptr, var);
                     }
                     _ => (),
                 }
             }
         }
-
 
         table
     }
