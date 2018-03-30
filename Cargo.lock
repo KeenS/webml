@@ -1,10 +1,6 @@
-[root]
-name = "webml-rt"
-version = "0.1.0"
-
 [[package]]
 name = "fixedbitset"
-version = "0.1.5"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
@@ -14,33 +10,37 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "ordermap"
-version = "0.2.9"
+version = "0.3.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "petgraph"
-version = "0.4.4"
+version = "0.4.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
- "fixedbitset 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
- "ordermap 0.2.9 (registry+https://github.com/rust-lang/crates.io-index)",
+ "fixedbitset 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
+ "ordermap 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]
 name = "web-assembler"
-version = "0.1.0"
+version = "0.1.1"
 
 [[package]]
 name = "webml"
 version = "0.1.0"
 dependencies = [
  "nom 2.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "petgraph 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)",
- "web-assembler 0.1.0",
+ "petgraph 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "web-assembler 0.1.1",
 ]
 
+[[package]]
+name = "webml-rt"
+version = "0.1.0"
+
 [metadata]
-"checksum fixedbitset 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)" = "88c3c33fc4c00db33f5174eb98aea809c4c007db0b71351d810a7e094ea3b64d"
+"checksum fixedbitset 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)" = "86d4de0081402f5e88cdac65c8dcdcc73118c1a7a465e2a05f0da05843a8ea33"
 "checksum nom 2.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "cf51a729ecf40266a2368ad335a5fdde43471f545a967109cd62146ecf8b66ff"
-"checksum ordermap 0.2.9 (registry+https://github.com/rust-lang/crates.io-index)" = "06e5d34d852e6396cf5fceaa24313f753d960a3b7e3abdadcdf43730e791aa3d"
-"checksum petgraph 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)" = "28814c774eeabfe38b20e1651f9e9a5ff6efeb3b2a66df25e056f579051ee4b3"
+"checksum ordermap 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)" = "a86ed3f5f244b372d6b1a00b72ef7f8876d0bc6a78a4c9985c53614041512063"
+"checksum petgraph 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)" = "8b30dc85588cd02b9b76f5e386535db546d21dc68506cff2abebee0b6445e8e4"
