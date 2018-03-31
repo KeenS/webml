@@ -1,0 +1,9 @@
+[package]
+name = "webml-rt"
+version = "0.1.0"
+authors = ["Sunrin SHIMURA (keen) <3han5chou7@gmail.com>"]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
