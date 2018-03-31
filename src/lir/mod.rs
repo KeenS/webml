@@ -77,6 +77,8 @@ pub struct Block {
 pub enum Op {
     ConstI32(Reg, u32),
     MoveI32(Reg, Reg),
+    AddI32(Reg, Reg, Reg),
+    MulI32(Reg, Reg, Reg),
     StoreI32(Addr, Reg),
     LoadI32(Reg, Addr),
     JumpIfI32(Reg, Label),

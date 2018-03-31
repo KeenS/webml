@@ -16,7 +16,7 @@ impl MIR2LIR {
         use mir::EbbTy::*;
         match *ty {
             Unit => LTy::Unit,
-            Int => LTy::I64,
+            Int => LTy::I32,
             Float => LTy::F64,
             Bool => LTy::I32,
             Tuple(_) => LTy::Ptr,
@@ -57,7 +57,7 @@ impl MIR2LIR {
                         ref var, ref value, ..
                     } => match value {
                         &Literal::Bool(b) => ops.push(ConstI32(reg!(var), b as u32)),
-                        &Literal::Int(i) => ops.push(ConstI64(reg!(var), i as u64)),
+                        &Literal::Int(i) => ops.push(ConstI32(reg!(var), i as u32)),
                         &Literal::Float(f) => ops.push(ConstF64(reg!(var), f as f64)),
                     },
                     &m::Alias {
@@ -85,7 +85,7 @@ impl MIR2LIR {
                         ref r,
                     } => {
                         if ty == &mir::EbbTy::Int {
-                            ops.push(AddI64(reg!(var), reg!(l), reg!(r)));
+                            ops.push(AddI32(reg!(var), reg!(l), reg!(r)));
                         } else {
                             assert_eq!(ty, &mir::EbbTy::Float);
                             ops.push(AddF64(reg!(var), reg!(l), reg!(r)));
@@ -98,7 +98,7 @@ impl MIR2LIR {
                         ref r,
                     } => {
                         if ty == &mir::EbbTy::Int {
-                            ops.push(MulI64(reg!(var), reg!(l), reg!(r)));
+                            ops.push(MulI32(reg!(var), reg!(l), reg!(r)));
                         } else {
                             assert_eq!(ty, &mir::EbbTy::Float);
                             ops.push(MulF64(reg!(var), reg!(l), reg!(r)));

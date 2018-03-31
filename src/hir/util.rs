@@ -37,8 +37,7 @@ pub trait Traverse {
                 ref mut body_ty,
                 ref mut body,
                 ref mut captures,
-                ref mut make_closure,
-            } => self.traverse_fun(param, body_ty, body, captures, make_closure),
+            } => self.traverse_fun(param, body_ty, body, captures),
             Closure {
                 ref mut envs,
                 ref mut param_ty,
@@ -98,7 +97,6 @@ pub trait Traverse {
         _body_ty: &mut HTy,
         body: &mut Box<Expr>,
         _captures: &mut Vec<(HTy, Symbol)>,
-        _make_closure: &mut Option<bool>,
     ) {
         self.traverse_expr(body)
     }

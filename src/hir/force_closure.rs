@@ -73,9 +73,8 @@ impl<'a> Traverse for Trav<'a> {
                 ref mut body_ty,
                 ref mut body,
                 ref mut captures,
-                ref mut make_closure,
             } => {
-                self.traverse_fun(param, body_ty, body, captures, make_closure);
+                self.traverse_fun(param, body_ty, body, captures);
                 return;
             }
             Closure {
@@ -165,7 +164,6 @@ impl<'a> Traverse for Trav<'a> {
         _body_ty: &mut HTy,
         body: &mut Box<Expr>,
         _captures: &mut Vec<(HTy, Symbol)>,
-        _make_closure: &mut Option<bool>,
     ) {
         self.with_bound(false, |this| this.traverse_expr(body))
     }
@@ -243,7 +241,6 @@ impl<'a> Traverse for Reg<'a> {
         _body_ty: &mut HTy,
         body: &mut Box<Expr>,
         _captures: &mut Vec<(HTy, Symbol)>,
-        _make_closure: &mut Option<bool>,
     ) {
         match self.bound_name {
             Some(ref name) => {

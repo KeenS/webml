@@ -46,29 +46,88 @@ fn tys_to_ptrbits(tys: &[lir::LTy]) -> u32 {
     bits
 }
 
+fn fun_type(f: &lir::Function) -> FuncType {
+    let &lir::Function {
+        ref nparams,
+        ref regs,
+        ref ret_ty,
+        ..
+    } = f;
+    let mut tys = regs.iter()
+        .map(|reg| lty_to_valuetype(reg))
+        .collect::<Vec<_>>();
+    let _ = tys.split_off(*nparams as usize);
+    FuncType {
+        params: tys,
+        ret: match ret_ty {
+            ty => lty_to_valuetype_opt(&ty),
+        },
+    }
+}
+
 pub struct LIR2WASM {
     md: ModuleBuilder,
+    init_fun: FunctionSpaceIndex,
     alloc_fun: FunctionSpaceIndex,
     print_fun: FunctionSpaceIndex,
     function_table: HashMap<Symbol, u32>,
+    function_type_table: HashMap<FuncType, TypeIndex>,
+    dynamic_function_table: HashMap<Symbol, u32>,
+    dynamic_function_elements: Vec<FunctionSpaceIndex>,
 }
 
 impl LIR2WASM {
     pub fn new() -> Self {
         let mut md = ModuleBuilder::new();
 
-        let alloc_fun_index = md.add_type(funtype!((i32, i32) -> i32));
-        let alloc_fun = md.import("webml-rt", "alloc", alloc_fun_index);
+        let init_fun_ty = funtype!(());
+        let alloc_fun_ty = funtype!((i32) -> i32);
+        let print_fun_ty = funtype!((i32));
+        let init_fun_ty_index = md.add_type(init_fun_ty.clone());
+        let alloc_fun_ty_index = md.add_type(alloc_fun_ty.clone());
+        let print_fun_ty_index = md.add_type(print_fun_ty.clone());
+        let init_fun = md.import("webml-rt", "init", init_fun_ty_index);
+        let init_fun = md.function_index_of(init_fun).unwrap();
+        let alloc_fun = md.import("webml-rt", "alloc", alloc_fun_ty_index);
+        let alloc_fun = md.function_index_of(alloc_fun).unwrap();
+        let print_fun = md.import("js-ffi", "print", print_fun_ty_index);
+        let print_fun = md.function_index_of(print_fun).unwrap();
 
-        let print_fun_index = md.add_type(funtype!((f64)));
-        let print_fun = md.import("js-ffi", "print", print_fun_index);
+        md.import("webml-rt", "memory", MemoryType {
+            limits: ResizableLimits::new(2)
+        });
 
         LIR2WASM {
-            md: md,
-            alloc_fun: alloc_fun.into(),
-            print_fun: print_fun.into(),
+            md,
+            init_fun,
+            alloc_fun,
+            print_fun,
             function_table: HashMap::new(),
+            function_type_table: vec![
+                (init_fun_ty, init_fun_ty_index),
+                (alloc_fun_ty, alloc_fun_ty_index),
+                (print_fun_ty, print_fun_ty_index),
+            ].into_iter().collect(),
+            dynamic_function_table: HashMap::new(),
+            dynamic_function_elements: vec![],
         }
+    }
+
+    fn intern_fun(&mut self, fname: &Symbol) -> u32 {
+        let index = self.function_index(fname);
+        let &mut Self {
+            ref mut dynamic_function_table,
+            ref mut dynamic_function_elements,
+            ..
+        } = self;
+        *dynamic_function_table
+            .entry(fname.clone())
+            .or_insert_with(|| {
+                dynamic_function_elements.push(index);
+                let ret = dynamic_function_elements.len() -1;
+                ret as u32
+            }
+            )
     }
 
     pub fn trans_lir(&mut self, l: lir::LIR) -> Module {
@@ -77,22 +136,46 @@ impl LIR2WASM {
             .enumerate()
             .map(|(i, s)| (s.name.clone(), i as u32))
             .collect();
+        {
+            for f in l.0.iter() {
+                let ftype = fun_type(f);
+                if ! self.function_type_table.contains_key(&ftype) {
+                    let tyi = self.md.add_type(ftype.clone());
+                    self.function_type_table.insert(ftype, tyi);
+                }
+            }
+        }
 
+
+        let nfunctions = l.0.len();
         for f in l.0 {
             self.trans_function(f);
         }
+        let fun_table = self.md.new_table(ElemType::AnyFunc, (nfunctions as u32)..);
+        let elems = ElemSegment {
+            index: fun_table,
+            offset: InitExpr(CodeBuilder::new().constant(0 as i32).end().build()),
+            elems: self.dynamic_function_elements.clone()
+        };
+
+        self.md.add_element(elems);
         let mut ret = ModuleBuilder::new();
         // FIXME:
         ::std::mem::swap(&mut self.md, &mut ret);
         ret.build()
     }
 
+    fn function_index(&self, fname: &Symbol) -> FunctionSpaceIndex {
+        let findex = FunctionIndex(self.function_table[fname]);
+        Into::<FunctionSpaceIndex>::into(findex)
+    }
+
     fn trans_function(&mut self, f: lir::Function) {
         use lir::Value::*;
+        let ftype = fun_type(&f);
         let lir::Function {
             nparams,
             regs,
-            ret_ty,
             body,
             ..
         } = f;
@@ -100,12 +183,7 @@ impl LIR2WASM {
             .map(|reg| lty_to_valuetype(reg))
             .collect::<Vec<_>>();
         let regtys = tys.split_off(nparams as usize);
-        let mut fb = FunctionBuilder::new(FuncType {
-            params: tys,
-            ret: match ret_ty {
-                ty => lty_to_valuetype_opt(&ty),
-            },
-        });
+        let mut fb = FunctionBuilder::new(ftype.clone());
 
         let mut locals = fb.new_locals(regtys);
 
@@ -125,14 +203,6 @@ impl LIR2WASM {
                                    .position(|x| *x == $label)
                                    .expect("internal error") as u32)
             }
-
-            macro_rules! fun {
-                ($funname: expr) => {{
-                    let findex = FunctionIndex(self.function_table[$funname]);
-                    Into::<FunctionSpaceIndex>::into(findex)
-                }}
-            }
-
 
             for c in body {
                 match c {
@@ -161,6 +231,18 @@ impl LIR2WASM {
                                 ConstI32(ref reg, c) => {
                                     cb = cb.constant(c as i32).set_local(reg!(reg))
                                 }
+                                AddI32(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .i32_add()
+                                        .set_local(reg!(reg1))
+                                }
+                                MulI32(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .i32_mul()
+                                        .set_local(reg!(reg1))
+                                }
                                 MoveI32(ref reg1, ref reg2) |
                                 MoveI64(ref reg1, ref reg2) |
                                 MoveF32(ref reg1, ref reg2) |
@@ -168,8 +250,8 @@ impl LIR2WASM {
                                     cb = cb.get_local(reg!(reg2)).set_local(reg!(reg1))
                                 }
                                 StoreI32(ref addr, ref value) => {
-                                    cb = cb.get_local(reg!(value))
-                                        .get_local(reg!(addr.0))
+                                    cb = cb.get_local(reg!(addr.0))
+                                        .get_local(reg!(value))
                                         .i32_store(addr.1);
                                 }
                                 LoadI32(ref reg, ref addr) => {
@@ -204,8 +286,8 @@ impl LIR2WASM {
                                 }
 
                                 StoreI64(ref addr, ref value) => {
-                                    cb = cb.get_local(reg!(value))
-                                        .get_local(reg!(addr.0))
+                                    cb = cb.get_local(reg!(addr.0))
+                                        .get_local(reg!(value))
                                         .i64_store(addr.1);
                                 }
 
@@ -223,8 +305,8 @@ impl LIR2WASM {
                                         .set_local(reg!(reg1))
                                 }
                                 StoreF64(ref addr, ref value) => {
-                                    cb = cb.get_local(reg!(value))
-                                        .get_local(reg!(addr.0))
+                                    cb = cb.get_local(reg!(addr.0))
+                                        .get_local(reg!(value))
                                         .f64_store(addr.1);
                                 }
 
@@ -249,8 +331,8 @@ impl LIR2WASM {
                                 }
 
                                 StoreF32(ref addr, ref value) => {
-                                    cb = cb.get_local(reg!(value))
-                                        .get_local(reg!(addr.0))
+                                    cb = cb.get_local(reg!(addr.0))
+                                        .get_local(reg!(value))
                                         .f32_store(addr.1);
                                 }
                                 LoadF32(ref reg, ref addr) => {
@@ -261,47 +343,58 @@ impl LIR2WASM {
 
                                 HeapAlloc(ref reg, ref value, ref tys) => {
                                     cb = match *value {
-                                        I(i) => cb.constant(i as i64),
+                                        I(i) => cb.constant(i as i32),
                                         R(ref r) => cb.get_local(reg!(r)),
                                     };
 
-                                    cb = cb.constant(tys_to_ptrbits(tys) as i32)
+                                    cb = cb//.constant(tys_to_ptrbits(tys) as i32)
                                         .call(self.alloc_fun)
                                         .set_local(reg!(reg))
                                 }
                                 StackAlloc(ref reg, size, ref tys) => {
                                     // allocating to heap, not stack
                                     cb = cb.constant(size as i32)
-                                        .constant(tys_to_ptrbits(tys) as i32)
+                                        //.constant(tys_to_ptrbits(tys) as i32)
                                         .call(self.alloc_fun)
                                         .set_local(reg!(reg))
                                 }
                                 StoreFnPtr(ref addr, ref value) => {
-                                    cb = cb.constant(*fun!(value) as i64)
-                                        .get_local(reg!(addr.0))
-                                        .i64_store(addr.1);
+                                    cb = cb.get_local(reg!(addr.0))
+                                        .constant(self.intern_fun(value) as i32)
+                                        .i32_store(addr.1);
                                 }
 
                                 ClosureCall(ref reg, ref fun, ref args) => {
-                                    for arg in args.iter() {
-                                        cb = cb.get_local(reg!(arg))
-                                    }
-
                                     cb = cb
                                         .get_local(reg!(fun))
                                         // load ptr to captured env
-                                        .i64_load(8);
+                                    // assuming sizeof(*p) == 4
+                                        .constant(4)
+                                        .i32_add();
+
                                     // load the rest args
                                     for arg in args.iter() {
                                         cb = cb.get_local(reg!(arg))
                                     }
 
+                                    let ftype = {
+                                        let ret = lty_to_valuetype_opt(&reg.0);
+                                        let mut params = vec![
+                                            // pointer to closure
+                                            ValueType::I32
+                                        ];
+                                        params.extend(args.iter().map(|r| lty_to_valuetype(&r.0)));
+                                        FuncType {
+                                            params, ret
+                                        }
+                                    };
+
                                     cb = cb
                                         .get_local(reg!(fun))
                                         // load function
-                                        .i64_load(0)
-                                        .call_indirect(0, false)
-                                        // if ret ty isn't unit
+                                        .i32_load(0)
+                                        .call_indirect(self.function_type_table[&ftype], false)
+                                        // FIXME: if ret ty isn't unit
                                         .set_local(reg!(reg));
                                 }
                                 FunCall(ref reg, ref fun, ref args) => {
@@ -312,9 +405,11 @@ impl LIR2WASM {
                                     if fun.0 == "print" {
                                         cb = cb.call(self.print_fun)
                                     // the ret ty of print is unit
+                                    } else if fun.0 == "gc-init" {
+                                        cb = cb.call(self.init_fun)
                                     } else {
-                                        cb = cb.call(fun!(fun))
-                                        // if ret ty isn't unit
+                                        cb = cb.call(self.function_index(fun))
+                                        // FIXME: if ret ty isn't unit
                                             .set_local(reg!(reg));
                                     }
 
@@ -340,7 +435,9 @@ impl LIR2WASM {
         self.md.start(FunctionIndex(
             self.function_table[&Symbol::new("main")],
         ));
-        self.md.new_function(fb.build());
+        let (_, body) = fb.build();
+        // use calculated type index,
+        NewFunction::new_function(&mut self.md, self.function_type_table[&ftype], body);
     }
 
     /// allocate block and loop scopes for jump -> break transformation.

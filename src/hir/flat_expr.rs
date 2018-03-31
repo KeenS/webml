@@ -66,7 +66,6 @@ impl FlatExpr {
                 param,
                 body_ty,
                 captures,
-                make_closure,
             } => {
                 let (ret, bodyval) = self.flat_make_val(*body);
                 body = Box::new(Binds {
@@ -79,7 +78,6 @@ impl FlatExpr {
                     param: param,
                     body_ty: body_ty,
                     captures: captures,
-                    make_closure: make_closure,
                 }
             }
             App { fun, arg, ty } => {

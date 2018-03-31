@@ -105,7 +105,6 @@ impl<'a> util::Traverse for Scope<'a> {
         _body_ty: &mut HTy,
         body: &mut Box<Expr>,
         _captures: &mut Vec<(HTy, Symbol)>,
-        _make_closure: &mut Option<bool>,
     ) {
         let mut scope = self.new_scope();
         scope.new_symbol(&mut param.1);

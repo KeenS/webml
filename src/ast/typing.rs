@@ -253,7 +253,7 @@ impl<'a> Scope<'a> {
             Some(t) => unify(t, given),
             None => {
                 if &sym.0 == "print" {
-                    *given.get_mut() = Some(Ty::fun(Ty::Float, Ty::Unit));
+                    *given.get_mut() = Some(Ty::fun(Ty::Int, Ty::Unit));
                     Ok(())
                 } else {
                     Err(TypeError::FreeVar)

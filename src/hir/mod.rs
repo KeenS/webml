@@ -50,7 +50,6 @@ pub enum Expr {
         body_ty: HTy,
         body: Box<Expr>,
         captures: Vec<(HTy, Symbol)>,
-        make_closure: Option<bool>,
     },
     Closure {
         envs: Vec<(HTy, Symbol)>,

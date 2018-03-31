@@ -159,13 +159,12 @@ impl<'a> Scope<'a> {
                 let fname = self.new_fname(bind_name.clone());
                 self.rename(&mut body, &bind_name, &fname);
                 captures.extend(frees.clone());
-                let is_closure = captures.len() != 0 || bind_name.is_none();
+                let is_closure = captures.len() != 0;
                 let anonfun = Fun {
                     param: (param_ty.clone(), param),
                     body_ty: body_ty.clone(),
                     body: body,
                     captures: captures,
-                    make_closure: Some(is_closure),
                 };
                 let fty = anonfun.ty();
                 cls.push(Val {

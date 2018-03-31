@@ -80,7 +80,6 @@ impl AST2HIR {
                     body_ty: conv_ty(body_ty),
                     body: Box::new(self.conv_expr(*body)),
                     captures: Vec::new(),
-                    make_closure: None,
                 }
             }
             E::App { ty, fun, arg } => self.conv_expr(*fun).app1(conv_ty(ty), self.conv_expr(*arg)),

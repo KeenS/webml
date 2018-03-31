@@ -15,7 +15,9 @@ impl PP for LIR {
 impl PP for Function {
     fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
         let indent = indent + 4;
-        write!(w, "fun {}: (", self.name.0)?;
+        write!(w, "fun ")?;
+        self.name.pp(w, 0)?;
+        write!(w, ": (")?;
         inter_iter!{
             self.regs.iter().enumerate().take(self.nparams as usize),
             write!(w, ", ")?,
@@ -148,7 +150,8 @@ impl PP for Op {
                 reg.0.pp(w, indent)?;
                 write!(w, " <- {}", i)?;
             }
-            AddI64(ref r1, ref r2, ref r3) => {
+            AddI32(ref r1, ref r2, ref r3)
+                | AddI64(ref r1, ref r2, ref r3) => {
                 r1.pp(w, indent)?;
                 write!(w, ": ")?;
                 r1.0.pp(w, indent)?;
@@ -157,7 +160,8 @@ impl PP for Op {
                 write!(w, " + ")?;
                 r3.pp(w, indent)?;
             }
-            MulI64(ref r1, ref r2, ref r3) => {
+            MulI32(ref r1, ref r2, ref r3)
+                | MulI64(ref r1, ref r2, ref r3) => {
                 r1.pp(w, indent)?;
                 write!(w, ": ")?;
                 r1.0.pp(w, indent)?;

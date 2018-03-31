@@ -4,24 +4,38 @@
         <meta charset="utf-8">
         <title></title>
         <script>
-         // Emscriptenで使用するModuleオブジェクト。
-         // グローバルで宣言する。
-         var Module = {};
-         var importObj = {"webml-rt": {
-             alloc: (x) => x,
-             print: (x) => console.log(x),
-             /* import2: () => console.log("world!")*/
-         }};
-         fetch('out.wasm').then(response =>
+         let importObj = {
+             "js-ffi": {print: (x) => console.log(x)},
+         };
+         fetch('webml-rt/target/wasm32-unknown-unknown/release/webml_rt.wasm').then(response =>
+             response.arrayBuffer()
+         ).then(buffer =>
+             WebAssembly.instantiate(buffer, {"imports": {print: (x) => console.log(x)}})
+         ).then(({module, instance}) => {
+             console.log(module);
+             console.log(instance);
+             console.log(instance.exports);
+             console.log(instance.exports["alloc"]);
+             console.log(instance.exports["init"]);
+             importObj["webml-rt"] = {
+                 alloc: instance.exports.alloc,
+                 init: instance.exports.init,
+                 memory: instance.exports.memory,
+             };
+         }).then(_ =>
+             fetch('out.wasm')
+         ).then(response =>
              response.arrayBuffer()
          ).then(buffer =>
              WebAssembly.instantiate(buffer, importObj)
          ).then(({module, instance}) => {
-             const scriptElem = document.createElement('script');
-             scriptElem.src = 'out.js';
-             document.body.appendChild(scriptElem);
+             /* const scriptElem = document.createElement('script');
+              * scriptElem.src = 'out.js';
+              * document.body.appendChild(scriptElem); */
+             
          }
-         );
+         )
+         ;
         </script>
     </head>
     <body></body>
