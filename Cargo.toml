@@ -8,5 +8,5 @@ nom = { version = "2.0.1", features = ["verbose-errors"]}
 petgraph = "0.4.1"
 
 [dependencies.web-assembler]
-# git = "https://github.com/KeenS/WebAssembler-rs"
-path = "../WebAssembler-rs/"
+git = "https://github.com/KeenS/WebAssembler-rs"
+# path = "../WebAssembler-rs/"
