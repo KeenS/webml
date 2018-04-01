@@ -1,9 +1,7 @@
 use mir::*;
 use prim::*;
 
-
 pub struct FunctionBuilder(Function);
-
 
 impl FunctionBuilder {
     pub fn new(name: Symbol, body_ty: EbbTy) -> Self {
@@ -33,7 +31,6 @@ impl EBBBuilder {
             body: Vec::new(),
         })
     }
-
 
     fn push(&mut self, op: Op) {
         self.0.body.push(op);
@@ -195,7 +192,13 @@ impl EBBBuilder {
         self
     }
 
-    pub fn builtin_call(&mut self, var: Symbol, ty: EbbTy, fun: BIF, args: Vec<Symbol>) -> &mut Self {
+    pub fn builtin_call(
+        &mut self,
+        var: Symbol,
+        ty: EbbTy,
+        fun: BIF,
+        args: Vec<Symbol>,
+    ) -> &mut Self {
         self.push(Op::BuiltinCall {
             var: var,
             ty: ty,

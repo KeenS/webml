@@ -1,19 +1,18 @@
+extern crate web_assembler as wasm;
 #[macro_use]
 extern crate webml;
-extern crate web_assembler as wasm;
 use webml::*;
 #[allow(unused_imports)]
-use webml::pass::{DebugPass, PPPass, ConvError};
+use webml::pass::{ConvError, DebugPass, PPPass};
 use wasm::Dump;
 use std::fs::File;
-use std::io::{Write, Read, BufReader};
+use std::io::{BufReader, Read, Write};
 use std::env;
 
 fn main() {
-
-    let filename = env::args().nth(1).unwrap_or(
-        "ml_example/example1.sml".to_string(),
-    );
+    let filename = env::args()
+        .nth(1)
+        .unwrap_or("ml_example/example1.sml".to_string());
 
     let input = {
         let file =
@@ -26,8 +25,7 @@ fn main() {
 
     let id = id::Id::new();
 
-    let mut passes =
-        compile_pass![
+    let mut passes = compile_pass![
         ConvError::new(parse),
         TyEnv::new(),
         hir::AST2HIR,
@@ -43,7 +41,6 @@ fn main() {
         lir::MIR2LIR::new(),
         backend::LIR2WASM::new(),
     ];
-
 
     let module: Result<wasm::Module, TypeError> = passes.trans(&input);
 

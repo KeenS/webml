@@ -131,7 +131,8 @@ impl<'a> util::Traverse for Scope<'a> {
 impl Rename {
     pub fn new(id: Id) -> Self {
         // leave built in functions as non_renamed
-        let prims = ::BUILTIN_FUNCTIONS.iter()
+        let prims = ::BUILTIN_FUNCTIONS
+            .iter()
             .map(|s| (Symbol::new(*s), 0))
             .collect();
 

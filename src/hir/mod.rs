@@ -70,9 +70,18 @@ pub enum Expr {
         then: Box<Expr>,
         else_: Box<Expr>,
     },
-    Tuple { tys: Vec<HTy>, tuple: Vec<Expr> },
-    Sym { ty: HTy, name: Symbol },
-    Lit { ty: HTy, value: Literal },
+    Tuple {
+        tys: Vec<HTy>,
+        tuple: Vec<Expr>,
+    },
+    Sym {
+        ty: HTy,
+        name: Symbol,
+    },
+    Lit {
+        ty: HTy,
+        value: Literal,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -84,7 +93,6 @@ pub enum HTy {
     Tuple(Vec<HTy>),
     Fun(Box<HTy>, Box<HTy>),
 }
-
 
 impl Expr {
     fn app1(self, ty: HTy, e: Expr) -> Expr {
@@ -103,20 +111,20 @@ impl Expr {
                 ref param_ty,
                 ref body_ty,
                 ..
-            } |
-            &Fun {
+            }
+            | &Fun {
                 param: (ref param_ty, _),
                 ref body_ty,
                 ..
             } => HTy::fun(param_ty.clone(), body_ty.clone()),
             &Tuple { ref tys, .. } => HTy::Tuple(tys.clone()),
-            &BinOp { ref ty, .. } |
-            &Binds { ref ty, .. } |
-            &BuiltinCall { ref ty, .. } |
-            &App { ref ty, .. } |
-            &If { ref ty, .. } |
-            &Sym { ref ty, .. } |
-            &Lit { ref ty, .. } => ty.clone(),
+            &BinOp { ref ty, .. }
+            | &Binds { ref ty, .. }
+            | &BuiltinCall { ref ty, .. }
+            | &App { ref ty, .. }
+            | &If { ref ty, .. }
+            | &Sym { ref ty, .. }
+            | &Lit { ref ty, .. } => ty.clone(),
         }
     }
 }

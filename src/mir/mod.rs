@@ -36,7 +36,11 @@ pub enum Op {
         ty: EbbTy,
         value: Literal,
     },
-    Alias { var: Symbol, ty: EbbTy, sym: Symbol },
+    Alias {
+        var: Symbol,
+        ty: EbbTy,
+        sym: Symbol,
+    },
     Add {
         var: Symbol,
         ty: EbbTy,
@@ -116,7 +120,6 @@ pub enum Op {
         fun: Symbol,
         env: Vec<(EbbTy, Symbol)>,
     },
-    // TODO: separate closure call and direct call
     BuiltinCall {
         var: Symbol,
         ty: EbbTy,
@@ -153,7 +156,10 @@ pub enum Op {
         forward: bool,
         args: Vec<Symbol>,
     },
-    Ret { value: Option<Symbol>, ty: EbbTy },
+    Ret {
+        value: Option<Symbol>,
+        ty: EbbTy,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -168,7 +174,10 @@ pub enum EbbTy {
         param: Box<EbbTy>,
         ret: Box<EbbTy>,
     },
-    Ebb { params: Vec<EbbTy>, ret: Box<EbbTy> },
+    Ebb {
+        params: Vec<EbbTy>,
+        ret: Box<EbbTy>,
+    },
 }
 
 impl MIR {

@@ -51,7 +51,7 @@ pub enum Value {
     // register
     R(Reg),
     // function pointer
-//    F(Symbol),
+    //    F(Symbol),
 }
 
 #[derive(Debug, Clone)]
@@ -71,7 +71,6 @@ pub struct Block {
     pub name: Label,
     pub body: Vec<Op>,
 }
-
 
 #[derive(Debug, Clone)]
 pub enum Op {
@@ -148,7 +147,6 @@ pub enum Op {
     Jump(Label),
     Ret(Option<Reg>),
 }
-
 
 impl Block {
     pub fn branches(&self) -> Vec<&Label> {

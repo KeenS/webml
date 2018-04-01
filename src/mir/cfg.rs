@@ -1,9 +1,8 @@
-use std::collections::{VecDeque, HashSet};
+use std::collections::{HashSet, VecDeque};
 use prim::*;
 
 use super::{Function, EBB};
 use petgraph::graph::Graph;
-
 
 impl Function {
     pub fn cfg(&self) -> Graph<usize, ()> {
@@ -37,7 +36,6 @@ impl Function {
         self.body.iter().position(|ebb| &ebb.name == name)
     }
 }
-
 
 impl EBB {
     pub fn next_ebbs(&self) -> Vec<(&Symbol, bool)> {

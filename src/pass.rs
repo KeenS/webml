@@ -50,7 +50,6 @@ where
     }
 }
 
-
 pub struct Chain<F, FO, S, SO> {
     pub fst: F,
     pub snd: S,
@@ -86,7 +85,6 @@ where
     }
 }
 
-
 pub struct ConvError<P, FE, O> {
     pass: P,
     phantom: PhantomData<(FE, O)>,
@@ -100,7 +98,6 @@ impl<P, FE, O> ConvError<P, FE, O> {
         }
     }
 }
-
 
 impl<In, FE, SE, O, P> Pass<In, SE> for ConvError<P, FE, O>
 where

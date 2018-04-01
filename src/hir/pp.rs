@@ -125,7 +125,9 @@ impl PP for Expr {
                 }
                 write!(w, ")")?;
             }
-            &BuiltinCall { ref fun, ref arg, .. } => {
+            &BuiltinCall {
+                ref fun, ref arg, ..
+            } => {
                 fun.pp(w, indent)?;
                 write!(w, " ")?;
                 arg.pp(w, indent)?;

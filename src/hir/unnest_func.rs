@@ -75,13 +75,15 @@ impl<'a> Scope<'a> {
         let mut closures = Vec::new();
         let mut vals = hir.0
             .into_iter()
-            .map(|val| if val.rec {
-                self.add_scope(val.name.clone());
-                self.conv_top_val(&mut closures, val)
-            } else {
-                let val = self.conv_top_val(&mut closures, val);
-                self.add_scope(val.name.clone());
-                val
+            .map(|val| {
+                if val.rec {
+                    self.add_scope(val.name.clone());
+                    self.conv_top_val(&mut closures, val)
+                } else {
+                    let val = self.conv_top_val(&mut closures, val);
+                    self.add_scope(val.name.clone());
+                    val
+                }
             })
             .collect();
         closures.append(&mut vals);
@@ -118,7 +120,6 @@ impl<'a> Scope<'a> {
                         bind.expr = self.conv_expr(cls, bind.expr, bind_name);
                         bind.rec = false;
                         bind
-
                     })
                     .collect();
                 ret = Box::new(self.conv_expr(cls, *ret, None));
@@ -187,11 +188,7 @@ impl<'a> Scope<'a> {
                     }
                 }
             }
-            BuiltinCall {
-                ty,
-                fun,
-                mut arg,
-            } => {
+            BuiltinCall { ty, fun, mut arg } => {
                 arg = Box::new(self.conv_expr(cls, *arg, None));
                 BuiltinCall {
                     ty: ty,
@@ -239,8 +236,7 @@ impl<'a> Scope<'a> {
                 }
             }
             Sym { name, ty } => Sym { ty: ty, name: name },
-            expr @ Closure { .. } |
-            expr @ Lit { .. } => expr
+            expr @ Closure { .. } | expr @ Lit { .. } => expr,
         }
     }
 
@@ -261,7 +257,9 @@ impl<'a> Scope<'a> {
     ) {
         use hir::Expr::*;
         match expr {
-            &Binds { ref binds, ref ret, .. } => {
+            &Binds {
+                ref binds, ref ret, ..
+            } => {
                 let mut scope = self;
                 for bind in binds.iter() {
                     if bind.rec {
@@ -282,7 +280,9 @@ impl<'a> Scope<'a> {
             &BuiltinCall { ref arg, .. } => {
                 self.analyze_free_expr(frees, bound, arg);
             }
-            &App { ref fun, ref arg, .. } => {
+            &App {
+                ref fun, ref arg, ..
+            } => {
                 self.analyze_free_expr(frees, bound, fun);
                 self.analyze_free_expr(frees, bound, arg);
             }
@@ -296,23 +296,19 @@ impl<'a> Scope<'a> {
                 self.analyze_free_expr(frees, bound, then);
                 self.analyze_free_expr(frees, bound, else_);
             }
-            &Tuple { ref tuple, .. } => {
-                for t in tuple.iter() {
-                    self.analyze_free_expr(frees, bound, t);
-                }
-            }
+            &Tuple { ref tuple, .. } => for t in tuple.iter() {
+                self.analyze_free_expr(frees, bound, t);
+            },
             &Sym { ref name, ref ty } => {
                 if !(self.is_in_scope(name) || bound == name) {
                     frees.push((ty.clone(), name.clone()))
                 }
             }
-            &Closure { ref envs, .. } => {
-                for &(ref ty, ref name) in envs {
-                    if !(self.is_in_scope(name) || bound == name) {
-                        frees.push((ty.clone(), name.clone()))
-                    }
+            &Closure { ref envs, .. } => for &(ref ty, ref name) in envs {
+                if !(self.is_in_scope(name) || bound == name) {
+                    frees.push((ty.clone(), name.clone()))
                 }
-            }
+            },
             &Lit { .. } => (),
         }
     }
@@ -342,10 +338,7 @@ impl<'a> Scope<'a> {
             Fun { ref mut body, .. } => {
                 Box::new(self.rename(body, from, to));
             }
-            BuiltinCall {
-                ref mut arg,
-                ..
-            } => {
+            BuiltinCall { ref mut arg, .. } => {
                 self.rename(arg, from, to);
             }
             App {
@@ -366,11 +359,9 @@ impl<'a> Scope<'a> {
                 self.rename(then, from, to);
                 self.rename(else_, from, to);
             }
-            Tuple { ref mut tuple, .. } => {
-                for t in tuple.iter_mut() {
-                    self.rename(t, from, to);
-                }
-            }
+            Tuple { ref mut tuple, .. } => for t in tuple.iter_mut() {
+                self.rename(t, from, to);
+            },
             Sym { ref mut name, .. } => {
                 if from.is_some() && name == from.as_ref().unwrap() {
                     *name = to.clone()
@@ -380,7 +371,6 @@ impl<'a> Scope<'a> {
         }
     }
 }
-
 
 impl UnnestFunc {
     pub fn new(id: Id) -> Self {

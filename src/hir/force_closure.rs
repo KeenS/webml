@@ -33,8 +33,10 @@ impl<'a> Trav<'a> {
 
 impl<'a> Traverse for Trav<'a> {
     fn traverse_binds(&mut self, _ty: &mut HTy, binds: &mut Vec<Val>, ret: &mut Box<Expr>) {
-        self.with_bound(true, |this| for bind in binds.iter_mut() {
-            this.traverse_expr(&mut bind.expr);
+        self.with_bound(true, |this| {
+            for bind in binds.iter_mut() {
+                this.traverse_expr(&mut bind.expr);
+            }
         });
         self.traverse_expr(ret);
     }
@@ -130,7 +132,6 @@ impl<'a> Traverse for Trav<'a> {
                     }
                     _ => return,
                 }
-
             }
             Lit {
                 ref mut ty,
@@ -139,11 +140,9 @@ impl<'a> Traverse for Trav<'a> {
                 self.traverse_lit(ty, value);
                 return;
             }
-
         }
         *expr = assign;
     }
-
 
     fn traverse_binop(
         &mut self,
@@ -172,7 +171,6 @@ impl<'a> Traverse for Trav<'a> {
         self.with_bound(false, |this| {
             this.traverse_expr(fun);
             this.traverse_expr(arg);
-
         });
     }
 }
@@ -198,7 +196,6 @@ impl<'a> Reg<'a> {
     }
 }
 
-
 impl<'a> Traverse for Reg<'a> {
     fn traverse_val(&mut self, val: &mut Val) {
         self.bound_name = None;
@@ -216,9 +213,10 @@ impl<'a> Traverse for Reg<'a> {
             }
             self.with_bound_name(bound_name, |this| this.traverse_expr(&mut bind.expr));
         }
-        self.with_bound_name(None, |this| { this.traverse_expr(ret); });
+        self.with_bound_name(None, |this| {
+            this.traverse_expr(ret);
+        });
     }
-
 
     fn traverse_binop(
         &mut self,
@@ -230,10 +228,8 @@ impl<'a> Traverse for Reg<'a> {
         self.with_bound_name(None, |this| {
             this.traverse_expr(l);
             this.traverse_expr(r);
-
         });
     }
-
 
     fn traverse_fun(
         &mut self,
@@ -248,7 +244,9 @@ impl<'a> Traverse for Reg<'a> {
             }
             None => (),
         };
-        self.with_bound_name(None, |this| { this.traverse_expr(body); });
+        self.with_bound_name(None, |this| {
+            this.traverse_expr(body);
+        });
     }
 
     fn traverse_app(&mut self, _ty: &mut HTy, fun: &mut Box<Expr>, arg: &mut Box<Expr>) {
@@ -257,7 +255,6 @@ impl<'a> Traverse for Reg<'a> {
             this.traverse_expr(arg);
         })
     }
-
 
     fn traverse_if(
         &mut self,
@@ -280,7 +277,9 @@ pub struct ForceClosure {
 
 impl ForceClosure {
     pub fn new() -> Self {
-        ForceClosure { functions: HashSet::new() }
+        ForceClosure {
+            functions: HashSet::new(),
+        }
     }
 }
 

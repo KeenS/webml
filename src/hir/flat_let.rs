@@ -80,11 +80,7 @@ fn take_binds(mut expr: Expr) -> (Expr, Vec<Val>) {
             };
             (expr, bindss.into_iter().flat_map(Vec::into_iter).collect())
         }
-        x @ Fun { .. } |
-        x @ Closure { .. } |
-        x @ Sym { .. } |
-        x @ Lit { .. } => (x, Vec::new()),
-
+        x @ Fun { .. } | x @ Closure { .. } | x @ Sym { .. } | x @ Lit { .. } => (x, Vec::new()),
     }
 }
 
@@ -92,7 +88,6 @@ impl FlatLet {
     pub fn new() -> Self {
         FlatLet
     }
-
 
     pub fn flat_hir(&mut self, mut hir: HIR) -> HIR {
         hir.0 = hir.0.into_iter().map(|val| self.flat_val(val)).collect();
@@ -160,7 +155,7 @@ impl FlatLet {
                     captures: captures,
                 }
             }
-            BuiltinCall { fun, mut arg, ty} => {
+            BuiltinCall { fun, mut arg, ty } => {
                 arg = Box::new(self.flat_expr(*arg));
                 BuiltinCall {
                     fun: fun,
@@ -204,14 +199,10 @@ impl FlatLet {
                     tuple: tuple,
                 }
             }
-            x @ Closure { .. } |
-            x @ Sym { .. } |
-            x @ Lit { .. } => x,
-
+            x @ Closure { .. } | x @ Sym { .. } | x @ Lit { .. } => x,
         }
     }
 }
-
 
 impl<E> Pass<HIR, E> for FlatLet {
     type Target = HIR;

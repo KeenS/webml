@@ -1,6 +1,6 @@
 use ast;
 use pass::Pass;
-use hir::{HIR, Expr, Val, HTy};
+use hir::{Expr, HTy, Val, HIR};
 
 pub struct AST2HIR;
 
@@ -45,66 +45,52 @@ impl AST2HIR {
     fn conv_expr(&self, expr: ast::Expr) -> Expr {
         use ast::Expr as E;
         match expr {
-            E::Binds { ty, binds, ret } => {
-                Expr::Binds {
-                    ty: conv_ty(ty),
-                    binds: binds.into_iter().map(|b| self.conv_val(b)).collect(),
-                    ret: Box::new(self.conv_expr(*ret)),
-                }
-            }
-            E::BinOp { op, ty, l, r } => {
-                Expr::BinOp {
-                    ty: conv_ty(ty),
-                    name: op,
-                    l: Box::new(self.conv_expr(*l)),
-                    r: Box::new(self.conv_expr(*r)),
-                }
-            }
+            E::Binds { ty, binds, ret } => Expr::Binds {
+                ty: conv_ty(ty),
+                binds: binds.into_iter().map(|b| self.conv_val(b)).collect(),
+                ret: Box::new(self.conv_expr(*ret)),
+            },
+            E::BinOp { op, ty, l, r } => Expr::BinOp {
+                ty: conv_ty(ty),
+                name: op,
+                l: Box::new(self.conv_expr(*l)),
+                r: Box::new(self.conv_expr(*r)),
+            },
             E::Fun {
                 param_ty,
                 param,
                 body_ty,
                 body,
-            } => {
-                Expr::Fun {
-                    param: (conv_ty(param_ty), param),
-                    body_ty: conv_ty(body_ty),
-                    body: Box::new(self.conv_expr(*body)),
-                    captures: Vec::new(),
-                }
-            }
+            } => Expr::Fun {
+                param: (conv_ty(param_ty), param),
+                body_ty: conv_ty(body_ty),
+                body: Box::new(self.conv_expr(*body)),
+                captures: Vec::new(),
+            },
             E::App { ty, fun, arg } => self.conv_expr(*fun).app1(conv_ty(ty), self.conv_expr(*arg)),
             E::If {
                 ty,
                 cond,
                 then,
                 else_,
-            } => {
-                Expr::If {
-                    ty: conv_ty(ty),
-                    cond: Box::new(self.conv_expr(*cond)),
-                    then: Box::new(self.conv_expr(*then)),
-                    else_: Box::new(self.conv_expr(*else_)),
-                }
-            }
-            E::Tuple { ty, tuple } => {
-                Expr::Tuple {
-                    tys: force_tuple(ty.force("internal typing error")),
-                    tuple: tuple.into_iter().map(|e| self.conv_expr(e)).collect(),
-                }
-            }
-            E::Sym { ty, name } => {
-                Expr::Sym {
-                    ty: conv_ty(ty),
-                    name: name,
-                }
-            }
-            E::Lit { ty, value } => {
-                Expr::Lit {
-                    ty: conv_ty(ty),
-                    value: value,
-                }
-            }
+            } => Expr::If {
+                ty: conv_ty(ty),
+                cond: Box::new(self.conv_expr(*cond)),
+                then: Box::new(self.conv_expr(*then)),
+                else_: Box::new(self.conv_expr(*else_)),
+            },
+            E::Tuple { ty, tuple } => Expr::Tuple {
+                tys: force_tuple(ty.force("internal typing error")),
+                tuple: tuple.into_iter().map(|e| self.conv_expr(e)).collect(),
+            },
+            E::Sym { ty, name } => Expr::Sym {
+                ty: conv_ty(ty),
+                name: name,
+            },
+            E::Lit { ty, value } => Expr::Lit {
+                ty: conv_ty(ty),
+                value: value,
+            },
         }
     }
 }

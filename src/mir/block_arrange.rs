@@ -4,10 +4,7 @@ use mir::*;
 use prim::*;
 use pass::Pass;
 
-
-
 pub struct BlockArrange;
-
 
 impl BlockArrange {
     pub fn new() -> Self {

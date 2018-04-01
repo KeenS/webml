@@ -1,6 +1,6 @@
 extern crate web_assembler as wasm;
 
-use std::collections::{HashSet, HashMap};
+use std::collections::{HashMap, HashSet};
 
 use prim::*;
 use pass::Pass;
@@ -16,7 +16,6 @@ enum Control<'a> {
     Block(&'a lir::Label),
     BlockEnd(&'a lir::Label),
 }
-
 
 fn lty_to_valuetype_opt(t: &lir::LTy) -> Option<ValueType> {
     use lir::LTy::*;
@@ -93,9 +92,13 @@ impl LIR2WASM {
         let print_fun = md.import("js-ffi", "print", print_fun_ty_index);
         let print_fun = md.function_index_of(print_fun).unwrap();
 
-        md.import("webml-rt", "memory", MemoryType {
-            limits: ResizableLimits::new(2)
-        });
+        md.import(
+            "webml-rt",
+            "memory",
+            MemoryType {
+                limits: ResizableLimits::new(2),
+            },
+        );
 
         LIR2WASM {
             md,
@@ -107,7 +110,8 @@ impl LIR2WASM {
                 (init_fun_ty, init_fun_ty_index),
                 (alloc_fun_ty, alloc_fun_ty_index),
                 (print_fun_ty, print_fun_ty_index),
-            ].into_iter().collect(),
+            ].into_iter()
+                .collect(),
             dynamic_function_table: HashMap::new(),
             dynamic_function_elements: vec![],
         }
@@ -124,10 +128,9 @@ impl LIR2WASM {
             .entry(fname.clone())
             .or_insert_with(|| {
                 dynamic_function_elements.push(index);
-                let ret = dynamic_function_elements.len() -1;
+                let ret = dynamic_function_elements.len() - 1;
                 ret as u32
-            }
-            )
+            })
     }
 
     pub fn trans_lir(&mut self, l: lir::LIR) -> Module {
@@ -139,13 +142,12 @@ impl LIR2WASM {
         {
             for f in l.0.iter() {
                 let ftype = fun_type(f);
-                if ! self.function_type_table.contains_key(&ftype) {
+                if !self.function_type_table.contains_key(&ftype) {
                     let tyi = self.md.add_type(ftype.clone());
                     self.function_type_table.insert(ftype, tyi);
                 }
             }
         }
-
 
         let nfunctions = l.0.len();
         for f in l.0 {
@@ -155,17 +157,17 @@ impl LIR2WASM {
         let elems = ElemSegment {
             index: fun_table,
             offset: InitExpr(CodeBuilder::new().constant(0 as i32).end().build()),
-            elems: self.dynamic_function_elements.clone()
+            elems: self.dynamic_function_elements.clone(),
         };
 
         self.md.add_element(elems);
         let main_function = FunctionBuilder::new(funtype!(()))
-                             .code(|cb, _params|
-                                   cb
-                                   .call(self.init_fun)
-                                   .call(self.function_index(&Symbol::new("sml-main")))
-                                   .return_())
-                             .build();
+            .code(|cb, _params| {
+                cb.call(self.init_fun)
+                    .call(self.function_index(&Symbol::new("sml-main")))
+                    .return_()
+            })
+            .build();
         let main_function = self.md.new_function(main_function);
         self.md.start(main_function);
 
@@ -307,10 +309,10 @@ impl LIR2WASM {
                                         .i32_le_s()
                                         .set_local(reg!(reg1))
                                 }
-                                MoveI32(ref reg1, ref reg2) |
-                                MoveI64(ref reg1, ref reg2) |
-                                MoveF32(ref reg1, ref reg2) |
-                                MoveF64(ref reg1, ref reg2) => {
+                                MoveI32(ref reg1, ref reg2)
+                                | MoveI64(ref reg1, ref reg2)
+                                | MoveF32(ref reg1, ref reg2)
+                                | MoveF64(ref reg1, ref reg2) => {
                                     cb = cb.get_local(reg!(reg2)).set_local(reg!(reg1))
                                 }
                                 StoreI32(ref addr, ref value) => {
@@ -319,10 +321,9 @@ impl LIR2WASM {
                                         .i32_store(addr.1);
                                 }
                                 LoadI32(ref reg, ref addr) => {
-                                    cb = cb.get_local(reg!(addr.0)).i32_load(addr.1).set_local(
-                                        reg!(reg),
-                                    );
-
+                                    cb = cb.get_local(reg!(addr.0))
+                                        .i32_load(addr.1)
+                                        .set_local(reg!(reg));
                                 }
                                 JumpIfI32(ref reg, ref label) => {
                                     cb = cb.get_local(reg!(reg)).br_if(label!(label));
@@ -398,9 +399,9 @@ impl LIR2WASM {
                                         .set_local(reg!(reg1))
                                 }
                                 LoadI64(ref reg, ref addr) => {
-                                    cb = cb.get_local(reg!(addr.0)).i64_load(addr.1).set_local(
-                                        reg!(reg),
-                                    );
+                                    cb = cb.get_local(reg!(addr.0))
+                                        .i64_load(addr.1)
+                                        .set_local(reg!(reg));
                                 }
 
                                 StoreI64(ref addr, ref value) => {
@@ -476,9 +477,9 @@ impl LIR2WASM {
                                         .f32_store(addr.1);
                                 }
                                 LoadF32(ref reg, ref addr) => {
-                                    cb = cb.get_local(reg!(addr.0)).f32_load(addr.1).set_local(
-                                        reg!(reg),
-                                    );
+                                    cb = cb.get_local(reg!(addr.0))
+                                        .f32_load(addr.1)
+                                        .set_local(reg!(reg));
                                 }
 
                                 ConstF64(ref reg, c) => cb = cb.constant(c).set_local(reg!(reg)),
@@ -549,9 +550,9 @@ impl LIR2WASM {
                                 }
 
                                 LoadF64(ref reg, ref addr) => {
-                                    cb = cb.get_local(reg!(addr.0)).f64_load(addr.1).set_local(
-                                        reg!(reg),
-                                    );
+                                    cb = cb.get_local(reg!(addr.0))
+                                        .f64_load(addr.1)
+                                        .set_local(reg!(reg));
                                 }
 
                                 HeapAlloc(ref reg, ref value, ref tys) => {
@@ -594,12 +595,10 @@ impl LIR2WASM {
                                         let ret = lty_to_valuetype_opt(&reg.0);
                                         let mut params = vec![
                                             // pointer to closure
-                                            ValueType::I32
+                                            ValueType::I32,
                                         ];
                                         params.extend(args.iter().map(|r| lty_to_valuetype(&r.0)));
-                                        FuncType {
-                                            params, ret
-                                        }
+                                        FuncType { params, ret }
                                     };
 
                                     cb = cb
@@ -618,14 +617,13 @@ impl LIR2WASM {
                                     cb = cb.call(self.function_index(fun))
                                     // FIXME: if ret ty isn't unit
                                         .set_local(reg!(reg));
-
                                 }
                                 BuiltinCall(ref reg, ref fun, ref args) => {
                                     for arg in args.iter() {
                                         cb = cb.get_local(reg!(arg))
                                     }
                                     match fun {
-                                        &BIF::Print => cb = cb.call(self.print_fun)
+                                        &BIF::Print => cb = cb.call(self.print_fun),
                                     }
                                 }
                                 Jump(ref label) => {
@@ -638,7 +636,6 @@ impl LIR2WASM {
                                     };
                                     cb = cb.return_()
                                 }
-
                             }
                         }
                     }
@@ -663,7 +660,6 @@ impl LIR2WASM {
         let ret = self.adjust_loop_block(ret);
         ret
     }
-
 
     fn insert_loop_block<'a>(&mut self, v: Vec<Control<'a>>) -> Vec<Control<'a>> {
         let v = self.insert_loop(v);
@@ -773,7 +769,6 @@ impl LIR2WASM {
         v
     }
 
-
     fn adjust_loop<'a>(&mut self, v: Vec<Control<'a>>) -> Vec<Control<'a>> {
         let mut ret = Vec::new();
         let mut scope = Vec::new();
@@ -789,9 +784,9 @@ impl LIR2WASM {
                     if name == last_name {
                         ret.push(c);
                         for d in defers.remove(&name).unwrap() {
-                            let ds = self.resolve_defers(d, &mut defers).into_iter().map(
-                                Control::LoopEnd,
-                            );
+                            let ds = self.resolve_defers(d, &mut defers)
+                                .into_iter()
+                                .map(Control::LoopEnd);
                             ret.extend(ds);
                         }
                     } else {
@@ -799,9 +794,7 @@ impl LIR2WASM {
                         scope.push(last_name);
                     }
                 }
-                Control::Body(_) |
-                Control::Block(_) |
-                Control::BlockEnd(_) => ret.push(c),
+                Control::Body(_) | Control::Block(_) | Control::BlockEnd(_) => ret.push(c),
             }
         }
 
@@ -814,20 +807,18 @@ impl LIR2WASM {
         let mut defers = HashMap::new();
         for c in v.into_iter().rev() {
             match c {
-                Control::BlockEnd(name) |
-                Control::LoopEnd(name) => {
+                Control::BlockEnd(name) | Control::LoopEnd(name) => {
                     scope.push(name);
                     tmp.push(c);
                 }
-                Control::Block(name) |
-                Control::Loop(name) => {
+                Control::Block(name) | Control::Loop(name) => {
                     let last_name = scope.pop().unwrap();
                     if name == last_name {
                         tmp.push(c);
                         for d in defers.remove(&name).unwrap() {
-                            let ds = self.resolve_defers(d, &mut defers).into_iter().map(
-                                Control::Block,
-                            );
+                            let ds = self.resolve_defers(d, &mut defers)
+                                .into_iter()
+                                .map(Control::Block);
                             tmp.extend(ds);
                         }
                     } else {

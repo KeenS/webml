@@ -6,7 +6,7 @@ use nom;
 use std::ops::Deref;
 use std::error::Error;
 use std::fmt;
-use std::cell::{RefCell, Ref, RefMut};
+use std::cell::{Ref, RefCell, RefMut};
 use std::rc::Rc;
 
 use ast;
@@ -53,9 +53,18 @@ pub enum Expr {
         then: Box<Expr>,
         else_: Box<Expr>,
     },
-    Tuple { ty: TyDefer, tuple: Vec<Expr> },
-    Sym { ty: TyDefer, name: Symbol },
-    Lit { ty: TyDefer, value: Literal },
+    Tuple {
+        ty: TyDefer,
+        tuple: Vec<Expr>,
+    },
+    Sym {
+        ty: TyDefer,
+        name: Symbol,
+    },
+    Lit {
+        ty: TyDefer,
+        value: Literal,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -68,10 +77,8 @@ pub enum Ty {
     Tuple(Vec<TyDefer>),
 }
 
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TyDefer(pub Rc<RefCell<Option<Ty>>>);
-
 
 impl Ty {
     pub fn fun(param: Ty, ret: Ty) -> Ty {
@@ -82,9 +89,6 @@ impl Ty {
     }
 }
 
-
-
-
 impl TyDefer {
     pub fn get_mut(&mut self) -> RefMut<Option<Ty>> {
         self.0.borrow_mut()
@@ -93,7 +97,6 @@ impl TyDefer {
     pub fn get(&self) -> Ref<Option<Ty>> {
         self.0.borrow()
     }
-
 
     pub fn new(t: Option<Ty>) -> Self {
         TyDefer(Rc::new(RefCell::new(t)))
@@ -112,7 +115,6 @@ impl TyDefer {
     }
 }
 
-
 #[derive(Debug)]
 pub enum TypeError<'a> {
     MisMatch { expected: Ty, actual: Ty },
@@ -121,8 +123,6 @@ pub enum TypeError<'a> {
     NotFunction(ast::Expr),
     ParseError(nom::Err<&'a str>),
 }
-
-
 
 impl<'a> fmt::Display for TypeError<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
@@ -142,7 +142,6 @@ impl<'a> Error for TypeError<'a> {
         }
     }
 }
-
 
 impl<'a> From<nom::Err<&'a str>> for TypeError<'a> {
     fn from(e: nom::Err<&'a str>) -> Self {

@@ -1,7 +1,5 @@
 use hir::*;
 
-
-
 pub trait Traverse {
     fn traverse_hir(&mut self, hir: &mut HIR) {
         for val in hir.0.iter_mut() {
@@ -68,7 +66,6 @@ pub trait Traverse {
                 ref mut ty,
                 ref mut value,
             } => self.traverse_lit(ty, value),
-
         }
     }
     fn traverse_binds(&mut self, _ty: &mut HTy, binds: &mut Vec<Val>, ret: &mut Box<Expr>) {

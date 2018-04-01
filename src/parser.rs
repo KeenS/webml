@@ -14,10 +14,9 @@ static INFIX1: &[&str] = &[];
 fn one_of<'a, 'b>(input: &'a str, tags: &'b [&str]) -> IResult<&'a str, &'a str> {
     for tag in tags {
         if input.starts_with(tag) {
-            return IResult::Done(&input[(tag.len())..],
-                                 &input[0..(tag.len())],)
+            return IResult::Done(&input[(tag.len())..], &input[0..(tag.len())]);
         }
-    };
+    }
     IResult::Error(Err::Code(ErrorKind::IsNotStr))
 }
 
@@ -30,7 +29,6 @@ named!(top <&str, AST >, do_parse!(
 ));
 
 named!(bind <&str, Val>, alt_complete!(bind_val | bind_fun));
-
 
 named!(bind_val <&str, Val>, do_parse!(
     tag_s!("val") >>
@@ -113,7 +111,6 @@ named!(expr1 <&str, Expr>, alt_complete!(
     expr1_bool  |
     expr1_sym
 ));
-
 
 named!(expr_bind <&str, Expr>, do_parse!(
     tag_s!("let") >> multispace >>
@@ -214,16 +211,20 @@ named!(infix4_op <&str, Expr>, do_parse!(
 named!(expr0_app <&str, Expr>, do_parse!(
     // left-recursion is eliminated
     fun: expr1 >> multispace >>
-        args: separated_nonempty_list!(multispace,
-                                       do_parse!(
-                                           map_res!(peek!(recognize!(expr1)),
-                                                    |s| if [INFIX1, INFIX2, INFIX3, INFIX4, INFIX5, INFIX6, INFIX7].iter().any(|tags| tags.contains(&s)) {
-                                                        Err(ErrorKind::IsNot) as  ::std::result::Result<&str, ErrorKind>
-                                                    } else {
-                                                        Ok(s)
-                                                    }
-                                           ) >>
-                                               e: expr1 >> (e)))
+        args: separated_nonempty_list!(
+            multispace,
+            do_parse!(
+                map_res!(peek!(recognize!(expr1)),
+                         |s| if [
+                             INFIX1, INFIX2, INFIX3,
+                             INFIX4, INFIX5, INFIX6,
+                             INFIX7].iter().any(|tags| tags.contains(&s)) {
+                             Err(ErrorKind::IsNot) as  ::std::result::Result<&str, ErrorKind>
+                         } else {
+                             Ok(s)
+                         }
+                ) >>
+                    e: expr1 >> (e)))
         >>
         ({
             let mut rest = args.into_iter();
@@ -250,7 +251,6 @@ named!(expr1_int <&str, Expr>, map!(digit, |s: &str| Expr::Lit{
 named!(expr1_float <&str, Expr>, map!(double_s, |s| Expr::Lit{
     ty: TyDefer::empty(),
     value: Literal::Float(s)}));
-
 
 named!(expr1_bool <&str, Expr>, alt!(
     map!(tag!("true"),  |_| Expr::Lit{ty: TyDefer::empty(), value: Literal::Bool(true)}) |
@@ -283,7 +283,6 @@ named!(expr1_tuple <&str, Expr>, do_parse!(
         ))
 );
 
-
 // TODO: use verify
 named!(symbol <&str, Symbol>, do_parse!(
     map_res!(peek!(alphanumeric),
@@ -299,4 +298,3 @@ pub fn parse(input: &str) -> ::std::result::Result<AST, Err<&str>> {
     let iresult = top(input);
     iresult.to_result()
 }
-

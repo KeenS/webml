@@ -12,8 +12,6 @@ pub struct HIR2MIR {
     closure_wrapper: HashMap<Symbol, (Symbol, EbbTy, EbbTy)>,
 }
 
-
-
 fn from(ty: hir::HTy) -> EbbTy {
     use hir::HTy::*;
     match ty {
@@ -22,20 +20,21 @@ fn from(ty: hir::HTy) -> EbbTy {
         Int => EbbTy::Int,
         Float => EbbTy::Float,
         Tuple(tys) => EbbTy::Tuple(tys.into_iter().map(from).collect()),
-        Fun(arg, ret) => {
-            EbbTy::Cls {
-                closures: vec![],
-                param: Box::new(from(*arg)),
-                ret: Box::new(from(*ret)),
-            }
-        }
+        Fun(arg, ret) => EbbTy::Cls {
+            closures: vec![],
+            param: Box::new(from(*arg)),
+            ret: Box::new(from(*ret)),
+        },
     }
 }
 
-
 impl HIR2MIR {
     pub fn new(id: Id) -> Self {
-        HIR2MIR { id, label: 0 , closure_wrapper: HashMap::new()}
+        HIR2MIR {
+            id,
+            label: 0,
+            closure_wrapper: HashMap::new(),
+        }
     }
 
     fn genlabel(&mut self, name: &str) -> Symbol {
@@ -51,11 +50,19 @@ impl HIR2MIR {
         name
     }
 
-    fn to_make_closure_wrapper(&mut self, fname: Symbol, param_ty: EbbTy, body_ty: EbbTy) -> Symbol {
+    fn to_make_closure_wrapper(
+        &mut self,
+        fname: Symbol,
+        param_ty: EbbTy,
+        body_ty: EbbTy,
+    ) -> Symbol {
         // tmp name
         let wrapper_name = self.wrapper_name(fname.clone());
-        let wrapper_name = self.closure_wrapper.entry(fname).or_insert(
-            (wrapper_name, param_ty.clone(), body_ty.clone()));
+        let wrapper_name = self.closure_wrapper.entry(fname).or_insert((
+            wrapper_name,
+            param_ty.clone(),
+            body_ty.clone(),
+        ));
         wrapper_name.0.clone()
     }
 
@@ -69,7 +76,13 @@ impl HIR2MIR {
             mainebuilder = self.trans_val(&mut funs, &mut mainbuilder, mainebuilder, val);
         }
         for (fname, (wrapper_name, param_ty, ret_ty)) in self.closure_wrapper.clone().into_iter() {
-            self.make_wrapper(&mut funs, fname.clone(), wrapper_name.clone(), param_ty.clone(), ret_ty.clone());
+            self.make_wrapper(
+                &mut funs,
+                fname.clone(),
+                wrapper_name.clone(),
+                param_ty.clone(),
+                ret_ty.clone(),
+            );
         }
 
         let ebb = mainebuilder.ret(None, EbbTy::Unit);
@@ -79,12 +92,22 @@ impl HIR2MIR {
         MIR(funs)
     }
 
-    fn make_wrapper(&mut self, funs: &mut Vec<Function>, fname: Symbol, wrapper_name: Symbol, param_ty: EbbTy, ret_ty: EbbTy) {
+    fn make_wrapper(
+        &mut self,
+        funs: &mut Vec<Function>,
+        fname: Symbol,
+        wrapper_name: Symbol,
+        param_ty: EbbTy,
+        ret_ty: EbbTy,
+    ) {
         let param = Symbol::new("param");
         let mut fb = FunctionBuilder::new(wrapper_name, ret_ty.clone());
         let mut eb = EBBBuilder::new(
             Symbol::new("entry"),
-            vec![(EbbTy::Tuple(vec![]), Symbol::new("_")), (param_ty, param.clone())]
+            vec![
+                (EbbTy::Tuple(vec![]), Symbol::new("_")),
+                (param_ty, param.clone()),
+            ],
         );
         let ret = Symbol::new("ret");
         eb.call(ret.clone(), ret_ty.clone(), fname, vec![param]);
@@ -118,7 +141,7 @@ impl HIR2MIR {
                 //                assert_eq!(body_ty, ty_);
                 let param = (from(param.0), param.1);
                 let mut eb_;
-                if ! captures.is_empty() {
+                if !captures.is_empty() {
                     // make closured function
                     let (tuples, vars): (Vec<_>, Vec<_>) = captures
                         .into_iter()
@@ -228,7 +251,8 @@ impl HIR2MIR {
                 let param_ty = from(param_ty);
                 let body_ty = from(body_ty);
                 if envs.is_empty() {
-                    let wrapper_name = self.to_make_closure_wrapper(fname, param_ty.clone(), body_ty.clone());
+                    let wrapper_name =
+                        self.to_make_closure_wrapper(fname, param_ty.clone(), body_ty.clone());
                     fname = wrapper_name;
                 }
                 let envs = envs.into_iter().map(|(ty, var)| (from(ty), var)).collect();
@@ -241,7 +265,6 @@ impl HIR2MIR {
                 eb
             }
         }
-
     }
 
     fn trans_expr(
@@ -303,7 +326,6 @@ fn force_symbol(e: hir::Expr) -> Symbol {
         e => panic!("not a symbol, {:?}", e),
     }
 }
-
 
 impl<E> Pass<hir::HIR, E> for HIR2MIR {
     type Target = MIR;

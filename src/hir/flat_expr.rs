@@ -157,12 +157,8 @@ impl FlatExpr {
                     binds: vals,
                     ret: ret,
                 }
-
             }
-            x @ Closure { .. } |
-            x @ Sym { .. } |
-            x @ Lit { .. } => x,
-
+            x @ Closure { .. } | x @ Sym { .. } | x @ Lit { .. } => x,
         }
     }
     // because self.make_val(self.flat_expr(expr)) doesn't pass borrow checker, we need this util
@@ -182,10 +178,8 @@ impl FlatExpr {
         };
         let sym = Expr::Sym { name: name, ty: ty };
         (Box::new(sym), val)
-
     }
 }
-
 
 impl<E> Pass<HIR, E> for FlatExpr {
     type Target = HIR;

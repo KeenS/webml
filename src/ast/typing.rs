@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::ops::{Drop, Deref, DerefMut};
+use std::ops::{Deref, DerefMut, Drop};
 
 use ast::*;
 use prim::*;
@@ -9,7 +9,6 @@ pub struct TyEnv {
     envs: Vec<HashMap<String, TyDefer>>,
     position: usize,
 }
-
 
 #[derive(Debug)]
 struct Scope<'a>(&'a mut TyEnv);
@@ -33,8 +32,10 @@ fn unify<'a>(t1: &mut TyDefer, t2: &mut TyDefer) -> Result<'a, ()> {
                 Ok(())
             } else {
                 match (t1, t2) {
-                    (&mut Ty::Fun(ref mut p1, ref mut b1),
-                     &mut Ty::Fun(ref mut p2, ref mut b2)) => {
+                    (
+                        &mut Ty::Fun(ref mut p1, ref mut b1),
+                        &mut Ty::Fun(ref mut p2, ref mut b2),
+                    ) => {
                         unify(p1, p2)?;
                         unify(b1, b2)?;
                         Ok(())
@@ -52,26 +53,21 @@ fn unify<'a>(t1: &mut TyDefer, t2: &mut TyDefer) -> Result<'a, ()> {
                             Ok(())
                         }
                     }
-                    (t1, t2) => {
-                        Err(TypeError::MisMatch {
-                            expected: t1.clone(),
-                            actual: t2.clone(),
-                        })
-                    }
+                    (t1, t2) => Err(TypeError::MisMatch {
+                        expected: t1.clone(),
+                        actual: t2.clone(),
+                    }),
                 }
             }
         }
-        (unknown @ &mut None, concrete @ &mut Some(_)) |
-        (concrete @ &mut Some(_), unknown @ &mut None) => {
+        (unknown @ &mut None, concrete @ &mut Some(_))
+        | (concrete @ &mut Some(_), unknown @ &mut None) => {
             *unknown = concrete.clone();
             Ok(())
         }
         _ => return Err(TypeError::CannotInfer),
     }
-
 }
-
-
 
 impl<'a> Scope<'a> {
     fn new(tyenv: &'a mut TyEnv) -> Self {
@@ -97,7 +93,6 @@ impl<'a> Scope<'a> {
             }
         }
         None
-
     }
 
     fn insert(&mut self, k: String, v: TyDefer) -> Option<TyDefer> {
@@ -112,7 +107,6 @@ impl<'a> Scope<'a> {
         Ok(())
     }
 
-
     fn infer_val<'b, 'r>(&'b mut self, val: &mut ast::Val) -> Result<'r, ()> {
         let &mut ast::Val {
             ref mut ty,
@@ -123,14 +117,12 @@ impl<'a> Scope<'a> {
         if *rec {
             self.insert(name.0.clone(), ty.clone());
             self.infer_expr(expr, ty)?;
-
         } else {
             self.infer_expr(expr, ty)?;
             self.insert(name.0.clone(), ty.clone());
         }
         Ok(())
     }
-
 
     fn infer_expr<'b, 'r>(
         &'b mut self,
@@ -270,7 +262,6 @@ impl<'a> Scope<'a> {
                 Ok(())
             }
         }
-
     }
 
     fn infer_symbol<'b, 'r>(&'b mut self, sym: &mut Symbol, given: &mut TyDefer) -> Result<'r, ()> {
@@ -306,12 +297,10 @@ impl<'a> Scope<'a> {
                 *g = Some(ty.clone());
                 Ok(())
             }
-            (ref ty, &mut Some(ref exp)) => {
-                Err(TypeError::MisMatch {
-                    expected: exp.clone(),
-                    actual: ty.clone(),
-                })
-            }
+            (ref ty, &mut Some(ref exp)) => Err(TypeError::MisMatch {
+                expected: exp.clone(),
+                actual: ty.clone(),
+            }),
         }
     }
 
@@ -330,8 +319,6 @@ impl<'a> Scope<'a> {
         Ok(())
     }
 }
-
-
 
 impl<'a> Drop for Scope<'a> {
     fn drop(&mut self) {
@@ -358,7 +345,6 @@ impl TyEnv {
         Ok(())
     }
 }
-
 
 use pass::Pass;
 impl<'a> Pass<ast::AST, TypeError<'a>> for TyEnv {

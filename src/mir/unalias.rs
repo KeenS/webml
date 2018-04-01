@@ -4,16 +4,15 @@ use mir::*;
 use prim::*;
 use pass::Pass;
 
-
-
 pub struct UnAlias {
     alias: HashMap<Symbol, Symbol>,
 }
 
-
 impl UnAlias {
     pub fn new() -> Self {
-        UnAlias { alias: HashMap::new() }
+        UnAlias {
+            alias: HashMap::new(),
+        }
     }
 
     fn conv_mir(&mut self, mir: MIR) -> MIR {
@@ -36,7 +35,9 @@ impl UnAlias {
         let mut body = Vec::new();
         for mut op in ebb.body.into_iter() {
             match &mut op {
-                &mut Alias { ref var, ref sym, .. } => {
+                &mut Alias {
+                    ref var, ref sym, ..
+                } => {
                     self.alias(var.clone(), sym.clone());
                     continue;
                 }
@@ -44,58 +45,58 @@ impl UnAlias {
                     ref mut l,
                     ref mut r,
                     ..
-                } |
-                &mut Sub {
+                }
+                | &mut Sub {
                     ref mut l,
                     ref mut r,
                     ..
-                } |
-                &mut Mul {
+                }
+                | &mut Mul {
                     ref mut l,
                     ref mut r,
                     ..
-                } |
-                &mut DivInt {
+                }
+                | &mut DivInt {
                     ref mut l,
                     ref mut r,
                     ..
-                } |
-                &mut DivFloat {
+                }
+                | &mut DivFloat {
                     ref mut l,
                     ref mut r,
                     ..
-                } |
-                &mut Mod {
+                }
+                | &mut Mod {
                     ref mut l,
                     ref mut r,
                     ..
-                } |
-                &mut Eq {
+                }
+                | &mut Eq {
                     ref mut l,
                     ref mut r,
                     ..
-                } |
-                &mut Neq {
+                }
+                | &mut Neq {
                     ref mut l,
                     ref mut r,
                     ..
-                } |
-                &mut Gt {
+                }
+                | &mut Gt {
                     ref mut l,
                     ref mut r,
                     ..
-                } |
-                &mut Ge {
+                }
+                | &mut Ge {
                     ref mut l,
                     ref mut r,
                     ..
-                } |
-                &mut Lt {
+                }
+                | &mut Lt {
                     ref mut l,
                     ref mut r,
                     ..
-                } |
-                &mut Le {
+                }
+                | &mut Le {
                     ref mut l,
                     ref mut r,
                     ..
@@ -103,11 +104,9 @@ impl UnAlias {
                     self.resolv_alias(l);
                     self.resolv_alias(r);
                 }
-                &mut Tuple { ref mut tuple, .. } => {
-                    for v in tuple.iter_mut() {
-                        self.resolv_alias(v);
-                    }
-                }
+                &mut Tuple { ref mut tuple, .. } => for v in tuple.iter_mut() {
+                    self.resolv_alias(v);
+                },
                 &mut Proj { ref mut tuple, .. } => {
                     self.resolv_alias(tuple);
                 }
@@ -122,14 +121,9 @@ impl UnAlias {
                         self.resolv_alias(var);
                     }
                 }
-                &mut BuiltinCall {
-                    ref mut args,
-                    ..
-                } => {
-                    for arg in args.iter_mut() {
-                        self.resolv_alias(arg);
-                    }
-                }
+                &mut BuiltinCall { ref mut args, .. } => for arg in args.iter_mut() {
+                    self.resolv_alias(arg);
+                },
 
                 &mut Call {
                     ref mut fun,
@@ -141,11 +135,9 @@ impl UnAlias {
                         self.resolv_alias(arg);
                     }
                 }
-                &mut Jump { ref mut args, .. } => {
-                    for arg in args.iter_mut() {
-                        self.resolv_alias(arg);
-                    }
-                }
+                &mut Jump { ref mut args, .. } => for arg in args.iter_mut() {
+                    self.resolv_alias(arg);
+                },
                 &mut Ret { ref mut value, .. } => {
                     value.as_mut().map(|v| self.resolv_alias(v));
                 }
@@ -164,7 +156,6 @@ impl UnAlias {
         }
         self.alias.insert(al, orig);
     }
-
 
     fn resolv_alias(&mut self, sym: &mut Symbol) {
         match self.alias.get(sym) {
