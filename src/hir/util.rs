@@ -137,3 +137,145 @@ pub trait Traverse {
 
     fn traverse_lit(&mut self, _ty: &mut HTy, _value: &mut Literal) {}
 }
+
+pub trait Transform {
+    fn transform_hir(&mut self, mut hir: HIR) -> HIR {
+        hir.0 = hir.0
+            .into_iter()
+            .map(|val| self.transform_val(val))
+            .collect();
+        hir
+    }
+
+    fn transform_val(&mut self, mut val: Val) -> Val {
+        val.expr = self.transform_expr(val.expr);
+        val
+    }
+
+    fn transform_expr(&mut self, expr: Expr) -> Expr {
+        use hir::Expr::*;
+        match expr {
+            Binds { ty, binds, ret } => self.transform_binds(ty, binds, ret),
+            BinOp { ty, name, l, r } => self.transform_binop(ty, name, l, r),
+            Fun {
+                param,
+                body_ty,
+                body,
+                captures,
+            } => self.transform_fun(param, body_ty, body, captures),
+            App { fun, arg, ty } => self.transform_app(ty, fun, arg),
+            If {
+                ty,
+                cond,
+                then,
+                else_,
+            } => self.transform_if(ty, cond, then, else_),
+            Tuple { tys, tuple } => self.transform_tuple(tys, tuple),
+            BuiltinCall { ty, fun, arg } => self.transform_builtin_call(ty, fun, arg),
+            Closure {
+                envs,
+                param_ty,
+                body_ty,
+                fname,
+            } => self.transform_closure(envs, param_ty, body_ty, fname),
+            Sym { ty, name } => self.transform_sym(ty, name),
+            Lit { ty, value } => self.transform_lit(ty, value),
+        }
+    }
+
+    fn transform_binds(&mut self, ty: HTy, binds: Vec<Val>, ret: Box<Expr>) -> Expr {
+        Expr::Binds {
+            ty: ty,
+            binds: binds
+                .into_iter()
+                .map(|val| self.transform_val(val))
+                .collect(),
+            ret: Box::new(self.transform_expr(*ret)),
+        }
+    }
+
+    fn transform_binop(&mut self, ty: HTy, name: Symbol, l: Box<Expr>, r: Box<Expr>) -> Expr {
+        Expr::BinOp {
+            ty,
+            name,
+            l: Box::new(self.transform_expr(*l)),
+            r: Box::new(self.transform_expr(*r)),
+        }
+    }
+
+    fn transform_fun(
+        &mut self,
+        param: (HTy, Symbol),
+        body_ty: HTy,
+        body: Box<Expr>,
+        captures: Vec<(HTy, Symbol)>,
+    ) -> Expr {
+        Expr::Fun {
+            param,
+            body_ty,
+            captures,
+            body: Box::new(self.transform_expr(*body)),
+        }
+    }
+
+    fn transform_closure(
+        &mut self,
+        envs: Vec<(HTy, Symbol)>,
+        param_ty: HTy,
+        body_ty: HTy,
+        fname: Symbol,
+    ) -> Expr {
+        Expr::Closure {
+            envs,
+            param_ty,
+            body_ty,
+            fname,
+        }
+    }
+
+    fn transform_builtin_call(&mut self, ty: HTy, fun: BIF, arg: Box<Expr>) -> Expr {
+        Expr::BuiltinCall {
+            ty: ty,
+            fun: fun,
+            arg: Box::new(self.transform_expr(*arg)),
+        }
+    }
+
+    fn transform_app(&mut self, ty: HTy, fun: Box<Expr>, arg: Box<Expr>) -> Expr {
+        Expr::App {
+            ty: ty,
+            fun: Box::new(self.transform_expr(*fun)),
+            arg: Box::new(self.transform_expr(*arg)),
+        }
+    }
+
+    fn transform_if(
+        &mut self,
+        ty: HTy,
+        cond: Box<Expr>,
+        then: Box<Expr>,
+        else_: Box<Expr>,
+    ) -> Expr {
+        Expr::If {
+            ty: ty,
+            cond: Box::new(self.transform_expr(*cond)),
+            then: Box::new(self.transform_expr(*then)),
+            else_: Box::new(self.transform_expr(*else_)),
+        }
+    }
+
+    fn transform_tuple(&mut self, tys: Vec<HTy>, tuple: Vec<Expr>) -> Expr {
+        Expr::Tuple {
+            tys: tys,
+            tuple: tuple.into_iter().map(|e| self.transform_expr(e)).collect(),
+        }
+    }
+
+    fn transform_sym(&mut self, ty: HTy, name: Symbol) -> Expr {
+        Expr::Sym { ty, name }
+    }
+
+    fn transform_lit(&mut self, ty: HTy, value: Literal) -> Expr {
+        Expr::Lit { ty, value }
+    }
+}
