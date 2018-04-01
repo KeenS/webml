@@ -17,7 +17,7 @@ impl PP for Symbol {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Literal {
     Int(i64),
     Float(f64),

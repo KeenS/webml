@@ -12,10 +12,10 @@ use std::rc::Rc;
 use ast;
 use prim::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct AST(pub Vec<Val>);
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Val {
     pub ty: TyDefer,
     pub rec: bool,
@@ -23,7 +23,7 @@ pub struct Val {
     pub expr: Expr,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Expr {
     Binds {
         ty: TyDefer,
