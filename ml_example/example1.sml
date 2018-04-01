@@ -1,7 +1,7 @@
 val x = 1
 val y=false
 val z = y
-val b = 1 + 2 * 3 + 4
+val b = 1 + 2 * 3 - 4
 val c = (1 + 2) * 3 + 4
 val d = fn x => fn y => x + y
 val e = if true then b else c
