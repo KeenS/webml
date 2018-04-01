@@ -6,7 +6,7 @@ pub struct Id(Rc<Cell<u64>>);
 
 impl Id {
     pub fn new() -> Self {
-        Id(Rc::new(Cell::new(0)))
+        Id(Rc::new(Cell::new(1)))
     }
 
     pub fn next(&mut self) -> u64 {
