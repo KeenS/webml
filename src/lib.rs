@@ -21,3 +21,9 @@ pub use pass::{Pass, Chain};
 pub use parser::parse;
 pub use ast::typing::TyEnv;
 pub use ast::TypeError;
+
+static BUILTIN_FUNCTIONS: &[&str] = &[
+    "print",
+    // "+", "-", "*", "div", "/", "mod",
+    // "=", "<>", ">", ">=", "<", "<="
+];

@@ -5,10 +5,12 @@ pub mod rename;
 pub mod unnest_func;
 pub mod flat_expr;
 pub mod force_closure;
+pub mod find_builtin;
 pub mod util;
 
 pub use self::ast2hir::AST2HIR;
 pub use self::rename::Rename;
+pub use self::find_builtin::FindBuiltin;
 pub use self::flat_let::FlatLet;
 pub use self::flat_expr::FlatExpr;
 pub use self::unnest_func::UnnestFunc;

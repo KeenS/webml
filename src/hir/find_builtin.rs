@@ -11,9 +11,30 @@ pub struct FindBuiltin {
 }
 
 impl Traverse for FindBuiltin {
+    fn traverse_app(&mut self, ty: &mut HTy, fun: &mut Box<Expr>, arg: &mut Box<Expr>) {
+        let prim_name;
+        if let Expr::Sym{ref mut name, ..} = **fun {
+            if name.1 == 0 {
+                prim_name = name.clone();
+                // pass through to satisfy borrow checher
+            } else {
+                return
+            }
+        } else {
+            return
+        }
+        *fun = Box::new(Expr::PrimFun {
+            param_ty: arg.ty(),
+            ret_ty: ty.clone(),
+            name: prim_name,
+
+        });
+        self.traverse_expr(arg);
+    }
+
     fn traverse_sym(&mut self, _ty: &mut HTy, name: &mut Symbol) {
         if name.1 == 0 {
-            println!("fond: {}", name.0);
+            panic!("primitive {} is used in non-call position, which is not supported");
         }
     }
 }

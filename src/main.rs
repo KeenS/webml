@@ -32,14 +32,15 @@ fn main() {
         TyEnv::new(),
         hir::AST2HIR,
         hir::Rename::new(id.clone()),
+        hir::FindBuiltin::new(),
         hir::FlatExpr::new(id.clone()),
         hir::FlatLet::new(),
         hir::UnnestFunc::new(id.clone()),
         hir::ForceClosure::new(),
         mir::HIR2MIR::new(id.clone()),
         mir::UnAlias::new(),
-        !mir::BlockArrange::new(),
-        lir::MIR2LIR::new(),
+        mir::BlockArrange::new(),
+        !lir::MIR2LIR::new(),
         backend::LIR2WASM::new(),
     ];
 

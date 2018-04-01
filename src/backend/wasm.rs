@@ -605,11 +605,15 @@ impl LIR2WASM {
                                         cb = cb.get_local(reg!(arg))
                                     }
                                     // prim funs
-                                    if fun.0 == "print" {
-                                        cb = cb.call(self.print_fun)
-                                    // the ret ty of print is unit
-                                    } else if fun.0 == "gc-init" {
-                                        cb = cb.call(self.init_fun)
+                                    if fun.1 == 0 {
+                                        if fun.0 == "print" {
+                                            // the ret ty of print is unit
+                                            cb = cb.call(self.print_fun)
+                                        } else if fun.0 == "gc-init" {
+                                            cb = cb.call(self.init_fun)
+                                        } else {
+                                            unreachable!("unhandled primitive found: {:?}", fun);
+                                        }
                                     } else {
                                         cb = cb.call(self.function_index(fun))
                                         // FIXME: if ret ty isn't unit

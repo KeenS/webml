@@ -126,7 +126,7 @@ impl PP for Expr {
                 write!(w, ")")?;
             }
             &PrimFun { ref name, .. } => {
-                name.pp(w, indent)?;
+                write!(w, "__{}", name.0)?;
             }
             &Sym { ref name, .. } => {
                 name.pp(w, indent)?;
