@@ -142,6 +142,7 @@ pub enum Op {
     StackAlloc(Reg, u32, Vec<LTy>),
 
     StoreFnPtr(Addr, Symbol),
+    BuiltinCall(Reg, BIF, Vec<Reg>),
     FunCall(Reg, Symbol, Vec<Reg>),
     ClosureCall(Reg, Reg, Vec<Reg>),
     Jump(Label),

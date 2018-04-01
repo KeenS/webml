@@ -291,6 +291,29 @@ impl PP for Op {
                 }
                 write!(w, ")")?;
             }
+            &BuiltinCall {
+                ref var,
+                ref ty,
+                ref fun,
+                ref args,
+            } => {
+                write!(w, "{}", space)?;
+                var.pp(w, indent)?;
+                write!(w, ": ")?;
+                ty.pp(w, indent)?;
+                write!(w, " := ")?;
+                fun.pp(w, indent)?;
+                write!(w, "(")?;
+                inter_iter!{
+                    args.iter(),
+                    write!(w, ", ")?,
+                    |arg| => {
+                        arg.pp(w, 0)?
+                    }
+                }
+                write!(w, ")")?;
+            }
+
             &Call {
                 ref var,
                 ref ty,

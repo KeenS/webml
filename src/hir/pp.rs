@@ -62,7 +62,7 @@ impl PP for Expr {
                 ref captures,
                 ..
             } => {
-                write!(w, "fun (")?;
+                write!(w, "fun(")?;
                 inter_iter! {
                     captures,
                     write!(w, ", ")?,
@@ -125,8 +125,10 @@ impl PP for Expr {
                 }
                 write!(w, ")")?;
             }
-            &PrimFun { ref name, .. } => {
-                write!(w, "__{}", name.0)?;
+            &BuiltinCall { ref fun, ref arg, .. } => {
+                fun.pp(w, indent)?;
+                write!(w, " ")?;
+                arg.pp(w, indent)?;
             }
             &Sym { ref name, .. } => {
                 name.pp(w, indent)?;

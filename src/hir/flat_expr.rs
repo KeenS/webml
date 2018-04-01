@@ -80,6 +80,19 @@ impl FlatExpr {
                     captures: captures,
                 }
             }
+            BuiltinCall { fun, arg, ty } => {
+                let (arg, argval) = self.flat_make_val(*arg);
+                let (ret, retval) = self.make_val(BuiltinCall {
+                    fun: fun,
+                    arg: arg,
+                    ty: ty.clone(),
+                });
+                Binds {
+                    ty: ty.clone(),
+                    binds: vec![argval, retval],
+                    ret: ret,
+                }
+            }
             App { fun, arg, ty } => {
                 let (fun, funval) = self.flat_make_val(*fun);
                 let (arg, argval) = self.flat_make_val(*arg);
@@ -147,7 +160,6 @@ impl FlatExpr {
 
             }
             x @ Closure { .. } |
-            x @ PrimFun { .. } |
             x @ Sym { .. } |
             x @ Lit { .. } => x,
 

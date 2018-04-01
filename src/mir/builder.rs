@@ -195,6 +195,16 @@ impl EBBBuilder {
         self
     }
 
+    pub fn builtin_call(&mut self, var: Symbol, ty: EbbTy, fun: BIF, args: Vec<Symbol>) -> &mut Self {
+        self.push(Op::BuiltinCall {
+            var: var,
+            ty: ty,
+            fun: fun,
+            args: args,
+        });
+        self
+    }
+
     pub fn call(&mut self, var: Symbol, ty: EbbTy, fun: Symbol, args: Vec<Symbol>) -> &mut Self {
         self.push(Op::Call {
             var: var,

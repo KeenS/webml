@@ -187,6 +187,18 @@ impl<'a> Scope<'a> {
                     }
                 }
             }
+            BuiltinCall {
+                ty,
+                fun,
+                mut arg,
+            } => {
+                arg = Box::new(self.conv_expr(cls, *arg, None));
+                BuiltinCall {
+                    ty: ty,
+                    fun: fun,
+                    arg: arg,
+                }
+            }
             App {
                 ty,
                 mut fun,
@@ -228,9 +240,7 @@ impl<'a> Scope<'a> {
             }
             Sym { name, ty } => Sym { ty: ty, name: name },
             expr @ Closure { .. } |
-            expr @ Lit { .. } |
-            expr @ PrimFun { .. } => expr,
-
+            expr @ Lit { .. } => expr
         }
     }
 
@@ -269,6 +279,9 @@ impl<'a> Scope<'a> {
                 self.analyze_free_expr(frees, bound, r);
             }
             &Fun { .. } => panic!("internal bug"),
+            &BuiltinCall { ref arg, .. } => {
+                self.analyze_free_expr(frees, bound, arg);
+            }
             &App { ref fun, ref arg, .. } => {
                 self.analyze_free_expr(frees, bound, fun);
                 self.analyze_free_expr(frees, bound, arg);
@@ -300,7 +313,7 @@ impl<'a> Scope<'a> {
                     }
                 }
             }
-            &Lit { .. } | &PrimFun { .. } => (),
+            &Lit { .. } => (),
         }
     }
 
@@ -328,6 +341,12 @@ impl<'a> Scope<'a> {
 
             Fun { ref mut body, .. } => {
                 Box::new(self.rename(body, from, to));
+            }
+            BuiltinCall {
+                ref mut arg,
+                ..
+            } => {
+                self.rename(arg, from, to);
             }
             App {
                 ref mut fun,
@@ -357,7 +376,7 @@ impl<'a> Scope<'a> {
                     *name = to.clone()
                 }
             }
-            Closure { .. } | Lit { .. } | PrimFun { .. } => (),
+            Closure { .. } | Lit { .. } => (),
         }
     }
 }

@@ -42,10 +42,10 @@ pub enum Expr {
         l: Box<Expr>,
         r: Box<Expr>,
     },
-    PrimFun {
-        param_ty: HTy,
-        ret_ty: HTy,
-        name: Symbol,
+    BuiltinCall {
+        ty: HTy,
+        fun: BIF,
+        arg: Box<Expr>,
     },
     Fun {
         param: (HTy, Symbol),
@@ -104,11 +104,6 @@ impl Expr {
                 ref body_ty,
                 ..
             } |
-            &PrimFun {
-                ref param_ty,
-                ret_ty: ref body_ty,
-                ..
-            } |
             &Fun {
                 param: (ref param_ty, _),
                 ref body_ty,
@@ -117,6 +112,7 @@ impl Expr {
             &Tuple { ref tys, .. } => HTy::Tuple(tys.clone()),
             &BinOp { ref ty, .. } |
             &Binds { ref ty, .. } |
+            &BuiltinCall { ref ty, .. } |
             &App { ref ty, .. } |
             &If { ref ty, .. } |
             &Sym { ref ty, .. } |

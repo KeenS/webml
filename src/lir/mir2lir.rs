@@ -44,7 +44,7 @@ impl MIR2LIR {
         let target_table = self.make_target_table(body.as_ref(), &symbol_table);
         macro_rules! reg {
             ($var: expr) => {
-                symbol_table[&$var].clone()
+                symbol_table.get(&$var).expect("variable resolution failed").clone()
             }
         }
 
@@ -318,6 +318,15 @@ impl MIR2LIR {
                             acc += 8;
                         }
                     }
+                    &m::BuiltinCall {
+                        ref var,
+                        ref fun,
+                        ref args,
+                        ..
+                    } => {
+                        let args = args.iter().map(|a| reg!(a)).collect();
+                        ops.push(BuiltinCall(reg!(var), fun.clone(), args))
+                    }
                     &m::Call {
                         ref var,
                         ref fun,
@@ -453,6 +462,9 @@ impl MIR2LIR {
                         ref var, ref ty, ..
                     }
                     | &mir::Op::Proj {
+                        ref var, ref ty, ..
+                    }
+                    | &mir::Op::BuiltinCall {
                         ref var, ref ty, ..
                     }
                     | &mir::Op::Call {

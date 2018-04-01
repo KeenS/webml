@@ -347,6 +347,20 @@ impl PP for Op {
                 }
                 write!(w, ")")?;
             }
+            BuiltinCall(ref reg, ref name, ref args) => {
+                reg.pp(w, indent)?;
+                write!(w, ": ")?;
+                reg.0.pp(w, indent)?;
+                write!(w, " <- builtin call ")?;
+                name.pp(w, indent)?;
+                write!(w, "(")?;
+                inter_iter!{
+                    args.iter(),
+                    write!(w, ", ")?,
+                    |arg| => arg.pp(w, indent)?
+                }
+                write!(w, ")")?;
+            }
             Jump(ref label) => {
                 write!(w, "jump ")?;
                 label.pp(w, indent)?;

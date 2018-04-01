@@ -61,11 +61,10 @@ impl HIR2MIR {
 
     fn trans_hir(&mut self, hir: hir::HIR) -> MIR {
         // TODO: make anonymous
-        let mut mainbuilder = FunctionBuilder::new(Symbol::new("main"), EbbTy::Unit);
+        let mut mainbuilder = FunctionBuilder::new(Symbol::new("sml-main"), EbbTy::Unit);
         let mut mainebuilder = EBBBuilder::new(self.genlabel("entry"), Vec::new());
         let mut funs = Vec::new();
 
-        mainebuilder.call(Symbol::new("_"), EbbTy::Unit, Symbol::new("gc-init"), vec![]);
         for val in hir.0.into_iter() {
             mainebuilder = self.trans_val(&mut funs, &mut mainbuilder, mainebuilder, val);
         }
@@ -149,6 +148,12 @@ impl HIR2MIR {
                 eb.alias(name, from(ty_), var);
                 eb
             }
+            BuiltinCall { ty, fun, arg } => {
+                assert_eq!(ty, ty_);
+                let arg = force_symbol(*arg);
+                eb.builtin_call(name, from(ty), fun, vec![arg]);
+                eb
+            }
             App { ty, fun, arg } => {
                 assert_eq!(ty, ty_);
                 let arg = force_symbol(*arg);
@@ -228,21 +233,6 @@ impl HIR2MIR {
                 }
                 let envs = envs.into_iter().map(|(ty, var)| (from(ty), var)).collect();
                 eb.closure(name, param_ty, body_ty, fname, envs);
-                eb
-            }
-            PrimFun {
-                param_ty,
-                ret_ty,
-                name: fname,
-            } => {
-                eb.alias(
-                    name,
-                    EbbTy::Ebb {
-                        params: vec![from(param_ty)],
-                        ret: Box::new(from(ret_ty)),
-                    },
-                    fname,
-                );
                 eb
             }
             Lit { ty, value } => {

@@ -159,6 +159,16 @@ impl LIR2WASM {
         };
 
         self.md.add_element(elems);
+        let main_function = FunctionBuilder::new(funtype!(()))
+                             .code(|cb, _params|
+                                   cb
+                                   .call(self.init_fun)
+                                   .call(self.function_index(&Symbol::new("sml-main")))
+                                   .return_())
+                             .build();
+        let main_function = self.md.new_function(main_function);
+        self.md.start(main_function);
+
         let mut ret = ModuleBuilder::new();
         // FIXME:
         ::std::mem::swap(&mut self.md, &mut ret);
@@ -201,7 +211,7 @@ impl LIR2WASM {
                 ($label: expr) => (scope.iter()
                                    .rev()
                                    .position(|x| *x == $label)
-                                   .expect("internal error") as u32)
+                                   .expect("internal error: label not found") as u32)
             }
 
             for c in body {
@@ -604,22 +614,19 @@ impl LIR2WASM {
                                     for arg in args.iter() {
                                         cb = cb.get_local(reg!(arg))
                                     }
-                                    // prim funs
-                                    if fun.1 == 0 {
-                                        if fun.0 == "print" {
-                                            // the ret ty of print is unit
-                                            cb = cb.call(self.print_fun)
-                                        } else if fun.0 == "gc-init" {
-                                            cb = cb.call(self.init_fun)
-                                        } else {
-                                            unreachable!("unhandled primitive found: {:?}", fun);
-                                        }
-                                    } else {
-                                        cb = cb.call(self.function_index(fun))
-                                        // FIXME: if ret ty isn't unit
-                                            .set_local(reg!(reg));
-                                    }
 
+                                    cb = cb.call(self.function_index(fun))
+                                    // FIXME: if ret ty isn't unit
+                                        .set_local(reg!(reg));
+
+                                }
+                                BuiltinCall(ref reg, ref fun, ref args) => {
+                                    for arg in args.iter() {
+                                        cb = cb.get_local(reg!(arg))
+                                    }
+                                    match fun {
+                                        &BIF::Print => cb = cb.call(self.print_fun)
+                                    }
                                 }
                                 Jump(ref label) => {
                                     cb = cb.br(label!(label));
@@ -639,9 +646,6 @@ impl LIR2WASM {
             }
             cb
         });
-        self.md.start(FunctionIndex(
-            self.function_table[&Symbol::new("main")],
-        ));
         let (_, body) = fb.build();
         // use calculated type index,
         NewFunction::new_function(&mut self.md, self.function_type_table[&ftype], body);

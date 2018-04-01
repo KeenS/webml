@@ -60,14 +60,6 @@ impl<'a> Traverse for Trav<'a> {
                 self.traverse_binop(ty, name, l, r);
                 return;
             }
-            PrimFun {
-                ref mut param_ty,
-                ref mut ret_ty,
-                ref mut name,
-            } => {
-                self.traverse_primfun(param_ty, ret_ty, name);
-                return;
-            }
             Fun {
                 ref mut param,
                 ref mut body_ty,
@@ -84,6 +76,14 @@ impl<'a> Traverse for Trav<'a> {
                 ref mut fname,
             } => {
                 self.traverse_closure(envs, param_ty, body_ty, fname);
+                return;
+            }
+            BuiltinCall {
+                ref mut ty,
+                ref mut fun,
+                ref mut arg,
+            } => {
+                self.traverse_builtin_call(ty, fun, arg);
                 return;
             }
             App {

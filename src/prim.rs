@@ -41,3 +41,20 @@ impl PP for Literal {
         Ok(())
     }
 }
+
+#[derive(Debug, Clone)]
+pub enum BIF {
+    Print,
+}
+
+impl PP for BIF {
+    fn pp(&self, w: &mut io::Write, _indent: usize) -> io::Result<()> {
+        use self::BIF::*;
+        match self {
+            &Print => {
+                write!(w, "_print")?;
+            }
+        }
+        Ok(())
+    }
+}

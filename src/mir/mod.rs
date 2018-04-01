@@ -117,6 +117,12 @@ pub enum Op {
         env: Vec<(EbbTy, Symbol)>,
     },
     // TODO: separate closure call and direct call
+    BuiltinCall {
+        var: Symbol,
+        ty: EbbTy,
+        fun: BIF,
+        args: Vec<Symbol>,
+    },
     Call {
         var: Symbol,
         ty: EbbTy,

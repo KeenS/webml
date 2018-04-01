@@ -27,11 +27,6 @@ pub trait Traverse {
                 ref mut l,
                 ref mut r,
             } => self.traverse_binop(ty, name, l, r),
-            PrimFun {
-                ref mut param_ty,
-                ref mut ret_ty,
-                ref mut name,
-            } => self.traverse_primfun(param_ty, ret_ty, name),
             Fun {
                 ref mut param,
                 ref mut body_ty,
@@ -44,6 +39,11 @@ pub trait Traverse {
                 ref mut body_ty,
                 ref mut fname,
             } => self.traverse_closure(envs, param_ty, body_ty, fname),
+            BuiltinCall {
+                ref mut ty,
+                ref mut fun,
+                ref mut arg,
+            } => self.traverse_builtin_call(ty, fun, arg),
             App {
                 ref mut ty,
                 ref mut fun,
@@ -89,8 +89,6 @@ pub trait Traverse {
         self.traverse_expr(r)
     }
 
-    fn traverse_primfun(&mut self, _param_ty: &mut HTy, _ret_ty: &mut HTy, _name: &mut Symbol) {}
-
     fn traverse_fun(
         &mut self,
         _param: &mut (HTy, Symbol),
@@ -109,6 +107,10 @@ pub trait Traverse {
         _fname: &mut Symbol,
     ) {
 
+    }
+
+    fn traverse_builtin_call(&mut self, _ty: &mut HTy, fun: &mut BIF, arg: &mut Box<Expr>) {
+        self.traverse_expr(arg);
     }
 
     fn traverse_app(&mut self, _ty: &mut HTy, fun: &mut Box<Expr>, arg: &mut Box<Expr>) {

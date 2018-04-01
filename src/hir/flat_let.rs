@@ -29,6 +29,16 @@ fn take_binds(mut expr: Expr) -> (Expr, Vec<Val>) {
             };
             (expr, lbinds)
         }
+        BuiltinCall { mut arg, ty, fun } => {
+            let (a, mut binds) = take_binds(*arg);
+            arg = Box::new(a);
+            let expr = BuiltinCall {
+                fun: fun,
+                arg: arg,
+                ty: ty,
+            };
+            (expr, binds)
+        }
         App {
             mut fun,
             mut arg,
@@ -72,7 +82,6 @@ fn take_binds(mut expr: Expr) -> (Expr, Vec<Val>) {
         }
         x @ Fun { .. } |
         x @ Closure { .. } |
-        x @ PrimFun { .. } |
         x @ Sym { .. } |
         x @ Lit { .. } => (x, Vec::new()),
 
@@ -151,6 +160,14 @@ impl FlatLet {
                     captures: captures,
                 }
             }
+            BuiltinCall { fun, mut arg, ty} => {
+                arg = Box::new(self.flat_expr(*arg));
+                BuiltinCall {
+                    fun: fun,
+                    arg: arg,
+                    ty: ty,
+                }
+            }
             App {
                 mut fun,
                 mut arg,
@@ -188,7 +205,6 @@ impl FlatLet {
                 }
             }
             x @ Closure { .. } |
-            x @ PrimFun { .. } |
             x @ Sym { .. } |
             x @ Lit { .. } => x,
 
