@@ -1,6 +1,5 @@
 use ast;
 use pass::Pass;
-use prim::*;
 use hir::{HIR, Expr, Val, HTy};
 
 pub struct AST2HIR;
@@ -53,18 +52,10 @@ impl AST2HIR {
                     ret: Box::new(self.conv_expr(*ret)),
                 }
             }
-            E::Add { ty, l, r } => {
-                Expr::Op {
+            E::BinOp { op, ty, l, r } => {
+                Expr::BinOp {
                     ty: conv_ty(ty),
-                    name: Symbol::new("+"),
-                    l: Box::new(self.conv_expr(*l)),
-                    r: Box::new(self.conv_expr(*r)),
-                }
-            }
-            E::Mul { ty, l, r } => {
-                Expr::Op {
-                    ty: conv_ty(ty),
-                    name: Symbol::new("*"),
+                    name: op,
                     l: Box::new(self.conv_expr(*l)),
                     r: Box::new(self.conv_expr(*r)),
                 }

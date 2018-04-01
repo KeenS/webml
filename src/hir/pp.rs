@@ -44,7 +44,7 @@ impl PP for Expr {
                 ret.pp(w, indent + 4)?;
                 write!(w, "\n{}end", ind)?;
             }
-            &Op {
+            &BinOp {
                 ref name,
                 ref l,
                 ref r,

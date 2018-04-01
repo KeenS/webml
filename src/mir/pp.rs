@@ -115,6 +115,27 @@ impl PP for EBB {
     }
 }
 
+fn pp_binop(
+    w: &mut io::Write,
+    indent: usize,
+    space: &str,
+    name: &str,
+    var: &Symbol,
+    ty: &EbbTy,
+    l: &Symbol,
+    r: &Symbol,
+) -> io::Result<()> {
+    write!(w, "{}", space)?;
+    var.pp(w, indent)?;
+    write!(w, ": ")?;
+    ty.pp(w, indent)?;
+    write!(w, " := ")?;
+    l.pp(w, indent)?;
+    write!(w, " {} ", name)?;
+    r.pp(w, indent)?;
+    Ok(())
+}
+
 impl PP for Op {
     fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
         use mir::Op::*;
@@ -151,14 +172,15 @@ impl PP for Op {
                 ref l,
                 ref r,
             } => {
-                write!(w, "{}", space)?;
-                var.pp(w, indent)?;
-                write!(w, ": ")?;
-                ty.pp(w, indent)?;
-                write!(w, " := ")?;
-                l.pp(w, indent)?;
-                write!(w, " + ")?;
-                r.pp(w, indent)?;
+                pp_binop(w, indent, &space, "+", var, ty, l, r)?;
+            }
+            &Sub {
+                ref var,
+                ref ty,
+                ref l,
+                ref r,
+            } => {
+                pp_binop(w, indent, &space, "-", var, ty, l, r)?;
             }
             &Mul {
                 ref var,
@@ -166,14 +188,79 @@ impl PP for Op {
                 ref l,
                 ref r,
             } => {
-                write!(w, "{}", space)?;
-                var.pp(w, indent)?;
-                write!(w, ": ")?;
-                ty.pp(w, indent)?;
-                write!(w, " := ")?;
-                l.pp(w, indent)?;
-                write!(w, " * ")?;
-                r.pp(w, indent)?;
+                pp_binop(w, indent, &space, "*", var, ty, l, r)?;
+            }
+            &DivInt {
+                ref var,
+                ref ty,
+                ref l,
+                ref r,
+            } => {
+                pp_binop(w, indent, &space, "div", var, ty, l, r)?;
+            }
+            &DivFloat {
+                ref var,
+                ref ty,
+                ref l,
+                ref r,
+            } => {
+                pp_binop(w, indent, &space, "/", var, ty, l, r)?;
+            }
+            &Mod {
+                ref var,
+                ref ty,
+                ref l,
+                ref r,
+            } => {
+                pp_binop(w, indent, &space, "mod", var, ty, l, r)?;
+            }
+            &Eq {
+                ref var,
+                ref ty,
+                ref l,
+                ref r,
+            } => {
+                pp_binop(w, indent, &space, "=", var, ty, l, r)?;
+            }
+            &Neq {
+                ref var,
+                ref ty,
+                ref l,
+                ref r,
+            } => {
+                pp_binop(w, indent, &space, "<>", var, ty, l, r)?;
+            }
+            &Gt {
+                ref var,
+                ref ty,
+                ref l,
+                ref r,
+            } => {
+                pp_binop(w, indent, &space, ">", var, ty, l, r)?;
+            }
+            &Ge {
+                ref var,
+                ref ty,
+                ref l,
+                ref r,
+            } => {
+                pp_binop(w, indent, &space, ">=", var, ty, l, r)?;
+            }
+            &Lt {
+                ref var,
+                ref ty,
+                ref l,
+                ref r,
+            } => {
+                pp_binop(w, indent, &space, "<", var, ty, l, r)?;
+            }
+            &Le {
+                ref var,
+                ref ty,
+                ref l,
+                ref r,
+            } => {
+                pp_binop(w, indent, &space, "<=", var, ty, l, r)?;
             }
             &Closure {
                 ref var,

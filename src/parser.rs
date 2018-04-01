@@ -2,6 +2,25 @@ use nom::*;
 use prim::*;
 use ast::*;
 
+static KEYWORDS: &[&str] = &["val", "fun", "fn", "let", "in", "end", "if", "then", "else"];
+static INFIX7: &[&str] = &["*", "/", "div", "mod"];
+static INFIX6: &[&str] = &["+", "-"];
+static INFIX5: &[&str] = &[];
+static INFIX4: &[&str] = &["=", "<>", "<=", "<", ">=", ">"];
+static INFIX3: &[&str] = &[];
+static INFIX2: &[&str] = &[];
+static INFIX1: &[&str] = &[];
+
+fn one_of<'a, 'b>(input: &'a str, tags: &'b [&str]) -> IResult<&'a str, &'a str> {
+    for tag in tags {
+        if input.starts_with(tag) {
+            return IResult::Done(&input[(tag.len())..],
+                                 &input[0..(tag.len())],)
+        }
+    };
+    IResult::Error(Err::Code(ErrorKind::IsNotStr))
+}
+
 named!(top <&str, AST >, do_parse!(
     opt!(multispace) >>
         tops: separated_list!(multispace, bind) >>
@@ -50,24 +69,49 @@ named!(expr <&str, Expr>, alt_complete!(
     expr_bind |
     expr_fun  |
     expr_if   |
-    expr_add  |
-    expr1
+    infix4
 ));
 
-named!(expr1 <&str, Expr>, alt_complete!(
-    expr1_app |
-    expr1_mul |
+// infix 4
+named!(infix4 <&str, Expr>, alt_complete!(
+    infix4_op |
+    infix5
+
+));
+
+// infix 5
+named!(infix5 <&str, Expr>, alt_complete!(
+    infix5_op |
+    infix6
+));
+
+// infix 6
+named!(infix6 <&str, Expr>, alt_complete!(
+    infix6_op |
+    infix7
+
+));
+
+// infix 7
+named!(infix7 <&str, Expr>, alt_complete!(
+    infix7_op |
     expr0
 
 ));
 
 named!(expr0 <&str, Expr>, alt_complete!(
-    expr0_tuple |
-    expr0_paren |
-    expr0_float |
-    expr0_int   |
-    expr0_bool  |
-    expr0_sym
+    expr0_app |
+    expr1
+
+));
+
+named!(expr1 <&str, Expr>, alt_complete!(
+    expr1_tuple |
+    expr1_paren |
+    expr1_float |
+    expr1_int   |
+    expr1_bool  |
+    expr1_sym
 ));
 
 
@@ -107,9 +151,80 @@ named!(expr_if <&str, Expr>, do_parse!(
         })
 ));
 
-named!(expr1_app <&str, Expr>, do_parse!(
-    fun: expr0 >> multispace >>
-        args: separated_nonempty_list!(multispace, expr0) >>
+// FIXME make left associative
+named!(infix7_op <&str, Expr>, do_parse!(
+    e1: expr0 >>
+        opt!(multispace) >>
+        op: call!(one_of, INFIX7) >>
+        opt!(multispace) >>
+        e2: infix7 >>
+        (Expr::BinOp {
+            op: Symbol::new(op),
+            ty: TyDefer::empty(),
+            l: Box::new(e1),
+            r: Box::new(e2)
+        })
+));
+
+// FIXME make left associative
+named!(infix6_op <&str, Expr>, do_parse!(
+    e1: infix7 >>
+        opt!(multispace) >>
+        op: call!(one_of, INFIX6) >>
+        opt!(multispace) >>
+        e2: infix6 >>
+        (Expr::BinOp {
+            op: Symbol::new(op),
+            ty: TyDefer::empty(),
+            l: Box::new(e1),
+            r: Box::new(e2)
+        })
+));
+
+// FIXME make left associative
+named!(infix5_op <&str, Expr>, do_parse!(
+    e1: infix6 >>
+        opt!(multispace) >>
+        op: call!(one_of, INFIX5) >>
+        opt!(multispace) >>
+        e2: infix5 >>
+        (Expr::BinOp {
+            op: Symbol::new(op),
+            ty: TyDefer::empty(),
+            l: Box::new(e1),
+            r: Box::new(e2)
+        })
+));
+
+// FIXME make left associative
+named!(infix4_op <&str, Expr>, do_parse!(
+    e1: infix5 >>
+        opt!(multispace) >>
+        op: call!(one_of, INFIX4) >>
+        opt!(multispace) >>
+        e2: infix4 >>
+        (Expr::BinOp {
+            op: Symbol::new(op),
+            ty: TyDefer::empty(),
+            l: Box::new(e1),
+            r: Box::new(e2)
+        })
+));
+
+named!(expr0_app <&str, Expr>, do_parse!(
+    // left-recursion is eliminated
+    fun: expr1 >> multispace >>
+        args: separated_nonempty_list!(multispace,
+                                       do_parse!(
+                                           map_res!(peek!(recognize!(expr1)),
+                                                    |s| if [INFIX1, INFIX2, INFIX3, INFIX4, INFIX5, INFIX6, INFIX7].iter().any(|tags| tags.contains(&s)) {
+                                                        Err(ErrorKind::IsNot) as  ::std::result::Result<&str, ErrorKind>
+                                                    } else {
+                                                        Ok(s)
+                                                    }
+                                           ) >>
+                                               e: expr1 >> (e)))
+        >>
         ({
             let mut rest = args.into_iter();
             let arg = rest.next().unwrap();
@@ -123,43 +238,25 @@ named!(expr1_app <&str, Expr>, do_parse!(
           })
 ));
 
-named!(expr_add <&str, Expr>, do_parse!(
-    e1: expr1 >>
-        opt!(multispace) >>
-        tag_s!("+") >>
-        opt!(multispace) >>
-        e2: expr >>
-        (Expr::Add {ty: TyDefer::empty(), l: Box::new(e1), r: Box::new(e2)})
-));
-
-named!(expr1_mul <&str, Expr>, do_parse!(
-    e1: expr0 >>
-        opt!(multispace) >>
-        tag_s!("*") >>
-        opt!(multispace) >>
-        e2: expr1 >>
-        (Expr::Mul {ty: TyDefer::empty(), l: Box::new(e1), r: Box::new(e2)})
-));
-
-named!(expr0_sym <&str, Expr>, map!(symbol, |s| Expr::Sym{
+named!(expr1_sym <&str, Expr>, map!(symbol, |s| Expr::Sym{
     ty: TyDefer::empty(),
     name: s
 }));
 
-named!(expr0_int <&str, Expr>, map!(digit, |s: &str| Expr::Lit{
+named!(expr1_int <&str, Expr>, map!(digit, |s: &str| Expr::Lit{
     ty: TyDefer::empty(),
     value: Literal::Int(s.parse().unwrap())}));
 
-named!(expr0_float <&str, Expr>, map!(double_s, |s| Expr::Lit{
+named!(expr1_float <&str, Expr>, map!(double_s, |s| Expr::Lit{
     ty: TyDefer::empty(),
     value: Literal::Float(s)}));
 
 
-named!(expr0_bool <&str, Expr>, alt!(
+named!(expr1_bool <&str, Expr>, alt!(
     map!(tag!("true"),  |_| Expr::Lit{ty: TyDefer::empty(), value: Literal::Bool(true)}) |
     map!(tag!("false"), |_| Expr::Lit{ty: TyDefer::empty(), value: Literal::Bool(false)})));
 
-named!(expr0_paren <&str, Expr>, do_parse!(
+named!(expr1_paren <&str, Expr>, do_parse!(
     tag!("(") >>
          opt!(multispace) >>
          e: expr >>
@@ -168,7 +265,7 @@ named!(expr0_paren <&str, Expr>, do_parse!(
     (e))
 );
 
-named!(expr0_tuple <&str, Expr>, do_parse!(
+named!(expr1_tuple <&str, Expr>, do_parse!(
     tag!("(") >>
         opt!(multispace) >>
         es: many1!(do_parse!(
@@ -186,17 +283,20 @@ named!(expr0_tuple <&str, Expr>, do_parse!(
         ))
 );
 
+
+// TODO: use verify
 named!(symbol <&str, Symbol>, do_parse!(
     map_res!(peek!(alphanumeric),
-             |s| match s as &str {
-                 "val" | "fun" | "fn" | "let" | "in" | "end" | "if" | "then" | "else" => {
-                     Err(ErrorKind::IsNot) as  ::std::result::Result<&str, ErrorKind>
-                 },
-                 s => Ok(s)
-             }) >>
+             |s| if KEYWORDS.contains(&s) {
+                 Err(ErrorKind::IsNot) as  ::std::result::Result<&str, ErrorKind>
+             } else {
+                 Ok(s)
+             }
+             ) >>
         sym: alphanumeric >> (Symbol::new(sym.to_string()))));
 
 pub fn parse(input: &str) -> ::std::result::Result<AST, Err<&str>> {
     let iresult = top(input);
     iresult.to_result()
 }
+

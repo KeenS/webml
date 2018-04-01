@@ -152,25 +152,50 @@ impl<'a> Scope<'a> {
                 unify(ty, given)?;
                 Ok(())
             }
-            &mut Add {
-                ref mut ty,
-                ref mut l,
-                ref mut r,
-            } |
-            &mut Mul {
+            &mut BinOp {
+                ref mut op,
                 ref mut ty,
                 ref mut l,
                 ref mut r,
             } => {
-                let mut lty = TyDefer::new(Some(Ty::Int));
-                self.infer_expr(l, &mut lty).or_else(|_| {
-                    *lty.get_mut() = Some(Ty::Float);
-                    self.infer_expr(l, &mut lty)
-                })?;
-                self.infer_expr(r, &mut lty)?;
-                unify(&mut lty, given)?;
-                unify(ty, given)?;
-                Ok(())
+                if ["+", "-", "*"].contains(&op.0.as_str()) {
+                    let mut lty = TyDefer::new(Some(Ty::Int));
+                    self.infer_expr(l, &mut lty).or_else(|_| {
+                        *lty.get_mut() = Some(Ty::Float);
+                        self.infer_expr(l, &mut lty)
+                    })?;
+                    self.infer_expr(r, &mut lty)?;
+                    unify(&mut lty, given)?;
+                    unify(ty, given)?;
+                    Ok(())
+                } else if ["=", "<>", ">", ">=", "<", "<="].contains(&op.0.as_str()) {
+                    let mut lty = TyDefer::new(Some(Ty::Int));
+                    self.infer_expr(l, &mut lty).or_else(|_| {
+                        *lty.get_mut() = Some(Ty::Float);
+                        self.infer_expr(l, &mut lty)
+                    })?;
+                    self.infer_expr(r, &mut lty)?;
+                    let mut ret_ty = TyDefer::new(Some(Ty::Bool));
+                    unify(&mut ret_ty, given)?;
+                    unify(ty, given)?;
+                    Ok(())
+                } else if ["div", "mod"].contains(&op.0.as_str()) {
+                    let mut lty = TyDefer::new(Some(Ty::Int));
+                    self.infer_expr(l, &mut lty)?;
+                    self.infer_expr(r, &mut lty)?;
+                    unify(&mut lty, given)?;
+                    unify(ty, given)?;
+                    Ok(())
+                } else if ["/"].contains(&op.0.as_str()) {
+                    let mut lty = TyDefer::new(Some(Ty::Float));
+                    self.infer_expr(l, &mut lty)?;
+                    self.infer_expr(r, &mut lty)?;
+                    unify(&mut lty, given)?;
+                    unify(ty, given)?;
+                    Ok(())
+                } else {
+                    unimplemented!()
+                }
             }
             &mut Fun {
                 ref mut param_ty,

@@ -51,13 +51,13 @@ impl<'a> Traverse for Trav<'a> {
                 self.traverse_binds(ty, binds, ret);
                 return;
             }
-            Op {
+            BinOp {
                 ref mut ty,
                 ref mut name,
                 ref mut l,
                 ref mut r,
             } => {
-                self.traverse_op(ty, name, l, r);
+                self.traverse_binop(ty, name, l, r);
                 return;
             }
             PrimFun {
@@ -145,7 +145,7 @@ impl<'a> Traverse for Trav<'a> {
     }
 
 
-    fn traverse_op(
+    fn traverse_binop(
         &mut self,
         _ty: &mut HTy,
         _name: &mut Symbol,
@@ -220,7 +220,7 @@ impl<'a> Traverse for Reg<'a> {
     }
 
 
-    fn traverse_op(
+    fn traverse_binop(
         &mut self,
         _ty: &mut HTy,
         _name: &mut Symbol,

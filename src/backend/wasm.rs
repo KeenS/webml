@@ -237,10 +237,64 @@ impl LIR2WASM {
                                         .i32_add()
                                         .set_local(reg!(reg1))
                                 }
+                                SubI32(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .i32_sub()
+                                        .set_local(reg!(reg1))
+                                }
                                 MulI32(ref reg1, ref reg2, ref reg3) => {
                                     cb = cb.get_local(reg!(reg2))
                                         .get_local(reg!(reg3))
                                         .i32_mul()
+                                        .set_local(reg!(reg1))
+                                }
+                                DivI32(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .i32_div_s()
+                                        .set_local(reg!(reg1))
+                                }
+                                ModI32(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .i32_rem_s()
+                                        .set_local(reg!(reg1))
+                                }
+                                EqI32(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .i32_eq()
+                                        .set_local(reg!(reg1))
+                                }
+                                NeqI32(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .i32_ne()
+                                        .set_local(reg!(reg1))
+                                }
+                                GtI32(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .i32_gt_s()
+                                        .set_local(reg!(reg1))
+                                }
+                                GeI32(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .i32_ge_s()
+                                        .set_local(reg!(reg1))
+                                }
+                                LtI32(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .i32_lt_s()
+                                        .set_local(reg!(reg1))
+                                }
+                                LeI32(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .i32_le_s()
                                         .set_local(reg!(reg1))
                                 }
                                 MoveI32(ref reg1, ref reg2) |
@@ -273,10 +327,64 @@ impl LIR2WASM {
                                         .i64_add()
                                         .set_local(reg!(reg1))
                                 }
+                                SubI64(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .i64_sub()
+                                        .set_local(reg!(reg1))
+                                }
                                 MulI64(ref reg1, ref reg2, ref reg3) => {
                                     cb = cb.get_local(reg!(reg2))
                                         .get_local(reg!(reg3))
                                         .i64_mul()
+                                        .set_local(reg!(reg1))
+                                }
+                                DivI64(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .i64_div_s()
+                                        .set_local(reg!(reg1))
+                                }
+                                ModI64(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .i64_rem_s()
+                                        .set_local(reg!(reg1))
+                                }
+                                EqI64(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .i64_eq()
+                                        .set_local(reg!(reg1))
+                                }
+                                NeqI64(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .i64_ne()
+                                        .set_local(reg!(reg1))
+                                }
+                                GtI64(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .i64_gt_s()
+                                        .set_local(reg!(reg1))
+                                }
+                                GeI64(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .i64_ge_s()
+                                        .set_local(reg!(reg1))
+                                }
+                                LtI64(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .i64_lt_s()
+                                        .set_local(reg!(reg1))
+                                }
+                                LeI64(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .i64_le_s()
                                         .set_local(reg!(reg1))
                                 }
                                 LoadI64(ref reg, ref addr) => {
@@ -291,6 +399,78 @@ impl LIR2WASM {
                                         .i64_store(addr.1);
                                 }
 
+                                ConstF32(ref reg, c) => cb = cb.constant(c).set_local(reg!(reg)),
+                                AddF32(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .f32_add()
+                                        .set_local(reg!(reg1))
+                                }
+                                SubF32(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .f32_sub()
+                                        .set_local(reg!(reg1))
+                                }
+                                MulF32(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .f32_mul()
+                                        .set_local(reg!(reg1))
+                                }
+                                DivF32(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .f32_div()
+                                        .set_local(reg!(reg1))
+                                }
+                                EqF32(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .f32_eq()
+                                        .set_local(reg!(reg1))
+                                }
+                                NeqF32(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .f32_ne()
+                                        .set_local(reg!(reg1))
+                                }
+                                GtF32(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .f32_gt()
+                                        .set_local(reg!(reg1))
+                                }
+                                GeF32(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .f32_ge()
+                                        .set_local(reg!(reg1))
+                                }
+                                LtF32(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .f32_lt()
+                                        .set_local(reg!(reg1))
+                                }
+                                LeF32(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .f32_le()
+                                        .set_local(reg!(reg1))
+                                }
+                                StoreF32(ref addr, ref value) => {
+                                    cb = cb.get_local(reg!(addr.0))
+                                        .get_local(reg!(value))
+                                        .f32_store(addr.1);
+                                }
+                                LoadF32(ref reg, ref addr) => {
+                                    cb = cb.get_local(reg!(addr.0)).f32_load(addr.1).set_local(
+                                        reg!(reg),
+                                    );
+                                }
+
                                 ConstF64(ref reg, c) => cb = cb.constant(c).set_local(reg!(reg)),
                                 AddF64(ref reg1, ref reg2, ref reg3) => {
                                     cb = cb.get_local(reg!(reg2))
@@ -298,10 +478,58 @@ impl LIR2WASM {
                                         .f64_add()
                                         .set_local(reg!(reg1))
                                 }
+                                SubF64(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .f64_sub()
+                                        .set_local(reg!(reg1))
+                                }
                                 MulF64(ref reg1, ref reg2, ref reg3) => {
                                     cb = cb.get_local(reg!(reg2))
                                         .get_local(reg!(reg3))
                                         .f64_mul()
+                                        .set_local(reg!(reg1))
+                                }
+                                DivF64(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .f64_div()
+                                        .set_local(reg!(reg1))
+                                }
+                                EqF64(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .f64_eq()
+                                        .set_local(reg!(reg1))
+                                }
+                                NeqF64(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .f64_ne()
+                                        .set_local(reg!(reg1))
+                                }
+                                GtF64(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .f64_gt()
+                                        .set_local(reg!(reg1))
+                                }
+                                GeF64(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .f64_ge()
+                                        .set_local(reg!(reg1))
+                                }
+                                LtF64(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .f64_lt()
+                                        .set_local(reg!(reg1))
+                                }
+                                LeF64(ref reg1, ref reg2, ref reg3) => {
+                                    cb = cb.get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .f64_le()
                                         .set_local(reg!(reg1))
                                 }
                                 StoreF64(ref addr, ref value) => {
@@ -312,31 +540,6 @@ impl LIR2WASM {
 
                                 LoadF64(ref reg, ref addr) => {
                                     cb = cb.get_local(reg!(addr.0)).f64_load(addr.1).set_local(
-                                        reg!(reg),
-                                    );
-                                }
-
-                                ConstF32(ref reg, c) => cb = cb.constant(c).set_local(reg!(reg)),
-                                AddF32(ref reg1, ref reg2, ref reg3) => {
-                                    cb = cb.get_local(reg!(reg2))
-                                        .get_local(reg!(reg3))
-                                        .f32_add()
-                                        .set_local(reg!(reg1))
-                                }
-                                MulF32(ref reg1, ref reg2, ref reg3) => {
-                                    cb = cb.get_local(reg!(reg2))
-                                        .get_local(reg!(reg3))
-                                        .f32_mul()
-                                        .set_local(reg!(reg1))
-                                }
-
-                                StoreF32(ref addr, ref value) => {
-                                    cb = cb.get_local(reg!(addr.0))
-                                        .get_local(reg!(value))
-                                        .f32_store(addr.1);
-                                }
-                                LoadF32(ref reg, ref addr) => {
-                                    cb = cb.get_local(reg!(addr.0)).f32_load(addr.1).set_local(
                                         reg!(reg),
                                     );
                                 }

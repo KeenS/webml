@@ -10,7 +10,7 @@ fn take_binds(mut expr: Expr) -> (Expr, Vec<Val>) {
             expr = *ret;
             (expr, binds)
         }
-        Op {
+        BinOp {
             ty,
             name,
             mut l,
@@ -21,7 +21,7 @@ fn take_binds(mut expr: Expr) -> (Expr, Vec<Val>) {
             l = Box::new(l_);
             r = Box::new(r_);
             lbinds.append(&mut rbinds);
-            let expr = Op {
+            let expr = BinOp {
                 ty: ty,
                 name: name,
                 l: l,
@@ -122,7 +122,7 @@ impl FlatLet {
                     ty: ty,
                 }
             }
-            Op {
+            BinOp {
                 ty,
                 name,
                 mut l,
@@ -130,7 +130,7 @@ impl FlatLet {
             } => {
                 l = Box::new(self.flat_expr(*l));
                 r = Box::new(self.flat_expr(*r));
-                Op {
+                BinOp {
                     ty: ty,
                     name: name,
                     l: l,

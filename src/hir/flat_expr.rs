@@ -46,10 +46,10 @@ impl FlatExpr {
                     ty: ty,
                 }
             }
-            Op { ty, name, l, r } => {
+            BinOp { ty, name, l, r } => {
                 let (l, lval) = self.flat_make_val(*l);
                 let (r, rval) = self.flat_make_val(*r);
-                let (ret, retval) = self.make_val(Op {
+                let (ret, retval) = self.make_val(BinOp {
                     ty: ty.clone(),
                     name: name,
                     l: l,

@@ -30,12 +30,8 @@ pub enum Expr {
         binds: Vec<Val>,
         ret: Box<Expr>,
     },
-    Add {
-        ty: TyDefer,
-        l: Box<Expr>,
-        r: Box<Expr>,
-    },
-    Mul {
+    BinOp {
+        op: Symbol,
         ty: TyDefer,
         l: Box<Expr>,
         r: Box<Expr>,

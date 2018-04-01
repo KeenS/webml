@@ -128,7 +128,7 @@ impl<'a> Scope<'a> {
                     ret: ret,
                 }
             }
-            Op {
+            BinOp {
                 ty,
                 name,
                 mut l,
@@ -136,7 +136,7 @@ impl<'a> Scope<'a> {
             } => {
                 l = Box::new(self.conv_expr(cls, *l, None));
                 r = Box::new(self.conv_expr(cls, *r, None));
-                Op {
+                BinOp {
                     ty: ty,
                     name: name,
                     l: l,
@@ -264,7 +264,7 @@ impl<'a> Scope<'a> {
                 }
                 scope.analyze_free_expr(frees, bound, ret);
             }
-            &Op { ref l, ref r, .. } => {
+            &BinOp { ref l, ref r, .. } => {
                 self.analyze_free_expr(frees, bound, l);
                 self.analyze_free_expr(frees, bound, r);
             }
@@ -317,7 +317,7 @@ impl<'a> Scope<'a> {
                 }
                 self.rename(ret, from, to);
             }
-            Op {
+            BinOp {
                 ref mut l,
                 ref mut r,
                 ..

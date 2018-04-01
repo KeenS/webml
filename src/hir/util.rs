@@ -21,12 +21,12 @@ pub trait Traverse {
                 ref mut binds,
                 ref mut ret,
             } => self.traverse_binds(ty, binds, ret),
-            Op {
+            BinOp {
                 ref mut ty,
                 ref mut name,
                 ref mut l,
                 ref mut r,
-            } => self.traverse_op(ty, name, l, r),
+            } => self.traverse_binop(ty, name, l, r),
             PrimFun {
                 ref mut param_ty,
                 ref mut ret_ty,
@@ -78,7 +78,7 @@ pub trait Traverse {
         self.traverse_expr(ret)
     }
 
-    fn traverse_op(
+    fn traverse_binop(
         &mut self,
         _ty: &mut HTy,
         _name: &mut Symbol,

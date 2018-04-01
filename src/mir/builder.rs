@@ -67,8 +67,108 @@ impl EBBBuilder {
         self
     }
 
+    pub fn sub(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
+        self.push(Op::Sub {
+            var: var,
+            ty: ty,
+            l: l,
+            r: r,
+        });
+        self
+    }
+
     pub fn mul(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
         self.push(Op::Mul {
+            var: var,
+            ty: ty,
+            l: l,
+            r: r,
+        });
+        self
+    }
+
+    pub fn div_int(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
+        self.push(Op::DivInt {
+            var: var,
+            ty: ty,
+            l: l,
+            r: r,
+        });
+        self
+    }
+
+    pub fn div_float(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
+        self.push(Op::DivFloat {
+            var: var,
+            ty: ty,
+            l: l,
+            r: r,
+        });
+        self
+    }
+
+    pub fn mod_(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
+        self.push(Op::Mod {
+            var: var,
+            ty: ty,
+            l: l,
+            r: r,
+        });
+        self
+    }
+
+    pub fn eq(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
+        self.push(Op::Eq {
+            var: var,
+            ty: ty,
+            l: l,
+            r: r,
+        });
+        self
+    }
+
+    pub fn neq(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
+        self.push(Op::Neq {
+            var: var,
+            ty: ty,
+            l: l,
+            r: r,
+        });
+        self
+    }
+
+    pub fn gt(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
+        self.push(Op::Gt {
+            var: var,
+            ty: ty,
+            l: l,
+            r: r,
+        });
+        self
+    }
+
+    pub fn ge(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
+        self.push(Op::Ge {
+            var: var,
+            ty: ty,
+            l: l,
+            r: r,
+        });
+        self
+    }
+
+    pub fn lt(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
+        self.push(Op::Lt {
+            var: var,
+            ty: ty,
+            l: l,
+            r: r,
+        });
+        self
+    }
+
+    pub fn le(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
+        self.push(Op::Le {
             var: var,
             ty: ty,
             l: l,

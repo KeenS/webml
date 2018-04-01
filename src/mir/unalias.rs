@@ -45,7 +45,57 @@ impl UnAlias {
                     ref mut r,
                     ..
                 } |
+                &mut Sub {
+                    ref mut l,
+                    ref mut r,
+                    ..
+                } |
                 &mut Mul {
+                    ref mut l,
+                    ref mut r,
+                    ..
+                } |
+                &mut DivInt {
+                    ref mut l,
+                    ref mut r,
+                    ..
+                } |
+                &mut DivFloat {
+                    ref mut l,
+                    ref mut r,
+                    ..
+                } |
+                &mut Mod {
+                    ref mut l,
+                    ref mut r,
+                    ..
+                } |
+                &mut Eq {
+                    ref mut l,
+                    ref mut r,
+                    ..
+                } |
+                &mut Neq {
+                    ref mut l,
+                    ref mut r,
+                    ..
+                } |
+                &mut Gt {
+                    ref mut l,
+                    ref mut r,
+                    ..
+                } |
+                &mut Ge {
+                    ref mut l,
+                    ref mut r,
+                    ..
+                } |
+                &mut Lt {
+                    ref mut l,
+                    ref mut r,
+                    ..
+                } |
+                &mut Le {
                     ref mut l,
                     ref mut r,
                     ..

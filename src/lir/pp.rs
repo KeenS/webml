@@ -151,72 +151,157 @@ impl PP for Op {
                 write!(w, " <- {}", i)?;
             }
             AddI32(ref r1, ref r2, ref r3)
-                | AddI64(ref r1, ref r2, ref r3) => {
-                r1.pp(w, indent)?;
-                write!(w, ": ")?;
-                r1.0.pp(w, indent)?;
-                write!(w, " <- ")?;
-                r2.pp(w, indent)?;
-                write!(w, " + ")?;
-                r3.pp(w, indent)?;
-            }
+                | AddI64(ref r1, ref r2, ref r3)
+                | AddF32(ref r1, ref r2, ref r3)
+                | AddF64(ref r1, ref r2, ref r3)
+                => {
+                    r1.pp(w, indent)?;
+                    write!(w, ": ")?;
+                    r1.0.pp(w, indent)?;
+                    write!(w, " <- ")?;
+                    r2.pp(w, indent)?;
+                    write!(w, " + ")?;
+                    r3.pp(w, indent)?;
+                }
+            SubI32(ref r1, ref r2, ref r3)
+                | SubI64(ref r1, ref r2, ref r3)
+                | SubF32(ref r1, ref r2, ref r3)
+                | SubF64(ref r1, ref r2, ref r3)
+                => {
+                    r1.pp(w, indent)?;
+                    write!(w, ": ")?;
+                    r1.0.pp(w, indent)?;
+                    write!(w, " <- ")?;
+                    r2.pp(w, indent)?;
+                    write!(w, " - ")?;
+                    r3.pp(w, indent)?;
+                }
             MulI32(ref r1, ref r2, ref r3)
-                | MulI64(ref r1, ref r2, ref r3) => {
-                r1.pp(w, indent)?;
-                write!(w, ": ")?;
-                r1.0.pp(w, indent)?;
-                write!(w, " <- ")?;
-                r2.pp(w, indent)?;
-                write!(w, " * ")?;
-                r3.pp(w, indent)?;
-            }
+                | MulI64(ref r1, ref r2, ref r3)
+                | MulF32(ref r1, ref r2, ref r3)
+                | MulF64(ref r1, ref r2, ref r3)
+                => {
+                    r1.pp(w, indent)?;
+                    write!(w, ": ")?;
+                    r1.0.pp(w, indent)?;
+                    write!(w, " <- ")?;
+                    r2.pp(w, indent)?;
+                    write!(w, " * ")?;
+                    r3.pp(w, indent)?;
+                }
+            DivI32(ref r1, ref r2, ref r3)
+                | DivI64(ref r1, ref r2, ref r3)
+                | DivF32(ref r1, ref r2, ref r3)
+                | DivF64(ref r1, ref r2, ref r3)
+                => {
+                    r1.pp(w, indent)?;
+                    write!(w, ": ")?;
+                    r1.0.pp(w, indent)?;
+                    write!(w, " <- ")?;
+                    r2.pp(w, indent)?;
+                    write!(w, " / ")?;
+                    r3.pp(w, indent)?;
+                }
+            ModI32(ref r1, ref r2, ref r3)
+                | ModI64(ref r1, ref r2, ref r3)
+                => {
+                    r1.pp(w, indent)?;
+                    write!(w, ": ")?;
+                    r1.0.pp(w, indent)?;
+                    write!(w, " <- ")?;
+                    r2.pp(w, indent)?;
+                    write!(w, " mod ")?;
+                    r3.pp(w, indent)?;
+                }
+            EqI32(ref r1, ref r2, ref r3)
+                | EqI64(ref r1, ref r2, ref r3)
+                | EqF32(ref r1, ref r2, ref r3)
+                | EqF64(ref r1, ref r2, ref r3)
+                => {
+                    r1.pp(w, indent)?;
+                    write!(w, ": ")?;
+                    r1.0.pp(w, indent)?;
+                    write!(w, " <- ")?;
+                    r2.pp(w, indent)?;
+                    write!(w, " = ")?;
+                    r3.pp(w, indent)?;
+                }
+            NeqI32(ref r1, ref r2, ref r3)
+                | NeqI64(ref r1, ref r2, ref r3)
+                | NeqF32(ref r1, ref r2, ref r3)
+                | NeqF64(ref r1, ref r2, ref r3)
+                => {
+                    r1.pp(w, indent)?;
+                    write!(w, ": ")?;
+                    r1.0.pp(w, indent)?;
+                    write!(w, " <- ")?;
+                    r2.pp(w, indent)?;
+                    write!(w, " <> ")?;
+                    r3.pp(w, indent)?;
+                }
+            GtI32(ref r1, ref r2, ref r3)
+                | GtI64(ref r1, ref r2, ref r3)
+                | GtF32(ref r1, ref r2, ref r3)
+                | GtF64(ref r1, ref r2, ref r3)
+                => {
+                    r1.pp(w, indent)?;
+                    write!(w, ": ")?;
+                    r1.0.pp(w, indent)?;
+                    write!(w, " <- ")?;
+                    r2.pp(w, indent)?;
+                    write!(w, " > ")?;
+                    r3.pp(w, indent)?;
+                }
+            GeI32(ref r1, ref r2, ref r3)
+                | GeI64(ref r1, ref r2, ref r3)
+                | GeF32(ref r1, ref r2, ref r3)
+                | GeF64(ref r1, ref r2, ref r3)
+                => {
+                    r1.pp(w, indent)?;
+                    write!(w, ": ")?;
+                    r1.0.pp(w, indent)?;
+                    write!(w, " <- ")?;
+                    r2.pp(w, indent)?;
+                    write!(w, " >= ")?;
+                    r3.pp(w, indent)?;
+                }
+            LtI32(ref r1, ref r2, ref r3)
+                | LtI64(ref r1, ref r2, ref r3)
+                | LtF32(ref r1, ref r2, ref r3)
+                | LtF64(ref r1, ref r2, ref r3)
+                => {
+                    r1.pp(w, indent)?;
+                    write!(w, ": ")?;
+                    r1.0.pp(w, indent)?;
+                    write!(w, " <- ")?;
+                    r2.pp(w, indent)?;
+                    write!(w, " < ")?;
+                    r3.pp(w, indent)?;
+                }
+            LeI32(ref r1, ref r2, ref r3)
+                | LeI64(ref r1, ref r2, ref r3)
+                | LeF32(ref r1, ref r2, ref r3)
+                | LeF64(ref r1, ref r2, ref r3)
+                => {
+                    r1.pp(w, indent)?;
+                    write!(w, ": ")?;
+                    r1.0.pp(w, indent)?;
+                    write!(w, " <- ")?;
+                    r2.pp(w, indent)?;
+                    write!(w, " <= ")?;
+                    r3.pp(w, indent)?;
+                }
             ConstF32(ref reg, ref i) => {
                 reg.pp(w, indent)?;
                 write!(w, ": ")?;
                 reg.0.pp(w, indent)?;
                 write!(w, " <- {}", i)?;
             }
-            AddF32(ref r1, ref r2, ref r3) => {
-                r1.pp(w, indent)?;
-                write!(w, ": ")?;
-                r1.0.pp(w, indent)?;
-                write!(w, " <- ")?;
-                r2.pp(w, indent)?;
-                write!(w, " + ")?;
-                r3.pp(w, indent)?;
-            }
-            MulF32(ref r1, ref r2, ref r3) => {
-                r1.pp(w, indent)?;
-                write!(w, ": ")?;
-                r1.0.pp(w, indent)?;
-                write!(w, " <- ")?;
-                r2.pp(w, indent)?;
-                write!(w, " * ")?;
-                r3.pp(w, indent)?;
-            }
             ConstF64(ref reg, ref i) => {
                 reg.pp(w, indent)?;
                 write!(w, ": ")?;
                 reg.0.pp(w, indent)?;
                 write!(w, " <- {}", i)?;
-            }
-            AddF64(ref r1, ref r2, ref r3) => {
-                r1.pp(w, indent)?;
-                write!(w, ": ")?;
-                r1.0.pp(w, indent)?;
-                write!(w, " <- ")?;
-                r2.pp(w, indent)?;
-                write!(w, " + ")?;
-                r3.pp(w, indent)?;
-            }
-            MulF64(ref r1, ref r2, ref r3) => {
-                r1.pp(w, indent)?;
-                write!(w, ": ")?;
-                r1.0.pp(w, indent)?;
-                write!(w, " <- ")?;
-                r2.pp(w, indent)?;
-                write!(w, " * ")?;
-                r3.pp(w, indent)?;
             }
             HeapAlloc(ref reg, ref value, ref tys) => {
                 reg.pp(w, indent)?;

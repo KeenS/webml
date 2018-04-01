@@ -34,7 +34,7 @@ pub enum Expr {
         binds: Vec<Val>,
         ret: Box<Expr>,
     },
-    Op {
+    BinOp {
         ty: HTy,
         name: Symbol,
         l: Box<Expr>,
@@ -113,7 +113,7 @@ impl Expr {
                 ..
             } => HTy::fun(param_ty.clone(), body_ty.clone()),
             &Tuple { ref tys, .. } => HTy::Tuple(tys.clone()),
-            &Op { ref ty, .. } |
+            &BinOp { ref ty, .. } |
             &Binds { ref ty, .. } |
             &App { ref ty, .. } |
             &If { ref ty, .. } |

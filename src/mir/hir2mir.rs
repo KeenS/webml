@@ -51,6 +51,14 @@ impl HIR2MIR {
         name
     }
 
+    fn to_make_closure_wrapper(&mut self, fname: Symbol, param_ty: EbbTy, body_ty: EbbTy) -> Symbol {
+        // tmp name
+        let wrapper_name = self.wrapper_name(fname.clone());
+        let wrapper_name = self.closure_wrapper.entry(fname).or_insert(
+            (wrapper_name, param_ty.clone(), body_ty.clone()));
+        wrapper_name.0.clone()
+    }
+
     fn trans_hir(&mut self, hir: hir::HIR) -> MIR {
         // TODO: make anonymous
         let mut mainbuilder = FunctionBuilder::new(Symbol::new("main"), EbbTy::Unit);
@@ -180,7 +188,7 @@ impl HIR2MIR {
                 eb.tuple(name, tys, tuple);
                 eb
             }
-            Op {
+            BinOp {
                 ty,
                 name: name_,
                 l,
@@ -191,8 +199,18 @@ impl HIR2MIR {
                 let r = force_symbol(*r);
                 match name_.0.as_ref() {
                     "+" => eb.add(name, from(ty), l, r),
+                    "-" => eb.sub(name, from(ty), l, r),
                     "*" => eb.mul(name, from(ty), l, r),
-                    _ => panic!("internal error"),
+                    "div" => eb.div_int(name, from(ty), l, r),
+                    "/" => eb.div_float(name, from(ty), l, r),
+                    "mod" => eb.mod_(name, from(ty), l, r),
+                    "=" => eb.eq(name, from(ty), l, r),
+                    "<>" => eb.neq(name, from(ty), l, r),
+                    ">" => eb.gt(name, from(ty), l, r),
+                    ">=" => eb.ge(name, from(ty), l, r),
+                    "<" => eb.lt(name, from(ty), l, r),
+                    "<=" => eb.le(name, from(ty), l, r),
+                    op => panic!("internal error, unknow, op '{}'", op),
                 };
                 eb
             }
@@ -205,10 +223,7 @@ impl HIR2MIR {
                 let param_ty = from(param_ty);
                 let body_ty = from(body_ty);
                 if envs.is_empty() {
-                    let wrapper_name = self.wrapper_name(fname.clone());
-                    self.closure_wrapper.insert(
-                        fname.clone(),
-                        (wrapper_name.clone(), param_ty.clone(), body_ty.clone()));
+                    let wrapper_name = self.to_make_closure_wrapper(fname, param_ty.clone(), body_ty.clone());
                     fname = wrapper_name;
                 }
                 let envs = envs.into_iter().map(|(ty, var)| (from(ty), var)).collect();
