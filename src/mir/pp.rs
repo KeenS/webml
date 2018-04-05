@@ -375,17 +375,22 @@ impl PP for Op {
             }
             &Branch {
                 ref cond,
-                ref then,
-                ref else_,
+                ref clauses,
                 ..
             } => {
-                write!(w, "{}if ", space,)?;
+                write!(w, "{}branch", space)?;
                 cond.pp(w, indent)?;
-                write!(w, " then ")?;
-                then.pp(w, indent)?;
-                write!(w, "() else ")?;
-                else_.pp(w, indent)?;
-                write!(w, "()")?;
+                write!(w, " {{\n")?;
+                {
+                    let indent = indent + 4;
+                    let space = Self::nspaces(indent);
+                    for &(ref val, ref arm, _) in clauses.iter() {
+                        write!(w, "{}{} => ", space, val)?;
+                        arm.pp(w, indent)?;
+                        write!(w, "()\n")?;
+                    }
+                }
+                write!(w, "{}}}\n", space)?;
             }
             &Jump {
                 ref target,

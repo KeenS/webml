@@ -184,28 +184,42 @@ impl HIR2MIR {
                 eb.call(name, from(ty), fun, vec![arg]);
                 eb
             }
-            If {
-                ty,
-                cond,
-                then,
-                else_,
-            } => {
-                let thenlabel = self.genlabel("then");
-                let elselabel = self.genlabel("else");
+            Case { ty, expr, arms } => {
                 let joinlabel = self.genlabel("join");
-                let (eb, var) = self.trans_expr_block(fb, eb, hir::HTy::Bool, *cond);
-                let ebb = eb.branch(var, thenlabel.clone(), true, elselabel.clone(), true);
+                let (eb, var) = self.trans_expr_block(fb, eb, expr.ty(), *expr);
+                let arms = arms.into_iter()
+                    .enumerate()
+                    .map(|(n, (pat, expr))| match pat {
+                        hir::Pattern::Lit { value } => match value {
+                            Literal::Int(key) => (
+                                key as u64,
+                                self.genlabel(&format!("branch_arm_{}", n)),
+                                expr,
+                            ),
+                            Literal::Bool(key) => (
+                                key as u64,
+                                self.genlabel(&format!("branch_arm_{}", n)),
+                                expr,
+                            ),
+                            Literal::Float(f) => {
+                                panic!("bug: float literal pattern given: {:?}", f)
+                            }
+                        },
+                        //p => panic!("bug: non literal branch pattern given: {:?}", p),
+                    })
+                    .collect::<Vec<_>>();
+                let labels = arms.iter()
+                    .map(|&(key, ref label, _)| (key, label.clone(), true))
+                    .collect();
+                let ebb = eb.branch(var, labels);
                 fb.add_ebb(ebb);
 
-                let eb = EBBBuilder::new(thenlabel, Vec::new());
-                let (eb, var) = self.trans_expr_block(fb, eb, ty.clone(), *then);
-                let ebb = eb.jump(joinlabel.clone(), true, vec![var]);
-                fb.add_ebb(ebb);
-
-                let eb = EBBBuilder::new(elselabel, Vec::new());
-                let (eb, var) = self.trans_expr_block(fb, eb, ty.clone(), *else_);
-                let ebb = eb.jump(joinlabel.clone(), true, vec![var]);
-                fb.add_ebb(ebb);
+                for (key, label, arm) in arms {
+                    let eb = EBBBuilder::new(label, Vec::new());
+                    let (eb, var) = self.trans_expr_block(fb, eb, ty.clone(), arm);
+                    let ebb = eb.jump(joinlabel.clone(), true, vec![var]);
+                    fb.add_ebb(ebb);
+                }
 
                 let eb = EBBBuilder::new(joinlabel, vec![(from(ty), name)]);
                 eb

@@ -100,19 +100,19 @@ impl PP for Expr {
                 write!(w, ") ")?;
                 arg.pp(w, indent + 4)?;
             }
-            &If {
-                ref cond,
-                ref then,
-                ref else_,
-                ..
+            &Case {
+                ref expr, ref arms, ..
             } => {
                 let ind = Self::nspaces(indent);
-                write!(w, "if ")?;
-                cond.pp(w, indent + 4)?;
-                write!(w, "\n{}then ", ind)?;
-                then.pp(w, indent + 4)?;
-                write!(w, "\n{}else ", ind)?;
-                else_.pp(w, indent + 4)?;
+                write!(w, "case ")?;
+                expr.pp(w, indent + 4)?;
+                write!(w, " of")?;
+                for &(ref pat, ref arm) in arms {
+                    write!(w, "\n{}", ind)?;
+                    pat.pp(w, indent + 4)?;
+                    write!(w, " => ")?;
+                    arm.pp(w, indent + 4)?;
+                }
             }
             &Tuple { ref tuple, .. } => {
                 write!(w, "(")?;
@@ -140,6 +140,14 @@ impl PP for Expr {
             }
         }
         Ok(())
+    }
+}
+
+impl PP for Pattern {
+    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
+        match *self {
+            Pattern::Lit { ref value } => value.pp(w, indent),
+        }
     }
 }
 

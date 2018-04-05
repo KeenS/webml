@@ -37,8 +37,8 @@ fn main() {
         hir::ForceClosure::new(),
         mir::HIR2MIR::new(id.clone()),
         mir::UnAlias::new(),
-        !mir::BlockArrange::new(),
-        lir::MIR2LIR::new(),
+        mir::BlockArrange::new(),
+        !lir::MIR2LIR::new(),
         backend::LIR2WASM::new(),
     ];
 

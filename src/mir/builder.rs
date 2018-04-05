@@ -237,20 +237,10 @@ impl EBBBuilder {
         self
     }
 
-    pub fn branch(
-        mut self,
-        cond: Symbol,
-        then: Symbol,
-        tforward: bool,
-        else_: Symbol,
-        eforward: bool,
-    ) -> EBB {
+    pub fn branch(mut self, cond: Symbol, clauses: Vec<(u64, Symbol, bool)>) -> EBB {
         self.push(Op::Branch {
             cond: cond,
-            then: then,
-            tforward: tforward,
-            else_: else_,
-            eforward: eforward,
+            clauses: clauses,
         });
         self.0
     }

@@ -329,12 +329,29 @@ impl MIR2LIR {
                     }
                     &m::Branch {
                         ref cond,
-                        ref then,
-                        ref else_,
+                        ref clauses,
                         ..
                     } => {
-                        ops.push(JumpIfI32(reg!(cond), Label(then.clone())));
-                        ops.push(Jump(Label(else_.clone())))
+                        let mut clauses = clauses.clone();
+                        clauses.sort_by_key(|&(ref key, _, _)| *key);
+                        if !clauses.is_empty() && clauses[0].0 == 0
+                            && clauses
+                                .iter()
+                                .enumerate()
+                                .all(|(n, &(ref key, _, _))| n == (*key as usize))
+                        {
+                            // use jump table
+                            ops.push(JumpTableI32(
+                                reg!(cond),
+                                clauses
+                                    .into_iter()
+                                    .map(|(_, label, _)| Label(label))
+                                    .collect(),
+                            ))
+                        } else {
+                            unimplemented!("non jumptable branch is not supported yet")
+                        }
+                        ops.push(Unreachable)
                     }
                     &m::Jump {
                         ref target,

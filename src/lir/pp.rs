@@ -144,6 +144,16 @@ impl PP for Op {
                 write!(w, " ")?;
                 label.pp(w, indent)?;
             }
+            JumpTableI32(ref reg, ref labels) => {
+                write!(w, "jump_table")?;
+                reg.pp(w, indent)?;
+                write!(w, " ")?;
+                let spaces = Self::nspaces(indent + 4);
+                for label in labels {
+                    write!(w, "\n{}", spaces)?;
+                    label.pp(w, indent)?;
+                }
+            }
             ConstI64(ref reg, ref i) => {
                 reg.pp(w, indent)?;
                 write!(w, ": ")?;
@@ -352,6 +362,9 @@ impl PP for Op {
             Jump(ref label) => {
                 write!(w, "jump ")?;
                 label.pp(w, indent)?;
+            }
+            Unreachable => {
+                write!(w, "unreachable")?;
             }
             Ret(ref reg) => {
                 write!(w, "ret ")?;

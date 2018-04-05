@@ -329,6 +329,14 @@ impl LIR2WASM {
                                     cb = cb.get_local(reg!(reg)).br_if(label!(label));
                                 }
 
+                                JumpTableI32(ref reg, ref labels) => {
+                                    cb = cb.get_local(reg!(reg)).br_table(
+                                        labels.iter().map(|l| label!(l)).collect(),
+                                        // FIXME
+                                        0,
+                                    );
+                                }
+
                                 ConstI64(ref reg, c) => {
                                     cb = cb.constant(c as i64).set_local(reg!(reg))
                                 }
@@ -629,6 +637,9 @@ impl LIR2WASM {
                                 Jump(ref label) => {
                                     cb = cb.br(label!(label));
                                 }
+                                Unreachable => {
+                                    cb = cb.unreachable();
+                                }
                                 Ret(ref reg) => {
                                     cb = match *reg {
                                         Some(ref r) => cb.get_local(reg!(r)),
@@ -804,7 +815,7 @@ impl LIR2WASM {
     fn adjust_block<'a>(&mut self, v: Vec<Control<'a>>) -> Vec<Control<'a>> {
         let mut tmp = Vec::new();
         let mut scope = Vec::new();
-        let mut defers = HashMap::new();
+        let mut defers = HashMap::<&lir::Label, Vec<&lir::Label>>::new();
         for c in v.into_iter().rev() {
             match c {
                 Control::BlockEnd(name) | Control::LoopEnd(name) => {
@@ -815,7 +826,7 @@ impl LIR2WASM {
                     let last_name = scope.pop().unwrap();
                     if name == last_name {
                         tmp.push(c);
-                        for d in defers.remove(&name).unwrap() {
+                        for d in defers.remove(&name).into_iter().flat_map(|v| v.into_iter()) {
                             let ds = self.resolve_defers(d, &mut defers)
                                 .into_iter()
                                 .map(Control::Block);

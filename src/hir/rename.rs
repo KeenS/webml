@@ -111,6 +111,22 @@ impl<'a> util::Traverse for Scope<'a> {
         scope.traverse_expr(body);
     }
 
+    fn traverse_case(
+        &mut self,
+        _ty: &mut HTy,
+        expr: &mut Box<Expr>,
+        arms: &mut Vec<(Pattern, Expr)>,
+    ) {
+        self.traverse_expr(expr);
+        for &mut (ref mut pat, ref mut arm) in arms.iter_mut() {
+            let mut scope = self.new_scope();
+            for sym in pat.symbols_mut() {
+                scope.new_symbol(sym)
+            }
+            scope.traverse_expr(arm);
+        }
+    }
+
     fn traverse_closure(
         &mut self,
         envs: &mut Vec<(HTy, Symbol)>,

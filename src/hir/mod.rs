@@ -64,11 +64,10 @@ pub enum Expr {
         fun: Box<Expr>,
         arg: Box<Expr>,
     },
-    If {
+    Case {
         ty: HTy,
-        cond: Box<Expr>,
-        then: Box<Expr>,
-        else_: Box<Expr>,
+        expr: Box<Expr>,
+        arms: Vec<(Pattern, Expr)>,
     },
     Tuple {
         tys: Vec<HTy>,
@@ -82,6 +81,17 @@ pub enum Expr {
         ty: HTy,
         value: Literal,
     },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Pattern {
+    Lit { value: Literal },
+}
+
+impl Pattern {
+    fn symbols_mut(&mut self) -> Vec<&mut Symbol> {
+        vec![]
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -122,7 +132,7 @@ impl Expr {
             | &Binds { ref ty, .. }
             | &BuiltinCall { ref ty, .. }
             | &App { ref ty, .. }
-            | &If { ref ty, .. }
+            | &Case { ref ty, .. }
             | &Sym { ref ty, .. }
             | &Lit { ref ty, .. } => ty.clone(),
         }

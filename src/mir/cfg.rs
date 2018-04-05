@@ -38,17 +38,14 @@ impl Function {
 }
 
 impl EBB {
-    pub fn next_ebbs(&self) -> Vec<(&Symbol, bool)> {
+    pub fn next_ebbs<'a>(&'a self) -> Vec<(&'a Symbol, bool)> {
         use mir::Op::*;
         let last = self.body.len() - 1;
         match &self.body[last] {
-            &Branch {
-                ref then,
-                tforward,
-                ref else_,
-                eforward,
-                ..
-            } => vec![(then, tforward), (else_, eforward)],
+            &Branch { ref clauses, .. } => clauses
+                .iter()
+                .map(|&(_, ref lbl, forward)| (lbl, forward))
+                .collect(),
             &Jump {
                 ref target,
                 forward,

@@ -139,36 +139,35 @@ impl Transform for FlatExpr {
         }
     }
 
-    fn transform_if(
-        &mut self,
-        ty: HTy,
-        cond: Box<Expr>,
-        then: Box<Expr>,
-        else_: Box<Expr>,
-    ) -> Expr {
-        let (cond, condval) = self.flat_make_val(*cond);
-        let (then, thenval) = self.flat_make_val(*then);
-        let (else_, elseval) = self.flat_make_val(*else_);
-        let then = Box::new(Binds {
+    fn transform_case(&mut self, ty: HTy, expr: Box<Expr>, arms: Vec<(Pattern, Expr)>) -> Expr {
+        let (expr, exprval) = self.flat_make_val(*expr);
+        let arms = {
+            let arm_and_val = arms.into_iter().map(|(pat, expr)| {
+                let (expr, exprval) = self.flat_make_val(expr);
+                ((pat, expr), exprval)
+            });
+            arm_and_val
+                .map(|((pat, arm), armval)| {
+                    (
+                        pat,
+                        Binds {
+                            ty: ty.clone(),
+                            binds: vec![armval],
+                            ret: arm,
+                        },
+                    )
+                })
+                .collect()
+        };
+        let e = Case {
             ty: ty.clone(),
-            binds: vec![thenval],
-            ret: then,
-        });
-        let else_ = Box::new(Binds {
-            ty: ty.clone(),
-            binds: vec![elseval],
-            ret: else_,
-        });
-        let e = If {
-            ty: ty.clone(),
-            cond: cond,
-            then: then,
-            else_: else_,
+            expr: expr,
+            arms: arms,
         };
         let (ret, retval) = self.make_val(e);
         Binds {
             ty: ty,
-            binds: vec![condval, retval],
+            binds: vec![exprval, retval],
             ret: ret,
         }
     }

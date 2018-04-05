@@ -57,21 +57,15 @@ fn take_binds(mut expr: Expr) -> (Expr, Vec<Val>) {
             };
             (expr, fbinds)
         }
-        If {
-            mut cond,
-            then,
-            else_,
-            ty,
-        } => {
-            let (c, cbinds) = take_binds(*cond);
-            cond = Box::new(c);
-            let expr = If {
-                cond: cond,
-                then: then,
-                else_: else_,
+        Case { mut expr, arms, ty } => {
+            let (e, ebinds) = take_binds(*expr);
+            expr = Box::new(e);
+            let expr = Case {
+                expr: expr,
+                arms: arms,
                 ty: ty,
             };
-            (expr, cbinds)
+            (expr, ebinds)
         }
         Tuple { tys, tuple } => {
             let (tuple, bindss): (_, Vec<_>) = tuple.into_iter().map(take_binds).unzip();

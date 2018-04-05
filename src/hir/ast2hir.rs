@@ -1,6 +1,7 @@
 use ast;
 use pass::Pass;
-use hir::{Expr, HTy, Val, HIR};
+use hir::{Expr, HTy, Pattern, Val, HIR};
+use prim::*;
 
 pub struct AST2HIR;
 
@@ -73,11 +74,23 @@ impl AST2HIR {
                 cond,
                 then,
                 else_,
-            } => Expr::If {
+            } => Expr::Case {
                 ty: conv_ty(ty),
-                cond: Box::new(self.conv_expr(*cond)),
-                then: Box::new(self.conv_expr(*then)),
-                else_: Box::new(self.conv_expr(*else_)),
+                expr: Box::new(self.conv_expr(*cond)),
+                arms: vec![
+                    (
+                        Pattern::Lit {
+                            value: Literal::Bool(true),
+                        },
+                        self.conv_expr(*then),
+                    ),
+                    (
+                        Pattern::Lit {
+                            value: Literal::Bool(false),
+                        },
+                        self.conv_expr(*else_),
+                    ),
+                ],
             },
             E::Tuple { ty, tuple } => Expr::Tuple {
                 tys: force_tuple(ty.force("internal typing error")),
