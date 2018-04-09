@@ -92,6 +92,14 @@ impl AST2HIR {
                     ),
                 ],
             },
+            E::Case { ty, cond, clauses } => Expr::Case {
+                ty: conv_ty(ty),
+                expr: Box::new(self.conv_expr(*cond)),
+                arms: clauses
+                    .into_iter()
+                    .map(|(pat, expr)| (self.conv_pat(pat), self.conv_expr(expr)))
+                    .collect(),
+            },
             E::Tuple { ty, tuple } => Expr::Tuple {
                 tys: force_tuple(ty.force("internal typing error")),
                 tuple: tuple.into_iter().map(|e| self.conv_expr(e)).collect(),
@@ -104,6 +112,11 @@ impl AST2HIR {
                 ty: conv_ty(ty),
                 value: value,
             },
+        }
+    }
+    fn conv_pat(&self, pat: ast::Pattern) -> Pattern {
+        match pat {
+            ast::Pattern::Lit { value } => Pattern::Lit { value },
         }
     }
 }

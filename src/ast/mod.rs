@@ -53,6 +53,11 @@ pub enum Expr {
         then: Box<Expr>,
         else_: Box<Expr>,
     },
+    Case {
+        ty: TyDefer,
+        cond: Box<Expr>,
+        clauses: Vec<(Pattern, Expr)>,
+    },
     Tuple {
         ty: TyDefer,
         tuple: Vec<Expr>,
@@ -65,6 +70,11 @@ pub enum Expr {
         ty: TyDefer,
         value: Literal,
     },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Pattern {
+    Lit { value: Literal },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

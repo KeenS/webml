@@ -237,6 +237,20 @@ impl<'a> Scope<'a> {
                 unify(ty, given)?;
                 Ok(())
             }
+            &mut Case {
+                ref mut cond,
+                ref mut ty,
+                ref mut clauses,
+            } => {
+                let mut cond_ty = TyDefer::empty();
+                self.infer_expr(cond, &mut cond_ty)?;
+                for &mut (ref mut pat, ref mut branch) in clauses.iter_mut() {
+                    self.infer_pat(pat, &mut cond_ty)?;
+                    self.infer_expr(branch, given)?;
+                }
+                unify(ty, given)?;
+                Ok(())
+            }
             &mut Tuple {
                 ref mut ty,
                 ref mut tuple,
@@ -288,6 +302,28 @@ impl<'a> Scope<'a> {
             &mut Int(_) => Ty::Int,
             &mut Float(_) => Ty::Float,
             &mut Bool(_) => Ty::Bool,
+        };
+        match (ty, given.get_mut().deref_mut()) {
+            (Ty::Int, &mut Some(Ty::Int)) => Ok(()),
+            (Ty::Bool, &mut Some(Ty::Bool)) => Ok(()),
+            (Ty::Float, &mut Some(Ty::Float)) => Ok(()),
+            (ty, g @ &mut None) => {
+                *g = Some(ty.clone());
+                Ok(())
+            }
+            (ref ty, &mut Some(ref exp)) => Err(TypeError::MisMatch {
+                expected: exp.clone(),
+                actual: ty.clone(),
+            }),
+        }
+    }
+
+    fn infer_pat<'b, 'r>(&'b mut self, pat: &mut Pattern, given: &mut TyDefer) -> Result<'r, ()> {
+        use prim::Literal::*;
+        let ty = match pat {
+            &mut Pattern::Lit { value: Bool(_) } => Ty::Bool,
+            &mut Pattern::Lit { value: Int(_) } => Ty::Int,
+            &mut Pattern::Lit { value: Float(_) } => Ty::Float,
         };
         match (ty, given.get_mut().deref_mut()) {
             (Ty::Int, &mut Some(Ty::Int)) => Ok(()),

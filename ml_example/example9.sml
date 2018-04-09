@@ -1,0 +1,9 @@
+fun fib n = case n < 2 of
+                true => 1
+             |  false =>  fib (n - 1) + fib (n - 2)
+val a = print (fib 0)
+val a = print (fib 1)
+val a = print (fib 2)
+val a = print (fib 3)
+val a = print (fib 4)
+val a = print (fib 5)
