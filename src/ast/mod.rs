@@ -1,7 +1,12 @@
 pub mod typing;
+pub mod case_check;
 mod pp;
+mod util;
 
 use nom;
+
+pub use self::typing::TyEnv;
+pub use self::case_check::CaseCheck;
 
 use std::ops::Deref;
 use std::error::Error;
@@ -89,6 +94,27 @@ pub enum Ty {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TyDefer(pub Rc<RefCell<Option<Ty>>>);
+
+impl Expr {
+    fn ty_defer(&self) -> TyDefer {
+        use self::Expr::*;
+        match *self {
+            Binds { ref ty, .. }
+            | BinOp { ref ty, .. }
+            | App { ref ty, .. }
+            | If { ref ty, .. }
+            | Case { ref ty, .. }
+            | Tuple { ref ty, .. }
+            | Sym { ref ty, .. }
+            | Lit { ref ty, .. } => ty.clone(),
+            Fun {
+                ref param_ty,
+                ref body_ty,
+                ..
+            } => TyDefer::new(Some(Ty::Fun(param_ty.clone(), body_ty.clone()))),
+        }
+    }
+}
 
 impl Ty {
     pub fn fun(param: Ty, ret: Ty) -> Ty {
