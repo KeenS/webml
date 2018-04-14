@@ -328,3 +328,57 @@ fn parse_case_wildcard() {
         ])
     )
 }
+
+#[test]
+fn parse_case_int() {
+    let input = r#"val x = case 3 of 1 => 1 | 2 => 2 | _ => 10"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![
+            Val {
+                ty: TyDefer::empty(),
+                rec: false,
+                name: Symbol::new("x"),
+                expr: Expr::Case {
+                    ty: TyDefer::empty(),
+                    cond: Box::new(Expr::Lit {
+                        ty: TyDefer::empty(),
+                        value: Literal::Int(3),
+                    }),
+                    clauses: vec![
+                        (
+                            Pattern::Lit {
+                                value: Literal::Int(1),
+                                ty: TyDefer::empty(),
+                            },
+                            Expr::Lit {
+                                ty: TyDefer::empty(),
+                                value: Literal::Int(1),
+                            },
+                        ),
+                        (
+                            Pattern::Lit {
+                                value: Literal::Int(2),
+                                ty: TyDefer::empty(),
+                            },
+                            Expr::Lit {
+                                ty: TyDefer::empty(),
+                                value: Literal::Int(2),
+                            },
+                        ),
+                        (
+                            Pattern::Wildcard {
+                                ty: TyDefer::empty(),
+                            },
+                            Expr::Lit {
+                                ty: TyDefer::empty(),
+                                value: Literal::Int(10),
+                            },
+                        ),
+                    ],
+                },
+            },
+        ])
+    )
+}

@@ -827,13 +827,11 @@ impl LIR2WASM {
                 Control::Block(name) | Control::Loop(name) => {
                     let last_name = scope.pop().unwrap();
                     if name == last_name {
-                        tmp.push(c);
-                        for d in defers.remove(&name).into_iter().flat_map(|v| v.into_iter()) {
-                            let ds = self.resolve_defers(d, &mut defers)
+                        tmp.extend(
+                            self.resolve_defers(name, &mut defers)
                                 .into_iter()
-                                .map(Control::Block);
-                            tmp.extend(ds);
-                        }
+                                .map(Control::Block),
+                        );
                     } else {
                         // Note: in the arm of Loop, this else clause must not occure,
                         // thus assuming safe.
@@ -844,7 +842,6 @@ impl LIR2WASM {
                 c => tmp.push(c),
             }
         }
-
         tmp.into_iter().rev().collect()
     }
 
@@ -855,8 +852,15 @@ impl LIR2WASM {
     ) -> Vec<&'a lir::Label> {
         let mut ret = Vec::new();
         ret.push(name);
-        for d in defers.remove(&name).iter().flat_map(|v| v.iter()) {
-            ret.extend(self.resolve_defers(d, defers))
+        let mut rest = Vec::new();
+        rest.extend(defers.remove(&name).iter().flat_map(|v| v.iter()).rev());
+        while !rest.is_empty() {
+            let mut tmp = Vec::new();
+            for d in rest {
+                ret.push(d);
+                tmp.extend(defers.remove(&d).iter().flat_map(|v| v.iter()).rev())
+            }
+            rest = tmp;
         }
         ret
     }

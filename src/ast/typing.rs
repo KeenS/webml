@@ -243,11 +243,15 @@ impl<'a> Scope<'a> {
                 ref mut clauses,
             } => {
                 let mut cond_ty = TyDefer::empty();
-                self.infer_expr(cond, &mut cond_ty)?;
+                // ignore error to allow to be inferred by patterns
+                let _ = self.infer_expr(cond, &mut cond_ty);
                 for &mut (ref mut pat, ref mut branch) in clauses.iter_mut() {
-                    self.infer_pat(pat, &mut cond_ty)?;
-                    self.infer_expr(branch, given)?;
+                    let mut scope = self.scope();
+                    scope.infer_pat(pat, &mut cond_ty)?;
+                    scope.infer_expr(branch, given)?;
                 }
+                // re-infer
+                self.infer_expr(cond, &mut cond_ty)?;
                 unify(ty, given)?;
                 Ok(())
             }
@@ -319,6 +323,16 @@ impl<'a> Scope<'a> {
     }
 
     fn infer_pat<'b, 'r>(&'b mut self, pat: &mut Pattern, given: &mut TyDefer) -> Result<'r, ()> {
+        use self::Pattern::*;
+        match *pat {
+            Lit {
+                ref mut ty,
+                ref mut value,
+            } => {
+                self.infer_literal(value, ty)?;
+            }
+            Wildcard { .. } | Var { .. } => (),
+        };
         let mut ty = pat.ty_defer();
         unify(&mut ty, given)?;
         for (name, ty) in pat.binds() {

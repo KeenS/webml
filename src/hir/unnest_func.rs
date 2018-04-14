@@ -289,9 +289,14 @@ impl<'a> Scope<'a> {
                 ref expr, ref arms, ..
             } => {
                 self.analyze_free_expr(frees, bound, expr);
+                let mut scope = self;
                 for &(ref pat, ref arm) in arms.iter() {
-                    // FIXME: add pat to scope
-                    self.analyze_free_expr(frees, bound, arm);
+                    use self::Pattern::*;
+                    match *pat {
+                        Lit { .. } => (),
+                        Var { ref name, .. } => scope.add_scope(name.clone()),
+                    }
+                    scope.analyze_free_expr(frees, bound, arm);
                 }
             }
             &Tuple { ref tuple, .. } => for t in tuple.iter() {
