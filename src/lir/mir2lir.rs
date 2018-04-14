@@ -119,33 +119,33 @@ impl MIR2LIR {
                     }
                     &m::DivInt {
                         ref var,
-                        ref ty,
                         ref l,
                         ref r,
+                        ..
                     } => {
                         ops.push(DivI32(reg!(var), reg!(l), reg!(r)));
                     }
                     &m::DivFloat {
                         ref var,
-                        ref ty,
                         ref l,
                         ref r,
+                        ..
                     } => {
                         ops.push(DivF64(reg!(var), reg!(l), reg!(r)));
                     }
                     &m::Mod {
                         ref var,
-                        ref ty,
                         ref l,
                         ref r,
+                        ..
                     } => {
                         ops.push(ModI32(reg!(var), reg!(l), reg!(r)));
                     }
                     &m::Eq {
                         ref var,
-                        ref ty,
                         ref l,
                         ref r,
+                        ..
                     } => match (&symbol_table[l].0, &symbol_table[r].0) {
                         (&LTy::I32, &LTy::I32) => ops.push(EqI32(reg!(var), reg!(l), reg!(r))),
                         (&LTy::I64, &LTy::I64) => ops.push(EqI64(reg!(var), reg!(l), reg!(r))),
@@ -155,9 +155,9 @@ impl MIR2LIR {
                     },
                     &m::Neq {
                         ref var,
-                        ref ty,
                         ref l,
                         ref r,
+                        ..
                     } => match (&symbol_table[l].0, &symbol_table[r].0) {
                         (&LTy::I32, &LTy::I32) => ops.push(NeqI32(reg!(var), reg!(l), reg!(r))),
                         (&LTy::I64, &LTy::I64) => ops.push(NeqI64(reg!(var), reg!(l), reg!(r))),
@@ -167,9 +167,9 @@ impl MIR2LIR {
                     },
                     &m::Gt {
                         ref var,
-                        ref ty,
                         ref l,
                         ref r,
+                        ..
                     } => match (&symbol_table[l].0, &symbol_table[r].0) {
                         (&LTy::I32, &LTy::I32) => ops.push(GtI32(reg!(var), reg!(l), reg!(r))),
                         (&LTy::I64, &LTy::I64) => ops.push(GtI64(reg!(var), reg!(l), reg!(r))),
@@ -179,9 +179,9 @@ impl MIR2LIR {
                     },
                     &m::Ge {
                         ref var,
-                        ref ty,
                         ref l,
                         ref r,
+                        ..
                     } => match (&symbol_table[l].0, &symbol_table[r].0) {
                         (&LTy::I32, &LTy::I32) => ops.push(GeI32(reg!(var), reg!(l), reg!(r))),
                         (&LTy::I64, &LTy::I64) => ops.push(GeI64(reg!(var), reg!(l), reg!(r))),
@@ -191,9 +191,9 @@ impl MIR2LIR {
                     },
                     &m::Lt {
                         ref var,
-                        ref ty,
                         ref l,
                         ref r,
+                        ..
                     } => match (&symbol_table[l].0, &symbol_table[r].0) {
                         (&LTy::I32, &LTy::I32) => ops.push(LtI32(reg!(var), reg!(l), reg!(r))),
                         (&LTy::I64, &LTy::I64) => ops.push(LtI64(reg!(var), reg!(l), reg!(r))),
@@ -203,9 +203,9 @@ impl MIR2LIR {
                     },
                     &m::Le {
                         ref var,
-                        ref ty,
                         ref l,
                         ref r,
+                        ..
                     } => match (&symbol_table[l].0, &symbol_table[r].0) {
                         (&LTy::I32, &LTy::I32) => ops.push(LeI32(reg!(var), reg!(l), reg!(r))),
                         (&LTy::I64, &LTy::I64) => ops.push(LeI64(reg!(var), reg!(l), reg!(r))),
