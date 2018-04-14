@@ -125,7 +125,6 @@ impl Pattern {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum HTy {
-    Unit,
     Bool,
     Int,
     Float,

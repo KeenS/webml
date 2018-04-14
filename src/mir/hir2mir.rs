@@ -15,11 +15,14 @@ pub struct HIR2MIR {
 fn from(ty: hir::HTy) -> EbbTy {
     use hir::HTy::*;
     match ty {
-        Unit => EbbTy::Unit,
         Bool => EbbTy::Bool,
         Int => EbbTy::Int,
         Float => EbbTy::Float,
-        Tuple(tys) => EbbTy::Tuple(tys.into_iter().map(from).collect()),
+        Tuple(tys) => match tys.len() {
+            0 => EbbTy::Unit,
+            // TODO: treat 1-tuple as inner type
+            _ => EbbTy::Tuple(tys.into_iter().map(from).collect()),
+        },
         Fun(arg, ret) => EbbTy::Cls {
             closures: vec![],
             param: Box::new(from(*arg)),
