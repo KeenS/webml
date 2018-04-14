@@ -8,7 +8,6 @@ pub struct AST2HIR;
 fn force_into(ty: ast::Ty) -> HTy {
     use ast::Ty::*;
     match ty {
-        Unit => HTy::Unit,
         Bool => HTy::Bool,
         Int => HTy::Int,
         Float => HTy::Float,

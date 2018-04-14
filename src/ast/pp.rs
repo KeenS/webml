@@ -7,7 +7,6 @@ impl PP for Ty {
     fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
         use self::Ty::*;
         match *self {
-            Unit => write!(w, "()")?,
             Bool => write!(w, "bool")?,
             Int => write!(w, "int")?,
             Float => write!(w, "float")?,

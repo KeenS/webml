@@ -86,7 +86,6 @@ pub enum Pattern {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Ty {
-    Unit,
     Bool,
     Int,
     Float,
@@ -140,6 +139,9 @@ impl Ty {
             TyDefer(Rc::new(RefCell::new(Some(param)))),
             TyDefer(Rc::new(RefCell::new(Some(ret)))),
         )
+    }
+    pub fn unit() -> Ty {
+        Ty::Tuple(Vec::new())
     }
 }
 
