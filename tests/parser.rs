@@ -216,6 +216,7 @@ fn parse_case_bool() {
                         (
                             Pattern::Lit {
                                 value: Literal::Bool(true),
+                                ty: TyDefer::empty(),
                             },
                             Expr::Lit {
                                 ty: TyDefer::empty(),
@@ -225,6 +226,52 @@ fn parse_case_bool() {
                         (
                             Pattern::Lit {
                                 value: Literal::Bool(false),
+                                ty: TyDefer::empty(),
+                            },
+                            Expr::Lit {
+                                ty: TyDefer::empty(),
+                                value: Literal::Bool(true),
+                            },
+                        ),
+                    ],
+                },
+            },
+        ])
+    )
+}
+
+#[test]
+fn parse_case_var() {
+    let input = r#"val x = case true of true => false | x => true"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![
+            Val {
+                ty: TyDefer::empty(),
+                rec: false,
+                name: Symbol::new("x"),
+                expr: Expr::Case {
+                    ty: TyDefer::empty(),
+                    cond: Box::new(Expr::Lit {
+                        ty: TyDefer::empty(),
+                        value: Literal::Bool(true),
+                    }),
+                    clauses: vec![
+                        (
+                            Pattern::Lit {
+                                value: Literal::Bool(true),
+                                ty: TyDefer::empty(),
+                            },
+                            Expr::Lit {
+                                ty: TyDefer::empty(),
+                                value: Literal::Bool(false),
+                            },
+                        ),
+                        (
+                            Pattern::Var {
+                                name: Symbol::new("x"),
+                                ty: TyDefer::empty(),
                             },
                             Expr::Lit {
                                 ty: TyDefer::empty(),

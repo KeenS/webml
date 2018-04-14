@@ -314,9 +314,16 @@ named!(symbol <&str, Symbol>, do_parse!(
              ) >>
         sym: alphanumeric >> (Symbol::new(sym.to_string()))));
 
-named!(pattern <&str, Pattern>, alt!(
-    map!(tag!("true"),  |_| Pattern::Lit{value: Literal::Bool(true)}) |
-    map!(tag!("false"), |_| Pattern::Lit{value: Literal::Bool(false)})));
+named!(pattern <&str, Pattern>, alt_complete!(pattern_bool | pattern_var));
+
+named!(pattern_bool <&str, Pattern>, alt!(
+    map!(tag!("true"),  |_| Pattern::Lit{value: Literal::Bool(true), ty: TyDefer::empty()}) |
+    map!(tag!("false"), |_| Pattern::Lit{value: Literal::Bool(false), ty: TyDefer::empty()})));
+
+named!(pattern_var <&str, Pattern>, map!(symbol, |name| Pattern::Var {
+    name: name,
+    ty: TyDefer::empty()
+}));
 
 pub fn parse(input: &str) -> ::std::result::Result<AST, Err<&str>> {
     let iresult = top(input);

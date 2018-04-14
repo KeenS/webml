@@ -319,25 +319,12 @@ impl<'a> Scope<'a> {
     }
 
     fn infer_pat<'b, 'r>(&'b mut self, pat: &mut Pattern, given: &mut TyDefer) -> Result<'r, ()> {
-        use prim::Literal::*;
-        let ty = match pat {
-            &mut Pattern::Lit { value: Bool(_) } => Ty::Bool,
-            &mut Pattern::Lit { value: Int(_) } => Ty::Int,
-            &mut Pattern::Lit { value: Float(_) } => Ty::Float,
-        };
-        match (ty, given.get_mut().deref_mut()) {
-            (Ty::Int, &mut Some(Ty::Int)) => Ok(()),
-            (Ty::Bool, &mut Some(Ty::Bool)) => Ok(()),
-            (Ty::Float, &mut Some(Ty::Float)) => Ok(()),
-            (ty, g @ &mut None) => {
-                *g = Some(ty.clone());
-                Ok(())
-            }
-            (ref ty, &mut Some(ref exp)) => Err(TypeError::MisMatch {
-                expected: exp.clone(),
-                actual: ty.clone(),
-            }),
+        let mut ty = pat.ty_defer();
+        unify(&mut ty, given)?;
+        for (name, ty) in pat.binds() {
+            self.insert(name.0.clone(), ty.clone());
         }
+        Ok(())
     }
 
     fn infer_tuple<'b, 'r>(

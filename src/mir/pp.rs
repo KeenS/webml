@@ -376,6 +376,7 @@ impl PP for Op {
             &Branch {
                 ref cond,
                 ref clauses,
+                ref default,
                 ..
             } => {
                 write!(w, "{}branch", space)?;
@@ -388,6 +389,13 @@ impl PP for Op {
                         write!(w, "{}{} => ", space, val)?;
                         arm.pp(w, indent)?;
                         write!(w, "()\n")?;
+                    }
+                    for &(ref arm, _) in default {
+                        write!(w, "{}default => ", space)?;
+                        arm.pp(w, indent)?;
+                        write!(w, "(")?;
+                        cond.pp(w, 0)?;
+                        write!(w, ")\n")?;
                     }
                 }
                 write!(w, "{}}}\n", space)?;

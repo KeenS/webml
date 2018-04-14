@@ -146,7 +146,8 @@ impl PP for Expr {
 impl PP for Pattern {
     fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
         match *self {
-            Pattern::Lit { ref value } => value.pp(w, indent),
+            Pattern::Lit { ref value, .. } => value.pp(w, indent),
+            Pattern::Var { ref name, .. } => name.pp(w, indent),
         }
     }
 }

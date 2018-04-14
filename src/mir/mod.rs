@@ -147,6 +147,7 @@ pub enum Op {
     Branch {
         cond: Symbol,
         clauses: Vec<(u64, Symbol, bool)>,
+        default: Option<(Symbol, bool)>,
     },
     Jump {
         target: Symbol,

@@ -42,9 +42,14 @@ impl EBB {
         use mir::Op::*;
         let last = self.body.len() - 1;
         match &self.body[last] {
-            &Branch { ref clauses, .. } => clauses
+            &Branch {
+                ref clauses,
+                ref default,
+                ..
+            } => clauses
                 .iter()
                 .map(|&(_, ref lbl, forward)| (lbl, forward))
+                .chain(default.iter().map(|&(ref lbl, forward)| (lbl, forward)))
                 .collect(),
             &Jump {
                 ref target,

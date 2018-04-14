@@ -85,12 +85,41 @@ pub enum Expr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Pattern {
-    Lit { value: Literal },
+    Lit { value: Literal, ty: HTy },
+    Var { name: Symbol, ty: HTy },
 }
 
 impl Pattern {
     fn symbols_mut(&mut self) -> Vec<&mut Symbol> {
-        vec![]
+        use self::Pattern::*;
+        match *self {
+            Lit { .. } => vec![],
+            Var { ref mut name, .. } => vec![name],
+        }
+    }
+
+    pub fn match_key(&self) -> u64 {
+        use self::Pattern::*;
+        // FIXME do not panic
+        match *self {
+            Lit { ref value, .. } => match *value {
+                Literal::Int(ref key) => *key as u64,
+                Literal::Bool(ref key) => *key as u64,
+                Literal::Float(ref f) => panic!(
+                    "bug: float literal pattern given, which is not supported: {:?}",
+                    f
+                ),
+            },
+            Var { .. } => panic!("bug: default like branch does not have keys"),
+        }
+    }
+
+    pub fn is_default_like(&self) -> bool {
+        use self::Pattern::*;
+        match *self {
+            Lit { .. } => false,
+            Var { .. } => true,
+        }
     }
 }
 

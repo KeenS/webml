@@ -187,31 +187,28 @@ impl HIR2MIR {
             Case { ty, expr, arms } => {
                 let joinlabel = self.genlabel("join");
                 let (eb, var) = self.trans_expr_block(fb, eb, expr.ty(), *expr);
+                let (default, arms): (Vec<_>, _) = arms.into_iter()
+                    .partition(|&(ref pat, _)| pat.is_default_like());
+                assert!(
+                    default.len() <= 1,
+                    "default like branch must be at most one"
+                );
+                let default = default.into_iter().next();
+                let default_label = default.as_ref().map(|_| (self.genlabel("default"), true));
                 let arms = arms.into_iter()
                     .enumerate()
-                    .map(|(n, (pat, expr))| match pat {
-                        hir::Pattern::Lit { value } => match value {
-                            Literal::Int(key) => (
-                                key as u64,
-                                self.genlabel(&format!("branch_arm_{}", n)),
-                                expr,
-                            ),
-                            Literal::Bool(key) => (
-                                key as u64,
-                                self.genlabel(&format!("branch_arm_{}", n)),
-                                expr,
-                            ),
-                            Literal::Float(f) => {
-                                panic!("bug: float literal pattern given: {:?}", f)
-                            }
-                        },
-                        //p => panic!("bug: non literal branch pattern given: {:?}", p),
+                    .map(|(n, (pat, expr))| {
+                        (
+                            pat.match_key(),
+                            self.genlabel(&format!("branch_arm_{}", n)),
+                            expr,
+                        )
                     })
                     .collect::<Vec<_>>();
                 let labels = arms.iter()
                     .map(|&(key, ref label, _)| (key, label.clone(), true))
                     .collect();
-                let ebb = eb.branch(var, labels);
+                let ebb = eb.branch(var, labels, default_label.clone());
                 fb.add_ebb(ebb);
 
                 for (key, label, arm) in arms {
@@ -220,7 +217,19 @@ impl HIR2MIR {
                     let ebb = eb.jump(joinlabel.clone(), true, vec![var]);
                     fb.add_ebb(ebb);
                 }
-
+                match (default, default_label) {
+                    (Some((pat, arm)), Some((label, _))) => {
+                        let (var, ty) = match pat {
+                            hir::Pattern::Var { name, ty } => (name, ty),
+                            hir::Pattern::Lit { .. } => unreachable!(),
+                        };
+                        let eb = EBBBuilder::new(label, vec![(from(ty.clone()), var)]);
+                        let (eb, var) = self.trans_expr_block(fb, eb, ty, arm);
+                        let ebb = eb.jump(joinlabel.clone(), true, vec![var]);
+                        fb.add_ebb(ebb);
+                    }
+                    _ => (),
+                }
                 let eb = EBBBuilder::new(joinlabel, vec![(from(ty), name)]);
                 eb
             }

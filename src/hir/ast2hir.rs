@@ -81,12 +81,14 @@ impl AST2HIR {
                     (
                         Pattern::Lit {
                             value: Literal::Bool(true),
+                            ty: HTy::Bool,
                         },
                         self.conv_expr(*then),
                     ),
                     (
                         Pattern::Lit {
                             value: Literal::Bool(false),
+                            ty: HTy::Bool,
                         },
                         self.conv_expr(*else_),
                     ),
@@ -116,7 +118,14 @@ impl AST2HIR {
     }
     fn conv_pat(&self, pat: ast::Pattern) -> Pattern {
         match pat {
-            ast::Pattern::Lit { value } => Pattern::Lit { value },
+            ast::Pattern::Lit { value, ty } => Pattern::Lit {
+                value: value,
+                ty: conv_ty(ty),
+            },
+            ast::Pattern::Var { name, ty } => Pattern::Var {
+                name: name,
+                ty: conv_ty(ty),
+            },
         }
     }
 }

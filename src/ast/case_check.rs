@@ -30,13 +30,19 @@ impl Traverse for CaseCheck {
             variants.insert(false);
             for &mut (ref pat, _) in arms {
                 match pat {
-                    &Pattern::Lit { ref value } => match value {
+                    &Pattern::Lit { ref value, .. } => match value {
                         &Literal::Bool(ref b) => if variants.remove(b) {
                             // ok
                         } else {
                             panic!("redundant patterns")
                         },
                         _ => panic!("pattern bool expected but got other"),
+                    },
+                    &Pattern::Var { ref name, .. } => if !variants.is_empty() {
+                        // ok
+                        variants.clear()
+                    } else {
+                        panic!("pattern after variable {:?} is redundant", name);
                     },
                 }
             }

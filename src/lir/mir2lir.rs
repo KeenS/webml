@@ -330,6 +330,7 @@ impl MIR2LIR {
                     &m::Branch {
                         ref cond,
                         ref clauses,
+                        ref default,
                         ..
                     } => {
                         let mut clauses = clauses.clone();
@@ -351,7 +352,27 @@ impl MIR2LIR {
                         } else {
                             unimplemented!("non jumptable branch is not supported yet")
                         }
-                        ops.push(Unreachable)
+                        match default.clone() {
+                            None => ops.push(Unreachable),
+                            Some((label, _)) => {
+                                let params = &target_table[&label];
+                                assert_eq!(params.len(), 1);
+                                let p = &params[0];
+                                match p.0 {
+                                    LTy::Unit => {
+                                        // do nothing
+                                        ()
+                                    }
+                                    LTy::I32 => ops.push(MoveI32(p.clone(), reg!(cond))),
+                                    LTy::I64 => ops.push(MoveI64(p.clone(), reg!(cond))),
+                                    LTy::F32 => ops.push(MoveF32(p.clone(), reg!(cond))),
+                                    LTy::F64 => ops.push(MoveF64(p.clone(), reg!(cond))),
+                                    LTy::Ptr => ops.push(MoveI32(p.clone(), reg!(cond))),
+                                    LTy::FPtr => ops.push(MoveI32(p.clone(), reg!(cond))),
+                                }
+                                ops.push(Jump(Label(label)))
+                            }
+                        }
                     }
                     &m::Jump {
                         ref target,

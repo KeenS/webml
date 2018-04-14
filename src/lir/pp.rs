@@ -145,7 +145,7 @@ impl PP for Op {
                 label.pp(w, indent)?;
             }
             JumpTableI32(ref reg, ref labels) => {
-                write!(w, "jump_table")?;
+                write!(w, "jump_table ")?;
                 reg.pp(w, indent)?;
                 write!(w, " ")?;
                 let spaces = Self::nspaces(indent + 4);
