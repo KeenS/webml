@@ -45,8 +45,8 @@ impl PP for Reg {
 }
 
 impl PP for Label {
-    fn pp(&self, w: &mut io::Write, _indent: usize) -> io::Result<()> {
-        write!(w, "{}", (self.0).0)
+    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
+        self.0.pp(w, indent)
     }
 }
 
@@ -84,7 +84,8 @@ impl PP for LTy {
 
 impl PP for Block {
     fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
-        write!(w, "{}:\n", (self.name.0).0)?;
+        self.name.pp(w, indent)?;
+        write!(w, ":\n")?;
         let indent = indent + 4;
         for op in self.body.iter() {
             write!(w, "{}", Self::nspaces(indent))?;
@@ -139,18 +140,22 @@ impl PP for Op {
                 addr.pp(w, indent)?;
             }
             JumpIfI32(ref reg, ref label) => {
-                write!(w, "jump_if_zero ")?;
+                write!(w, "jump_if ")?;
                 reg.pp(w, indent)?;
                 write!(w, " ")?;
                 label.pp(w, indent)?;
             }
-            JumpTableI32(ref reg, ref labels) => {
+            JumpTableI32(ref reg, ref labels, ref default) => {
                 write!(w, "jump_table ")?;
                 reg.pp(w, indent)?;
                 write!(w, " ")?;
                 let spaces = Self::nspaces(indent + 4);
                 for label in labels {
                     write!(w, "\n{}", spaces)?;
+                    label.pp(w, indent)?;
+                }
+                for label in default {
+                    write!(w, "\n{}default ", spaces)?;
                     label.pp(w, indent)?;
                 }
             }

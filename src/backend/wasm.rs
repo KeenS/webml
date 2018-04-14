@@ -329,11 +329,13 @@ impl LIR2WASM {
                                     cb = cb.get_local(reg!(reg)).br_if(label!(label));
                                 }
 
-                                JumpTableI32(ref reg, ref labels) => {
+                                JumpTableI32(ref reg, ref labels, ref default) => {
                                     cb = cb.get_local(reg!(reg)).br_table(
                                         labels.iter().map(|l| label!(l)).collect(),
-                                        // FIXME
-                                        0,
+                                        default.as_ref().map(|l| label!(l)).unwrap_or(
+                                            // FIXME: should be `unreachable` branch
+                                            0,
+                                        ),
                                     );
                                 }
 
