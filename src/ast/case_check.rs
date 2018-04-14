@@ -38,11 +38,19 @@ impl Traverse for CaseCheck {
                         },
                         _ => panic!("pattern bool expected but got other"),
                     },
-                    &Pattern::Var { ref name, .. } => if !variants.is_empty() {
+                    &Pattern::Var { ref name, .. } => {
+                        if !variants.is_empty() {
+                            // ok
+                            variants.clear()
+                        } else {
+                            panic!("pattern variable '{:?}' is redundant", name);
+                        }
+                    }
+                    &Pattern::Wildcard { .. } => if !variants.is_empty() {
                         // ok
                         variants.clear()
                     } else {
-                        panic!("pattern after variable {:?} is redundant", name);
+                        panic!("pattern '_' is redundant");
                     },
                 }
             }

@@ -126,6 +126,10 @@ impl AST2HIR {
                 name: name,
                 ty: conv_ty(ty),
             },
+            ast::Pattern::Wildcard { ty } => Pattern::Var {
+                name: Symbol::new("_"),
+                ty: conv_ty(ty),
+            },
         }
     }
 }

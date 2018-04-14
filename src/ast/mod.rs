@@ -81,6 +81,7 @@ pub enum Expr {
 pub enum Pattern {
     Lit { value: Literal, ty: TyDefer },
     Var { name: Symbol, ty: TyDefer },
+    Wildcard { ty: TyDefer },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -121,13 +122,13 @@ impl Pattern {
     fn ty_defer(&self) -> TyDefer {
         use self::Pattern::*;
         match *self {
-            Lit { ref ty, .. } | Var { ref ty, .. } => ty.clone(),
+            Lit { ref ty, .. } | Var { ref ty, .. } | Wildcard { ref ty } => ty.clone(),
         }
     }
     fn binds(&self) -> Vec<(&Symbol, &TyDefer)> {
         use self::Pattern::*;
         match *self {
-            Lit { .. } => vec![],
+            Lit { .. } | Wildcard { .. } => vec![],
             Var { ref name, ref ty } => vec![(name, ty)],
         }
     }

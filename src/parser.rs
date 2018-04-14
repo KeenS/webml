@@ -3,7 +3,7 @@ use prim::*;
 use ast::*;
 
 static KEYWORDS: &[&str] = &[
-    "val", "fun", "fn", "let", "in", "end", "if", "then", "else", "case", "of"
+    "val", "fun", "fn", "let", "in", "end", "if", "then", "else", "case", "of", "_"
 ];
 static INFIX7: &[&str] = &["*", "/", "div", "mod"];
 static INFIX6: &[&str] = &["+", "-"];
@@ -314,7 +314,7 @@ named!(symbol <&str, Symbol>, do_parse!(
              ) >>
         sym: alphanumeric >> (Symbol::new(sym.to_string()))));
 
-named!(pattern <&str, Pattern>, alt_complete!(pattern_bool | pattern_var));
+named!(pattern <&str, Pattern>, alt_complete!(pattern_bool | pattern_var | pattern_wildcard));
 
 named!(pattern_bool <&str, Pattern>, alt!(
     map!(tag!("true"),  |_| Pattern::Lit{value: Literal::Bool(true), ty: TyDefer::empty()}) |
@@ -322,6 +322,10 @@ named!(pattern_bool <&str, Pattern>, alt!(
 
 named!(pattern_var <&str, Pattern>, map!(symbol, |name| Pattern::Var {
     name: name,
+    ty: TyDefer::empty()
+}));
+
+named!(pattern_wildcard <&str, Pattern>, map!(tag!("_"), |name| Pattern::Wildcard {
     ty: TyDefer::empty()
 }));
 
