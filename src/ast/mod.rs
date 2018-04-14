@@ -81,6 +81,7 @@ pub enum Expr {
 pub enum Pattern {
     Lit { value: Literal, ty: TyDefer },
     Var { name: Symbol, ty: TyDefer },
+    Tuple { ty: TyDefer, tuple: Vec<Symbol> },
     Wildcard { ty: TyDefer },
 }
 
