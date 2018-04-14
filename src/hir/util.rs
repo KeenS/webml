@@ -47,12 +47,11 @@ pub trait Traverse {
                 ref mut fun,
                 ref mut arg,
             } => self.traverse_app(ty, fun, arg),
-            If {
+            Case {
                 ref mut ty,
-                ref mut cond,
-                ref mut then,
-                ref mut else_,
-            } => self.traverse_if(ty, cond, then, else_),
+                ref mut expr,
+                ref mut arms,
+            } => self.traverse_case(ty, expr, arms),
             Tuple {
                 ref mut tys,
                 ref mut tuple,
@@ -115,16 +114,16 @@ pub trait Traverse {
         self.traverse_expr(arg);
     }
 
-    fn traverse_if(
+    fn traverse_case(
         &mut self,
         _ty: &mut HTy,
-        cond: &mut Box<Expr>,
-        then: &mut Box<Expr>,
-        else_: &mut Box<Expr>,
+        expr: &mut Box<Expr>,
+        arms: &mut Vec<(Pattern, Expr)>,
     ) {
-        self.traverse_expr(cond);
-        self.traverse_expr(then);
-        self.traverse_expr(else_);
+        self.traverse_expr(expr);
+        for &mut (_, ref mut e) in arms.iter_mut() {
+            self.traverse_expr(e);
+        }
     }
 
     fn traverse_tuple(&mut self, _tys: &mut Vec<HTy>, tuple: &mut Vec<Expr>) {
@@ -164,12 +163,7 @@ pub trait Transform {
                 captures,
             } => self.transform_fun(param, body_ty, body, captures),
             App { fun, arg, ty } => self.transform_app(ty, fun, arg),
-            If {
-                ty,
-                cond,
-                then,
-                else_,
-            } => self.transform_if(ty, cond, then, else_),
+            Case { ty, expr, arms } => self.transform_case(ty, expr, arms),
             Tuple { tys, tuple } => self.transform_tuple(tys, tuple),
             BuiltinCall { ty, fun, arg } => self.transform_builtin_call(ty, fun, arg),
             Closure {
@@ -249,18 +243,15 @@ pub trait Transform {
         }
     }
 
-    fn transform_if(
-        &mut self,
-        ty: HTy,
-        cond: Box<Expr>,
-        then: Box<Expr>,
-        else_: Box<Expr>,
-    ) -> Expr {
-        Expr::If {
+    fn transform_case(&mut self, ty: HTy, cond: Box<Expr>, arms: Vec<(Pattern, Expr)>) -> Expr {
+        Expr::Case {
             ty: ty,
-            cond: Box::new(self.transform_expr(*cond)),
-            then: Box::new(self.transform_expr(*then)),
-            else_: Box::new(self.transform_expr(*else_)),
+            expr: Box::new(self.transform_expr(*cond)),
+            arms: arms.into_iter()
+                .map(|(pat, expr)|
+                                       // FIXME: pass `pat` to transformer
+                                       (pat, self.transform_expr(expr)))
+                .collect(),
         }
     }
 

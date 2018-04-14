@@ -329,6 +329,16 @@ impl LIR2WASM {
                                     cb = cb.get_local(reg!(reg)).br_if(label!(label));
                                 }
 
+                                JumpTableI32(ref reg, ref labels, ref default) => {
+                                    cb = cb.get_local(reg!(reg)).br_table(
+                                        labels.iter().map(|l| label!(l)).collect(),
+                                        default.as_ref().map(|l| label!(l)).unwrap_or(
+                                            // FIXME: should be `unreachable` branch
+                                            0,
+                                        ),
+                                    );
+                                }
+
                                 ConstI64(ref reg, c) => {
                                     cb = cb.constant(c as i64).set_local(reg!(reg))
                                 }
@@ -629,6 +639,9 @@ impl LIR2WASM {
                                 Jump(ref label) => {
                                     cb = cb.br(label!(label));
                                 }
+                                Unreachable => {
+                                    cb = cb.unreachable();
+                                }
                                 Ret(ref reg) => {
                                     cb = match *reg {
                                         Some(ref r) => cb.get_local(reg!(r)),
@@ -804,7 +817,7 @@ impl LIR2WASM {
     fn adjust_block<'a>(&mut self, v: Vec<Control<'a>>) -> Vec<Control<'a>> {
         let mut tmp = Vec::new();
         let mut scope = Vec::new();
-        let mut defers = HashMap::new();
+        let mut defers = HashMap::<&lir::Label, Vec<&lir::Label>>::new();
         for c in v.into_iter().rev() {
             match c {
                 Control::BlockEnd(name) | Control::LoopEnd(name) => {
@@ -814,13 +827,11 @@ impl LIR2WASM {
                 Control::Block(name) | Control::Loop(name) => {
                     let last_name = scope.pop().unwrap();
                     if name == last_name {
-                        tmp.push(c);
-                        for d in defers.remove(&name).unwrap() {
-                            let ds = self.resolve_defers(d, &mut defers)
+                        tmp.extend(
+                            self.resolve_defers(name, &mut defers)
                                 .into_iter()
-                                .map(Control::Block);
-                            tmp.extend(ds);
-                        }
+                                .map(Control::Block),
+                        );
                     } else {
                         // Note: in the arm of Loop, this else clause must not occure,
                         // thus assuming safe.
@@ -831,7 +842,6 @@ impl LIR2WASM {
                 c => tmp.push(c),
             }
         }
-
         tmp.into_iter().rev().collect()
     }
 
@@ -842,8 +852,15 @@ impl LIR2WASM {
     ) -> Vec<&'a lir::Label> {
         let mut ret = Vec::new();
         ret.push(name);
-        for d in defers.remove(&name).iter().flat_map(|v| v.iter()) {
-            ret.extend(self.resolve_defers(d, defers))
+        let mut rest = Vec::new();
+        rest.extend(defers.remove(&name).iter().flat_map(|v| v.iter()).rev());
+        while !rest.is_empty() {
+            let mut tmp = Vec::new();
+            for d in rest {
+                ret.push(d);
+                tmp.extend(defers.remove(&d).iter().flat_map(|v| v.iter()).rev())
+            }
+            rest = tmp;
         }
         ret
     }

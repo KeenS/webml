@@ -1,6 +1,7 @@
 use ast;
 use pass::Pass;
-use hir::{Expr, HTy, Val, HIR};
+use hir::{Expr, HTy, Pattern, Val, HIR};
+use prim::*;
 
 pub struct AST2HIR;
 
@@ -73,11 +74,33 @@ impl AST2HIR {
                 cond,
                 then,
                 else_,
-            } => Expr::If {
+            } => Expr::Case {
                 ty: conv_ty(ty),
-                cond: Box::new(self.conv_expr(*cond)),
-                then: Box::new(self.conv_expr(*then)),
-                else_: Box::new(self.conv_expr(*else_)),
+                expr: Box::new(self.conv_expr(*cond)),
+                arms: vec![
+                    (
+                        Pattern::Lit {
+                            value: Literal::Bool(true),
+                            ty: HTy::Bool,
+                        },
+                        self.conv_expr(*then),
+                    ),
+                    (
+                        Pattern::Lit {
+                            value: Literal::Bool(false),
+                            ty: HTy::Bool,
+                        },
+                        self.conv_expr(*else_),
+                    ),
+                ],
+            },
+            E::Case { ty, cond, clauses } => Expr::Case {
+                ty: conv_ty(ty),
+                expr: Box::new(self.conv_expr(*cond)),
+                arms: clauses
+                    .into_iter()
+                    .map(|(pat, expr)| (self.conv_pat(pat), self.conv_expr(expr)))
+                    .collect(),
             },
             E::Tuple { ty, tuple } => Expr::Tuple {
                 tys: force_tuple(ty.force("internal typing error")),
@@ -90,6 +113,22 @@ impl AST2HIR {
             E::Lit { ty, value } => Expr::Lit {
                 ty: conv_ty(ty),
                 value: value,
+            },
+        }
+    }
+    fn conv_pat(&self, pat: ast::Pattern) -> Pattern {
+        match pat {
+            ast::Pattern::Lit { value, ty } => Pattern::Lit {
+                value: value,
+                ty: conv_ty(ty),
+            },
+            ast::Pattern::Var { name, ty } => Pattern::Var {
+                name: name,
+                ty: conv_ty(ty),
+            },
+            ast::Pattern::Wildcard { ty } => Pattern::Var {
+                name: Symbol::new("_"),
+                ty: conv_ty(ty),
             },
         }
     }

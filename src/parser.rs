@@ -2,7 +2,9 @@ use nom::*;
 use prim::*;
 use ast::*;
 
-static KEYWORDS: &[&str] = &["val", "fun", "fn", "let", "in", "end", "if", "then", "else"];
+static KEYWORDS: &[&str] = &[
+    "val", "fun", "fn", "let", "in", "end", "if", "then", "else", "case", "of", "_"
+];
 static INFIX7: &[&str] = &["*", "/", "div", "mod"];
 static INFIX6: &[&str] = &["+", "-"];
 static INFIX5: &[&str] = &[];
@@ -67,6 +69,7 @@ named!(expr <&str, Expr>, alt_complete!(
     expr_bind |
     expr_fun  |
     expr_if   |
+    expr_case |
     infix4
 ));
 
@@ -145,6 +148,23 @@ named!(expr_if <&str, Expr>, do_parse!(
             cond: Box::new(cond),
             then: Box::new(then),
             else_: Box::new(else_)
+        })
+));
+
+named!(expr_case <&str, Expr>, do_parse!(
+    tag_s!("case") >> multispace >> cond: expr >> multispace >>
+        tag_s!("of") >> multispace >>
+        clauses: separated_nonempty_list!(
+            do_parse!(opt!(multispace) >> tag!("|") >> opt!(multispace) >> (())),
+            do_parse!(
+                pat: pattern >> opt!(multispace) >>
+                    tag_s!("=>") >> opt!(multispace) >>
+                    expr: expr >>
+                    (pat, expr))) >>
+        (Expr::Case {
+            ty: TyDefer::empty(),
+            cond: Box::new(cond),
+            clauses: clauses,
         })
 ));
 
@@ -293,6 +313,25 @@ named!(symbol <&str, Symbol>, do_parse!(
              }
              ) >>
         sym: alphanumeric >> (Symbol::new(sym.to_string()))));
+
+named!(pattern <&str, Pattern>, alt_complete!(pattern_bool | pattern_int | pattern_var | pattern_wildcard));
+
+named!(pattern_bool <&str, Pattern>, alt!(
+    map!(tag!("true"),  |_| Pattern::Lit{value: Literal::Bool(true), ty: TyDefer::empty()}) |
+    map!(tag!("false"), |_| Pattern::Lit{value: Literal::Bool(false), ty: TyDefer::empty()})));
+
+named!(pattern_var <&str, Pattern>, map!(symbol, |name| Pattern::Var {
+    name: name,
+    ty: TyDefer::empty()
+}));
+
+named!(pattern_wildcard <&str, Pattern>, map!(tag!("_"), |name| Pattern::Wildcard {
+    ty: TyDefer::empty()
+}));
+
+named!(pattern_int <&str, Pattern>, map!(digit, |s: &str| Pattern::Lit{
+    ty: TyDefer::empty(),
+    value: Literal::Int(s.parse().unwrap())}));
 
 pub fn parse(input: &str) -> ::std::result::Result<AST, Err<&str>> {
     let iresult = top(input);

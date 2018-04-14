@@ -237,6 +237,24 @@ impl<'a> Scope<'a> {
                 unify(ty, given)?;
                 Ok(())
             }
+            &mut Case {
+                ref mut cond,
+                ref mut ty,
+                ref mut clauses,
+            } => {
+                let mut cond_ty = TyDefer::empty();
+                // ignore error to allow to be inferred by patterns
+                let _ = self.infer_expr(cond, &mut cond_ty);
+                for &mut (ref mut pat, ref mut branch) in clauses.iter_mut() {
+                    let mut scope = self.scope();
+                    scope.infer_pat(pat, &mut cond_ty)?;
+                    scope.infer_expr(branch, given)?;
+                }
+                // re-infer
+                self.infer_expr(cond, &mut cond_ty)?;
+                unify(ty, given)?;
+                Ok(())
+            }
             &mut Tuple {
                 ref mut ty,
                 ref mut tuple,
@@ -302,6 +320,25 @@ impl<'a> Scope<'a> {
                 actual: ty.clone(),
             }),
         }
+    }
+
+    fn infer_pat<'b, 'r>(&'b mut self, pat: &mut Pattern, given: &mut TyDefer) -> Result<'r, ()> {
+        use self::Pattern::*;
+        match *pat {
+            Lit {
+                ref mut ty,
+                ref mut value,
+            } => {
+                self.infer_literal(value, ty)?;
+            }
+            Wildcard { .. } | Var { .. } => (),
+        };
+        let mut ty = pat.ty_defer();
+        unify(&mut ty, given)?;
+        for (name, ty) in pat.binds() {
+            self.insert(name.0.clone(), ty.clone());
+        }
+        Ok(())
     }
 
     fn infer_tuple<'b, 'r>(

@@ -96,13 +96,12 @@ impl<'a> Traverse for Trav<'a> {
                 self.traverse_app(ty, fun, arg);
                 return;
             }
-            If {
+            Case {
                 ref mut ty,
-                ref mut cond,
-                ref mut then,
-                ref mut else_,
+                ref mut expr,
+                ref mut arms,
             } => {
-                self.traverse_if(ty, cond, then, else_);
+                self.traverse_case(ty, expr, arms);
                 return;
             }
 
@@ -256,17 +255,17 @@ impl<'a> Traverse for Reg<'a> {
         })
     }
 
-    fn traverse_if(
+    fn traverse_case(
         &mut self,
         _ty: &mut HTy,
-        cond: &mut Box<Expr>,
-        then: &mut Box<Expr>,
-        else_: &mut Box<Expr>,
+        expr: &mut Box<Expr>,
+        arms: &mut Vec<(Pattern, Expr)>,
     ) {
         self.with_bound_name(None, |this| {
-            this.traverse_expr(cond);
-            this.traverse_expr(then);
-            this.traverse_expr(else_);
+            this.traverse_expr(expr);
+            for &mut (_, ref mut expr) in arms.iter_mut() {
+                this.traverse_expr(expr)
+            }
         });
     }
 }

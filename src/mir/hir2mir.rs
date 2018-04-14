@@ -184,29 +184,52 @@ impl HIR2MIR {
                 eb.call(name, from(ty), fun, vec![arg]);
                 eb
             }
-            If {
-                ty,
-                cond,
-                then,
-                else_,
-            } => {
-                let thenlabel = self.genlabel("then");
-                let elselabel = self.genlabel("else");
+            Case { ty, expr, arms } => {
                 let joinlabel = self.genlabel("join");
-                let (eb, var) = self.trans_expr_block(fb, eb, hir::HTy::Bool, *cond);
-                let ebb = eb.branch(var, thenlabel.clone(), true, elselabel.clone(), true);
+                let (eb, var) = self.trans_expr_block(fb, eb, expr.ty(), *expr);
+                let (default, arms): (Vec<_>, _) = arms.into_iter()
+                    .partition(|&(ref pat, _)| pat.is_default_like());
+                assert!(
+                    default.len() <= 1,
+                    "default like branch must be at most one"
+                );
+                let default = default.into_iter().next();
+                let default_label = default.as_ref().map(|_| (self.genlabel("default"), true));
+                let arms = arms.into_iter()
+                    .enumerate()
+                    .map(|(n, (pat, expr))| {
+                        (
+                            pat.match_key(),
+                            self.genlabel(&format!("branch_arm_{}", n)),
+                            expr,
+                        )
+                    })
+                    .collect::<Vec<_>>();
+                let labels = arms.iter()
+                    .map(|&(key, ref label, _)| (key, label.clone(), true))
+                    .collect();
+                let ebb = eb.branch(var, labels, default_label.clone());
                 fb.add_ebb(ebb);
 
-                let eb = EBBBuilder::new(thenlabel, Vec::new());
-                let (eb, var) = self.trans_expr_block(fb, eb, ty.clone(), *then);
-                let ebb = eb.jump(joinlabel.clone(), true, vec![var]);
-                fb.add_ebb(ebb);
-
-                let eb = EBBBuilder::new(elselabel, Vec::new());
-                let (eb, var) = self.trans_expr_block(fb, eb, ty.clone(), *else_);
-                let ebb = eb.jump(joinlabel.clone(), true, vec![var]);
-                fb.add_ebb(ebb);
-
+                for (key, label, arm) in arms {
+                    let eb = EBBBuilder::new(label, Vec::new());
+                    let (eb, var) = self.trans_expr_block(fb, eb, ty.clone(), arm);
+                    let ebb = eb.jump(joinlabel.clone(), true, vec![var]);
+                    fb.add_ebb(ebb);
+                }
+                match (default, default_label) {
+                    (Some((pat, arm)), Some((label, _))) => {
+                        let (var, ty) = match pat {
+                            hir::Pattern::Var { name, ty } => (name, ty),
+                            hir::Pattern::Lit { .. } => unreachable!(),
+                        };
+                        let eb = EBBBuilder::new(label, vec![(from(ty.clone()), var)]);
+                        let (eb, var) = self.trans_expr_block(fb, eb, ty, arm);
+                        let ebb = eb.jump(joinlabel.clone(), true, vec![var]);
+                        fb.add_ebb(ebb);
+                    }
+                    _ => (),
+                }
                 let eb = EBBBuilder::new(joinlabel, vec![(from(ty), name)]);
                 eb
             }

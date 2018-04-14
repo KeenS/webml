@@ -209,20 +209,19 @@ impl<'a> Scope<'a> {
                     arg: arg,
                 }
             }
-            If {
+            Case {
                 ty,
-                mut cond,
-                mut then,
-                mut else_,
+                mut expr,
+                mut arms,
             } => {
-                cond = Box::new(self.conv_expr(cls, *cond, None));
-                then = Box::new(self.conv_expr(cls, *then, None));
-                else_ = Box::new(self.conv_expr(cls, *else_, None));
-                If {
+                expr = Box::new(self.conv_expr(cls, *expr, None));
+                arms = arms.into_iter()
+                    .map(|(pat, arm)| (pat, self.conv_expr(cls, arm, None)))
+                    .collect();
+                Case {
                     ty: ty,
-                    cond: cond,
-                    then: then,
-                    else_: else_,
+                    expr: expr,
+                    arms: arms,
                 }
             }
             Tuple { tys, tuple } => {
@@ -286,15 +285,19 @@ impl<'a> Scope<'a> {
                 self.analyze_free_expr(frees, bound, fun);
                 self.analyze_free_expr(frees, bound, arg);
             }
-            &If {
-                ref cond,
-                ref then,
-                ref else_,
-                ..
+            &Case {
+                ref expr, ref arms, ..
             } => {
-                self.analyze_free_expr(frees, bound, cond);
-                self.analyze_free_expr(frees, bound, then);
-                self.analyze_free_expr(frees, bound, else_);
+                self.analyze_free_expr(frees, bound, expr);
+                let mut scope = self;
+                for &(ref pat, ref arm) in arms.iter() {
+                    use self::Pattern::*;
+                    match *pat {
+                        Lit { .. } => (),
+                        Var { ref name, .. } => scope.add_scope(name.clone()),
+                    }
+                    scope.analyze_free_expr(frees, bound, arm);
+                }
             }
             &Tuple { ref tuple, .. } => for t in tuple.iter() {
                 self.analyze_free_expr(frees, bound, t);
@@ -349,15 +352,15 @@ impl<'a> Scope<'a> {
                 self.rename(fun, from, to);
                 self.rename(arg, from, to);
             }
-            If {
-                ref mut cond,
-                ref mut then,
-                ref mut else_,
+            Case {
+                ref mut expr,
+                ref mut arms,
                 ..
             } => {
-                self.rename(cond, from, to);
-                self.rename(then, from, to);
-                self.rename(else_, from, to);
+                self.rename(expr, from, to);
+                for &mut (_, ref mut arm) in arms.iter_mut() {
+                    self.rename(arm, from, to);
+                }
             }
             Tuple { ref mut tuple, .. } => for t in tuple.iter_mut() {
                 self.rename(t, from, to);

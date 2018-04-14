@@ -27,7 +27,8 @@ fn main() {
 
     let mut passes = compile_pass![
         ConvError::new(parse),
-        TyEnv::new(),
+        ast::TyEnv::new(),
+        ast::CaseCheck::new(),
         hir::AST2HIR,
         hir::Rename::new(id.clone()),
         hir::FindBuiltin::new(),
@@ -37,8 +38,8 @@ fn main() {
         hir::ForceClosure::new(),
         mir::HIR2MIR::new(id.clone()),
         mir::UnAlias::new(),
-        !mir::BlockArrange::new(),
-        lir::MIR2LIR::new(),
+        mir::BlockArrange::new(),
+        !lir::MIR2LIR::new(),
         backend::LIR2WASM::new(),
     ];
 

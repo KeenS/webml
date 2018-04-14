@@ -12,11 +12,6 @@
          ).then(buffer =>
              WebAssembly.instantiate(buffer, {"imports": {print: (x) => console.log(x)}})
          ).then(({module, instance}) => {
-             console.log(module);
-             console.log(instance);
-             console.log(instance.exports);
-             console.log(instance.exports["alloc"]);
-             console.log(instance.exports["init"]);
              importObj["webml-rt"] = {
                  alloc: instance.exports.alloc,
                  init: instance.exports.init,

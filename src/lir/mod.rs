@@ -4,7 +4,7 @@ pub mod pp;
 pub use self::mir2lir::MIR2LIR;
 use prim::*;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum LTy {
     I32,
     I64,
@@ -90,6 +90,7 @@ pub enum Op {
     StoreI32(Addr, Reg),
     LoadI32(Reg, Addr),
     JumpIfI32(Reg, Label),
+    JumpTableI32(Reg, Vec<Label>, Option<Label>),
 
     ConstI64(Reg, u64),
     MoveI64(Reg, Reg),
@@ -145,6 +146,7 @@ pub enum Op {
     FunCall(Reg, Symbol, Vec<Reg>),
     ClosureCall(Reg, Reg, Vec<Reg>),
     Jump(Label),
+    Unreachable,
     Ret(Option<Reg>),
 }
 
@@ -153,10 +155,13 @@ impl Block {
         use self::Op::*;
         self.body
             .iter()
-            .filter_map(|op| match *op {
-                Jump(ref label) => Some(label),
-                JumpIfI32(_, ref label) => Some(label),
-                _ => None,
+            .flat_map(|op| match *op {
+                Jump(ref label) => vec![label],
+                JumpIfI32(_, ref label) => vec![label],
+                JumpTableI32(_, ref labels, ref default) => {
+                    labels.iter().chain(default.iter()).collect()
+                }
+                _ => vec![],
             })
             .collect()
     }

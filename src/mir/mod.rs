@@ -146,10 +146,8 @@ pub enum Op {
 
     Branch {
         cond: Symbol,
-        then: Symbol,
-        tforward: bool,
-        else_: Symbol,
-        eforward: bool,
+        clauses: Vec<(u64, Symbol, bool)>,
+        default: Option<(Symbol, bool)>,
     },
     Jump {
         target: Symbol,

@@ -18,7 +18,6 @@ pub mod id;
 
 pub use pass::{Chain, Pass};
 pub use parser::parse;
-pub use ast::typing::TyEnv;
 pub use ast::TypeError;
 
 static BUILTIN_FUNCTIONS: &[&str] = &[

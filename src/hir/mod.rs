@@ -64,11 +64,10 @@ pub enum Expr {
         fun: Box<Expr>,
         arg: Box<Expr>,
     },
-    If {
+    Case {
         ty: HTy,
-        cond: Box<Expr>,
-        then: Box<Expr>,
-        else_: Box<Expr>,
+        expr: Box<Expr>,
+        arms: Vec<(Pattern, Expr)>,
     },
     Tuple {
         tys: Vec<HTy>,
@@ -82,6 +81,46 @@ pub enum Expr {
         ty: HTy,
         value: Literal,
     },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Pattern {
+    Lit { value: Literal, ty: HTy },
+    Var { name: Symbol, ty: HTy },
+}
+
+impl Pattern {
+    fn symbols_mut(&mut self) -> Vec<&mut Symbol> {
+        use self::Pattern::*;
+        match *self {
+            Lit { .. } => vec![],
+            Var { ref mut name, .. } => vec![name],
+        }
+    }
+
+    pub fn match_key(&self) -> u64 {
+        use self::Pattern::*;
+        // FIXME do not panic
+        match *self {
+            Lit { ref value, .. } => match *value {
+                Literal::Int(ref key) => *key as u64,
+                Literal::Bool(ref key) => *key as u64,
+                Literal::Float(ref f) => panic!(
+                    "bug: float literal pattern given, which is not supported: {:?}",
+                    f
+                ),
+            },
+            Var { .. } => panic!("bug: default like branch does not have keys"),
+        }
+    }
+
+    pub fn is_default_like(&self) -> bool {
+        use self::Pattern::*;
+        match *self {
+            Lit { .. } => false,
+            Var { .. } => true,
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -122,7 +161,7 @@ impl Expr {
             | &Binds { ref ty, .. }
             | &BuiltinCall { ref ty, .. }
             | &App { ref ty, .. }
-            | &If { ref ty, .. }
+            | &Case { ref ty, .. }
             | &Sym { ref ty, .. }
             | &Lit { ref ty, .. } => ty.clone(),
         }
