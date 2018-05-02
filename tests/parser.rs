@@ -418,7 +418,7 @@ fn parse_case_tuple() {
                             Pattern::Tuple {
                                 tuple: vec![
                                     (TyDefer::empty(), Symbol::new("x")),
-                                    (Symbol::new("y"), TyDefer::empty()),
+                                    (TyDefer::empty(), Symbol::new("y")),
                                     (TyDefer::empty(), Symbol::new("z")),
                                 ],
                             },
