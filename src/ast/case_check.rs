@@ -24,59 +24,79 @@ impl Traverse for CaseCheck {
     ) {
         let ty = cond.ty_defer()
             .force("internal error: typed AST isn't typed");
-        if ty == Ty::Bool {
-            let variants = {
-                let mut set = HashSet::new();
-                set.insert(true);
-                set.insert(false);
-                set
-            };
-            let mut matched = HashSet::new();
-            let mut defaulted = false;
-            for &mut (ref pat, _) in arms {
-                if defaulted {
-                    panic!("pattern after default case is redundant");
-                }
-                match pat {
-                    &Pattern::Lit { ref value, .. } => match value {
-                        &Literal::Bool(ref b) => if matched.insert(*b) {
+        match ty {
+            // variants like
+            Ty::Bool => {
+                let variants = {
+                    let mut set = HashSet::new();
+                    set.insert(true);
+                    set.insert(false);
+                    set
+                };
+                let mut matched = HashSet::new();
+                let mut defaulted = false;
+                for &mut (ref pat, _) in arms {
+                    if defaulted {
+                        panic!("pattern after default case is redundant");
+                    }
+                    match pat {
+                        &Pattern::Lit {
+                            value: Literal::Bool(ref b),
+                            ..
+                        } => if matched.insert(*b) {
                             // ok
                         } else {
                             panic!("redundant patterns")
                         },
-                        _ => panic!("pattern bool expected but got other"),
-                    },
-                    &Pattern::Var { .. } | &Pattern::Wildcard { .. } => defaulted = true,
+                        &Pattern::Var { .. } | &Pattern::Wildcard { .. } => defaulted = true,
+                        _ => unreachable!("expression and pattern doesn't match. It'a bug"),
+                    }
+                }
+                if matched != variants && !defaulted {
+                    panic!("pattern non-exhausitive. rest: {:?}", matched)
                 }
             }
-            if matched != variants && !defaulted {
-                panic!("pattern non-exhausitive. rest: {:?}", matched)
-            }
-        } else if ty == Ty::Int {
-            let mut matched = HashSet::new();
-            let mut defaulted = false;
-            for &mut (ref pat, _) in arms {
-                if defaulted {
-                    panic!("pattern after default case is redundant");
-                }
-                match pat {
-                    &Pattern::Lit { ref value, .. } => match value {
-                        &Literal::Int(ref i) => if matched.insert(i) {
+            // integer like
+            Ty::Int => {
+                let mut matched = HashSet::new();
+                let mut defaulted = false;
+                for &mut (ref pat, _) in arms {
+                    if defaulted {
+                        panic!("pattern after default case is redundant");
+                    }
+                    match pat {
+                        &Pattern::Lit {
+                            value: Literal::Int(ref i),
+                            ..
+                        } => if matched.insert(i) {
                             // ok
                         } else {
                             panic!("redundant patterns")
                         },
-                        _ => panic!("pattern bool expected but got other"),
-                    },
-                    &Pattern::Var { .. } | &Pattern::Wildcard { .. } => defaulted = true,
+                        &Pattern::Var { .. } | &Pattern::Wildcard { .. } => defaulted = true,
+                        _ => unreachable!("expression and pattern doesn't match. It'a bug"),
+                    }
+                }
+                // FIXME: treat cases when all the integers are specified by literal pattern
+                if !defaulted {
+                    panic!("pattern non-exhausitive. rest: {:?}", matched)
                 }
             }
-            // FIXME: treat cases when all the integers are specified by literal pattern
-            if !defaulted {
-                panic!("pattern non-exhausitive. rest: {:?}", matched)
+            // record like
+            Ty::Tuple(tuple) => {
+                assert_eq!(arms.len(), 1);
+                for &mut (ref pat, _) in arms {
+                    match pat {
+                        &Pattern::Tuple { .. }
+                        | &Pattern::Var { .. }
+                        | &Pattern::Wildcard { .. } => {
+                            // ok
+                        }
+                        _ => unreachable!("expression and pattern doesn't match. It'a bug"),
+                    }
+                }
             }
-        } else {
-            panic!("non variant pattern match isn't supported");
+            _ => panic!("non variant pattern match isn't supported"),
         }
     }
 }

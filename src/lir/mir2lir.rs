@@ -285,7 +285,7 @@ impl MIR2LIR {
                                     LTy::Unit => // do nothing
                                         break,
                                 };
-                                ops.push(ctor(reg!(var), Addr(reg!(tuple), *index)));
+                                ops.push(ctor(reg!(var), Addr(reg!(tuple), *index * 8)));
                                 break;
                             }
                         }

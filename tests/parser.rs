@@ -382,3 +382,54 @@ fn parse_case_int() {
         ])
     )
 }
+
+#[test]
+fn parse_case_tuple() {
+    let input = r#"val x = case (1, 2, 3) of (x, y, z) => z"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![
+            Val {
+                ty: TyDefer::empty(),
+                rec: false,
+                name: Symbol::new("x"),
+                expr: Expr::Case {
+                    ty: TyDefer::empty(),
+                    cond: Box::new(Expr::Tuple {
+                        ty: TyDefer::empty(),
+                        tuple: vec![
+                            Expr::Lit {
+                                ty: TyDefer::empty(),
+                                value: Literal::Int(1),
+                            },
+                            Expr::Lit {
+                                ty: TyDefer::empty(),
+                                value: Literal::Int(2),
+                            },
+                            Expr::Lit {
+                                ty: TyDefer::empty(),
+                                value: Literal::Int(3),
+                            },
+                        ],
+                    }),
+                    clauses: vec![
+                        (
+                            Pattern::Tuple {
+                                tuple: vec![
+                                    (TyDefer::empty(), Symbol::new("x")),
+                                    (Symbol::new("y"), TyDefer::empty()),
+                                    (TyDefer::empty(), Symbol::new("z")),
+                                ],
+                            },
+                            Expr::Sym {
+                                ty: TyDefer::empty(),
+                                name: Symbol::new("z"),
+                            },
+                        ),
+                    ],
+                },
+            },
+        ])
+    )
+}

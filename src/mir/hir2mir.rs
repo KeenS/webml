@@ -47,6 +47,12 @@ impl HIR2MIR {
         Symbol(name, label)
     }
 
+    fn gensym(&mut self, name: &str) -> Symbol {
+        let name = format!("{}", name);
+        let id = self.id.next();
+        Symbol(name, id)
+    }
+
     fn wrapper_name(&mut self, mut name: Symbol) -> Symbol {
         name.1 = self.id.next();
         name.0.push_str("_closure_wrapper");
@@ -191,7 +197,7 @@ impl HIR2MIR {
                 let joinlabel = self.genlabel("join");
                 let (eb, var) = self.trans_expr_block(fb, eb, expr.ty(), *expr);
                 let (default, arms): (Vec<_>, _) = arms.into_iter()
-                    .partition(|&(ref pat, _)| pat.is_default_like());
+                    .partition(|&(ref pat, _)| pat.is_irrefutable());
                 assert!(
                     default.len() <= 1,
                     "default like branch must be at most one"
@@ -210,8 +216,16 @@ impl HIR2MIR {
                     .collect::<Vec<_>>();
                 let labels = arms.iter()
                     .map(|&(key, ref label, _)| (key, label.clone(), true))
-                    .collect();
-                let ebb = eb.branch(var, labels, default_label.clone());
+                    .collect::<Vec<_>>();
+                // an easy optimization of non branching case
+                let ebb;
+                if labels.is_empty() && default_label.is_some() {
+                    let (label, is_forward) = default_label.clone().unwrap();
+                    ebb = eb.jump(label, is_forward, vec![var]);
+                } else {
+                    ebb = eb.branch(var, labels, default_label.clone());
+                }
+
                 fb.add_ebb(ebb);
 
                 for (key, label, arm) in arms {
@@ -222,12 +236,25 @@ impl HIR2MIR {
                 }
                 match (default, default_label) {
                     (Some((pat, arm)), Some((label, _))) => {
-                        let (var, ty) = match pat {
-                            hir::Pattern::Var { name, ty } => (name, ty),
+                        let eb = match pat {
+                            hir::Pattern::Var { name, ty } => {
+                                let eb = EBBBuilder::new(label, vec![(from(ty.clone()), name)]);
+                                eb
+                            }
+                            hir::Pattern::Tuple { tys, tuple } => {
+                                let ty = hir::HTy::Tuple(tys.clone());
+                                let var = self.gensym("tuple");
+                                let mut eb =
+                                    EBBBuilder::new(label, vec![(from(ty.clone()), var.clone())]);
+                                for (i, (t, ty)) in tuple.into_iter().zip(tys).enumerate() {
+                                    eb.proj(t, from(ty), i as u32, var.clone());
+                                }
+                                eb
+                            }
                             hir::Pattern::Lit { .. } => unreachable!(),
                         };
-                        let eb = EBBBuilder::new(label, vec![(from(ty.clone()), var)]);
-                        let (eb, var) = self.trans_expr_block(fb, eb, ty, arm);
+
+                        let (eb, var) = self.trans_expr_block(fb, eb, ty.clone(), arm);
                         let ebb = eb.jump(joinlabel.clone(), true, vec![var]);
                         fb.add_ebb(ebb);
                     }

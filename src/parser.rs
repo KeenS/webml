@@ -314,11 +314,34 @@ named!(symbol <&str, Symbol>, do_parse!(
              ) >>
         sym: alphanumeric >> (Symbol::new(sym.to_string()))));
 
-named!(pattern <&str, Pattern>, alt_complete!(pattern_bool | pattern_int | pattern_var | pattern_wildcard));
+named!(pattern <&str, Pattern>, alt_complete!(
+    pattern_bool |
+    pattern_int |
+    pattern_tuple |
+    pattern_var |
+    pattern_wildcard));
 
 named!(pattern_bool <&str, Pattern>, alt!(
     map!(tag!("true"),  |_| Pattern::Lit{value: Literal::Bool(true), ty: TyDefer::empty()}) |
     map!(tag!("false"), |_| Pattern::Lit{value: Literal::Bool(false), ty: TyDefer::empty()})));
+
+named!(pattern_tuple <&str, Pattern>, do_parse!(
+    tag!("(") >>
+        opt!(multispace) >>
+        es: many1!(do_parse!(
+            e: symbol >> opt!(multispace)
+                >> tag!(",") >> opt!(multispace) >> (e))
+        ) >>
+        e: symbol >>  opt!(multispace) >>
+        tag!(")") >>
+        (
+            {
+                let mut es = es;
+                es.push(e);
+                Pattern::Tuple{tuple: es.into_iter().map(|e| (TyDefer::empty(), e)).collect()}
+            }
+        ))
+);
 
 named!(pattern_var <&str, Pattern>, map!(symbol, |name| Pattern::Var {
     name: name,

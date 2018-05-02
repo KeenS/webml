@@ -318,11 +318,11 @@ impl LIR2WASM {
                                 StoreI32(ref addr, ref value) => {
                                     cb = cb.get_local(reg!(addr.0))
                                         .get_local(reg!(value))
-                                        .i32_store(addr.1);
+                                        .i32_store(addr.1 / 4);
                                 }
                                 LoadI32(ref reg, ref addr) => {
                                     cb = cb.get_local(reg!(addr.0))
-                                        .i32_load(addr.1)
+                                        .i32_load(addr.1 / 4)
                                         .set_local(reg!(reg));
                                 }
                                 JumpIfI32(ref reg, ref label) => {
@@ -410,14 +410,14 @@ impl LIR2WASM {
                                 }
                                 LoadI64(ref reg, ref addr) => {
                                     cb = cb.get_local(reg!(addr.0))
-                                        .i64_load(addr.1)
+                                        .i64_load(addr.1 / 8)
                                         .set_local(reg!(reg));
                                 }
 
                                 StoreI64(ref addr, ref value) => {
                                     cb = cb.get_local(reg!(addr.0))
                                         .get_local(reg!(value))
-                                        .i64_store(addr.1);
+                                        .i64_store(addr.1 / 8);
                                 }
 
                                 ConstF32(ref reg, c) => cb = cb.constant(c).set_local(reg!(reg)),
@@ -484,11 +484,11 @@ impl LIR2WASM {
                                 StoreF32(ref addr, ref value) => {
                                     cb = cb.get_local(reg!(addr.0))
                                         .get_local(reg!(value))
-                                        .f32_store(addr.1);
+                                        .f32_store(addr.1 / 4);
                                 }
                                 LoadF32(ref reg, ref addr) => {
                                     cb = cb.get_local(reg!(addr.0))
-                                        .f32_load(addr.1)
+                                        .f32_load(addr.1 / 4)
                                         .set_local(reg!(reg));
                                 }
 
@@ -556,12 +556,12 @@ impl LIR2WASM {
                                 StoreF64(ref addr, ref value) => {
                                     cb = cb.get_local(reg!(addr.0))
                                         .get_local(reg!(value))
-                                        .f64_store(addr.1);
+                                        .f64_store(addr.1 / 8);
                                 }
 
                                 LoadF64(ref reg, ref addr) => {
                                     cb = cb.get_local(reg!(addr.0))
-                                        .f64_load(addr.1)
+                                        .f64_load(addr.1 / 8)
                                         .set_local(reg!(reg));
                                 }
 
@@ -585,7 +585,7 @@ impl LIR2WASM {
                                 StoreFnPtr(ref addr, ref value) => {
                                     cb = cb.get_local(reg!(addr.0))
                                         .constant(self.intern_fun(value) as i32)
-                                        .i32_store(addr.1);
+                                        .i32_store(addr.1 / 4);
                                 }
 
                                 ClosureCall(ref reg, ref fun, ref args) => {

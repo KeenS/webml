@@ -42,7 +42,11 @@ pub struct Reg(pub LTy, pub u32);
 pub struct Label(pub Symbol);
 
 #[derive(Debug, Clone)]
-pub struct Addr(pub Reg, pub u32);
+pub struct Addr(
+    pub Reg,
+    /// offset, in bytes
+    pub u32,
+);
 
 #[derive(Debug, Clone)]
 pub enum Value {
