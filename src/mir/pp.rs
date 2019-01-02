@@ -1,7 +1,7 @@
 use std::io;
 
-use util::PP;
-use mir::*;
+use crate::mir::*;
+use crate::util::PP;
 
 impl PP for MIR {
     fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
@@ -40,7 +40,7 @@ impl PP for Function {
 
 impl PP for EbbTy {
     fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
-        use mir::EbbTy::*;
+        use crate::mir::EbbTy::*;
         let indent = indent + 4;
         match *self {
             Unit => write!(w, "()")?,
@@ -138,7 +138,7 @@ fn pp_binop(
 
 impl PP for Op {
     fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
-        use mir::Op::*;
+        use crate::mir::Op::*;
         let space = Self::nspaces(indent);
         let indent = indent + 4;
         match self {
@@ -276,7 +276,8 @@ impl PP for Op {
                     closures: env.iter().map(|&(ref ty, _)| ty.clone()).collect(),
                     param: Box::new(param_ty.clone()),
                     ret: Box::new(ret_ty.clone()),
-                }).pp(w, indent)?;
+                })
+                .pp(w, indent)?;
                 write!(w, " := ")?;
                 fun.pp(w, indent)?;
                 write!(w, ".__close(")?;
@@ -304,7 +305,7 @@ impl PP for Op {
                 write!(w, " := ")?;
                 fun.pp(w, indent)?;
                 write!(w, "(")?;
-                inter_iter!{
+                inter_iter! {
                     args.iter(),
                     write!(w, ", ")?,
                     |arg| => {
@@ -327,7 +328,7 @@ impl PP for Op {
                 write!(w, " := ")?;
                 fun.pp(w, indent)?;
                 write!(w, "(")?;
-                inter_iter!{
+                inter_iter! {
                     args.iter(),
                     write!(w, ", ")?,
                     |arg| => {
@@ -344,7 +345,7 @@ impl PP for Op {
                 write!(w, "{}", space)?;
                 var.pp(w, indent)?;
                 write!(w, ": (")?;
-                inter_iter!{
+                inter_iter! {
                     tys.iter(),
                     write!(w, ", ")?,
                     |ty| => {
@@ -353,7 +354,7 @@ impl PP for Op {
                 }
                 write!(w, ") := ")?;
                 write!(w, "(")?;
-                inter_iter!{
+                inter_iter! {
                     tuple.iter(),
                     write!(w, ", ")?,
                     |var| => var.pp(w, 0)?
@@ -408,7 +409,7 @@ impl PP for Op {
                 write!(w, "{}", space)?;
                 target.pp(w, indent)?;
                 write!(w, "(")?;
-                inter_iter!{
+                inter_iter! {
                     args.iter(),
                     write!(w, ", ")?,
                     |arg| => {

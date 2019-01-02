@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
-use ast::*;
-use prim::*;
 use super::util::Traverse;
+use crate::ast::*;
+use crate::prim::*;
 
 #[derive(Debug)]
 pub struct CaseCheck;
@@ -22,7 +22,8 @@ impl Traverse for CaseCheck {
         cond: &mut Box<Expr>,
         arms: &mut Vec<(Pattern, Expr)>,
     ) {
-        let ty = cond.ty_defer()
+        let ty = cond
+            .ty_defer()
             .force("internal error: typed AST isn't typed");
         match ty {
             // variants like
@@ -43,11 +44,13 @@ impl Traverse for CaseCheck {
                         &Pattern::Lit {
                             value: Literal::Bool(ref b),
                             ..
-                        } => if matched.insert(*b) {
-                            // ok
-                        } else {
-                            panic!("redundant patterns")
-                        },
+                        } => {
+                            if matched.insert(*b) {
+                                // ok
+                            } else {
+                                panic!("redundant patterns")
+                            }
+                        }
                         &Pattern::Var { .. } | &Pattern::Wildcard { .. } => defaulted = true,
                         _ => unreachable!("expression and pattern doesn't match. It'a bug"),
                     }
@@ -68,11 +71,13 @@ impl Traverse for CaseCheck {
                         &Pattern::Lit {
                             value: Literal::Int(ref i),
                             ..
-                        } => if matched.insert(i) {
-                            // ok
-                        } else {
-                            panic!("redundant patterns")
-                        },
+                        } => {
+                            if matched.insert(i) {
+                                // ok
+                            } else {
+                                panic!("redundant patterns")
+                            }
+                        }
                         &Pattern::Var { .. } | &Pattern::Wildcard { .. } => defaulted = true,
                         _ => unreachable!("expression and pattern doesn't match. It'a bug"),
                     }
@@ -83,7 +88,7 @@ impl Traverse for CaseCheck {
                 }
             }
             // record like
-            Ty::Tuple(tuple) => {
+            Ty::Tuple(_tuple) => {
                 assert_eq!(arms.len(), 1);
                 for &mut (ref pat, _) in arms {
                     match pat {
@@ -101,7 +106,7 @@ impl Traverse for CaseCheck {
     }
 }
 
-use pass::Pass;
+use crate::pass::Pass;
 impl<'a> Pass<ast::AST, TypeError<'a>> for CaseCheck {
     type Target = ast::AST;
 

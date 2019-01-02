@@ -1,21 +1,21 @@
-pub mod typing;
 pub mod case_check;
 mod pp;
+pub mod typing;
 mod util;
 
 use nom;
 
-pub use self::typing::TyEnv;
 pub use self::case_check::CaseCheck;
+pub use self::typing::TyEnv;
 
-use std::ops::Deref;
+use std::cell::{Ref, RefCell, RefMut};
 use std::error::Error;
 use std::fmt;
-use std::cell::{Ref, RefCell, RefMut};
+use std::ops::Deref;
 use std::rc::Rc;
 
-use ast;
-use prim::*;
+use crate::ast;
+use crate::prim::*;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct AST(pub Vec<Val>);

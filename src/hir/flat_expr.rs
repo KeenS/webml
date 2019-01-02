@@ -1,8 +1,8 @@
-use prim::*;
-use hir::*;
-use pass::Pass;
-use id::Id;
-use hir::util::Transform;
+use crate::hir::util::Transform;
+use crate::hir::*;
+use crate::id::Id;
+use crate::pass::Pass;
+use crate::prim::*;
 
 pub struct FlatExpr {
     id: Id,
@@ -38,7 +38,7 @@ impl FlatExpr {
     }
 }
 
-use hir::Expr::*;
+use crate::hir::Expr::*;
 
 impl Transform for FlatExpr {
     fn transform_binds(&mut self, ty: HTy, mut binds: Vec<Val>, ret: Box<Expr>) -> Expr {

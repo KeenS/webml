@@ -1,8 +1,8 @@
 extern crate webml;
 
+use webml::ast::{Expr, Pattern, TyDefer, Val, AST};
 use webml::parse;
 use webml::prim::*;
-use webml::ast::{Expr, Pattern, TyDefer, Val, AST};
 
 #[test]
 fn parse_int() {
@@ -10,17 +10,15 @@ fn parse_int() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![
-            Val {
+        AST(vec![Val {
+            ty: TyDefer::empty(),
+            rec: false,
+            name: Symbol::new("x"),
+            expr: Expr::Lit {
                 ty: TyDefer::empty(),
-                rec: false,
-                name: Symbol::new("x"),
-                expr: Expr::Lit {
-                    ty: TyDefer::empty(),
-                    value: Literal::Int(1),
-                },
+                value: Literal::Int(1),
             },
-        ])
+        },])
     )
 }
 
@@ -30,17 +28,15 @@ fn parse_float() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![
-            Val {
+        AST(vec![Val {
+            ty: TyDefer::empty(),
+            rec: false,
+            name: Symbol::new("x"),
+            expr: Expr::Lit {
                 ty: TyDefer::empty(),
-                rec: false,
-                name: Symbol::new("x"),
-                expr: Expr::Lit {
-                    ty: TyDefer::empty(),
-                    value: Literal::Float(1.0),
-                },
+                value: Literal::Float(1.0),
             },
-        ])
+        },])
     )
 }
 
@@ -50,17 +46,15 @@ fn parse_bool_true() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![
-            Val {
+        AST(vec![Val {
+            ty: TyDefer::empty(),
+            rec: false,
+            name: Symbol::new("x"),
+            expr: Expr::Lit {
                 ty: TyDefer::empty(),
-                rec: false,
-                name: Symbol::new("x"),
-                expr: Expr::Lit {
-                    ty: TyDefer::empty(),
-                    value: Literal::Bool(true),
-                },
+                value: Literal::Bool(true),
             },
-        ])
+        },])
     )
 }
 
@@ -70,17 +64,15 @@ fn parse_bool_false() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![
-            Val {
+        AST(vec![Val {
+            ty: TyDefer::empty(),
+            rec: false,
+            name: Symbol::new("x"),
+            expr: Expr::Lit {
                 ty: TyDefer::empty(),
-                rec: false,
-                name: Symbol::new("x"),
-                expr: Expr::Lit {
-                    ty: TyDefer::empty(),
-                    value: Literal::Bool(false),
-                },
+                value: Literal::Bool(false),
             },
-        ])
+        },])
     )
 }
 
@@ -90,22 +82,20 @@ fn parse_fn_unary() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![
-            Val {
-                ty: TyDefer::empty(),
-                rec: false,
-                name: Symbol::new("f"),
-                expr: Expr::Fun {
-                    param_ty: TyDefer::empty(),
-                    param: Symbol::new("x"),
-                    body_ty: TyDefer::empty(),
-                    body: Box::new(Expr::Sym {
-                        ty: TyDefer::empty(),
-                        name: Symbol::new("x"),
-                    }),
-                },
+        AST(vec![Val {
+            ty: TyDefer::empty(),
+            rec: false,
+            name: Symbol::new("f"),
+            expr: Expr::Fun {
+                param_ty: TyDefer::empty(),
+                param: Symbol::new("x"),
+                body_ty: TyDefer::empty(),
+                body: Box::new(Expr::Sym {
+                    ty: TyDefer::empty(),
+                    name: Symbol::new("x"),
+                }),
             },
-        ])
+        },])
     )
 }
 
@@ -115,22 +105,20 @@ fn parse_fun_unary() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![
-            Val {
-                ty: TyDefer::empty(),
-                rec: true,
-                name: Symbol::new("f"),
-                expr: Expr::Fun {
-                    param_ty: TyDefer::empty(),
-                    param: Symbol::new("x"),
-                    body_ty: TyDefer::empty(),
-                    body: Box::new(Expr::Sym {
-                        ty: TyDefer::empty(),
-                        name: Symbol::new("x"),
-                    }),
-                },
+        AST(vec![Val {
+            ty: TyDefer::empty(),
+            rec: true,
+            name: Symbol::new("f"),
+            expr: Expr::Fun {
+                param_ty: TyDefer::empty(),
+                param: Symbol::new("x"),
+                body_ty: TyDefer::empty(),
+                body: Box::new(Expr::Sym {
+                    ty: TyDefer::empty(),
+                    name: Symbol::new("x"),
+                }),
             },
-        ])
+        },])
     )
 }
 
@@ -140,27 +128,25 @@ fn parse_fun_binary() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![
-            Val {
-                ty: TyDefer::empty(),
-                rec: true,
-                name: Symbol::new("f"),
-                expr: Expr::Fun {
+        AST(vec![Val {
+            ty: TyDefer::empty(),
+            rec: true,
+            name: Symbol::new("f"),
+            expr: Expr::Fun {
+                param_ty: TyDefer::empty(),
+                param: Symbol::new("x"),
+                body_ty: TyDefer::empty(),
+                body: Box::new(Expr::Fun {
                     param_ty: TyDefer::empty(),
-                    param: Symbol::new("x"),
+                    param: Symbol::new("y"),
                     body_ty: TyDefer::empty(),
-                    body: Box::new(Expr::Fun {
-                        param_ty: TyDefer::empty(),
-                        param: Symbol::new("y"),
-                        body_ty: TyDefer::empty(),
-                        body: Box::new(Expr::Sym {
-                            ty: TyDefer::empty(),
-                            name: Symbol::new("x"),
-                        }),
+                    body: Box::new(Expr::Sym {
+                        ty: TyDefer::empty(),
+                        name: Symbol::new("x"),
                     }),
-                },
+                }),
             },
-        ])
+        },])
     )
 }
 
@@ -170,28 +156,26 @@ fn parse_if() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![
-            Val {
+        AST(vec![Val {
+            ty: TyDefer::empty(),
+            rec: false,
+            name: Symbol::new("x"),
+            expr: Expr::If {
                 ty: TyDefer::empty(),
-                rec: false,
-                name: Symbol::new("x"),
-                expr: Expr::If {
+                cond: Box::new(Expr::Lit {
                     ty: TyDefer::empty(),
-                    cond: Box::new(Expr::Lit {
-                        ty: TyDefer::empty(),
-                        value: Literal::Bool(true),
-                    }),
-                    then: Box::new(Expr::Lit {
-                        ty: TyDefer::empty(),
-                        value: Literal::Bool(false),
-                    }),
-                    else_: Box::new(Expr::Lit {
-                        ty: TyDefer::empty(),
-                        value: Literal::Bool(true),
-                    }),
-                },
+                    value: Literal::Bool(true),
+                }),
+                then: Box::new(Expr::Lit {
+                    ty: TyDefer::empty(),
+                    value: Literal::Bool(false),
+                }),
+                else_: Box::new(Expr::Lit {
+                    ty: TyDefer::empty(),
+                    value: Literal::Bool(true),
+                }),
             },
-        ])
+        },])
     )
 }
 
@@ -201,42 +185,40 @@ fn parse_case_bool() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![
-            Val {
+        AST(vec![Val {
+            ty: TyDefer::empty(),
+            rec: false,
+            name: Symbol::new("x"),
+            expr: Expr::Case {
                 ty: TyDefer::empty(),
-                rec: false,
-                name: Symbol::new("x"),
-                expr: Expr::Case {
+                cond: Box::new(Expr::Lit {
                     ty: TyDefer::empty(),
-                    cond: Box::new(Expr::Lit {
-                        ty: TyDefer::empty(),
-                        value: Literal::Bool(true),
-                    }),
-                    clauses: vec![
-                        (
-                            Pattern::Lit {
-                                value: Literal::Bool(true),
-                                ty: TyDefer::empty(),
-                            },
-                            Expr::Lit {
-                                ty: TyDefer::empty(),
-                                value: Literal::Bool(false),
-                            },
-                        ),
-                        (
-                            Pattern::Lit {
-                                value: Literal::Bool(false),
-                                ty: TyDefer::empty(),
-                            },
-                            Expr::Lit {
-                                ty: TyDefer::empty(),
-                                value: Literal::Bool(true),
-                            },
-                        ),
-                    ],
-                },
+                    value: Literal::Bool(true),
+                }),
+                clauses: vec![
+                    (
+                        Pattern::Lit {
+                            value: Literal::Bool(true),
+                            ty: TyDefer::empty(),
+                        },
+                        Expr::Lit {
+                            ty: TyDefer::empty(),
+                            value: Literal::Bool(false),
+                        },
+                    ),
+                    (
+                        Pattern::Lit {
+                            value: Literal::Bool(false),
+                            ty: TyDefer::empty(),
+                        },
+                        Expr::Lit {
+                            ty: TyDefer::empty(),
+                            value: Literal::Bool(true),
+                        },
+                    ),
+                ],
             },
-        ])
+        },])
     )
 }
 
@@ -246,42 +228,40 @@ fn parse_case_var() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![
-            Val {
+        AST(vec![Val {
+            ty: TyDefer::empty(),
+            rec: false,
+            name: Symbol::new("x"),
+            expr: Expr::Case {
                 ty: TyDefer::empty(),
-                rec: false,
-                name: Symbol::new("x"),
-                expr: Expr::Case {
+                cond: Box::new(Expr::Lit {
                     ty: TyDefer::empty(),
-                    cond: Box::new(Expr::Lit {
-                        ty: TyDefer::empty(),
-                        value: Literal::Bool(true),
-                    }),
-                    clauses: vec![
-                        (
-                            Pattern::Lit {
-                                value: Literal::Bool(true),
-                                ty: TyDefer::empty(),
-                            },
-                            Expr::Lit {
-                                ty: TyDefer::empty(),
-                                value: Literal::Bool(false),
-                            },
-                        ),
-                        (
-                            Pattern::Var {
-                                name: Symbol::new("x"),
-                                ty: TyDefer::empty(),
-                            },
-                            Expr::Lit {
-                                ty: TyDefer::empty(),
-                                value: Literal::Bool(true),
-                            },
-                        ),
-                    ],
-                },
+                    value: Literal::Bool(true),
+                }),
+                clauses: vec![
+                    (
+                        Pattern::Lit {
+                            value: Literal::Bool(true),
+                            ty: TyDefer::empty(),
+                        },
+                        Expr::Lit {
+                            ty: TyDefer::empty(),
+                            value: Literal::Bool(false),
+                        },
+                    ),
+                    (
+                        Pattern::Var {
+                            name: Symbol::new("x"),
+                            ty: TyDefer::empty(),
+                        },
+                        Expr::Lit {
+                            ty: TyDefer::empty(),
+                            value: Literal::Bool(true),
+                        },
+                    ),
+                ],
             },
-        ])
+        },])
     )
 }
 
@@ -291,41 +271,39 @@ fn parse_case_wildcard() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![
-            Val {
+        AST(vec![Val {
+            ty: TyDefer::empty(),
+            rec: false,
+            name: Symbol::new("x"),
+            expr: Expr::Case {
                 ty: TyDefer::empty(),
-                rec: false,
-                name: Symbol::new("x"),
-                expr: Expr::Case {
+                cond: Box::new(Expr::Lit {
                     ty: TyDefer::empty(),
-                    cond: Box::new(Expr::Lit {
-                        ty: TyDefer::empty(),
-                        value: Literal::Bool(true),
-                    }),
-                    clauses: vec![
-                        (
-                            Pattern::Lit {
-                                value: Literal::Bool(true),
-                                ty: TyDefer::empty(),
-                            },
-                            Expr::Lit {
-                                ty: TyDefer::empty(),
-                                value: Literal::Bool(false),
-                            },
-                        ),
-                        (
-                            Pattern::Wildcard {
-                                ty: TyDefer::empty(),
-                            },
-                            Expr::Lit {
-                                ty: TyDefer::empty(),
-                                value: Literal::Bool(true),
-                            },
-                        ),
-                    ],
-                },
+                    value: Literal::Bool(true),
+                }),
+                clauses: vec![
+                    (
+                        Pattern::Lit {
+                            value: Literal::Bool(true),
+                            ty: TyDefer::empty(),
+                        },
+                        Expr::Lit {
+                            ty: TyDefer::empty(),
+                            value: Literal::Bool(false),
+                        },
+                    ),
+                    (
+                        Pattern::Wildcard {
+                            ty: TyDefer::empty(),
+                        },
+                        Expr::Lit {
+                            ty: TyDefer::empty(),
+                            value: Literal::Bool(true),
+                        },
+                    ),
+                ],
             },
-        ])
+        },])
     )
 }
 
@@ -335,51 +313,49 @@ fn parse_case_int() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![
-            Val {
+        AST(vec![Val {
+            ty: TyDefer::empty(),
+            rec: false,
+            name: Symbol::new("x"),
+            expr: Expr::Case {
                 ty: TyDefer::empty(),
-                rec: false,
-                name: Symbol::new("x"),
-                expr: Expr::Case {
+                cond: Box::new(Expr::Lit {
                     ty: TyDefer::empty(),
-                    cond: Box::new(Expr::Lit {
-                        ty: TyDefer::empty(),
-                        value: Literal::Int(3),
-                    }),
-                    clauses: vec![
-                        (
-                            Pattern::Lit {
-                                value: Literal::Int(1),
-                                ty: TyDefer::empty(),
-                            },
-                            Expr::Lit {
-                                ty: TyDefer::empty(),
-                                value: Literal::Int(1),
-                            },
-                        ),
-                        (
-                            Pattern::Lit {
-                                value: Literal::Int(2),
-                                ty: TyDefer::empty(),
-                            },
-                            Expr::Lit {
-                                ty: TyDefer::empty(),
-                                value: Literal::Int(2),
-                            },
-                        ),
-                        (
-                            Pattern::Wildcard {
-                                ty: TyDefer::empty(),
-                            },
-                            Expr::Lit {
-                                ty: TyDefer::empty(),
-                                value: Literal::Int(10),
-                            },
-                        ),
-                    ],
-                },
+                    value: Literal::Int(3),
+                }),
+                clauses: vec![
+                    (
+                        Pattern::Lit {
+                            value: Literal::Int(1),
+                            ty: TyDefer::empty(),
+                        },
+                        Expr::Lit {
+                            ty: TyDefer::empty(),
+                            value: Literal::Int(1),
+                        },
+                    ),
+                    (
+                        Pattern::Lit {
+                            value: Literal::Int(2),
+                            ty: TyDefer::empty(),
+                        },
+                        Expr::Lit {
+                            ty: TyDefer::empty(),
+                            value: Literal::Int(2),
+                        },
+                    ),
+                    (
+                        Pattern::Wildcard {
+                            ty: TyDefer::empty(),
+                        },
+                        Expr::Lit {
+                            ty: TyDefer::empty(),
+                            value: Literal::Int(10),
+                        },
+                    ),
+                ],
             },
-        ])
+        },])
     )
 }
 
@@ -389,47 +365,43 @@ fn parse_case_tuple() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![
-            Val {
+        AST(vec![Val {
+            ty: TyDefer::empty(),
+            rec: false,
+            name: Symbol::new("x"),
+            expr: Expr::Case {
                 ty: TyDefer::empty(),
-                rec: false,
-                name: Symbol::new("x"),
-                expr: Expr::Case {
+                cond: Box::new(Expr::Tuple {
                     ty: TyDefer::empty(),
-                    cond: Box::new(Expr::Tuple {
-                        ty: TyDefer::empty(),
-                        tuple: vec![
-                            Expr::Lit {
-                                ty: TyDefer::empty(),
-                                value: Literal::Int(1),
-                            },
-                            Expr::Lit {
-                                ty: TyDefer::empty(),
-                                value: Literal::Int(2),
-                            },
-                            Expr::Lit {
-                                ty: TyDefer::empty(),
-                                value: Literal::Int(3),
-                            },
-                        ],
-                    }),
-                    clauses: vec![
-                        (
-                            Pattern::Tuple {
-                                tuple: vec![
-                                    (TyDefer::empty(), Symbol::new("x")),
-                                    (TyDefer::empty(), Symbol::new("y")),
-                                    (TyDefer::empty(), Symbol::new("z")),
-                                ],
-                            },
-                            Expr::Sym {
-                                ty: TyDefer::empty(),
-                                name: Symbol::new("z"),
-                            },
-                        ),
+                    tuple: vec![
+                        Expr::Lit {
+                            ty: TyDefer::empty(),
+                            value: Literal::Int(1),
+                        },
+                        Expr::Lit {
+                            ty: TyDefer::empty(),
+                            value: Literal::Int(2),
+                        },
+                        Expr::Lit {
+                            ty: TyDefer::empty(),
+                            value: Literal::Int(3),
+                        },
                     ],
-                },
+                }),
+                clauses: vec![(
+                    Pattern::Tuple {
+                        tuple: vec![
+                            (TyDefer::empty(), Symbol::new("x")),
+                            (TyDefer::empty(), Symbol::new("y")),
+                            (TyDefer::empty(), Symbol::new("z")),
+                        ],
+                    },
+                    Expr::Sym {
+                        ty: TyDefer::empty(),
+                        name: Symbol::new("z"),
+                    },
+                ),],
             },
-        ])
+        },])
     )
 }

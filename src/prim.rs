@@ -1,5 +1,5 @@
+use crate::util::PP;
 use std::io;
-use util::PP;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Symbol(pub String, pub u64);

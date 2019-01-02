@@ -1,5 +1,5 @@
+use crate::prim::*;
 use std::collections::{HashSet, VecDeque};
-use prim::*;
 
 use super::{Function, EBB};
 use petgraph::graph::Graph;
@@ -11,13 +11,15 @@ impl Function {
         let mut done = HashSet::new();
         queue.push_back(0);
         while !queue.is_empty() {
-            let ebb_idx = queue.pop_front()
+            let ebb_idx = queue
+                .pop_front()
                 // this is safe because queue is non_empty
                 .expect("internal error");
             done.insert(ebb_idx);
             let node = graph.add_node(ebb_idx);
             for &(next, _) in self.body[ebb_idx].next_ebbs().iter() {
-                let next_idx = self.find_ebb(next)
+                let next_idx = self
+                    .find_ebb(next)
                     // this is safe because jump target must be in the function
                     .expect("internal error");
                 if done.contains(&next_idx) {
@@ -39,7 +41,7 @@ impl Function {
 
 impl EBB {
     pub fn next_ebbs<'a>(&'a self) -> Vec<(&'a Symbol, bool)> {
-        use mir::Op::*;
+        use crate::mir::Op::*;
         let last = self.body.len() - 1;
         match &self.body[last] {
             &Branch {

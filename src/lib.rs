@@ -6,21 +6,21 @@ extern crate web_assembler;
 
 #[macro_use]
 pub mod util;
-pub mod prim;
+pub mod ast;
+pub mod backend;
+pub mod hir;
+pub mod id;
+pub mod lir;
+pub mod mir;
 mod parser;
 pub mod pass;
-pub mod ast;
-pub mod hir;
-pub mod mir;
-pub mod lir;
-pub mod backend;
-pub mod id;
+pub mod prim;
 
-pub use pass::{Chain, Pass};
-pub use parser::parse;
-pub use ast::TypeError;
+pub use crate::ast::TypeError;
+pub use crate::parser::parse;
+pub use crate::pass::{Chain, Pass};
 
 static BUILTIN_FUNCTIONS: &[&str] = &[
-    "print" // "+", "-", "*", "div", "/", "mod",
-// "=", "<>", ">", ">=", "<", "<="
+    "print", // "+", "-", "*", "div", "/", "mod",
+             // "=", "<>", ">", ">=", "<", "<="
 ];

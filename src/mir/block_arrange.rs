@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
-use mir::*;
-use prim::*;
-use pass::Pass;
+use crate::mir::*;
+use crate::pass::Pass;
+use crate::prim::*;
 
 pub struct BlockArrange;
 

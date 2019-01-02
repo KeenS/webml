@@ -1,7 +1,7 @@
 use std::io;
 
-use util::PP;
-use ast::*;
+use crate::ast::*;
+use crate::util::PP;
 
 impl PP for Ty {
     fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {

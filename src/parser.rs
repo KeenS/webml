@@ -1,9 +1,9 @@
+use crate::ast::*;
+use crate::prim::*;
 use nom::*;
-use prim::*;
-use ast::*;
 
 static KEYWORDS: &[&str] = &[
-    "val", "fun", "fn", "let", "in", "end", "if", "then", "else", "case", "of", "_"
+    "val", "fun", "fn", "let", "in", "end", "if", "then", "else", "case", "of", "_",
 ];
 static INFIX7: &[&str] = &["*", "/", "div", "mod"];
 static INFIX6: &[&str] = &["+", "-"];

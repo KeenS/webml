@@ -2,6 +2,7 @@
 authors = ["Sunrin SHIMURA (keen) <3han5chou7@gmail.com>"]
 name = "webml"
 version = "0.1.0"
+edition = "2018"
 
 [dependencies]
 nom = { version = "2.0.1", features = ["verbose-errors"]}

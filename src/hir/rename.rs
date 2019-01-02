@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 use std::ops::{Deref, DerefMut, Drop};
 
-use prim::*;
-use hir::*;
-use pass::Pass;
-use hir::util::Traverse;
-use id::Id;
+use crate::hir::util::Traverse;
+use crate::hir::*;
+use crate::id::Id;
+use crate::pass::Pass;
+use crate::prim::*;
 
 pub struct Rename {
     tables: Vec<HashMap<Symbol, u64>>,
@@ -147,7 +147,7 @@ impl<'a> util::Traverse for Scope<'a> {
 impl Rename {
     pub fn new(id: Id) -> Self {
         // leave built in functions as non_renamed
-        let prims = ::BUILTIN_FUNCTIONS
+        let prims = crate::BUILTIN_FUNCTIONS
             .iter()
             .map(|s| (Symbol::new(*s), 0))
             .collect();
