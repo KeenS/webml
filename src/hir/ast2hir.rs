@@ -1,4 +1,5 @@
 use crate::ast;
+use crate::config::Config;
 use crate::hir::{Expr, HTy, Pattern, Val, HIR};
 use crate::pass::Pass;
 use crate::prim::*;
@@ -143,7 +144,7 @@ impl AST2HIR {
 impl<E> Pass<ast::AST, E> for AST2HIR {
     type Target = HIR;
 
-    fn trans(&mut self, ast: ast::AST) -> ::std::result::Result<Self::Target, E> {
+    fn trans(&mut self, ast: ast::AST, _: &Config) -> ::std::result::Result<Self::Target, E> {
         Ok(self.conv_ast(ast))
     }
 }

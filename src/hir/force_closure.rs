@@ -1,8 +1,8 @@
-use std::collections::HashSet;
-
+use crate::config::Config;
 use crate::hir::util::Traverse;
 use crate::hir::*;
 use crate::pass::Pass;
+use std::collections::HashSet;
 
 struct Trav<'a> {
     t: &'a mut ForceClosure,
@@ -285,7 +285,7 @@ impl ForceClosure {
 impl<E> Pass<HIR, E> for ForceClosure {
     type Target = HIR;
 
-    fn trans(&mut self, mut hir: HIR) -> ::std::result::Result<Self::Target, E> {
+    fn trans(&mut self, mut hir: HIR, _: &Config) -> ::std::result::Result<Self::Target, E> {
         Reg::new(self, None).traverse_hir(&mut hir);
         Trav::new(self, false).traverse_hir(&mut hir);
         Ok(hir)

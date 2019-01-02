@@ -1,4 +1,5 @@
 use super::builder::*;
+use crate::config::Config;
 use crate::hir;
 use crate::id::Id;
 use crate::mir::*;
@@ -386,7 +387,7 @@ fn force_symbol(e: hir::Expr) -> Symbol {
 impl<E> Pass<hir::HIR, E> for HIR2MIR {
     type Target = MIR;
 
-    fn trans(&mut self, hir: hir::HIR) -> ::std::result::Result<Self::Target, E> {
+    fn trans(&mut self, hir: hir::HIR, _: &Config) -> ::std::result::Result<Self::Target, E> {
         Ok(self.trans_hir(hir))
     }
 }

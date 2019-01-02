@@ -1,8 +1,8 @@
-use std::collections::HashSet;
-
 use super::util::Traverse;
 use crate::ast::*;
+use crate::config::Config;
 use crate::prim::*;
+use std::collections::HashSet;
 
 #[derive(Debug)]
 pub struct CaseCheck;
@@ -110,7 +110,7 @@ use crate::pass::Pass;
 impl<'a> Pass<ast::AST, TypeError<'a>> for CaseCheck {
     type Target = ast::AST;
 
-    fn trans<'b>(&'b mut self, mut ast: ast::AST) -> Result<'a, Self::Target> {
+    fn trans<'b>(&'b mut self, mut ast: ast::AST, _: &Config) -> Result<'a, Self::Target> {
         self.traverse_ast(&mut ast);
         Ok(ast)
     }

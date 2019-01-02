@@ -1,8 +1,8 @@
+use crate::ast::*;
+use crate::config::Config;
+use crate::prim::*;
 use std::collections::HashMap;
 use std::ops::{Deref, DerefMut, Drop};
-
-use crate::ast::*;
-use crate::prim::*;
 
 #[derive(Debug)]
 pub struct TyEnv {
@@ -387,7 +387,7 @@ use crate::pass::Pass;
 impl<'a> Pass<ast::AST, TypeError<'a>> for TyEnv {
     type Target = ast::AST;
 
-    fn trans<'b>(&'b mut self, mut ast: ast::AST) -> Result<'a, Self::Target> {
+    fn trans<'b>(&'b mut self, mut ast: ast::AST, _: &Config) -> Result<'a, Self::Target> {
         self.infer(&mut ast)?;
         Ok(ast)
     }

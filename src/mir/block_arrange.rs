@@ -1,8 +1,8 @@
-use std::collections::HashSet;
-
+use crate::config::Config;
 use crate::mir::*;
 use crate::pass::Pass;
 use crate::prim::*;
+use std::collections::HashSet;
 
 pub struct BlockArrange;
 
@@ -49,7 +49,7 @@ fn visit(
 impl<E> Pass<MIR, E> for BlockArrange {
     type Target = MIR;
 
-    fn trans(&mut self, mir: MIR) -> ::std::result::Result<Self::Target, E> {
+    fn trans(&mut self, mir: MIR, _: &Config) -> ::std::result::Result<Self::Target, E> {
         Ok(self.arrange_mir(mir))
     }
 }

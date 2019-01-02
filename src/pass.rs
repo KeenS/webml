@@ -1,10 +1,11 @@
+use crate::config::Config;
 use crate::util::PP;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
 pub trait Pass<T, E> {
     type Target;
-    fn trans(&mut self, t: T) -> Result<Self::Target, E>;
+    fn trans(&mut self, t: T, config: &Config) -> Result<Self::Target, E>;
 }
 
 impl<In, Out, Err, F> Pass<In, Err> for F
@@ -12,7 +13,7 @@ where
     F: Fn(In) -> Result<Out, Err>,
 {
     type Target = Out;
-    fn trans(&mut self, t: In) -> Result<Self::Target, Err> {
+    fn trans(&mut self, t: In, _: &Config) -> Result<Self::Target, Err> {
         let out = self(t)?;
         Ok(out)
     }
@@ -27,8 +28,8 @@ where
 {
     type Target = Out;
 
-    fn trans(&mut self, i: In) -> Result<Self::Target, Err> {
-        let o = self.0.trans(i)?;
+    fn trans(&mut self, i: In, config: &Config) -> Result<Self::Target, Err> {
+        let o = self.0.trans(i, config)?;
         println!("{:#?}", o);
         Ok(o)
     }
@@ -43,9 +44,28 @@ where
 {
     type Target = Out;
 
-    fn trans(&mut self, i: In) -> Result<Self::Target, Err> {
-        let o = self.0.trans(i)?;
+    fn trans(&mut self, i: In, config: &Config) -> Result<Self::Target, Err> {
+        let o = self.0.trans(i, config)?;
         o.pp(&mut ::std::io::stdout(), 0).unwrap();
+        Ok(o)
+    }
+}
+
+pub struct PrintablePass<T>(pub T, pub &'static str);
+
+impl<T, In, Out, Err> Pass<In, Err> for PrintablePass<T>
+where
+    T: Pass<In, Err, Target = Out>,
+    Out: PP,
+{
+    type Target = Out;
+
+    fn trans(&mut self, i: In, config: &Config) -> Result<Self::Target, Err> {
+        let o = self.0.trans(i, config)?;
+        if config.pretty_print_ir.contains(self.1) {
+            o.pp(&mut ::std::io::stdout(), 0).unwrap();
+        }
+
         Ok(o)
     }
 }
@@ -73,14 +93,14 @@ where
 {
     type Target = Out;
 
-    fn trans(&mut self, i: In) -> Result<Self::Target, E> {
+    fn trans(&mut self, i: In, config: &Config) -> Result<Self::Target, E> {
         let &mut Chain {
             ref mut fst,
             ref mut snd,
             ..
         } = self;
-        let t = fst.trans(i)?;
-        let o = snd.trans(t)?;
+        let t = fst.trans(i, config)?;
+        let o = snd.trans(t, config)?;
         Ok(o)
     }
 }
@@ -106,26 +126,20 @@ where
 {
     type Target = O;
 
-    fn trans(&mut self, i: In) -> Result<Self::Target, SE> {
-        Ok(self.pass.trans(i)?)
+    fn trans(&mut self, i: In, config: &Config) -> Result<Self::Target, SE> {
+        Ok(self.pass.trans(i, config)?)
     }
 }
 
 #[macro_export]
 macro_rules! compile_pass {
-    (? $pass: expr) => {DebugPass($pass)};
-    (? $pass: expr, ) => {DebugPass($pass)};
-    (? $pass: expr, $($passes: tt)*) => {
-        Chain::new(DebugPass($pass), compile_pass!($($passes)*))
+    ($($labels: ident : $passes: expr,)*) => {
+        compile_pass!($($labels: $passes),*)
     };
-    (! $pass: expr) => {PPPass($pass)};
-    (! $pass: expr, ) => {PPPass($pass)};
-    (! $pass: expr, $($passes: tt)*) => {
-        Chain::new(PPPass($pass), compile_pass!($($passes)*))
+    ($label: ident : $pass: expr, $($labels: ident : $passes: expr),*) => {
+        Chain::new(PrintablePass($pass, stringify!($label)), compile_pass!($($labels: $passes),*))
     };
-    ($pass: expr) => {$pass};
-    ($pass: expr, ) => {$pass};
-    ($pass: expr, $($passes: tt)*) => {
-        Chain::new(compile_pass!($pass), compile_pass!($($passes)*))
+    ($label: ident : $pass: expr) => {
+        PrintablePass($pass, stringify!($label))
     };
 }
