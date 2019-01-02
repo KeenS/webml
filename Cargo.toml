@@ -10,4 +10,7 @@ petgraph = "0.4.1"
 
 [dependencies.web-assembler]
 git = "https://github.com/KeenS/WebAssembler-rs"
+
+[dev-dependencies]
+walkdir = "2.2.7"
 # path = "../WebAssembler-rs/"
