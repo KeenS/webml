@@ -80,6 +80,7 @@ pub enum Expr {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Pattern {
     Lit { value: Literal, ty: TyDefer },
+    Tuple { tuple: Vec<(TyDefer, Symbol)> },
     Var { name: Symbol, ty: TyDefer },
     Wildcard { ty: TyDefer },
 }
@@ -122,6 +123,9 @@ impl Pattern {
         use self::Pattern::*;
         match *self {
             Lit { ref ty, .. } | Var { ref ty, .. } | Wildcard { ref ty } => ty.clone(),
+            Tuple { ref tuple } => TyDefer::new(Some(Ty::Tuple(
+                tuple.iter().map(|&(ref ty, ..)| ty.clone()).collect(),
+            ))),
         }
     }
     fn binds(&self) -> Vec<(&Symbol, &TyDefer)> {
@@ -129,6 +133,7 @@ impl Pattern {
         match *self {
             Lit { .. } | Wildcard { .. } => vec![],
             Var { ref name, ref ty } => vec![(name, ty)],
+            Tuple { ref tuple } => tuple.iter().map(|&(ref ty, ref sym)| (sym, ty)).collect(),
         }
     }
 }

@@ -147,6 +147,17 @@ impl PP for Pattern {
     fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
         match *self {
             Pattern::Lit { ref value, .. } => value.pp(w, indent),
+            Pattern::Tuple { ref tuple, .. } => {
+                write!(w, "(")?;
+                inter_iter! {
+                    tuple.iter(),
+                    write!(w, ", ")?,
+                    |t| => {
+                        t.pp(w, indent)?
+                    }
+                }
+                write!(w, ")")
+            }
             Pattern::Var { ref name, .. } => name.pp(w, indent),
         }
     }

@@ -121,6 +121,13 @@ impl AST2HIR {
                 value: value,
                 ty: conv_ty(ty),
             },
+            ast::Pattern::Tuple { tuple } => {
+                let (tys, tuple) = tuple
+                    .into_iter()
+                    .map(|(ty, sym)| (conv_ty(ty), sym))
+                    .unzip();
+                Pattern::Tuple { tuple, tys }
+            }
             ast::Pattern::Var { name, ty } => Pattern::Var {
                 name: name,
                 ty: conv_ty(ty),

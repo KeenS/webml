@@ -87,6 +87,7 @@ pub enum Expr {
 pub enum Pattern {
     Lit { value: Literal, ty: HTy },
     Var { name: Symbol, ty: HTy },
+    Tuple { tys: Vec<HTy>, tuple: Vec<Symbol> },
 }
 
 impl Pattern {
@@ -94,6 +95,7 @@ impl Pattern {
         use self::Pattern::*;
         match *self {
             Lit { .. } => vec![],
+            Tuple { ref mut tuple, .. } => tuple.iter_mut().collect(),
             Var { ref mut name, .. } => vec![name],
         }
     }
@@ -110,15 +112,16 @@ impl Pattern {
                     f
                 ),
             },
+            Tuple { .. } => panic!("bug: non-variant expression does not have keys"),
             Var { .. } => panic!("bug: default like branch does not have keys"),
         }
     }
 
-    pub fn is_default_like(&self) -> bool {
+    pub fn is_irrefutable(&self) -> bool {
         use self::Pattern::*;
         match *self {
             Lit { .. } => false,
-            Var { .. } => true,
+            Tuple { .. } | Var { .. } => true,
         }
     }
 }

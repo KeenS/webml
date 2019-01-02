@@ -294,6 +294,9 @@ impl<'a> Scope<'a> {
                     use self::Pattern::*;
                     match *pat {
                         Lit { .. } => (),
+                        Tuple { ref tuple, .. } => for name in tuple {
+                            scope.add_scope(name.clone())
+                        },
                         Var { ref name, .. } => scope.add_scope(name.clone()),
                     }
                     scope.analyze_free_expr(frees, bound, arm);

@@ -331,7 +331,7 @@ impl<'a> Scope<'a> {
             } => {
                 self.infer_literal(value, ty)?;
             }
-            Wildcard { .. } | Var { .. } => (),
+            Tuple { .. } | Wildcard { .. } | Var { .. } => (),
         };
         let mut ty = pat.ty_defer();
         unify(&mut ty, given)?;
