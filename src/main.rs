@@ -60,13 +60,11 @@ mod test {
     #[test]
     fn examples_compile_pass() {
         use walkdir::WalkDir;
-        println!("called");
         for entry in WalkDir::new("ml_example")
             .into_iter()
             .filter(|e| e.as_ref().map(|e| e.file_type().is_file()).unwrap_or(false))
         {
             let path = entry.unwrap().into_path();
-            println!("path: {}", path.to_str().unwrap());
             assert_compile_pass!(path.to_str().unwrap());
         }
     }
