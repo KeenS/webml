@@ -2,7 +2,7 @@
 extern crate nom;
 extern crate petgraph;
 #[macro_use]
-extern crate web_assembler as wasm;
+extern crate wasm;
 
 #[macro_use]
 pub mod util;

@@ -9,8 +9,9 @@ nom = { version = "2.0.1", features = ["verbose-errors"]}
 petgraph = "0.4.1"
 clap = "2.32.0"
 
-[dependencies.web-assembler]
+[dependencies.wasm]
 git = "https://github.com/KeenS/WebAssembler-rs"
+package = "web-assembler"
 
 [dev-dependencies]
 walkdir = "2.2.7"

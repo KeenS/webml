@@ -1,9 +1,5 @@
-extern crate web_assembler as wasm;
-#[macro_use]
-extern crate webml;
 use clap::{app_from_crate, crate_authors, crate_description, crate_name, crate_version, Arg};
 use std::collections::HashSet;
-use std::env;
 use std::fs;
 use wasm::Dump;
 use webml::pass::{ConvError, PrintablePass};
@@ -78,22 +74,19 @@ fn main() {
 mod test {
     use super::*;
 
-    macro_rules! assert_compile_pass {
-        ($filename: expr) => {
-            let input = fs::read_to_string($filename).unwrap();
-            compile_str(&input).expect(&format!("failed to compile {}", $filename));
-        };
-    }
-
     #[test]
     fn examples_compile_pass() {
         use walkdir::WalkDir;
+
+        let config = Config::default();
         for entry in WalkDir::new("ml_example")
             .into_iter()
             .filter(|e| e.as_ref().map(|e| e.file_type().is_file()).unwrap_or(false))
         {
             let path = entry.unwrap().into_path();
-            assert_compile_pass!(path.to_str().unwrap());
+            let input = fs::read_to_string(&path).unwrap();
+            compile_str(&input, &config)
+                .expect(&format!("failed to compile {}", path.to_str().unwrap()));
         }
     }
 }
