@@ -1,28 +1,14 @@
 extern crate web_assembler as wasm;
 #[macro_use]
 extern crate webml;
-use crate::wasm::Dump;
 use std::env;
-use std::fs::File;
-use std::io::{BufReader, Read, Write};
+use std::fs;
+use wasm::Dump;
 #[allow(unused_imports)]
 use webml::pass::{ConvError, DebugPass, PPPass};
 use webml::*;
 
-fn main() {
-    let filename = env::args()
-        .nth(1)
-        .unwrap_or("ml_example/example1.sml".to_string());
-
-    let input = {
-        let file =
-            File::open(filename.clone()).expect(&format!("input file {} doesn't exist", filename));
-        let mut br = BufReader::new(file);
-        let mut s = String::new();
-        br.read_to_string(&mut s).unwrap();
-        s
-    };
-
+fn compile_str(input: &str) -> Result<Vec<u8>, TypeError> {
     let id = id::Id::new();
 
     let mut passes = compile_pass![
@@ -43,11 +29,38 @@ fn main() {
         backend::LIR2WASM::new(),
     ];
 
-    let module: Result<wasm::Module, TypeError> = passes.trans(&input);
+    let module: wasm::Module = passes.trans(input)?;
 
-    let module = module.unwrap();
     let mut code = Vec::new();
     module.dump(&mut code);
-    let mut out = File::create("out.wasm").unwrap();
-    out.write(&code).unwrap();
+    Ok(code)
+}
+
+fn main() {
+    let filename = env::args()
+        .nth(1)
+        .unwrap_or("ml_example/example1.sml".to_string());
+
+    let input = fs::read_to_string(filename).expect("failed to load file");
+    let code = compile_str(&input).unwrap();
+    fs::write("out.wasm", &code).unwrap()
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    macro_rules! assert_compile_pass {
+        ($filename: expr) => {
+            let input = fs::read_to_string($filename).unwrap();
+            compile_str(&input).expect(&format!("failed to compile {}", $filename));
+        };
+    }
+
+    #[test]
+    fn examples_compile_pass() {
+        for i in 0..=12 {
+            assert_compile_pass!(format!("ml_example/example{}.sml", i));
+        }
+    }
 }
