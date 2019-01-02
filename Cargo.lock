@@ -15,7 +15,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
 name = "petgraph"
-version = "0.4.12"
+version = "0.4.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 dependencies = [
  "fixedbitset 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -25,14 +25,14 @@ dependencies = [
 [[package]]
 name = "web-assembler"
 version = "0.1.1"
-source = "git+https://github.com/KeenS/WebAssembler-rs#166d7f93eda3d52f30b45230adcb1872c061affe"
+source = "git+https://github.com/KeenS/WebAssembler-rs#caed3fd1c14423c9c00ff209dd040af75b057f6f"
 
 [[package]]
 name = "webml"
 version = "0.1.0"
 dependencies = [
  "nom 2.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
- "petgraph 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)",
+ "petgraph 0.4.13 (registry+https://github.com/rust-lang/crates.io-index)",
  "web-assembler 0.1.1 (git+https://github.com/KeenS/WebAssembler-rs)",
 ]
 
@@ -40,5 +40,5 @@ dependencies = [
 "checksum fixedbitset 0.1.9 (registry+https://github.com/rust-lang/crates.io-index)" = "86d4de0081402f5e88cdac65c8dcdcc73118c1a7a465e2a05f0da05843a8ea33"
 "checksum nom 2.2.1 (registry+https://github.com/rust-lang/crates.io-index)" = "cf51a729ecf40266a2368ad335a5fdde43471f545a967109cd62146ecf8b66ff"
 "checksum ordermap 0.3.5 (registry+https://github.com/rust-lang/crates.io-index)" = "a86ed3f5f244b372d6b1a00b72ef7f8876d0bc6a78a4c9985c53614041512063"
-"checksum petgraph 0.4.12 (registry+https://github.com/rust-lang/crates.io-index)" = "8b30dc85588cd02b9b76f5e386535db546d21dc68506cff2abebee0b6445e8e4"
+"checksum petgraph 0.4.13 (registry+https://github.com/rust-lang/crates.io-index)" = "9c3659d1ee90221741f65dd128d9998311b0e40c5d3c23a62445938214abce4f"
 "checksum web-assembler 0.1.1 (git+https://github.com/KeenS/WebAssembler-rs)" = "<none>"
