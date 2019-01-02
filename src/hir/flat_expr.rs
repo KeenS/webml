@@ -1,3 +1,4 @@
+use crate::config::Config;
 use crate::hir::util::Transform;
 use crate::hir::*;
 use crate::id::Id;
@@ -196,7 +197,7 @@ impl Transform for FlatExpr {
 impl<E> Pass<HIR, E> for FlatExpr {
     type Target = HIR;
 
-    fn trans(&mut self, hir: HIR) -> ::std::result::Result<Self::Target, E> {
+    fn trans(&mut self, hir: HIR, _: &Config) -> ::std::result::Result<Self::Target, E> {
         Ok(self.transform_hir(hir))
     }
 }

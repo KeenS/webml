@@ -1,11 +1,11 @@
-use std::collections::HashMap;
-use std::ops::{Deref, DerefMut, Drop};
-
+use crate::config::Config;
 use crate::hir::util::Traverse;
 use crate::hir::*;
 use crate::id::Id;
 use crate::pass::Pass;
 use crate::prim::*;
+use std::collections::HashMap;
+use std::ops::{Deref, DerefMut, Drop};
 
 pub struct Rename {
     tables: Vec<HashMap<Symbol, u64>>,
@@ -167,7 +167,7 @@ impl Rename {
 impl<E> Pass<HIR, E> for Rename {
     type Target = HIR;
 
-    fn trans(&mut self, mut hir: HIR) -> ::std::result::Result<Self::Target, E> {
+    fn trans(&mut self, mut hir: HIR, _: &Config) -> ::std::result::Result<Self::Target, E> {
         self.scope().traverse_hir(&mut hir);
         Ok(hir)
     }

@@ -1,12 +1,10 @@
-extern crate web_assembler as wasm;
-
-use std::collections::{HashMap, HashSet};
-
-use self::wasm::builder::*;
-use self::wasm::*;
+use crate::config::Config;
 use crate::lir;
 use crate::pass::Pass;
 use crate::prim::*;
+use std::collections::{HashMap, HashSet};
+use wasm::builder::*;
+use wasm::*;
 
 #[derive(Debug, Clone)]
 enum Control<'a> {
@@ -931,7 +929,7 @@ impl LIR2WASM {
 impl<E> Pass<lir::LIR, E> for LIR2WASM {
     type Target = Module;
 
-    fn trans(&mut self, lir: lir::LIR) -> ::std::result::Result<Self::Target, E> {
+    fn trans(&mut self, lir: lir::LIR, _: &Config) -> ::std::result::Result<Self::Target, E> {
         Ok(self.trans_lir(lir))
     }
 }

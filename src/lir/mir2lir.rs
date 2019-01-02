@@ -1,9 +1,9 @@
-use std::collections::HashMap;
-
+use crate::config::Config;
 use crate::lir::*;
 use crate::mir;
 use crate::pass::Pass;
 use crate::prim::*;
+use std::collections::HashMap;
 
 pub struct MIR2LIR;
 
@@ -597,7 +597,7 @@ impl MIR2LIR {
 impl<E> Pass<mir::MIR, E> for MIR2LIR {
     type Target = LIR;
 
-    fn trans(&mut self, mir: mir::MIR) -> ::std::result::Result<Self::Target, E> {
+    fn trans(&mut self, mir: mir::MIR, _: &Config) -> ::std::result::Result<Self::Target, E> {
         Ok(self.trans_mir(mir))
     }
 }

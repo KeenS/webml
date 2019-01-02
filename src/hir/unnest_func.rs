@@ -1,10 +1,10 @@
-use std::collections::HashSet;
-use std::ops::{Deref, DerefMut, Drop};
-
+use crate::config::Config;
 use crate::hir::*;
 use crate::id::Id;
 use crate::pass::Pass;
 use crate::prim::*;
+use std::collections::HashSet;
+use std::ops::{Deref, DerefMut, Drop};
 
 pub struct UnnestFunc {
     tables: Vec<HashSet<Symbol>>,
@@ -405,7 +405,7 @@ impl UnnestFunc {
 impl<E> Pass<HIR, E> for UnnestFunc {
     type Target = HIR;
 
-    fn trans(&mut self, hir: HIR) -> ::std::result::Result<Self::Target, E> {
+    fn trans(&mut self, hir: HIR, _: &Config) -> ::std::result::Result<Self::Target, E> {
         Ok(self.scope().conv_hir(hir))
     }
 }

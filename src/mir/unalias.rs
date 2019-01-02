@@ -1,8 +1,8 @@
-use std::collections::HashMap;
-
+use crate::config::Config;
 use crate::mir::*;
 use crate::pass::Pass;
 use crate::prim::*;
+use std::collections::HashMap;
 
 pub struct UnAlias {
     alias: HashMap<Symbol, Symbol>,
@@ -177,7 +177,7 @@ impl UnAlias {
 impl<E> Pass<MIR, E> for UnAlias {
     type Target = MIR;
 
-    fn trans(&mut self, mir: MIR) -> ::std::result::Result<Self::Target, E> {
+    fn trans(&mut self, mir: MIR, _: &Config) -> ::std::result::Result<Self::Target, E> {
         Ok(self.conv_mir(mir))
     }
 }

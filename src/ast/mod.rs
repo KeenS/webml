@@ -6,7 +6,7 @@ mod util;
 use nom;
 
 pub use self::case_check::CaseCheck;
-pub use self::typing::TyEnv;
+pub use self::typing::TyEnv as Typing;
 
 use std::cell::{Ref, RefCell, RefMut};
 use std::error::Error;

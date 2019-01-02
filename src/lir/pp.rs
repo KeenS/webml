@@ -1,7 +1,6 @@
-use std::io;
-
 use crate::lir::*;
 use crate::util::PP;
+use std::io;
 
 impl PP for LIR {
     fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
