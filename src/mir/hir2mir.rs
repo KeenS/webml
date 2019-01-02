@@ -1,10 +1,10 @@
-use mir::*;
 use super::builder::*;
-use prim::*;
-use pass::Pass;
-use hir;
+use crate::hir;
+use crate::id::Id;
+use crate::mir::*;
+use crate::pass::Pass;
+use crate::prim::*;
 use std::collections::HashMap;
-use id::Id;
 
 pub struct HIR2MIR {
     label: u64,
@@ -13,7 +13,7 @@ pub struct HIR2MIR {
 }
 
 fn from(ty: hir::HTy) -> EbbTy {
-    use hir::HTy::*;
+    use crate::hir::HTy::*;
     match ty {
         Bool => EbbTy::Bool,
         Int => EbbTy::Int,
@@ -133,7 +133,7 @@ impl HIR2MIR {
         mut eb: EBBBuilder,
         val: hir::Val,
     ) -> EBBBuilder {
-        use hir::Expr::*;
+        use crate::hir::Expr::*;
         let hir::Val {
             ty: ty_,
             name,
@@ -196,7 +196,8 @@ impl HIR2MIR {
             Case { ty, expr, arms } => {
                 let joinlabel = self.genlabel("join");
                 let (eb, var) = self.trans_expr_block(fb, eb, expr.ty(), *expr);
-                let (default, arms): (Vec<_>, _) = arms.into_iter()
+                let (default, arms): (Vec<_>, _) = arms
+                    .into_iter()
                     .partition(|&(ref pat, _)| pat.is_irrefutable());
                 assert!(
                     default.len() <= 1,
@@ -204,7 +205,8 @@ impl HIR2MIR {
                 );
                 let default = default.into_iter().next();
                 let default_label = default.as_ref().map(|_| (self.genlabel("default"), true));
-                let arms = arms.into_iter()
+                let arms = arms
+                    .into_iter()
                     .enumerate()
                     .map(|(n, (pat, expr))| {
                         (
@@ -214,7 +216,8 @@ impl HIR2MIR {
                         )
                     })
                     .collect::<Vec<_>>();
-                let labels = arms.iter()
+                let labels = arms
+                    .iter()
                     .map(|&(key, ref label, _)| (key, label.clone(), true))
                     .collect::<Vec<_>>();
                 // an easy optimization of non branching case
@@ -228,7 +231,7 @@ impl HIR2MIR {
 
                 fb.add_ebb(ebb);
 
-                for (key, label, arm) in arms {
+                for (_key, label, arm) in arms {
                     let eb = EBBBuilder::new(label, Vec::new());
                     let (eb, var) = self.trans_expr_block(fb, eb, ty.clone(), arm);
                     let ebb = eb.jump(joinlabel.clone(), true, vec![var]);
@@ -327,7 +330,7 @@ impl HIR2MIR {
         ty_: hir::HTy,
         expr: hir::Expr,
     ) -> EBB {
-        use hir::Expr::*;
+        use crate::hir::Expr::*;
         match expr {
             Binds { ty, binds, ret } => {
                 assert_eq!(ty, ty_);
@@ -353,7 +356,7 @@ impl HIR2MIR {
         ty_: hir::HTy,
         expr: hir::Expr,
     ) -> (EBBBuilder, Symbol) {
-        use hir::Expr::*;
+        use crate::hir::Expr::*;
         match expr {
             Binds { ty, binds, ret } => {
                 assert_eq!(ty, ty_);

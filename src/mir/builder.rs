@@ -1,5 +1,5 @@
-use mir::*;
-use prim::*;
+use crate::mir::*;
+use crate::prim::*;
 
 pub struct FunctionBuilder(Function);
 

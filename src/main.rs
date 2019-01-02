@@ -1,13 +1,13 @@
 extern crate web_assembler as wasm;
 #[macro_use]
 extern crate webml;
-use webml::*;
-#[allow(unused_imports)]
-use webml::pass::{ConvError, DebugPass, PPPass};
-use wasm::Dump;
+use crate::wasm::Dump;
+use std::env;
 use std::fs::File;
 use std::io::{BufReader, Read, Write};
-use std::env;
+#[allow(unused_imports)]
+use webml::pass::{ConvError, DebugPass, PPPass};
+use webml::*;
 
 fn main() {
     let filename = env::args()

@@ -1,4 +1,4 @@
-use ast::*;
+use crate::ast::*;
 
 pub trait Traverse {
     fn traverse_ast(&mut self, ast: &mut AST) {
@@ -12,7 +12,7 @@ pub trait Traverse {
     }
 
     fn traverse_expr(&mut self, expr: &mut Expr) {
-        use ast::Expr::*;
+        use crate::ast::Expr::*;
         match *expr {
             Binds {
                 ref mut ty,
@@ -71,7 +71,7 @@ pub trait Traverse {
 
     fn traverse_binop(
         &mut self,
-        op: &mut Symbol,
+        _op: &mut Symbol,
         _ty: &mut TyDefer,
         l: &mut Box<Expr>,
         r: &mut Box<Expr>,

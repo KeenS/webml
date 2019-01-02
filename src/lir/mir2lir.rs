@@ -1,9 +1,9 @@
 use std::collections::HashMap;
 
-use pass::Pass;
-use prim::*;
-use lir::*;
-use mir;
+use crate::lir::*;
+use crate::mir;
+use crate::pass::Pass;
+use crate::prim::*;
 
 pub struct MIR2LIR;
 
@@ -13,7 +13,7 @@ impl MIR2LIR {
     }
 
     fn ebbty_to_lty<'a>(&self, ty: &mir::EbbTy) -> LTy {
-        use mir::EbbTy::*;
+        use crate::mir::EbbTy::*;
         match *ty {
             Unit => LTy::Unit,
             Int => LTy::I32,
@@ -30,9 +30,9 @@ impl MIR2LIR {
     }
 
     fn trans_function(&self, f: mir::Function) -> Function {
-        use lir::Op::*;
-        use lir::Value::*;
-        use mir::Op as m;
+        use crate::lir::Op::*;
+        use crate::lir::Value::*;
+        use crate::mir::Op as m;
         let mir::Function {
             name,
             body,
@@ -57,8 +57,11 @@ impl MIR2LIR {
             let target_table = self.make_target_table(body.as_ref(), &symbol_table);
             macro_rules! reg {
                 ($var: expr) => {
-                    symbol_table.get(&$var).expect("variable resolution failed").clone()
-                }
+                    symbol_table
+                        .get(&$var)
+                        .expect("variable resolution failed")
+                        .clone()
+                };
             }
 
             for ebb in body.iter() {
@@ -282,8 +285,11 @@ impl MIR2LIR {
                                     LTy::I64 => LoadI64,
                                     LTy::Ptr => LoadI64,
                                     LTy::FPtr => LoadI64,
-                                    LTy::Unit => // do nothing
-                                        break,
+                                    LTy::Unit =>
+                                    // do nothing
+                                    {
+                                        break
+                                    }
                                 };
                                 ops.push(ctor(reg!(var), Addr(reg!(tuple), *index * 8)));
                                 break;
@@ -303,7 +309,8 @@ impl MIR2LIR {
 
                             let reg = reg!(var);
                             let mut size: u32 = LTy::Ptr.size();
-                            size += env.iter()
+                            size += env
+                                .iter()
                                 .map(|&(ref ty, _)| self.ebbty_to_lty(ty).size())
                                 .sum::<u32>();
                             let mut tys = vec![LTy::FPtr];
@@ -395,7 +402,8 @@ impl MIR2LIR {
                                 }
                             };
 
-                            if !clauses.is_empty() && clauses[0].0 == 0
+                            if !clauses.is_empty()
+                                && clauses[0].0 == 0
                                 && clauses
                                     .iter()
                                     .enumerate()
@@ -489,7 +497,7 @@ impl MIR2LIR {
                 if table.get(&$var).is_none() {
                     table.insert($var, new_reg($ty));
                 };
-            }}
+            }};
         }
 
         // allocate function params first
@@ -575,7 +583,8 @@ impl MIR2LIR {
     ) -> HashMap<&'a Symbol, Vec<Reg>> {
         let mut tbl = HashMap::new();
         for ebb in body {
-            let params = ebb.params
+            let params = ebb
+                .params
                 .iter()
                 .map(|&(_, ref param)| symbol_table[param].clone())
                 .collect();

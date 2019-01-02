@@ -1,4 +1,4 @@
-use hir::*;
+use crate::hir::*;
 
 pub trait Traverse {
     fn traverse_hir(&mut self, hir: &mut HIR) {
@@ -12,7 +12,7 @@ pub trait Traverse {
     }
 
     fn traverse_expr(&mut self, expr: &mut Expr) {
-        use hir::Expr::*;
+        use crate::hir::Expr::*;
         match *expr {
             Binds {
                 ref mut ty,
@@ -105,7 +105,7 @@ pub trait Traverse {
 
     }
 
-    fn traverse_builtin_call(&mut self, _ty: &mut HTy, fun: &mut BIF, arg: &mut Box<Expr>) {
+    fn traverse_builtin_call(&mut self, _ty: &mut HTy, _fun: &mut BIF, arg: &mut Box<Expr>) {
         self.traverse_expr(arg);
     }
 
@@ -139,7 +139,8 @@ pub trait Traverse {
 
 pub trait Transform {
     fn transform_hir(&mut self, mut hir: HIR) -> HIR {
-        hir.0 = hir.0
+        hir.0 = hir
+            .0
             .into_iter()
             .map(|val| self.transform_val(val))
             .collect();
@@ -152,7 +153,7 @@ pub trait Transform {
     }
 
     fn transform_expr(&mut self, expr: Expr) -> Expr {
-        use hir::Expr::*;
+        use crate::hir::Expr::*;
         match expr {
             Binds { ty, binds, ret } => self.transform_binds(ty, binds, ret),
             BinOp { ty, name, l, r } => self.transform_binop(ty, name, l, r),
@@ -247,7 +248,8 @@ pub trait Transform {
         Expr::Case {
             ty: ty,
             expr: Box::new(self.transform_expr(*cond)),
-            arms: arms.into_iter()
+            arms: arms
+                .into_iter()
                 .map(|(pat, expr)|
                                        // FIXME: pass `pat` to transformer
                                        (pat, self.transform_expr(expr)))

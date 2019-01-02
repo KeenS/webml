@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
-use mir::*;
-use prim::*;
-use pass::Pass;
+use crate::mir::*;
+use crate::pass::Pass;
+use crate::prim::*;
 
 pub struct UnAlias {
     alias: HashMap<Symbol, Symbol>,
@@ -31,7 +31,7 @@ impl UnAlias {
     }
 
     fn conv_ebb(&mut self, mut ebb: EBB) -> EBB {
-        use mir::Op::*;
+        use crate::mir::Op::*;
         let mut body = Vec::new();
         for mut op in ebb.body.into_iter() {
             match &mut op {
@@ -104,9 +104,11 @@ impl UnAlias {
                     self.resolv_alias(l);
                     self.resolv_alias(r);
                 }
-                &mut Tuple { ref mut tuple, .. } => for v in tuple.iter_mut() {
-                    self.resolv_alias(v);
-                },
+                &mut Tuple { ref mut tuple, .. } => {
+                    for v in tuple.iter_mut() {
+                        self.resolv_alias(v);
+                    }
+                }
                 &mut Proj { ref mut tuple, .. } => {
                     self.resolv_alias(tuple);
                 }
@@ -121,9 +123,11 @@ impl UnAlias {
                         self.resolv_alias(var);
                     }
                 }
-                &mut BuiltinCall { ref mut args, .. } => for arg in args.iter_mut() {
-                    self.resolv_alias(arg);
-                },
+                &mut BuiltinCall { ref mut args, .. } => {
+                    for arg in args.iter_mut() {
+                        self.resolv_alias(arg);
+                    }
+                }
 
                 &mut Call {
                     ref mut fun,
@@ -135,9 +139,11 @@ impl UnAlias {
                         self.resolv_alias(arg);
                     }
                 }
-                &mut Jump { ref mut args, .. } => for arg in args.iter_mut() {
-                    self.resolv_alias(arg);
-                },
+                &mut Jump { ref mut args, .. } => {
+                    for arg in args.iter_mut() {
+                        self.resolv_alias(arg);
+                    }
+                }
                 &mut Ret { ref mut value, .. } => {
                     value.as_mut().map(|v| self.resolv_alias(v));
                 }

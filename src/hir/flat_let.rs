@@ -1,11 +1,11 @@
-use hir::*;
-use pass::Pass;
-use hir::util::Transform;
+use crate::hir::util::Transform;
+use crate::hir::*;
+use crate::pass::Pass;
 
 pub struct FlatLet;
 
 fn take_binds(mut expr: Expr) -> (Expr, Vec<Val>) {
-    use hir::Expr::*;
+    use crate::hir::Expr::*;
     match expr {
         Binds { binds, ret, .. } => {
             expr = *ret;

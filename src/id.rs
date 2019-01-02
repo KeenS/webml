@@ -1,5 +1,5 @@
-use std::rc::Rc;
 use std::cell::Cell;
+use std::rc::Rc;
 
 #[derive(Clone, Default, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Id(Rc<Cell<u64>>);

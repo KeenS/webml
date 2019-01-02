@@ -1,10 +1,10 @@
 use std::collections::HashSet;
 use std::ops::{Deref, DerefMut, Drop};
 
-use prim::*;
-use hir::*;
-use pass::Pass;
-use id::Id;
+use crate::hir::*;
+use crate::id::Id;
+use crate::pass::Pass;
+use crate::prim::*;
 
 pub struct UnnestFunc {
     tables: Vec<HashSet<Symbol>>,
@@ -73,7 +73,8 @@ impl<'a> Scope<'a> {
 
     fn conv_hir(&mut self, mut hir: HIR) -> HIR {
         let mut closures = Vec::new();
-        let mut vals = hir.0
+        let mut vals = hir
+            .0
             .into_iter()
             .map(|val| {
                 if val.rec {
@@ -102,7 +103,7 @@ impl<'a> Scope<'a> {
     }
 
     fn conv_expr(&mut self, cls: &mut Vec<Val>, expr: Expr, bind_name: Option<Symbol>) -> Expr {
-        use hir::Expr::*;
+        use crate::hir::Expr::*;
         match expr {
             Binds {
                 ty,
@@ -215,7 +216,8 @@ impl<'a> Scope<'a> {
                 mut arms,
             } => {
                 expr = Box::new(self.conv_expr(cls, *expr, None));
-                arms = arms.into_iter()
+                arms = arms
+                    .into_iter()
                     .map(|(pat, arm)| (pat, self.conv_expr(cls, arm, None)))
                     .collect();
                 Case {
@@ -254,7 +256,7 @@ impl<'a> Scope<'a> {
         bound: &Symbol,
         expr: &'c Expr,
     ) {
-        use hir::Expr::*;
+        use crate::hir::Expr::*;
         match expr {
             &Binds {
                 ref binds, ref ret, ..
@@ -294,33 +296,39 @@ impl<'a> Scope<'a> {
                     use self::Pattern::*;
                     match *pat {
                         Lit { .. } => (),
-                        Tuple { ref tuple, .. } => for name in tuple {
-                            scope.add_scope(name.clone())
-                        },
+                        Tuple { ref tuple, .. } => {
+                            for name in tuple {
+                                scope.add_scope(name.clone())
+                            }
+                        }
                         Var { ref name, .. } => scope.add_scope(name.clone()),
                     }
                     scope.analyze_free_expr(frees, bound, arm);
                 }
             }
-            &Tuple { ref tuple, .. } => for t in tuple.iter() {
-                self.analyze_free_expr(frees, bound, t);
-            },
+            &Tuple { ref tuple, .. } => {
+                for t in tuple.iter() {
+                    self.analyze_free_expr(frees, bound, t);
+                }
+            }
             &Sym { ref name, ref ty } => {
                 if !(self.is_in_scope(name) || bound == name) {
                     frees.push((ty.clone(), name.clone()))
                 }
             }
-            &Closure { ref envs, .. } => for &(ref ty, ref name) in envs {
-                if !(self.is_in_scope(name) || bound == name) {
-                    frees.push((ty.clone(), name.clone()))
+            &Closure { ref envs, .. } => {
+                for &(ref ty, ref name) in envs {
+                    if !(self.is_in_scope(name) || bound == name) {
+                        frees.push((ty.clone(), name.clone()))
+                    }
                 }
-            },
+            }
             &Lit { .. } => (),
         }
     }
 
     fn rename(&mut self, expr: &mut Expr, from: &Option<Symbol>, to: &Symbol) {
-        use hir::Expr::*;
+        use crate::hir::Expr::*;
         match *expr {
             Binds {
                 ref mut binds,
@@ -365,9 +373,11 @@ impl<'a> Scope<'a> {
                     self.rename(arm, from, to);
                 }
             }
-            Tuple { ref mut tuple, .. } => for t in tuple.iter_mut() {
-                self.rename(t, from, to);
-            },
+            Tuple { ref mut tuple, .. } => {
+                for t in tuple.iter_mut() {
+                    self.rename(t, from, to);
+                }
+            }
             Sym { ref mut name, .. } => {
                 if from.is_some() && name == from.as_ref().unwrap() {
                     *name = to.clone()

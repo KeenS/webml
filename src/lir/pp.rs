@@ -1,7 +1,7 @@
 use std::io;
 
-use util::PP;
-use lir::*;
+use crate::lir::*;
+use crate::util::PP;
 
 impl PP for LIR {
     fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
@@ -18,7 +18,7 @@ impl PP for Function {
         write!(w, "fun ")?;
         self.name.pp(w, 0)?;
         write!(w, ": (")?;
-        inter_iter!{
+        inter_iter! {
             self.regs.iter().enumerate().take(self.nparams as usize),
             write!(w, ", ")?,
             |(i, reg)| => {
@@ -58,7 +58,7 @@ impl PP for Addr {
 
 impl PP for Value {
     fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
-        use lir::Value::*;
+        use crate::lir::Value::*;
         match self {
             &I(ref i) => write!(w, "{}", i),
             &R(ref r) => r.pp(w, indent),
@@ -68,7 +68,7 @@ impl PP for Value {
 
 impl PP for LTy {
     fn pp(&self, w: &mut io::Write, _indent: usize) -> io::Result<()> {
-        use lir::LTy::*;
+        use crate::lir::LTy::*;
         match *self {
             Unit => write!(w, "()")?,
             I32 => write!(w, "i32")?,
@@ -97,7 +97,7 @@ impl PP for Block {
 }
 impl PP for Op {
     fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
-        use lir::Op::*;
+        use crate::lir::Op::*;
         let indent = indent + 4;
         match *self {
             ConstI32(ref reg, ref i) => {
@@ -329,7 +329,7 @@ impl PP for Op {
                 write!(w, " <- closure_call ")?;
                 name.pp(w, indent)?;
                 write!(w, "(")?;
-                inter_iter!{
+                inter_iter! {
                     args.iter(),
                     write!(w, ", ")?,
                     |arg| => arg.pp(w, indent)?
@@ -343,7 +343,7 @@ impl PP for Op {
                 write!(w, " <- call ")?;
                 name.pp(w, indent)?;
                 write!(w, "(")?;
-                inter_iter!{
+                inter_iter! {
                     args.iter(),
                     write!(w, ", ")?,
                     |arg| => arg.pp(w, indent)?
@@ -357,7 +357,7 @@ impl PP for Op {
                 write!(w, " <- builtin call ")?;
                 name.pp(w, indent)?;
                 write!(w, "(")?;
-                inter_iter!{
+                inter_iter! {
                     args.iter(),
                     write!(w, ", ")?,
                     |arg| => arg.pp(w, indent)?

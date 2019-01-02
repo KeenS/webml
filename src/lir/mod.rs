@@ -2,7 +2,7 @@ pub mod mir2lir;
 pub mod pp;
 
 pub use self::mir2lir::MIR2LIR;
-use prim::*;
+use crate::prim::*;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum LTy {

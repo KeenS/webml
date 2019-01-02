@@ -1,7 +1,7 @@
 use std::io;
 
-use util::PP;
-use hir::*;
+use crate::hir::*;
+use crate::util::PP;
 
 impl PP for HIR {
     fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
@@ -28,7 +28,7 @@ impl PP for Val {
 
 impl PP for Expr {
     fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
-        use hir::Expr::*;
+        use crate::hir::Expr::*;
         match self {
             &Binds {
                 ref binds, ref ret, ..
@@ -165,7 +165,7 @@ impl PP for Pattern {
 
 impl PP for HTy {
     fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
-        use hir::HTy::*;
+        use crate::hir::HTy::*;
         match *self {
             Bool => write!(w, "bool")?,
             Int => write!(w, "int")?,

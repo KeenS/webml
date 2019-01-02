@@ -1,8 +1,8 @@
 use std::collections::HashSet;
 
-use hir::*;
-use hir::util::Traverse;
-use pass::Pass;
+use crate::hir::util::Traverse;
+use crate::hir::*;
+use crate::pass::Pass;
 
 struct Trav<'a> {
     t: &'a mut ForceClosure,
@@ -42,7 +42,7 @@ impl<'a> Traverse for Trav<'a> {
     }
 
     fn traverse_expr(&mut self, expr: &mut Expr) {
-        use hir::Expr::*;
+        use crate::hir::Expr::*;
         let assign;
         match *expr {
             Binds {

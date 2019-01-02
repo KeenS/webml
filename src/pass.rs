@@ -1,6 +1,6 @@
+use crate::util::PP;
 use std::fmt::Debug;
 use std::marker::PhantomData;
-use util::PP;
 
 pub trait Pass<T, E> {
     type Target;

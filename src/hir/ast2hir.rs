@@ -1,12 +1,12 @@
-use ast;
-use pass::Pass;
-use hir::{Expr, HTy, Pattern, Val, HIR};
-use prim::*;
+use crate::ast;
+use crate::hir::{Expr, HTy, Pattern, Val, HIR};
+use crate::pass::Pass;
+use crate::prim::*;
 
 pub struct AST2HIR;
 
 fn force_into(ty: ast::Ty) -> HTy {
-    use ast::Ty::*;
+    use crate::ast::Ty::*;
     match ty {
         Bool => HTy::Bool,
         Int => HTy::Int,
@@ -17,7 +17,7 @@ fn force_into(ty: ast::Ty) -> HTy {
 }
 
 fn force_tuple(ty: ast::Ty) -> Vec<HTy> {
-    use ast::Ty::*;
+    use crate::ast::Ty::*;
     match ty {
         Tuple(tys) => tys.into_iter().map(conv_ty).collect(),
         _ => panic!(),
@@ -43,7 +43,7 @@ impl AST2HIR {
     }
 
     fn conv_expr(&self, expr: ast::Expr) -> Expr {
-        use ast::Expr as E;
+        use crate::ast::Expr as E;
         match expr {
             E::Binds { ty, binds, ret } => Expr::Binds {
                 ty: conv_ty(ty),

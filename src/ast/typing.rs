@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::ops::{Deref, DerefMut, Drop};
 
-use ast::*;
-use prim::*;
+use crate::ast::*;
+use crate::prim::*;
 
 #[derive(Debug)]
 pub struct TyEnv {
@@ -129,7 +129,7 @@ impl<'a> Scope<'a> {
         expr: &mut ast::Expr,
         given: &mut TyDefer,
     ) -> Result<'r, ()> {
-        use ast::Expr::*;
+        use crate::ast::Expr::*;
         match expr {
             &mut Binds {
                 ref mut ty,
@@ -301,7 +301,7 @@ impl<'a> Scope<'a> {
         lit: &mut Literal,
         given: &mut TyDefer,
     ) -> Result<'r, ()> {
-        use prim::Literal::*;
+        use crate::prim::Literal::*;
         let ty = match lit {
             &mut Int(_) => Ty::Int,
             &mut Float(_) => Ty::Float,
@@ -383,7 +383,7 @@ impl TyEnv {
     }
 }
 
-use pass::Pass;
+use crate::pass::Pass;
 impl<'a> Pass<ast::AST, TypeError<'a>> for TyEnv {
     type Target = ast::AST;
 

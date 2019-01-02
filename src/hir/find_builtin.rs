@@ -1,15 +1,15 @@
-use hir::*;
-use pass::Pass;
-use hir::util::Transform;
+use crate::hir::util::Transform;
+use crate::hir::*;
+use crate::pass::Pass;
 
 pub struct FindBuiltin;
 
 impl Transform for FindBuiltin {
     fn transform_app(&mut self, ty: HTy, fun: Box<Expr>, arg: Box<Expr>) -> Expr {
-        use hir::Expr::*;
+        use crate::hir::Expr::*;
         match *fun {
             Expr::Sym { ref name, .. } if name.1 == 0 => {
-                assert!(::BUILTIN_FUNCTIONS.contains(&name.0.as_str()));
+                assert!(crate::BUILTIN_FUNCTIONS.contains(&name.0.as_str()));
                 let fun = match name.0.as_str() {
                     "print" => BIF::Print,
                     name => unreachable!("unknown builtin function found: {}", name),
