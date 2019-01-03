@@ -1,24 +1,20 @@
-#![feature(lang_items)]
 #![feature(stdsimd)]
 #![no_std]
 #![cfg(target_arch = "wasm32")]
-
-
 use core::ptr;
-use core::arch::wasm32::*;
+use stdsimd::arch::wasm32::memory::{grow, size};
 
 #[repr(C)]
 struct Page {
     top: usize,
-    data: *mut u8
+    data: *mut u8,
 }
 
 static mut GC: *mut Page = 0 as *mut _;
 
-
 #[no_mangle]
 pub unsafe extern "C" fn init() {
-    let ret = grow_memory(1);
+    let ret = grow(0, 1);
     let page_ptr: *mut Page = ((ret as u32) * page_size()) as *mut _;
     // for alignment
     let data_ptr: *mut u8 = page_ptr.offset(8) as *mut _;
@@ -28,7 +24,7 @@ pub unsafe extern "C" fn init() {
 
 #[no_mangle]
 pub unsafe extern "C" fn alloc(size: usize) -> *mut u8 {
-    let ret = (*GC).data.offset(size as isize);
+    let ret = (*GC).data.offset((*GC).top as isize);
     (*GC).top += size;
     ret
 }
@@ -44,7 +40,7 @@ pub unsafe extern "C" fn page_alloc() -> *mut u8 {
         return ret as *mut u8;
     }
 
-    let ret = grow_memory(1);
+    let ret = grow(0, 1);
 
     // if we failed to allocate a page then return null
     if ret == -1 {
@@ -63,13 +59,9 @@ pub unsafe extern "C" fn page_free(page: *mut u8) {
 
 #[no_mangle]
 pub unsafe extern "C" fn memory_used() -> usize {
-    (page_size() * (current_memory() as u32)) as usize
+    (page_size() * (size(0) as u32)) as usize
 }
 
 fn page_size() -> u32 {
     64 * 1024
 }
-
-// provided by libstd.
-#[lang = "eh_personality"] extern fn eh_personality() {}
-#[lang = "panic_fmt"] extern fn panic_fmt() -> ! { loop {} }

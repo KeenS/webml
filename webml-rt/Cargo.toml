@@ -2,8 +2,10 @@
 name = "webml-rt"
 version = "0.1.0"
 authors = ["Sunrin SHIMURA (keen) <3han5chou7@gmail.com>"]
+edition="2018"
 
 [lib]
 crate-type = ["cdylib"]
 
 [dependencies]
+stdsimd = "0.1.2"

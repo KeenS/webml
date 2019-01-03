@@ -1,4 +1,37 @@
 [[package]]
+name = "cfg-if"
+version = "0.1.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "coresimd"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "libc"
+version = "0.2.45"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "stdsimd"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "cfg-if 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)",
+ "coresimd 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libc 0.2.45 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
 name = "webml-rt"
 version = "0.1.0"
+dependencies = [
+ "stdsimd 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
+[metadata]
+"checksum cfg-if 0.1.6 (registry+https://github.com/rust-lang/crates.io-index)" = "082bb9b28e00d3c9d39cc03e64ce4cea0f1bb9b3fde493f0cbc008472d22bdf4"
+"checksum coresimd 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "d98353d7172aa5cd59233ac75943e16183e52ca4eb0f69a6e2dc9aeb8c942f77"
+"checksum libc 0.2.45 (registry+https://github.com/rust-lang/crates.io-index)" = "2d2857ec59fadc0773853c664d2d18e7198e83883e7060b63c924cb077bd5c74"
+"checksum stdsimd 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)" = "f120e15f7ea7d1899d4233eec523ab60a065497d9df80f465d4fed0a1c95b11a"
