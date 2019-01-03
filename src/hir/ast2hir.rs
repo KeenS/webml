@@ -102,7 +102,8 @@ impl AST2HIR {
                     let tuple_tys = HTy::Tuple(tys.clone());
                     let tuple = Expr::Tuple { tys, tuple };
                     let pattern = self.conv_pat(val.pattern);
-                    assert!(pattern.is_irrefutable());
+                    // FIXME: this transformation should be done before case_check
+                    // assert!(pattern.is_irrefutable());
 
                     (
                         Expr::Case {
