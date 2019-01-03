@@ -24,7 +24,7 @@ pub struct AST(pub Vec<Val>);
 pub struct Val {
     pub ty: TyDefer,
     pub rec: bool,
-    pub name: Symbol,
+    pub pattern: Pattern,
     pub expr: Expr,
 }
 
@@ -128,7 +128,7 @@ impl Pattern {
             ))),
         }
     }
-    fn binds(&self) -> Vec<(&Symbol, &TyDefer)> {
+    pub fn binds(&self) -> Vec<(&Symbol, &TyDefer)> {
         use self::Pattern::*;
         match *self {
             Lit { .. } | Wildcard { .. } => vec![],

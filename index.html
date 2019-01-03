@@ -7,11 +7,14 @@
          let importObj = {
              "js-ffi": {print: (x) => console.log(x)},
          };
+         let rt;
+         let prog;
          fetch('webml-rt/target/wasm32-unknown-unknown/release/webml_rt.wasm').then(response =>
              response.arrayBuffer()
          ).then(buffer =>
              WebAssembly.instantiate(buffer, {"imports": {print: (x) => console.log(x)}})
          ).then(({module, instance}) => {
+             rt = instance;
              importObj["webml-rt"] = {
                  alloc: instance.exports.alloc,
                  init: instance.exports.init,
@@ -27,7 +30,7 @@
              /* const scriptElem = document.createElement('script');
               * scriptElem.src = 'out.js';
               * document.body.appendChild(scriptElem); */
-             
+             prog = instance
          }
          )
          ;

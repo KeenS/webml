@@ -238,7 +238,9 @@ impl MIR2LIR {
                             let reg = reg!(var);
 
                             let tys: Vec<_> = tys.iter().map(|ty| self.ebbty_to_lty(ty)).collect();
-                            let size: u32 = tys.iter().map(|ty| ty.size()).sum();
+                            // currently all the items are aligned to 8
+                            let size: u32 = tys.iter().map(|ty| 8).sum();
+                            // let size: u32 = tys.iter().map(|ty| ty.size()).sum();
 
                             ops.push(HeapAlloc(reg.clone(), I(size as i32), tys.clone()));
 
