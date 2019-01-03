@@ -140,6 +140,7 @@ pub enum Op {
     Proj {
         var: Symbol,
         ty: EbbTy,
+        /// 0-origin
         index: u32,
         tuple: Symbol,
     },

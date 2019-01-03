@@ -56,7 +56,11 @@ pub trait Traverse {
                 ref mut tys,
                 ref mut tuple,
             } => self.traverse_tuple(tys, tuple),
-
+            Proj {
+                ref mut ty,
+                ref mut index,
+                ref mut tuple,
+            } => self.traverse_proj(ty, index, tuple),
             Sym {
                 ref mut ty,
                 ref mut name,
@@ -132,6 +136,10 @@ pub trait Traverse {
         }
     }
 
+    fn traverse_proj(&mut self, _ty: &mut HTy, _index: &mut u32, tuple: &mut Box<Expr>) {
+        self.traverse_expr(tuple)
+    }
+
     fn traverse_sym(&mut self, _ty: &mut HTy, _name: &mut Symbol) {}
 
     fn traverse_lit(&mut self, _ty: &mut HTy, _value: &mut Literal) {}
@@ -166,6 +174,7 @@ pub trait Transform {
             App { fun, arg, ty } => self.transform_app(ty, fun, arg),
             Case { ty, expr, arms } => self.transform_case(ty, expr, arms),
             Tuple { tys, tuple } => self.transform_tuple(tys, tuple),
+            Proj { ty, index, tuple } => self.transform_proj(ty, index, tuple),
             BuiltinCall { ty, fun, arg } => self.transform_builtin_call(ty, fun, arg),
             Closure {
                 envs,
@@ -261,6 +270,14 @@ pub trait Transform {
         Expr::Tuple {
             tys: tys,
             tuple: tuple.into_iter().map(|e| self.transform_expr(e)).collect(),
+        }
+    }
+
+    fn transform_proj(&mut self, ty: HTy, index: u32, tuple: Box<Expr>) -> Expr {
+        Expr::Proj {
+            ty,
+            index,
+            tuple: Box::new(self.transform_expr(*tuple)),
         }
     }
 
