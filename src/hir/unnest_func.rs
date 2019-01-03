@@ -236,6 +236,14 @@ impl<'a> Scope<'a> {
                     tuple: tuple,
                 }
             }
+            Proj { ty, index, tuple } => {
+                let tuple = self.conv_expr(cls, *tuple, None);
+                Proj {
+                    ty,
+                    tuple: Box::new(tuple),
+                    index,
+                }
+            }
             Sym { name, ty } => Sym { ty: ty, name: name },
             expr @ Closure { .. } | expr @ Lit { .. } => expr,
         }
@@ -311,6 +319,7 @@ impl<'a> Scope<'a> {
                     self.analyze_free_expr(frees, bound, t);
                 }
             }
+            &Proj { ref tuple, .. } => self.analyze_free_expr(frees, bound, tuple),
             &Sym { ref name, ref ty } => {
                 if !(self.is_in_scope(name) || bound == name) {
                     frees.push((ty.clone(), name.clone()))
@@ -378,6 +387,7 @@ impl<'a> Scope<'a> {
                     self.rename(t, from, to);
                 }
             }
+            Proj { ref mut tuple, .. } => self.rename(tuple, from, to),
             Sym { ref mut name, .. } => {
                 if from.is_some() && name == from.as_ref().unwrap() {
                     *name = to.clone()

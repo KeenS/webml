@@ -113,6 +113,15 @@ impl<'a> Traverse for Trav<'a> {
                 return;
             }
 
+            Proj {
+                ref mut ty,
+                ref mut index,
+                ref mut tuple,
+            } => {
+                self.traverse_proj(ty, index, tuple);
+                return;
+            }
+
             Sym {
                 ref mut ty,
                 ref mut name,

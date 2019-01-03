@@ -125,6 +125,14 @@ impl PP for Expr {
                 }
                 write!(w, ")")?;
             }
+            &Proj {
+                ref index,
+                ref tuple,
+                ..
+            } => {
+                write!(w, "#{}", index)?;
+                tuple.pp(w, indent + 4)?;
+            }
             &BuiltinCall {
                 ref fun, ref arg, ..
             } => {

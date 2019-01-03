@@ -73,6 +73,12 @@ pub enum Expr {
         tys: Vec<HTy>,
         tuple: Vec<Expr>,
     },
+    Proj {
+        ty: HTy,
+        /// 0-origin
+        index: u32,
+        tuple: Box<Expr>,
+    },
     Sym {
         ty: HTy,
         name: Symbol,
@@ -159,7 +165,8 @@ impl Expr {
                 ..
             } => HTy::fun(param_ty.clone(), body_ty.clone()),
             &Tuple { ref tys, .. } => HTy::Tuple(tys.clone()),
-            &BinOp { ref ty, .. }
+            &Proj { ref ty, .. }
+            | &BinOp { ref ty, .. }
             | &Binds { ref ty, .. }
             | &BuiltinCall { ref ty, .. }
             | &App { ref ty, .. }

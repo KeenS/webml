@@ -76,6 +76,15 @@ fn take_binds(mut expr: Expr) -> (Expr, Vec<Val>) {
             };
             (expr, bindss.into_iter().flat_map(Vec::into_iter).collect())
         }
+        Proj { ty, tuple, index } => {
+            let (t, binds) = take_binds(*tuple);
+            let proj = Proj {
+                ty,
+                index,
+                tuple: Box::new(t),
+            };
+            (proj, binds)
+        }
         x @ Fun { .. } | x @ Closure { .. } | x @ Sym { .. } | x @ Lit { .. } => (x, Vec::new()),
     }
 }

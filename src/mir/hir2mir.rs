@@ -273,6 +273,12 @@ impl HIR2MIR {
                 eb.tuple(name, tys, tuple);
                 eb
             }
+            Proj { ty, index, tuple } => {
+                let ty = from(ty);
+                let tuple = force_symbol(*tuple);
+                eb.proj(name, ty, index, tuple);
+                eb
+            }
             BinOp {
                 ty,
                 name: name_,
