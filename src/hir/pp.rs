@@ -130,7 +130,7 @@ impl PP for Expr {
                 ref tuple,
                 ..
             } => {
-                write!(w, "#{}", index)?;
+                write!(w, "#{} ", index)?;
                 tuple.pp(w, indent + 4)?;
             }
             &BuiltinCall {

@@ -35,12 +35,12 @@ named!(bind <&str, Val>, alt_complete!(bind_val | bind_fun));
 named!(bind_val <&str, Val>, do_parse!(
     tag_s!("val") >>
         multispace >>
-        name: symbol >>
+        pat: pattern >>
         opt!(multispace) >>
         tag_s!("=") >>
         opt!(multispace) >>
         e: expr >>
-        (Val{ty: TyDefer::empty(), rec: false, name: name, expr: e})
+        (Val{ty: TyDefer::empty(), rec: false, pattern: pat, expr: e})
 ));
 
 named!(bind_fun <&str, Val>, do_parse!(
@@ -61,7 +61,7 @@ named!(bind_fun <&str, Val>, do_parse!(
                     body: Box::new(acc)
                 }
             );
-            Val{ty: TyDefer::empty(), rec: true, name: name, expr: expr}
+            Val{ty: TyDefer::empty(), rec: true, pattern: Pattern::Var{name: name, ty: TyDefer::empty()}, expr: expr}
         })
 ));
 

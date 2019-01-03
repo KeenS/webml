@@ -28,7 +28,7 @@ static BUILTIN_FUNCTIONS: &[&str] = &[
 ];
 
 pub fn compile_str<'a>(input: &'a str, config: &Config) -> Result<Vec<u8>, TypeError<'a>> {
-    use crate::pass::{ConvError, PrintablePass};
+    use crate::pass::{ConvError, DebugPass, PrintablePass};
     use wasm::Dump;
 
     let id = id::Id::new();
@@ -37,7 +37,7 @@ pub fn compile_str<'a>(input: &'a str, config: &Config) -> Result<Vec<u8>, TypeE
        parse: ConvError::new(parse),
        typing: ast::Typing::new(),
        case_check: ast::CaseCheck::new(),
-       ast_to_hir: hir::AST2HIR,
+       ast_to_hir: hir::AST2HIR::new(id.clone()),
        rename: hir::Rename::new(id.clone()),
        find_buildin: hir::FindBuiltin::new(),
        flattening_expresion: hir::FlatExpr::new(id.clone()),
@@ -47,7 +47,7 @@ pub fn compile_str<'a>(input: &'a str, config: &Config) -> Result<Vec<u8>, TypeE
        hir_to_mir: mir::HIR2MIR::new(id.clone()),
        unalias: mir::UnAlias::new(),
        block_arrange: mir::BlockArrange::new(),
-       mir_to_lir: lir::MIR2LIR::new(),
+       mir_to_lir: DebugPass(lir::MIR2LIR::new()),
        backend: backend::LIR2WASM::new(),
     ];
 

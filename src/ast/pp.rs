@@ -16,11 +16,11 @@ impl PP for Val {
     fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
         write!(w, "{}", Self::nspaces(indent))?;
         if self.rec {
-            write!(w, "val ")?;
-        } else {
             write!(w, "fun ")?;
+        } else {
+            write!(w, "val ")?;
         };
-        self.name.pp(w, indent)?;
+        self.pattern.pp(w, indent)?;
         // write!(w, ": ")?;
         // self.ty.pp(w, indent)?;
         write!(w, " = ")?;

@@ -1,3 +1,3 @@
-val x = case (1, 2, 3) of
-            (x, y, z) => z
-val y = print x
+val (u, v, w) = (1, 2, 3)
+val _ = print v
+

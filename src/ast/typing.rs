@@ -111,16 +111,23 @@ impl<'a> Scope<'a> {
         let &mut ast::Val {
             ref mut ty,
             ref rec,
-            ref mut name,
+            ref mut pattern,
             ref mut expr,
         } = val;
+        let names = pattern.binds();
         if *rec {
-            self.insert(name.0.clone(), ty.clone());
+            for (name, ty) in names {
+                self.insert(name.0.clone(), ty.clone());
+            }
             self.infer_expr(expr, ty)?;
         } else {
             self.infer_expr(expr, ty)?;
-            self.insert(name.0.clone(), ty.clone());
+            for (name, ty) in names {
+                self.insert(name.0.clone(), ty.clone());
+            }
         }
+        self.infer_pat(pattern, ty)?;
+
         Ok(())
     }
 

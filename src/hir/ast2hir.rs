@@ -1,10 +1,13 @@
 use crate::ast;
 use crate::config::Config;
 use crate::hir::{Expr, HTy, Pattern, Val, HIR};
+use crate::id::Id;
 use crate::pass::Pass;
 use crate::prim::*;
 
-pub struct AST2HIR;
+pub struct AST2HIR {
+    id: Id,
+}
 
 fn force_into(ty: ast::Ty) -> HTy {
     use crate::ast::Ty::*;
@@ -30,25 +33,122 @@ fn conv_ty(ty: ast::TyDefer) -> HTy {
 }
 
 impl AST2HIR {
-    fn conv_ast(&self, ast: ast::AST) -> HIR {
-        HIR(ast.0.into_iter().map(|val| self.conv_val(val)).collect())
+    pub fn new(id: Id) -> Self {
+        Self { id }
     }
 
-    fn conv_val(&self, val: ast::Val) -> Val {
-        Val {
-            ty: conv_ty(val.ty),
-            rec: val.rec,
-            name: val.name,
-            expr: self.conv_expr(val.expr),
+    pub fn gensym(&mut self) -> Symbol {
+        let id = self.id.next();
+        Symbol("#g".into(), id)
+    }
+
+    fn conv_ast(&mut self, ast: ast::AST) -> HIR {
+        HIR(ast
+            .0
+            .into_iter()
+            .flat_map(|val| self.conv_val(val))
+            .collect())
+    }
+
+    fn conv_val(&mut self, val: ast::Val) -> Vec<Val> {
+        match val.pattern {
+            ast::Pattern::Var { name, ty } => vec![Val {
+                ty: conv_ty(ty),
+                rec: val.rec,
+                name: name,
+                expr: self.conv_expr(val.expr),
+            }],
+            ast::Pattern::Lit { ty, .. } | ast::Pattern::Wildcard { ty } => vec![Val {
+                ty: conv_ty(ty),
+                rec: val.rec,
+                name: self.gensym(),
+                expr: self.conv_expr(val.expr),
+            }],
+            ast::Pattern::Tuple { .. } => {
+                // when C(p1, p2, p3) binds var1 var2 var3, convert
+                //
+                // ```
+                // val C(p1, p2, p3) = expr
+                // ```
+                //
+                // to
+                //
+                // ```
+                // val tmp = case expr of C(p1, p2, p3)  => (var1, var2, var3)
+                // val var1 = #1 tmp
+                // val var2 = #2 tmp
+                // val var3 = #3 tmp
+                // ```
+                let binds = val
+                    .pattern
+                    .binds()
+                    .iter()
+                    .map(|&(name, ty)| (name.clone(), ty.clone()))
+                    .collect::<Vec<_>>();
+                let (case, tuple_ty) = {
+                    let (tys, tuple): (Vec<_>, Vec<_>) = val
+                        .pattern
+                        .binds()
+                        .iter()
+                        .map(|&(name, ty)| {
+                            let ty = conv_ty(ty.clone());
+                            let expr = Expr::Sym {
+                                ty: ty.clone(),
+                                name: name.clone(),
+                            };
+                            (ty, expr)
+                        })
+                        .unzip();
+                    let tuple_tys = HTy::Tuple(tys.clone());
+                    let tuple = Expr::Tuple { tys, tuple };
+                    let pattern = self.conv_pat(val.pattern);
+                    assert!(pattern.is_irrefutable());
+
+                    (
+                        Expr::Case {
+                            ty: tuple_tys.clone(),
+                            expr: Box::new(self.conv_expr(val.expr)),
+                            arms: vec![(pattern, tuple)],
+                        },
+                        tuple_tys,
+                    )
+                };
+
+                let name = self.gensym();
+                let mut ret = vec![Val {
+                    ty: tuple_ty.clone(),
+                    rec: val.rec,
+                    name: name.clone(),
+                    expr: case,
+                }];
+                let tuple = Box::new(Expr::Sym {
+                    ty: tuple_ty,
+                    name: name,
+                });
+                for (index, (var, ty)) in binds.into_iter().enumerate() {
+                    let ty = conv_ty(ty.clone());
+                    ret.push(Val {
+                        ty: ty.clone(),
+                        rec: false,
+                        name: var.clone(),
+                        expr: Expr::Proj {
+                            ty: ty.clone(),
+                            index: index as u32,
+                            tuple: tuple.clone(),
+                        },
+                    })
+                }
+                ret
+            }
         }
     }
 
-    fn conv_expr(&self, expr: ast::Expr) -> Expr {
+    fn conv_expr(&mut self, expr: ast::Expr) -> Expr {
         use crate::ast::Expr as E;
         match expr {
             E::Binds { ty, binds, ret } => Expr::Binds {
                 ty: conv_ty(ty),
-                binds: binds.into_iter().map(|b| self.conv_val(b)).collect(),
+                binds: binds.into_iter().flat_map(|b| self.conv_val(b)).collect(),
                 ret: Box::new(self.conv_expr(*ret)),
             },
             E::BinOp { op, ty, l, r } => Expr::BinOp {
@@ -116,7 +216,7 @@ impl AST2HIR {
             },
         }
     }
-    fn conv_pat(&self, pat: ast::Pattern) -> Pattern {
+    fn conv_pat(&mut self, pat: ast::Pattern) -> Pattern {
         match pat {
             ast::Pattern::Lit { value, ty } => Pattern::Lit {
                 value: value,
