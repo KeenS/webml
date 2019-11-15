@@ -4,7 +4,6 @@ pub mod flat_expr;
 pub mod flat_let;
 pub mod force_closure;
 pub mod pp;
-pub mod rename;
 pub mod unnest_func;
 pub mod util;
 
@@ -13,7 +12,6 @@ pub use self::find_builtin::FindBuiltin;
 pub use self::flat_expr::FlatExpr;
 pub use self::flat_let::FlatLet;
 pub use self::force_closure::ForceClosure;
-pub use self::rename::Rename;
 pub use self::unnest_func::UnnestFunc;
 
 use crate::prim::*;

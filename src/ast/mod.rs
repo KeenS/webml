@@ -1,13 +1,13 @@
 pub mod case_check;
 mod pp;
+pub mod rename;
 pub mod typing;
 mod util;
 
-use nom;
-
 pub use self::case_check::CaseCheck;
+pub use self::rename::Rename;
 pub use self::typing::TyEnv as Typing;
-
+use nom;
 use std::cell::{Ref, RefCell, RefMut};
 use std::error::Error;
 use std::fmt;

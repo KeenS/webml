@@ -1,6 +1,6 @@
+use crate::ast::util::Traverse;
+use crate::ast::*;
 use crate::config::Config;
-use crate::hir::util::Traverse;
-use crate::hir::*;
 use crate::id::Id;
 use crate::pass::Pass;
 use crate::prim::*;
@@ -58,6 +58,19 @@ impl<'a> Scope<'a> {
         symbol.1 = new_id;
     }
 
+    fn new_symbol_pattern(&mut self, pat: &mut Pattern) {
+        use Pattern::*;
+        match pat {
+            Wildcard { .. } | Lit { .. } => (),
+            Var { name, .. } => self.new_symbol(name),
+            Tuple { tuple } => {
+                for (_, sym) in tuple {
+                    self.new_symbol(sym)
+                }
+            }
+        }
+    }
+
     fn rename(&mut self, symbol: &mut Symbol) {
         let pos = self.pos;
         for table in self.tables[0..pos].iter_mut().rev() {
@@ -73,15 +86,15 @@ impl<'a> Scope<'a> {
 }
 
 impl<'a> util::Traverse for Scope<'a> {
-    fn traverse_hir<'b, 'c>(&'b mut self, hir: &'c mut HIR) {
+    fn traverse_ast<'b, 'c>(&'b mut self, hir: &'c mut AST) {
         let scope = self;
         for val in hir.0.iter_mut() {
             if val.rec {
-                scope.new_symbol(&mut val.name);
+                scope.new_symbol_pattern(&mut val.pattern);
                 scope.traverse_val(val);
             } else {
                 scope.traverse_val(val);
-                scope.new_symbol(&mut val.name);
+                scope.new_symbol_pattern(&mut val.pattern);
             }
         }
     }
@@ -90,56 +103,54 @@ impl<'a> util::Traverse for Scope<'a> {
         self.traverse_expr(&mut val.expr);
     }
 
-    fn traverse_binds(&mut self, _ty: &mut HTy, binds: &mut Vec<Val>, ret: &mut Box<Expr>) {
+    fn traverse_binds(&mut self, _ty: &mut TyDefer, binds: &mut Vec<Val>, ret: &mut Box<Expr>) {
         let mut scope = self.new_scope();
         for bind in binds.iter_mut() {
             scope.traverse_val(bind);
-            scope.new_symbol(&mut bind.name);
+            scope.new_symbol_pattern(&mut bind.pattern);
         }
         scope.traverse_expr(ret);
     }
 
+    fn traverse_binop(
+        &mut self,
+        op: &mut Symbol,
+        _ty: &mut TyDefer,
+        l: &mut Box<Expr>,
+        r: &mut Box<Expr>,
+    ) {
+        self.rename(op);
+        self.traverse_expr(l);
+        self.traverse_expr(r);
+    }
+
     fn traverse_fun(
         &mut self,
-        param: &mut (HTy, Symbol),
-        _body_ty: &mut HTy,
+        _param_ty: &mut TyDefer,
+        param: &mut Symbol,
+        _body_ty: &mut TyDefer,
         body: &mut Box<Expr>,
-        _captures: &mut Vec<(HTy, Symbol)>,
     ) {
         let mut scope = self.new_scope();
-        scope.new_symbol(&mut param.1);
+        scope.new_symbol(param);
         scope.traverse_expr(body);
     }
 
     fn traverse_case(
         &mut self,
-        _ty: &mut HTy,
+        _ty: &mut TyDefer,
         expr: &mut Box<Expr>,
         arms: &mut Vec<(Pattern, Expr)>,
     ) {
         self.traverse_expr(expr);
         for &mut (ref mut pat, ref mut arm) in arms.iter_mut() {
             let mut scope = self.new_scope();
-            for sym in pat.symbols_mut() {
-                scope.new_symbol(sym)
-            }
+            scope.new_symbol_pattern(pat);
             scope.traverse_expr(arm);
         }
     }
 
-    fn traverse_closure(
-        &mut self,
-        envs: &mut Vec<(HTy, Symbol)>,
-        _param_ty: &mut HTy,
-        _body_ty: &mut HTy,
-        _fname: &mut Symbol,
-    ) {
-        for &mut (_, ref mut var) in envs.iter_mut() {
-            self.rename(var);
-        }
-    }
-
-    fn traverse_sym(&mut self, _ty: &mut HTy, name: &mut Symbol) {
+    fn traverse_sym(&mut self, _ty: &mut TyDefer, name: &mut Symbol) {
         self.rename(name);
     }
 }
@@ -164,11 +175,11 @@ impl Rename {
     }
 }
 
-impl<E> Pass<HIR, E> for Rename {
-    type Target = HIR;
+impl<E> Pass<AST, E> for Rename {
+    type Target = AST;
 
-    fn trans(&mut self, mut hir: HIR, _: &Config) -> ::std::result::Result<Self::Target, E> {
-        self.scope().traverse_hir(&mut hir);
-        Ok(hir)
+    fn trans(&mut self, mut ast: AST, _: &Config) -> ::std::result::Result<Self::Target, E> {
+        self.scope().traverse_ast(&mut ast);
+        Ok(ast)
     }
 }

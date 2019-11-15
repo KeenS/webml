@@ -24,7 +24,7 @@ pub use crate::pass::{Chain, Pass};
 
 static BUILTIN_FUNCTIONS: &[&str] = &[
     "print", // "+", "-", "*", "div", "/", "mod",
-             // "=", "<>", ">", ">=", "<", "<="
+            // "=", "<>", ">", ">=", "<", "<="
 ];
 
 pub fn compile_str<'a>(input: &'a str, config: &Config) -> Result<Vec<u8>, TypeError<'a>> {
@@ -35,10 +35,10 @@ pub fn compile_str<'a>(input: &'a str, config: &Config) -> Result<Vec<u8>, TypeE
 
     let mut passes = compile_pass![
        parse: ConvError::new(parse),
+       rename: ast::Rename::new(id.clone()),
        typing: ast::Typing::new(),
        case_check: ast::CaseCheck::new(),
        ast_to_hir: hir::AST2HIR::new(id.clone()),
-       rename: hir::Rename::new(id.clone()),
        find_buildin: hir::FindBuiltin::new(),
        flattening_expresion: hir::FlatExpr::new(id.clone()),
        flattening_let: hir::FlatLet::new(),
