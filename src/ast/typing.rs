@@ -6,7 +6,7 @@ use std::ops::DerefMut;
 
 #[derive(Debug)]
 pub struct TyEnv {
-    env: HashMap<String, TyDefer>,
+    env: HashMap<Symbol, TyDefer>,
 }
 
 fn unify<'a>(t1: &mut TyDefer, t2: &mut TyDefer) -> Result<'a, ()> {
@@ -54,11 +54,11 @@ fn unify<'a>(t1: &mut TyDefer, t2: &mut TyDefer) -> Result<'a, ()> {
 }
 
 impl TyEnv {
-    fn get_mut(&mut self, name: &str) -> Option<&mut TyDefer> {
+    fn get_mut(&mut self, name: &Symbol) -> Option<&mut TyDefer> {
         self.env.get_mut(name)
     }
 
-    fn insert(&mut self, k: String, v: TyDefer) -> Option<TyDefer> {
+    fn insert(&mut self, k: Symbol, v: TyDefer) -> Option<TyDefer> {
         self.env.insert(k, v)
     }
 }
@@ -81,13 +81,13 @@ impl TyEnv {
         let names = pattern.binds();
         if *rec {
             for (name, ty) in names {
-                self.insert(name.0.clone(), ty.clone());
+                self.insert(name.clone(), ty.clone());
             }
             self.infer_expr(expr, ty)?;
         } else {
             self.infer_expr(expr, ty)?;
             for (name, ty) in names {
-                self.insert(name.0.clone(), ty.clone());
+                self.insert(name.clone(), ty.clone());
             }
         }
         self.infer_pat(pattern, ty)?;
@@ -165,7 +165,7 @@ impl TyEnv {
                 ref mut body_ty,
                 ref mut body,
             } => {
-                self.insert(param.0.clone(), param_ty.clone());
+                self.insert(param.clone(), param_ty.clone());
 
                 self.infer_expr(body, body_ty)?;
                 let mut fn_ty = match (param_ty.defined(), body_ty.defined()) {
@@ -251,7 +251,7 @@ impl TyEnv {
     }
 
     fn infer_symbol<'b, 'r>(&'b mut self, sym: &mut Symbol, given: &mut TyDefer) -> Result<'r, ()> {
-        match self.get_mut(&sym.0) {
+        match self.get_mut(&sym) {
             Some(t) => unify(t, given),
             None => {
                 if &sym.0 == "print" {
@@ -304,7 +304,7 @@ impl TyEnv {
         let mut ty = pat.ty_defer();
         unify(&mut ty, given)?;
         for (name, ty) in pat.binds() {
-            self.insert(name.0.clone(), ty.clone());
+            self.insert(name.clone(), ty.clone());
         }
         Ok(())
     }
