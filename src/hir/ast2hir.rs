@@ -9,8 +9,8 @@ pub struct AST2HIR {
     id: Id,
 }
 
-fn force_into(ty: ast::Ty) -> HTy {
-    use crate::ast::Ty::*;
+fn force_into(ty: ast::Type) -> HTy {
+    use crate::ast::Type::*;
     match ty {
         Bool => HTy::Bool,
         Int => HTy::Int,
@@ -20,8 +20,8 @@ fn force_into(ty: ast::Ty) -> HTy {
     }
 }
 
-fn force_tuple(ty: ast::Ty) -> Vec<HTy> {
-    use crate::ast::Ty::*;
+fn force_tuple(ty: ast::Type) -> Vec<HTy> {
+    use crate::ast::Type::*;
     match ty {
         Tuple(tys) => tys.into_iter().map(conv_ty).collect(),
         _ => panic!(),

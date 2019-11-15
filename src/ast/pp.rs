@@ -151,9 +151,9 @@ impl PP for Pattern {
     }
 }
 
-impl PP for Ty {
+impl PP for Type {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
-        use self::Ty::*;
+        use self::Type::*;
         match *self {
             Bool => write!(w, "bool")?,
             Int => write!(w, "int")?,

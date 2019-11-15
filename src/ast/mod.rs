@@ -86,7 +86,7 @@ pub enum Pattern {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Ty {
+pub enum Type {
     Bool,
     Int,
     Float,
@@ -95,7 +95,7 @@ pub enum Ty {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TyDefer(pub Rc<RefCell<Option<Ty>>>);
+pub struct TyDefer(pub Rc<RefCell<Option<Type>>>);
 
 impl Expr {
     fn ty_defer(&self) -> TyDefer {
@@ -113,7 +113,7 @@ impl Expr {
                 ref param_ty,
                 ref body_ty,
                 ..
-            } => TyDefer::new(Some(Ty::Fun(param_ty.clone(), body_ty.clone()))),
+            } => TyDefer::new(Some(Type::Fun(param_ty.clone(), body_ty.clone()))),
         }
     }
 }
@@ -123,7 +123,7 @@ impl Pattern {
         use self::Pattern::*;
         match *self {
             Lit { ref ty, .. } | Var { ref ty, .. } | Wildcard { ref ty } => ty.clone(),
-            Tuple { ref tuple } => TyDefer::new(Some(Ty::Tuple(
+            Tuple { ref tuple } => TyDefer::new(Some(Type::Tuple(
                 tuple.iter().map(|&(ref ty, ..)| ty.clone()).collect(),
             ))),
         }
@@ -138,28 +138,28 @@ impl Pattern {
     }
 }
 
-impl Ty {
-    pub fn fun(param: Ty, ret: Ty) -> Ty {
-        Ty::Fun(
+impl Type {
+    pub fn fun(param: Type, ret: Type) -> Type {
+        Type::Fun(
             TyDefer(Rc::new(RefCell::new(Some(param)))),
             TyDefer(Rc::new(RefCell::new(Some(ret)))),
         )
     }
-    pub fn unit() -> Ty {
-        Ty::Tuple(Vec::new())
+    pub fn unit() -> Type {
+        Type::Tuple(Vec::new())
     }
 }
 
 impl TyDefer {
-    pub fn get_mut(&mut self) -> RefMut<Option<Ty>> {
+    pub fn get_mut(&mut self) -> RefMut<Option<Type>> {
         self.0.borrow_mut()
     }
 
-    pub fn get(&self) -> Ref<Option<Ty>> {
+    pub fn get(&self) -> Ref<Option<Type>> {
         self.0.borrow()
     }
 
-    pub fn new(t: Option<Ty>) -> Self {
+    pub fn new(t: Option<Type>) -> Self {
         TyDefer(Rc::new(RefCell::new(t)))
     }
 
@@ -167,18 +167,18 @@ impl TyDefer {
         Self::new(None)
     }
 
-    pub fn defined(&self) -> Option<Ty> {
+    pub fn defined(&self) -> Option<Type> {
         self.0.deref().clone().into_inner()
     }
 
-    pub fn force(self, message: &str) -> Ty {
+    pub fn force(self, message: &str) -> Type {
         self.0.deref().clone().into_inner().expect(message)
     }
 }
 
 #[derive(Debug)]
 pub enum TypeError<'a> {
-    MisMatch { expected: Ty, actual: Ty },
+    MisMatch { expected: Type, actual: Type },
     CannotInfer,
     FreeVar,
     NotFunction(ast::Expr),

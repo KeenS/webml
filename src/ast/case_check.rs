@@ -27,7 +27,7 @@ impl Traverse for CaseCheck {
             .force("internal error: typed AST isn't typed");
         match ty {
             // variants like
-            Ty::Bool => {
+            Type::Bool => {
                 let variants = {
                     let mut set = HashSet::new();
                     set.insert(true);
@@ -60,7 +60,7 @@ impl Traverse for CaseCheck {
                 }
             }
             // integer like
-            Ty::Int => {
+            Type::Int => {
                 let mut matched = HashSet::new();
                 let mut defaulted = false;
                 for &mut (ref pat, _) in arms {
@@ -88,7 +88,7 @@ impl Traverse for CaseCheck {
                 }
             }
             // record like
-            Ty::Tuple(_tuple) => {
+            Type::Tuple(_tuple) => {
                 assert_eq!(arms.len(), 1);
                 for &mut (ref pat, _) in arms {
                     match pat {

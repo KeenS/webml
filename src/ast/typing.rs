@@ -33,18 +33,18 @@ fn unify<'a>(t1: &mut TyDefer, t2: &mut TyDefer) -> Result<'a, ()> {
             } else {
                 match (t1, t2) {
                     (
-                        &mut Ty::Fun(ref mut p1, ref mut b1),
-                        &mut Ty::Fun(ref mut p2, ref mut b2),
+                        &mut Type::Fun(ref mut p1, ref mut b1),
+                        &mut Type::Fun(ref mut p2, ref mut b2),
                     ) => {
                         unify(p1, p2)?;
                         unify(b1, b2)?;
                         Ok(())
                     }
-                    (&mut Ty::Tuple(ref mut tu1), &mut Ty::Tuple(ref mut tu2)) => {
+                    (&mut Type::Tuple(ref mut tu1), &mut Type::Tuple(ref mut tu2)) => {
                         if tu1.len() != tu2.len() {
                             return Err(TypeError::MisMatch {
-                                expected: Ty::Tuple(tu1.clone()),
-                                actual: Ty::Tuple(tu2.clone()),
+                                expected: Type::Tuple(tu1.clone()),
+                                actual: Type::Tuple(tu2.clone()),
                             });
                         } else {
                             for (t1, t2) in tu1.iter_mut().zip(tu2) {
@@ -158,9 +158,9 @@ impl<'a> Scope<'a> {
                 ref mut r,
             } => {
                 if ["+", "-", "*"].contains(&op.0.as_str()) {
-                    let mut lty = TyDefer::new(Some(Ty::Int));
+                    let mut lty = TyDefer::new(Some(Type::Int));
                     self.infer_expr(l, &mut lty).or_else(|_| {
-                        *lty.get_mut() = Some(Ty::Float);
+                        *lty.get_mut() = Some(Type::Float);
                         self.infer_expr(l, &mut lty)
                     })?;
                     self.infer_expr(r, &mut lty)?;
@@ -168,25 +168,25 @@ impl<'a> Scope<'a> {
                     unify(ty, given)?;
                     Ok(())
                 } else if ["=", "<>", ">", ">=", "<", "<="].contains(&op.0.as_str()) {
-                    let mut lty = TyDefer::new(Some(Ty::Int));
+                    let mut lty = TyDefer::new(Some(Type::Int));
                     self.infer_expr(l, &mut lty).or_else(|_| {
-                        *lty.get_mut() = Some(Ty::Float);
+                        *lty.get_mut() = Some(Type::Float);
                         self.infer_expr(l, &mut lty)
                     })?;
                     self.infer_expr(r, &mut lty)?;
-                    let mut ret_ty = TyDefer::new(Some(Ty::Bool));
+                    let mut ret_ty = TyDefer::new(Some(Type::Bool));
                     unify(&mut ret_ty, given)?;
                     unify(ty, given)?;
                     Ok(())
                 } else if ["div", "mod"].contains(&op.0.as_str()) {
-                    let mut lty = TyDefer::new(Some(Ty::Int));
+                    let mut lty = TyDefer::new(Some(Type::Int));
                     self.infer_expr(l, &mut lty)?;
                     self.infer_expr(r, &mut lty)?;
                     unify(&mut lty, given)?;
                     unify(ty, given)?;
                     Ok(())
                 } else if ["/"].contains(&op.0.as_str()) {
-                    let mut lty = TyDefer::new(Some(Ty::Float));
+                    let mut lty = TyDefer::new(Some(Type::Float));
                     self.infer_expr(l, &mut lty)?;
                     self.infer_expr(r, &mut lty)?;
                     unify(&mut lty, given)?;
@@ -207,7 +207,7 @@ impl<'a> Scope<'a> {
 
                 scope.infer_expr(body, body_ty)?;
                 let mut fn_ty = match (param_ty.defined(), body_ty.defined()) {
-                    (Some(p), Some(b)) => TyDefer::new(Some(Ty::fun(p, b))),
+                    (Some(p), Some(b)) => TyDefer::new(Some(Type::fun(p, b))),
                     _ => TyDefer::new(None),
                 };
                 unify(&mut fn_ty, given)?;
@@ -219,10 +219,10 @@ impl<'a> Scope<'a> {
                 ref mut fun,
                 ref mut arg,
             } => {
-                let mut fun_ty = TyDefer::new(Some(Ty::Fun(TyDefer::new(None), ty.clone())));
+                let mut fun_ty = TyDefer::new(Some(Type::Fun(TyDefer::new(None), ty.clone())));
                 self.infer_expr(fun, &mut fun_ty)?;
                 match fun_ty.get_mut().deref_mut() {
-                    &mut Some(Ty::Fun(ref mut param, ref mut ret)) => {
+                    &mut Some(Type::Fun(ref mut param, ref mut ret)) => {
                         self.infer_expr(arg, param)?;
                         unify(given, ret)?;
                     }
@@ -238,7 +238,7 @@ impl<'a> Scope<'a> {
                 ref mut then,
                 ref mut else_,
             } => {
-                let _cond_ty = self.infer_expr(cond, &mut TyDefer::new(Some(Ty::Bool)))?;
+                let _cond_ty = self.infer_expr(cond, &mut TyDefer::new(Some(Type::Bool)))?;
                 self.infer_expr(then, given)?;
                 self.infer_expr(else_, given)?;
                 unify(ty, given)?;
@@ -294,7 +294,7 @@ impl<'a> Scope<'a> {
             Some(t) => unify(t, given),
             None => {
                 if &sym.0 == "print" {
-                    *given.get_mut() = Some(Ty::fun(Ty::Int, Ty::unit()));
+                    *given.get_mut() = Some(Type::fun(Type::Int, Type::unit()));
                     Ok(())
                 } else {
                     Err(TypeError::FreeVar)
@@ -310,14 +310,14 @@ impl<'a> Scope<'a> {
     ) -> Result<'r, ()> {
         use crate::prim::Literal::*;
         let ty = match lit {
-            &mut Int(_) => Ty::Int,
-            &mut Float(_) => Ty::Float,
-            &mut Bool(_) => Ty::Bool,
+            &mut Int(_) => Type::Int,
+            &mut Float(_) => Type::Float,
+            &mut Bool(_) => Type::Bool,
         };
         match (ty, given.get_mut().deref_mut()) {
-            (Ty::Int, &mut Some(Ty::Int)) => Ok(()),
-            (Ty::Bool, &mut Some(Ty::Bool)) => Ok(()),
-            (Ty::Float, &mut Some(Ty::Float)) => Ok(()),
+            (Type::Int, &mut Some(Type::Int)) => Ok(()),
+            (Type::Bool, &mut Some(Type::Bool)) => Ok(()),
+            (Type::Float, &mut Some(Type::Float)) => Ok(()),
             (ty, g @ &mut None) => {
                 *g = Some(ty.clone());
                 Ok(())
@@ -359,7 +359,7 @@ impl<'a> Scope<'a> {
             // ignoring the error of infering. Right, maybe.
             let _res = self.infer_expr(e, t);
         }
-        unify(&mut TyDefer::new(Some(Ty::Tuple(tys))), given)?;
+        unify(&mut TyDefer::new(Some(Type::Tuple(tys))), given)?;
         Ok(())
     }
 }
