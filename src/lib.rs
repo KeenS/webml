@@ -10,6 +10,7 @@ pub mod mir;
 mod parser;
 pub mod pass;
 pub mod prim;
+mod union_find;
 
 pub use crate::ast::TypeError;
 pub use crate::config::Config;
@@ -22,7 +23,7 @@ static BUILTIN_FUNCTIONS: &[&str] = &[
 ];
 
 pub fn compile_str<'a>(input: &'a str, config: &Config) -> Result<Vec<u8>, TypeError<'a>> {
-    use crate::pass::{ConvError, DebugPass, PrintablePass};
+    use crate::pass::{ConvError, PrintablePass};
     use wasm::Dump;
 
     let id = id::Id::new();
@@ -41,7 +42,7 @@ pub fn compile_str<'a>(input: &'a str, config: &Config) -> Result<Vec<u8>, TypeE
        hir_to_mir: mir::HIR2MIR::new(id.clone()),
        unalias: mir::UnAlias::new(),
        block_arrange: mir::BlockArrange::new(),
-       mir_to_lir: DebugPass(lir::MIR2LIR::new()),
+       mir_to_lir: lir::MIR2LIR::new(),
        backend: backend::LIR2WASM::new(),
     ];
 
