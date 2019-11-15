@@ -3,7 +3,7 @@ use crate::util::PP;
 use std::io;
 
 impl PP for AST {
-    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         for bind in &self.0 {
             bind.pp(w, indent)?;
             write!(w, "\n")?;
@@ -13,7 +13,7 @@ impl PP for AST {
 }
 
 impl PP for Val {
-    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         write!(w, "{}", Self::nspaces(indent))?;
         if self.rec {
             write!(w, "fun ")?;
@@ -30,7 +30,7 @@ impl PP for Val {
 }
 
 impl PP for Expr {
-    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         use crate::ast::Expr::*;
         match self {
             &Binds {
@@ -131,7 +131,7 @@ impl PP for Expr {
 }
 
 impl PP for Pattern {
-    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         match self {
             Pattern::Lit { ref value, .. } => value.pp(w, indent),
             Pattern::Tuple { ref tuple, .. } => {
@@ -152,7 +152,7 @@ impl PP for Pattern {
 }
 
 impl PP for Ty {
-    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         use self::Ty::*;
         match *self {
             Bool => write!(w, "bool")?,

@@ -3,7 +3,7 @@ use std::io;
 use wasm::Module;
 
 impl PP for Module {
-    fn pp(&self, w: &mut io::Write, _: usize) -> io::Result<()> {
+    fn pp<W: io::Write>(&self, w: &mut W, _: usize) -> io::Result<()> {
         writeln!(w, "{:#?}", self)?;
         Ok(())
     }

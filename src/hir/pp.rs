@@ -4,7 +4,7 @@ use crate::hir::*;
 use crate::util::PP;
 
 impl PP for HIR {
-    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         for bind in &self.0 {
             bind.pp(w, indent)?;
             write!(w, "\n")?;
@@ -14,7 +14,7 @@ impl PP for HIR {
 }
 
 impl PP for Val {
-    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         let rec = if self.rec { "rec " } else { "" };
         write!(w, "{}val{} ", Self::nspaces(indent), rec)?;
         self.name.pp(w, indent)?;
@@ -27,7 +27,7 @@ impl PP for Val {
 }
 
 impl PP for Expr {
-    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         use crate::hir::Expr::*;
         match self {
             &Binds {
@@ -152,7 +152,7 @@ impl PP for Expr {
 }
 
 impl PP for Pattern {
-    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         match *self {
             Pattern::Lit { ref value, .. } => value.pp(w, indent),
             Pattern::Tuple { ref tuple, .. } => {
@@ -172,7 +172,7 @@ impl PP for Pattern {
 }
 
 impl PP for HTy {
-    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         use crate::hir::HTy::*;
         match *self {
             Bool => write!(w, "bool")?,

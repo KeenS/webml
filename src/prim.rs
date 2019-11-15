@@ -11,7 +11,7 @@ impl Symbol {
 }
 
 impl PP for Symbol {
-    fn pp(&self, w: &mut io::Write, _indent: usize) -> io::Result<()> {
+    fn pp<W: io::Write>(&self, w: &mut W, _indent: usize) -> io::Result<()> {
         write!(w, "{}@{}", self.0, self.1)?;
         Ok(())
     }
@@ -25,7 +25,7 @@ pub enum Literal {
 }
 
 impl PP for Literal {
-    fn pp(&self, w: &mut io::Write, _indent: usize) -> io::Result<()> {
+    fn pp<W: io::Write>(&self, w: &mut W, _indent: usize) -> io::Result<()> {
         use self::Literal::*;
         match self {
             &Int(ref v) => {
@@ -48,7 +48,7 @@ pub enum BIF {
 }
 
 impl PP for BIF {
-    fn pp(&self, w: &mut io::Write, _indent: usize) -> io::Result<()> {
+    fn pp<W: io::Write>(&self, w: &mut W, _indent: usize) -> io::Result<()> {
         use self::BIF::*;
         match self {
             &Print => {

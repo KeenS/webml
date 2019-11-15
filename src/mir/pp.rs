@@ -4,7 +4,7 @@ use crate::mir::*;
 use crate::util::PP;
 
 impl PP for MIR {
-    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         for fun in &self.0 {
             fun.pp(w, indent)?;
         }
@@ -13,7 +13,7 @@ impl PP for MIR {
 }
 
 impl PP for Function {
-    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         let indent = indent + 4;
         write!(w, "fun ")?;
         self.name.pp(w, indent)?;
@@ -39,7 +39,7 @@ impl PP for Function {
 }
 
 impl PP for EbbTy {
-    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         use crate::mir::EbbTy::*;
         let indent = indent + 4;
         match *self {
@@ -91,7 +91,7 @@ impl PP for EbbTy {
 }
 
 impl PP for EBB {
-    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         let space = Self::nspaces(indent);
         write!(w, "{}", space)?;
         self.name.pp(w, indent)?;
@@ -115,8 +115,8 @@ impl PP for EBB {
     }
 }
 
-fn pp_binop(
-    w: &mut io::Write,
+fn pp_binop<W: io::Write>(
+    w: &mut W,
     indent: usize,
     space: &str,
     name: &str,
@@ -137,7 +137,7 @@ fn pp_binop(
 }
 
 impl PP for Op {
-    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         use crate::mir::Op::*;
         let space = Self::nspaces(indent);
         let indent = indent + 4;

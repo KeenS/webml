@@ -3,7 +3,7 @@ use crate::util::PP;
 use std::io;
 
 impl PP for LIR {
-    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         for fun in &self.0 {
             fun.pp(w, indent)?;
         }
@@ -12,7 +12,7 @@ impl PP for LIR {
 }
 
 impl PP for Function {
-    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         let indent = indent + 4;
         write!(w, "fun ")?;
         self.name.pp(w, 0)?;
@@ -38,25 +38,25 @@ impl PP for Function {
 }
 
 impl PP for Reg {
-    fn pp(&self, w: &mut io::Write, _indent: usize) -> io::Result<()> {
+    fn pp<W: io::Write>(&self, w: &mut W, _indent: usize) -> io::Result<()> {
         write!(w, "r{:?}", self.1)
     }
 }
 
 impl PP for Label {
-    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         self.0.pp(w, indent)
     }
 }
 
 impl PP for Addr {
-    fn pp(&self, w: &mut io::Write, _indent: usize) -> io::Result<()> {
+    fn pp<W: io::Write>(&self, w: &mut W, _indent: usize) -> io::Result<()> {
         write!(w, "[r{}+{}]", (self.0).1, self.1)
     }
 }
 
 impl PP for Value {
-    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         use crate::lir::Value::*;
         match self {
             &I(ref i) => write!(w, "{}", i),
@@ -66,7 +66,7 @@ impl PP for Value {
 }
 
 impl PP for LTy {
-    fn pp(&self, w: &mut io::Write, _indent: usize) -> io::Result<()> {
+    fn pp<W: io::Write>(&self, w: &mut W, _indent: usize) -> io::Result<()> {
         use crate::lir::LTy::*;
         match *self {
             Unit => write!(w, "()")?,
@@ -82,7 +82,7 @@ impl PP for LTy {
 }
 
 impl PP for Block {
-    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         self.name.pp(w, indent)?;
         write!(w, ":\n")?;
         let indent = indent + 4;
@@ -95,7 +95,7 @@ impl PP for Block {
     }
 }
 impl PP for Op {
-    fn pp(&self, w: &mut io::Write, indent: usize) -> io::Result<()> {
+    fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         use crate::lir::Op::*;
         let indent = indent + 4;
         match *self {
