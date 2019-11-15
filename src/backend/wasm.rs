@@ -32,17 +32,6 @@ fn lty_to_valuetype(t: &lir::LTy) -> ValueType {
     lty_to_valuetype_opt(t).unwrap_or(ValueType::I32)
 }
 
-fn tys_to_ptrbits(tys: &[lir::LTy]) -> u32 {
-    let mut bits = 0;
-    for ty in tys {
-        bits <<= 1;
-        if ty.is_ptr() {
-            bits |= 1;
-        }
-    }
-    bits
-}
-
 fn fun_type(f: &lir::Function) -> FuncType {
     let &lir::Function {
         ref nparams,

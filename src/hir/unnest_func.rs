@@ -269,7 +269,7 @@ impl<'a> Scope<'a> {
             &Binds {
                 ref binds, ref ret, ..
             } => {
-                let mut scope = self;
+                let scope = self;
                 for bind in binds.iter() {
                     if bind.rec {
                         scope.add_scope(bind.name.clone());
@@ -299,7 +299,7 @@ impl<'a> Scope<'a> {
                 ref expr, ref arms, ..
             } => {
                 self.analyze_free_expr(frees, bound, expr);
-                let mut scope = self;
+                let scope = self;
                 for &(ref pat, ref arm) in arms.iter() {
                     use self::Pattern::*;
                     match *pat {

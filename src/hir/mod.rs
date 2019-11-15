@@ -95,15 +95,6 @@ pub enum Pattern {
 }
 
 impl Pattern {
-    fn symbols_mut(&mut self) -> Vec<&mut Symbol> {
-        use self::Pattern::*;
-        match *self {
-            Lit { .. } => vec![],
-            Tuple { ref mut tuple, .. } => tuple.iter_mut().collect(),
-            Var { ref mut name, .. } => vec![name],
-        }
-    }
-
     pub fn match_key(&self) -> u64 {
         use self::Pattern::*;
         // FIXME do not panic

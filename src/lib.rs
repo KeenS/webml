@@ -1,10 +1,4 @@
 #[macro_use]
-extern crate nom;
-extern crate petgraph;
-#[macro_use]
-extern crate wasm;
-
-#[macro_use]
 pub mod util;
 pub mod ast;
 pub mod backend;

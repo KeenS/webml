@@ -32,7 +32,7 @@ fn take_binds(mut expr: Expr) -> (Expr, Vec<Val>) {
             (expr, lbinds)
         }
         BuiltinCall { mut arg, ty, fun } => {
-            let (a, mut binds) = take_binds(*arg);
+            let (a, binds) = take_binds(*arg);
             arg = Box::new(a);
             let expr = BuiltinCall {
                 fun: fun,
