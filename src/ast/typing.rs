@@ -2,27 +2,11 @@ use crate::ast::*;
 use crate::config::Config;
 use crate::prim::*;
 use std::collections::HashMap;
-use std::ops::{Deref, DerefMut, Drop};
+use std::ops::DerefMut;
 
 #[derive(Debug)]
 pub struct TyEnv {
-    envs: Vec<HashMap<String, TyDefer>>,
-    position: usize,
-}
-
-#[derive(Debug)]
-struct Scope<'a>(&'a mut TyEnv);
-impl<'a> Deref for Scope<'a> {
-    type Target = TyEnv;
-    fn deref(&self) -> &Self::Target {
-        self.0
-    }
-}
-
-impl<'a> DerefMut for Scope<'a> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.0
-    }
+    env: HashMap<String, TyDefer>,
 }
 
 fn unify<'a>(t1: &mut TyDefer, t2: &mut TyDefer) -> Result<'a, ()> {
@@ -69,37 +53,17 @@ fn unify<'a>(t1: &mut TyDefer, t2: &mut TyDefer) -> Result<'a, ()> {
     }
 }
 
-impl<'a> Scope<'a> {
-    fn new(tyenv: &'a mut TyEnv) -> Self {
-        if tyenv.envs.len() <= tyenv.position {
-            tyenv.envs.push(HashMap::new())
-        }
-        tyenv.envs[tyenv.position].clear();
-        tyenv.position += 1;
-
-        Scope(tyenv)
-    }
-
-    fn scope(&mut self) -> Scope {
-        Scope::new(self)
-    }
-
+impl TyEnv {
     fn get_mut(&mut self, name: &str) -> Option<&mut TyDefer> {
-        let range = 0..self.position;
-        for env in self.envs[range].iter_mut().rev() {
-            match env.get_mut(name) {
-                found @ Some(_) => return found,
-                _ => (),
-            }
-        }
-        None
+        self.env.get_mut(name)
     }
 
     fn insert(&mut self, k: String, v: TyDefer) -> Option<TyDefer> {
-        let pos = self.position - 1;
-        self.envs[pos].insert(k, v)
+        self.env.insert(k, v)
     }
+}
 
+impl TyEnv {
     fn infer_ast<'b, 'r>(&'b mut self, ast: &mut ast::AST) -> Result<'r, ()> {
         for mut val in ast.0.iter_mut() {
             self.infer_val(&mut val)?;
@@ -143,11 +107,10 @@ impl<'a> Scope<'a> {
                 ref mut binds,
                 ref mut ret,
             } => {
-                let mut scope = self.scope();
                 for mut bind in binds {
-                    scope.infer_val(&mut bind)?;
+                    self.infer_val(&mut bind)?;
                 }
-                scope.infer_expr(ret, ty)?;
+                self.infer_expr(ret, ty)?;
                 unify(ty, given)?;
                 Ok(())
             }
@@ -202,10 +165,9 @@ impl<'a> Scope<'a> {
                 ref mut body_ty,
                 ref mut body,
             } => {
-                let mut scope = self.scope();
-                scope.insert(param.0.clone(), param_ty.clone());
+                self.insert(param.0.clone(), param_ty.clone());
 
-                scope.infer_expr(body, body_ty)?;
+                self.infer_expr(body, body_ty)?;
                 let mut fn_ty = match (param_ty.defined(), body_ty.defined()) {
                     (Some(p), Some(b)) => TyDefer::new(Some(Type::fun(p, b))),
                     _ => TyDefer::new(None),
@@ -253,9 +215,8 @@ impl<'a> Scope<'a> {
                 // ignore error to allow to be inferred by patterns
                 let _ = self.infer_expr(cond, &mut cond_ty);
                 for &mut (ref mut pat, ref mut branch) in clauses.iter_mut() {
-                    let mut scope = self.scope();
-                    scope.infer_pat(pat, &mut cond_ty)?;
-                    scope.infer_expr(branch, given)?;
+                    self.infer_pat(pat, &mut cond_ty)?;
+                    self.infer_expr(branch, given)?;
                 }
                 // re-infer
                 self.infer_expr(cond, &mut cond_ty)?;
@@ -364,28 +325,15 @@ impl<'a> Scope<'a> {
     }
 }
 
-impl<'a> Drop for Scope<'a> {
-    fn drop(&mut self) {
-        assert!(0 < self.0.position);
-        self.0.position -= 1;
-    }
-}
-
 impl TyEnv {
     pub fn new() -> Self {
         TyEnv {
-            envs: Vec::new(),
-            position: 0,
+            env: HashMap::new(),
         }
     }
 
-    fn scope(&mut self) -> Scope {
-        Scope::new(self)
-    }
-
     pub fn infer<'a, 'b>(&'a mut self, ast: &mut ast::AST) -> Result<'b, ()> {
-        let mut scope = self.scope();
-        scope.infer_ast(ast)?;
+        self.infer_ast(ast)?;
         Ok(())
     }
 }
