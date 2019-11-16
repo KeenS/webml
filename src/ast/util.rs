@@ -1,17 +1,17 @@
 use crate::ast::*;
 
-pub trait Traverse {
-    fn traverse_ast(&mut self, ast: &mut AST) {
+pub trait Traverse<Ty> {
+    fn traverse_ast(&mut self, ast: &mut AST<Ty>) {
         for val in ast.0.iter_mut() {
             self.traverse_val(val)
         }
     }
 
-    fn traverse_val(&mut self, val: &mut Val) {
+    fn traverse_val(&mut self, val: &mut Val<Ty>) {
         self.traverse_expr(&mut val.expr)
     }
 
-    fn traverse_expr(&mut self, expr: &mut Expr) {
+    fn traverse_expr(&mut self, expr: &mut Expr<Ty>) {
         use crate::ast::Expr::*;
         match *expr {
             Binds {
@@ -20,17 +20,16 @@ pub trait Traverse {
                 ref mut ret,
             } => self.traverse_binds(ty, binds, ret),
             BinOp {
-                ref mut op,
                 ref mut ty,
+                ref mut op,
                 ref mut l,
                 ref mut r,
-            } => self.traverse_binop(op, ty, l, r),
+            } => self.traverse_binop(ty, op, l, r),
             Fun {
-                ref mut param_ty,
+                ref mut ty,
                 ref mut param,
-                ref mut body_ty,
                 ref mut body,
-            } => self.traverse_fun(param_ty, param, body_ty, body),
+            } => self.traverse_fun(ty, param, body),
             App {
                 ref mut ty,
                 ref mut fun,
@@ -62,7 +61,7 @@ pub trait Traverse {
             } => self.traverse_lit(ty, value),
         }
     }
-    fn traverse_binds(&mut self, _ty: &mut TyDefer, binds: &mut Vec<Val>, ret: &mut Box<Expr>) {
+    fn traverse_binds(&mut self, _ty: &mut Ty, binds: &mut Vec<Val<Ty>>, ret: &mut Box<Expr<Ty>>) {
         for val in binds.iter_mut() {
             self.traverse_val(val)
         }
@@ -71,36 +70,30 @@ pub trait Traverse {
 
     fn traverse_binop(
         &mut self,
+        _ty: &mut Ty,
         _op: &mut Symbol,
-        _ty: &mut TyDefer,
-        l: &mut Box<Expr>,
-        r: &mut Box<Expr>,
+        l: &mut Box<Expr<Ty>>,
+        r: &mut Box<Expr<Ty>>,
     ) {
         self.traverse_expr(l);
         self.traverse_expr(r)
     }
 
-    fn traverse_fun(
-        &mut self,
-        _param_ty: &mut TyDefer,
-        _param: &mut Symbol,
-        _body_ty: &mut TyDefer,
-        body: &mut Box<Expr>,
-    ) {
+    fn traverse_fun(&mut self, _ty: &mut Ty, _param: &mut Symbol, body: &mut Box<Expr<Ty>>) {
         self.traverse_expr(body)
     }
 
-    fn traverse_app(&mut self, _ty: &mut TyDefer, fun: &mut Box<Expr>, arg: &mut Box<Expr>) {
+    fn traverse_app(&mut self, _ty: &mut Ty, fun: &mut Box<Expr<Ty>>, arg: &mut Box<Expr<Ty>>) {
         self.traverse_expr(fun);
         self.traverse_expr(arg);
     }
 
     fn traverse_if(
         &mut self,
-        _ty: &mut TyDefer,
-        cond: &mut Box<Expr>,
-        then: &mut Box<Expr>,
-        else_: &mut Box<Expr>,
+        _ty: &mut Ty,
+        cond: &mut Box<Expr<Ty>>,
+        then: &mut Box<Expr<Ty>>,
+        else_: &mut Box<Expr<Ty>>,
     ) {
         self.traverse_expr(cond);
         self.traverse_expr(then);
@@ -109,9 +102,9 @@ pub trait Traverse {
 
     fn traverse_case(
         &mut self,
-        _ty: &mut TyDefer,
-        cond: &mut Box<Expr>,
-        clauses: &mut Vec<(Pattern, Expr)>,
+        _ty: &mut Ty,
+        cond: &mut Box<Expr<Ty>>,
+        clauses: &mut Vec<(Pattern<Ty>, Expr<Ty>)>,
     ) {
         self.traverse_expr(cond);
         for &mut (_, ref mut e) in clauses.iter_mut() {
@@ -119,13 +112,13 @@ pub trait Traverse {
         }
     }
 
-    fn traverse_tuple(&mut self, _ty: &mut TyDefer, tuple: &mut Vec<Expr>) {
+    fn traverse_tuple(&mut self, _ty: &mut Ty, tuple: &mut Vec<Expr<Ty>>) {
         for t in tuple.iter_mut() {
             self.traverse_expr(t)
         }
     }
 
-    fn traverse_sym(&mut self, _ty: &mut TyDefer, _name: &mut Symbol) {}
+    fn traverse_sym(&mut self, _ty: &mut Ty, _name: &mut Symbol) {}
 
-    fn traverse_lit(&mut self, _ty: &mut TyDefer, _value: &mut Literal) {}
+    fn traverse_lit(&mut self, _ty: &mut Ty, _value: &mut Literal) {}
 }

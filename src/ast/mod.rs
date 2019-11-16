@@ -6,99 +6,103 @@ mod util;
 
 pub use self::case_check::CaseCheck;
 pub use self::rename::Rename;
-pub use self::typing::TyEnv as Typing;
+pub use self::typing::TyEnv as Typer;
 use nom;
-use std::cell::{Ref, RefCell, RefMut};
 use std::error::Error;
 use std::fmt;
-use std::ops::Deref;
-use std::rc::Rc;
 
 use crate::ast;
 use crate::prim::*;
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct AST(pub Vec<Val>);
+pub type UntypedAst = AST<()>;
+pub type TypedAst = AST<Type>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Val {
-    pub ty: TyDefer,
+pub struct AST<Ty>(pub Vec<Val<Ty>>);
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Val<Ty> {
+    pub ty: Ty,
     pub rec: bool,
-    pub pattern: Pattern,
-    pub expr: Expr,
+    pub pattern: Pattern<Ty>,
+    pub expr: Expr<Ty>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Expr {
+pub enum Expr<Ty> {
     Binds {
-        ty: TyDefer,
-        binds: Vec<Val>,
-        ret: Box<Expr>,
+        ty: Ty,
+        binds: Vec<Val<Ty>>,
+        ret: Box<Expr<Ty>>,
     },
     BinOp {
         op: Symbol,
-        ty: TyDefer,
-        l: Box<Expr>,
-        r: Box<Expr>,
+        ty: Ty,
+        l: Box<Expr<Ty>>,
+        r: Box<Expr<Ty>>,
     },
     Fun {
-        param_ty: TyDefer,
+        ty: Ty,
         param: Symbol,
-        body_ty: TyDefer,
-        body: Box<Expr>,
+        body: Box<Expr<Ty>>,
     },
     App {
-        ty: TyDefer,
-        fun: Box<Expr>,
-        arg: Box<Expr>,
+        ty: Ty,
+        fun: Box<Expr<Ty>>,
+        arg: Box<Expr<Ty>>,
     },
     If {
-        ty: TyDefer,
-        cond: Box<Expr>,
-        then: Box<Expr>,
-        else_: Box<Expr>,
+        ty: Ty,
+        cond: Box<Expr<Ty>>,
+        then: Box<Expr<Ty>>,
+        else_: Box<Expr<Ty>>,
     },
     Case {
-        ty: TyDefer,
-        cond: Box<Expr>,
-        clauses: Vec<(Pattern, Expr)>,
+        ty: Ty,
+        cond: Box<Expr<Ty>>,
+        clauses: Vec<(Pattern<Ty>, Expr<Ty>)>,
     },
     Tuple {
-        ty: TyDefer,
-        tuple: Vec<Expr>,
+        ty: Ty,
+        tuple: Vec<Expr<Ty>>,
     },
     Sym {
-        ty: TyDefer,
+        ty: Ty,
         name: Symbol,
     },
     Lit {
-        ty: TyDefer,
+        ty: Ty,
         value: Literal,
     },
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Pattern {
-    Lit { value: Literal, ty: TyDefer },
-    Tuple { tuple: Vec<(TyDefer, Symbol)> },
-    Var { name: Symbol, ty: TyDefer },
-    Wildcard { ty: TyDefer },
+pub enum Pattern<Ty> {
+    Lit { value: Literal, ty: Ty },
+    // having redundant types for now
+    Tuple { tuple: Vec<(Ty, Symbol)>, ty: Ty },
+    Var { name: Symbol, ty: Ty },
+    Wildcard { ty: Ty },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Type {
+    Var(u64),
     Bool,
     Int,
     Float,
-    Fun(TyDefer, TyDefer),
-    Tuple(Vec<TyDefer>),
+    Fun(Box<Type>, Box<Type>),
+    Tuple(Vec<Type>),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TyDefer(pub Rc<RefCell<Option<Type>>>);
+impl<Ty> Expr<Ty> {
+    fn boxed(self) -> Box<Self> {
+        Box::new(self)
+    }
+}
 
-impl Expr {
-    fn ty_defer(&self) -> TyDefer {
+impl<Ty: Clone> Expr<Ty> {
+    fn ty(&self) -> Ty {
         use self::Expr::*;
         match *self {
             Binds { ref ty, .. }
@@ -108,71 +112,41 @@ impl Expr {
             | Case { ref ty, .. }
             | Tuple { ref ty, .. }
             | Sym { ref ty, .. }
-            | Lit { ref ty, .. } => ty.clone(),
-            Fun {
-                ref param_ty,
-                ref body_ty,
-                ..
-            } => TyDefer::new(Some(Type::Fun(param_ty.clone(), body_ty.clone()))),
+            | Lit { ref ty, .. }
+            | Fun { ref ty, .. } => ty.clone(),
         }
     }
 }
 
-impl Pattern {
-    fn ty_defer(&self) -> TyDefer {
-        use self::Pattern::*;
-        match *self {
-            Lit { ref ty, .. } | Var { ref ty, .. } | Wildcard { ref ty } => ty.clone(),
-            Tuple { ref tuple } => TyDefer::new(Some(Type::Tuple(
-                tuple.iter().map(|&(ref ty, ..)| ty.clone()).collect(),
-            ))),
-        }
-    }
-    pub fn binds(&self) -> Vec<(&Symbol, &TyDefer)> {
+impl<Ty> Pattern<Ty> {
+    pub fn binds(&self) -> Vec<(&Symbol, &Ty)> {
         use self::Pattern::*;
         match *self {
             Lit { .. } | Wildcard { .. } => vec![],
             Var { ref name, ref ty } => vec![(name, ty)],
-            Tuple { ref tuple } => tuple.iter().map(|&(ref ty, ref sym)| (sym, ty)).collect(),
+            Tuple { ref tuple, .. } => tuple.iter().map(|&(ref ty, ref sym)| (sym, ty)).collect(),
+        }
+    }
+}
+
+impl<Ty: Clone> Pattern<Ty> {
+    fn ty(&self) -> Ty {
+        use self::Pattern::*;
+        match *self {
+            Lit { ref ty, .. }
+            | Var { ref ty, .. }
+            | Wildcard { ref ty }
+            | Tuple { ref ty, .. } => ty.clone(),
         }
     }
 }
 
 impl Type {
     pub fn fun(param: Type, ret: Type) -> Type {
-        Type::Fun(
-            TyDefer(Rc::new(RefCell::new(Some(param)))),
-            TyDefer(Rc::new(RefCell::new(Some(ret)))),
-        )
+        Type::Fun(Box::new(param), Box::new(ret))
     }
     pub fn unit() -> Type {
         Type::Tuple(Vec::new())
-    }
-}
-
-impl TyDefer {
-    pub fn get_mut(&mut self) -> RefMut<Option<Type>> {
-        self.0.borrow_mut()
-    }
-
-    pub fn get(&self) -> Ref<Option<Type>> {
-        self.0.borrow()
-    }
-
-    pub fn new(t: Option<Type>) -> Self {
-        TyDefer(Rc::new(RefCell::new(t)))
-    }
-
-    pub fn empty() -> Self {
-        Self::new(None)
-    }
-
-    pub fn defined(&self) -> Option<Type> {
-        self.0.deref().clone().into_inner()
-    }
-
-    pub fn force(self, message: &str) -> Type {
-        self.0.deref().clone().into_inner().expect(message)
     }
 }
 
@@ -181,7 +155,7 @@ pub enum TypeError<'a> {
     MisMatch { expected: Type, actual: Type },
     CannotInfer,
     FreeVar,
-    NotFunction(ast::Expr),
+    NotFunction(ast::Expr<Type>),
     ParseError(nom::Err<&'a str>),
 }
 

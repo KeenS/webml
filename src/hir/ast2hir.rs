@@ -16,7 +16,8 @@ fn force_into(ty: ast::Type) -> HTy {
         Int => HTy::Int,
         Float => HTy::Float,
         Tuple(tys) => HTy::Tuple(tys.into_iter().map(conv_ty).collect()),
-        Fun(arg, ret) => HTy::fun(conv_ty(arg), conv_ty(ret)),
+        Fun(arg, ret) => HTy::fun(conv_ty(*arg), conv_ty(*ret)),
+        Var(_) => panic!(),
     }
 }
 
@@ -28,8 +29,8 @@ fn force_tuple(ty: ast::Type) -> Vec<HTy> {
     }
 }
 
-fn conv_ty(ty: ast::TyDefer) -> HTy {
-    force_into(ty.force("internal typing error"))
+fn conv_ty(ty: ast::Type) -> HTy {
+    force_into(ty)
 }
 
 impl AST2HIR {
@@ -42,7 +43,7 @@ impl AST2HIR {
         Symbol("#g".into(), id)
     }
 
-    fn conv_ast(&mut self, ast: ast::AST) -> HIR {
+    fn conv_ast(&mut self, ast: ast::TypedAst) -> HIR {
         HIR(ast
             .0
             .into_iter()
@@ -50,7 +51,7 @@ impl AST2HIR {
             .collect())
     }
 
-    fn conv_val(&mut self, val: ast::Val) -> Vec<Val> {
+    fn conv_val(&mut self, val: ast::Val<ast::Type>) -> Vec<Val> {
         match val.pattern {
             ast::Pattern::Var { name, ty } => vec![Val {
                 ty: conv_ty(ty),
@@ -144,7 +145,7 @@ impl AST2HIR {
         }
     }
 
-    fn conv_expr(&mut self, expr: ast::Expr) -> Expr {
+    fn conv_expr(&mut self, expr: ast::Expr<ast::Type>) -> Expr {
         use crate::ast::Expr as E;
         match expr {
             E::Binds { ty, binds, ret } => Expr::Binds {
@@ -158,17 +159,18 @@ impl AST2HIR {
                 l: Box::new(self.conv_expr(*l)),
                 r: Box::new(self.conv_expr(*r)),
             },
-            E::Fun {
-                param_ty,
-                param,
-                body_ty,
-                body,
-            } => Expr::Fun {
-                param: (conv_ty(param_ty), param),
-                body_ty: conv_ty(body_ty),
-                body: Box::new(self.conv_expr(*body)),
-                captures: Vec::new(),
-            },
+            E::Fun { ty, param, body } => {
+                let (param_ty, body_ty) = match ty {
+                    ast::Type::Fun(param_ty, body_ty) => (*param_ty, *body_ty),
+                    _ => panic!("internal error: functon is not typed as function"),
+                };
+                Expr::Fun {
+                    param: (conv_ty(param_ty), param),
+                    body_ty: conv_ty(body_ty),
+                    body: Box::new(self.conv_expr(*body)),
+                    captures: Vec::new(),
+                }
+            }
             E::App { ty, fun, arg } => self.conv_expr(*fun).app1(conv_ty(ty), self.conv_expr(*arg)),
             E::If {
                 ty,
@@ -204,7 +206,7 @@ impl AST2HIR {
                     .collect(),
             },
             E::Tuple { ty, tuple } => Expr::Tuple {
-                tys: force_tuple(ty.force("internal typing error")),
+                tys: force_tuple(ty),
                 tuple: tuple.into_iter().map(|e| self.conv_expr(e)).collect(),
             },
             E::Sym { ty, name } => Expr::Sym {
@@ -217,13 +219,13 @@ impl AST2HIR {
             },
         }
     }
-    fn conv_pat(&mut self, pat: ast::Pattern) -> Pattern {
+    fn conv_pat(&mut self, pat: ast::Pattern<ast::Type>) -> Pattern {
         match pat {
             ast::Pattern::Lit { value, ty } => Pattern::Lit {
                 value: value,
                 ty: conv_ty(ty),
             },
-            ast::Pattern::Tuple { tuple } => {
+            ast::Pattern::Tuple { tuple, .. } => {
                 let (tys, tuple) = tuple
                     .into_iter()
                     .map(|(ty, sym)| (conv_ty(ty), sym))
@@ -242,10 +244,10 @@ impl AST2HIR {
     }
 }
 
-impl<E> Pass<ast::AST, E> for AST2HIR {
+impl<E> Pass<ast::TypedAst, E> for AST2HIR {
     type Target = HIR;
 
-    fn trans(&mut self, ast: ast::AST, _: &Config) -> ::std::result::Result<Self::Target, E> {
+    fn trans(&mut self, ast: ast::TypedAst, _: &Config) -> ::std::result::Result<Self::Target, E> {
         Ok(self.conv_ast(ast))
     }
 }

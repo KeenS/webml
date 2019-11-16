@@ -13,18 +13,16 @@ impl CaseCheck {
     }
 }
 
-impl Traverse for CaseCheck {
+impl Traverse<Type> for CaseCheck {
     // TODO: do it in typed ast
     // FIXME: return errors instead of panic
     fn traverse_case(
         &mut self,
-        _ty: &mut TyDefer,
-        cond: &mut Box<Expr>,
-        arms: &mut Vec<(Pattern, Expr)>,
+        _ty: &mut Type,
+        cond: &mut Box<Expr<Type>>,
+        arms: &mut Vec<(Pattern<Type>, Expr<Type>)>,
     ) {
-        let ty = cond
-            .ty_defer()
-            .force("internal error: typed AST isn't typed");
+        let ty = cond.ty();
         match ty {
             // variants like
             Type::Bool => {
@@ -107,10 +105,10 @@ impl Traverse for CaseCheck {
 }
 
 use crate::pass::Pass;
-impl<'a> Pass<ast::AST, TypeError<'a>> for CaseCheck {
-    type Target = ast::AST;
+impl<'a> Pass<ast::TypedAst, TypeError<'a>> for CaseCheck {
+    type Target = ast::TypedAst;
 
-    fn trans<'b>(&'b mut self, mut ast: ast::AST, _: &Config) -> Result<'a, Self::Target> {
+    fn trans<'b>(&'b mut self, mut ast: ast::TypedAst, _: &Config) -> Result<'a, Self::Target> {
         self.traverse_ast(&mut ast);
         Ok(ast)
     }

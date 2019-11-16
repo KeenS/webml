@@ -31,7 +31,7 @@ pub fn compile_str<'a>(input: &'a str, config: &Config) -> Result<Vec<u8>, TypeE
     let mut passes = compile_pass![
        parse: ConvError::new(parse),
        rename: ast::Rename::new(id.clone()),
-       typing: ast::Typing::new(),
+       typing: ast::Typer::new(),
        case_check: ast::CaseCheck::new(),
        ast_to_hir: hir::AST2HIR::new(id.clone()),
        find_buildin: hir::FindBuiltin::new(),

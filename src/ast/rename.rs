@@ -58,12 +58,12 @@ impl<'a> Scope<'a> {
         symbol.1 = new_id;
     }
 
-    fn new_symbol_pattern(&mut self, pat: &mut Pattern) {
+    fn new_symbol_pattern<Ty>(&mut self, pat: &mut Pattern<Ty>) {
         use Pattern::*;
         match pat {
             Wildcard { .. } | Lit { .. } => (),
             Var { name, .. } => self.new_symbol(name),
-            Tuple { tuple } => {
+            Tuple { tuple, .. } => {
                 for (_, sym) in tuple {
                     self.new_symbol(sym)
                 }
@@ -85,8 +85,8 @@ impl<'a> Scope<'a> {
     }
 }
 
-impl<'a> util::Traverse for Scope<'a> {
-    fn traverse_ast<'b, 'c>(&'b mut self, hir: &'c mut AST) {
+impl<'a, Ty> util::Traverse<Ty> for Scope<'a> {
+    fn traverse_ast<'b, 'c>(&'b mut self, hir: &'c mut AST<Ty>) {
         let scope = self;
         for val in hir.0.iter_mut() {
             if val.rec {
@@ -99,11 +99,11 @@ impl<'a> util::Traverse for Scope<'a> {
         }
     }
 
-    fn traverse_val<'b, 'c>(&'b mut self, val: &'c mut Val) {
+    fn traverse_val<'b, 'c>(&'b mut self, val: &'c mut Val<Ty>) {
         self.traverse_expr(&mut val.expr);
     }
 
-    fn traverse_binds(&mut self, _ty: &mut TyDefer, binds: &mut Vec<Val>, ret: &mut Box<Expr>) {
+    fn traverse_binds(&mut self, _ty: &mut Ty, binds: &mut Vec<Val<Ty>>, ret: &mut Box<Expr<Ty>>) {
         let mut scope = self.new_scope();
         for bind in binds.iter_mut() {
             scope.traverse_val(bind);
@@ -114,23 +114,17 @@ impl<'a> util::Traverse for Scope<'a> {
 
     fn traverse_binop(
         &mut self,
+        _ty: &mut Ty,
         op: &mut Symbol,
-        _ty: &mut TyDefer,
-        l: &mut Box<Expr>,
-        r: &mut Box<Expr>,
+        l: &mut Box<Expr<Ty>>,
+        r: &mut Box<Expr<Ty>>,
     ) {
         self.rename(op);
         self.traverse_expr(l);
         self.traverse_expr(r);
     }
 
-    fn traverse_fun(
-        &mut self,
-        _param_ty: &mut TyDefer,
-        param: &mut Symbol,
-        _body_ty: &mut TyDefer,
-        body: &mut Box<Expr>,
-    ) {
+    fn traverse_fun(&mut self, _ty: &mut Ty, param: &mut Symbol, body: &mut Box<Expr<Ty>>) {
         let mut scope = self.new_scope();
         scope.new_symbol(param);
         scope.traverse_expr(body);
@@ -138,9 +132,9 @@ impl<'a> util::Traverse for Scope<'a> {
 
     fn traverse_case(
         &mut self,
-        _ty: &mut TyDefer,
-        expr: &mut Box<Expr>,
-        arms: &mut Vec<(Pattern, Expr)>,
+        _ty: &mut Ty,
+        expr: &mut Box<Expr<Ty>>,
+        arms: &mut Vec<(Pattern<Ty>, Expr<Ty>)>,
     ) {
         self.traverse_expr(expr);
         for &mut (ref mut pat, ref mut arm) in arms.iter_mut() {
@@ -150,7 +144,7 @@ impl<'a> util::Traverse for Scope<'a> {
         }
     }
 
-    fn traverse_sym(&mut self, _ty: &mut TyDefer, name: &mut Symbol) {
+    fn traverse_sym(&mut self, _ty: &mut Ty, name: &mut Symbol) {
         self.rename(name);
     }
 }
@@ -175,10 +169,10 @@ impl Rename {
     }
 }
 
-impl<E> Pass<AST, E> for Rename {
-    type Target = AST;
+impl<E, Ty> Pass<AST<Ty>, E> for Rename {
+    type Target = AST<Ty>;
 
-    fn trans(&mut self, mut ast: AST, _: &Config) -> ::std::result::Result<Self::Target, E> {
+    fn trans(&mut self, mut ast: AST<Ty>, _: &Config) -> ::std::result::Result<Self::Target, E> {
         self.scope().traverse_ast(&mut ast);
         Ok(ast)
     }

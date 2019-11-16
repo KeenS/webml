@@ -1,77 +1,263 @@
 use crate::ast::*;
 use crate::config::Config;
+use crate::id::Id;
 use crate::prim::*;
+use crate::unification_pool::{NodeId, UnificationPool};
 use std::collections::HashMap;
-use std::ops::DerefMut;
 
 #[derive(Debug)]
 pub struct TyEnv {
-    env: HashMap<Symbol, TyDefer>,
+    env: HashMap<Symbol, NodeId>,
+    pool: TypePool,
 }
 
-fn unify<'a>(t1: &mut TyDefer, t2: &mut TyDefer) -> Result<'a, ()> {
-    match (t1.get_mut().deref_mut(), t2.get_mut().deref_mut()) {
-        (&mut Some(ref mut t1), &mut Some(ref mut t2)) => {
-            if t1 == t2 {
-                Ok(())
+#[derive(Debug)]
+struct TypePool {
+    pool: UnificationPool<Typing>,
+    id: Id,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum Typing {
+    Var(u64),
+    Bool,
+    Int,
+    Float,
+    Fun(NodeId, NodeId),
+    Tuple(Vec<NodeId>),
+}
+
+fn resolve(pool: &UnificationPool<Typing>, id: NodeId) -> Type {
+    conv_ty(pool, pool.value_of(id).clone())
+}
+
+fn conv_ty(pool: &UnificationPool<Typing>, ty: Typing) -> Type {
+    use Typing::*;
+    match ty {
+        Var(id) => Type::Var(id),
+        Bool => Type::Bool,
+        Int => Type::Int,
+        Float => Type::Float,
+        Fun(param, body) => Type::Fun(
+            Box::new(resolve(pool, param)),
+            Box::new(resolve(pool, body)),
+        ),
+        Tuple(tys) => Type::Tuple(tys.into_iter().map(|ty| resolve(pool, ty)).collect()),
+    }
+}
+
+fn try_unify<'b, 'r>(
+    pool: &'b mut UnificationPool<Typing>,
+    t1: Typing,
+    t2: Typing,
+) -> Result<'r, Typing> {
+    use Typing::*;
+    match (t1, t2) {
+        (t1, t2) if t1 == t2 => Ok(t1),
+        (Var(_), ty) | (ty, Var(_)) => Ok(ty.clone()),
+        (Fun(p1, b1), Fun(p2, b2)) => {
+            let p = pool.try_unify_with(p1, p2, try_unify)?;
+            let b = pool.try_unify_with(b1, b2, try_unify)?;
+            Ok(Fun(p, b))
+        }
+        (Tuple(tu1), Tuple(tu2)) => {
+            if tu1.len() != tu2.len() {
+                return Err(TypeError::MisMatch {
+                    expected: conv_ty(pool, Tuple(tu1).clone()),
+                    actual: conv_ty(pool, Tuple(tu2).clone()),
+                });
             } else {
-                match (t1, t2) {
-                    (
-                        &mut Type::Fun(ref mut p1, ref mut b1),
-                        &mut Type::Fun(ref mut p2, ref mut b2),
-                    ) => {
-                        unify(p1, p2)?;
-                        unify(b1, b2)?;
-                        Ok(())
-                    }
-                    (&mut Type::Tuple(ref mut tu1), &mut Type::Tuple(ref mut tu2)) => {
-                        if tu1.len() != tu2.len() {
-                            return Err(TypeError::MisMatch {
-                                expected: Type::Tuple(tu1.clone()),
-                                actual: Type::Tuple(tu2.clone()),
-                            });
-                        } else {
-                            for (t1, t2) in tu1.iter_mut().zip(tu2) {
-                                unify(t1, t2)?
-                            }
-                            Ok(())
-                        }
-                    }
-                    (t1, t2) => Err(TypeError::MisMatch {
-                        expected: t1.clone(),
-                        actual: t2.clone(),
-                    }),
-                }
+                let tu = tu1
+                    .into_iter()
+                    .zip(tu2)
+                    .map(|(t1, t2)| pool.try_unify_with(t1, t2, try_unify))
+                    .collect::<Result<Vec<_>>>()?;
+                Ok(Tuple(tu))
             }
         }
-        (unknown @ &mut None, concrete @ &mut Some(_))
-        | (concrete @ &mut Some(_), unknown @ &mut None) => {
-            *unknown = concrete.clone();
-            Ok(())
-        }
-        _ => return Err(TypeError::CannotInfer),
+        (t1, t2) => Err(TypeError::MisMatch {
+            expected: conv_ty(pool, t1.clone()),
+            actual: conv_ty(pool, t2.clone()),
+        }),
     }
 }
 
 impl TyEnv {
-    fn get_mut(&mut self, name: &Symbol) -> Option<&mut TyDefer> {
-        self.env.get_mut(name)
+    fn get(&self, name: &Symbol) -> Option<NodeId> {
+        self.env.get(name).cloned()
     }
 
-    fn insert(&mut self, k: Symbol, v: TyDefer) -> Option<TyDefer> {
+    fn insert(&mut self, k: Symbol, v: NodeId) -> Option<NodeId> {
         self.env.insert(k, v)
     }
 }
 
+impl TypePool {
+    fn new() -> Self {
+        Self {
+            pool: UnificationPool::new(),
+            id: Id::new(),
+        }
+    }
+
+    fn tyvar(&mut self) -> NodeId {
+        self.pool.node_new(Typing::Var(self.id.next()))
+    }
+
+    fn ty(&mut self, ty: Typing) -> NodeId {
+        self.pool.node_new(ty)
+    }
+
+    fn node_new(&mut self, t: Typing) -> NodeId {
+        self.pool.node_new(t)
+    }
+
+    fn try_unify_with<'r>(
+        &mut self,
+        id1: NodeId,
+        id2: NodeId,
+        try_unify: impl FnOnce(&mut UnificationPool<Typing>, Typing, Typing) -> Result<'r, Typing>,
+    ) -> Result<'r, NodeId> {
+        self.pool.try_unify_with(id1, id2, try_unify)
+    }
+
+    fn value_of(&self, id: NodeId) -> &Typing {
+        self.pool.value_of(id)
+    }
+}
+
+impl<Ty> AST<Ty> {
+    fn map_ty<Ty2>(self, f: &mut dyn FnMut(Ty) -> Ty2) -> AST<Ty2> {
+        AST(self.0.into_iter().map(move |val| val.map_ty(f)).collect())
+    }
+}
+
+impl<Ty> Val<Ty> {
+    fn map_ty<Ty2>(self, f: &mut dyn FnMut(Ty) -> Ty2) -> Val<Ty2> {
+        Val {
+            ty: f(self.ty),
+            rec: self.rec,
+            pattern: self.pattern.map_ty(&mut *f),
+            expr: self.expr.map_ty(f),
+        }
+    }
+}
+
+impl<Ty> Expr<Ty> {
+    fn map_ty<Ty2>(self, f: &mut dyn FnMut(Ty) -> Ty2) -> Expr<Ty2> {
+        use crate::ast::Expr::*;
+        match self {
+            Binds { ty, binds, ret } => Binds {
+                ty: f(ty),
+                binds: binds.into_iter().map(|val| val.map_ty(f)).collect(),
+                ret: ret.map_ty(f).boxed(),
+            },
+            BinOp { op, ty, l, r } => BinOp {
+                op,
+                ty: f(ty),
+                l: l.map_ty(f).boxed(),
+                r: r.map_ty(f).boxed(),
+            },
+            Fun { param, ty, body } => Fun {
+                param: param,
+                ty: f(ty),
+                body: body.map_ty(f).boxed(),
+            },
+            App { ty, fun, arg } => App {
+                ty: f(ty),
+                fun: fun.map_ty(f).boxed(),
+                arg: arg.map_ty(f).boxed(),
+            },
+            If {
+                ty,
+                cond,
+                then,
+                else_,
+            } => If {
+                ty: f(ty),
+                cond: cond.map_ty(f).boxed(),
+                then: then.map_ty(f).boxed(),
+                else_: else_.map_ty(f).boxed(),
+            },
+            Case { ty, cond, clauses } => Case {
+                ty: f(ty),
+                cond: cond.map_ty(&mut *f).boxed(),
+                clauses: clauses
+                    .into_iter()
+                    .map(move |(pat, expr)| (pat.map_ty(&mut *f), expr.map_ty(f)))
+                    .collect(),
+            },
+            Tuple { ty, tuple } => Tuple {
+                ty: f(ty),
+                tuple: tuple.into_iter().map(|t| t.map_ty(f)).collect(),
+            },
+
+            Sym { ty, name } => Sym {
+                ty: f(ty),
+                name: name,
+            },
+            Lit { ty, value } => Lit {
+                ty: f(ty),
+                value: value,
+            },
+        }
+    }
+}
+
+impl<Ty> Pattern<Ty> {
+    fn map_ty<Ty2>(self, f: &mut dyn FnMut(Ty) -> Ty2) -> Pattern<Ty2> {
+        use Pattern::*;
+        match self {
+            Lit { value, ty } => Lit { value, ty: f(ty) },
+            Tuple { tuple, ty } => Tuple {
+                tuple: tuple.into_iter().map(|(ty, sym)| (f(ty), sym)).collect(),
+                ty: f(ty),
+            },
+            Var { name, ty } => Var { name, ty: f(ty) },
+            Wildcard { ty } => Wildcard { ty: f(ty) },
+        }
+    }
+}
+
+impl TypePool {
+    fn typing_ast(&mut self, ast: UntypedAst) -> AST<NodeId> {
+        ast.map_ty(&mut |_| self.tyvar())
+    }
+}
+
+impl TypePool {
+    fn resolve(&self, id: NodeId) -> Type {
+        use Typing::*;
+        match self.pool.value_of(id) {
+            Var(id) => Type::Var(*id),
+            Bool => Type::Bool,
+            Int => Type::Int,
+            Float => Type::Float,
+            Fun(param, body) => Type::Fun(
+                Box::new(self.resolve(*param)),
+                Box::new(self.resolve(*body)),
+            ),
+            Tuple(tys) => Type::Tuple(tys.into_iter().map(|ty| self.resolve(*ty)).collect()),
+        }
+    }
+
+    fn typed_ast(&self, ast: AST<NodeId>) -> TypedAst {
+        ast.map_ty(&mut |ty| resolve(&self.pool, ty))
+    }
+    fn typed_expr(&self, expr: Expr<NodeId>) -> Expr<Type> {
+        expr.map_ty(&mut |ty| resolve(&self.pool, ty))
+    }
+}
+
 impl TyEnv {
-    fn infer_ast<'b, 'r>(&'b mut self, ast: &mut ast::AST) -> Result<'r, ()> {
+    fn infer_ast<'b, 'r>(&'b mut self, ast: &mut AST<NodeId>) -> Result<'r, ()> {
         for mut val in ast.0.iter_mut() {
             self.infer_val(&mut val)?;
         }
         Ok(())
     }
 
-    fn infer_val<'b, 'r>(&'b mut self, val: &mut ast::Val) -> Result<'r, ()> {
+    fn infer_val<'b, 'r>(&'b mut self, val: &mut Val<NodeId>) -> Result<'r, ()> {
         let &mut ast::Val {
             ref mut ty,
             ref rec,
@@ -83,23 +269,19 @@ impl TyEnv {
             for (name, ty) in names {
                 self.insert(name.clone(), ty.clone());
             }
-            self.infer_expr(expr, ty)?;
+            self.infer_expr(expr, *ty)?;
         } else {
-            self.infer_expr(expr, ty)?;
+            self.infer_expr(expr, *ty)?;
             for (name, ty) in names {
                 self.insert(name.clone(), ty.clone());
             }
         }
-        self.infer_pat(pattern, ty)?;
+        self.infer_pat(pattern, *ty)?;
 
         Ok(())
     }
 
-    fn infer_expr<'b, 'r>(
-        &'b mut self,
-        expr: &mut ast::Expr,
-        given: &mut TyDefer,
-    ) -> Result<'r, ()> {
+    fn infer_expr<'b, 'r>(&'b mut self, expr: &mut Expr<NodeId>, given: NodeId) -> Result<'r, ()> {
         use crate::ast::Expr::*;
         match expr {
             &mut Binds {
@@ -110,8 +292,8 @@ impl TyEnv {
                 for mut bind in binds {
                     self.infer_val(&mut bind)?;
                 }
-                self.infer_expr(ret, ty)?;
-                unify(ty, given)?;
+                self.infer_expr(ret, *ty)?;
+                self.unify(*ty, given)?;
                 Ok(())
             }
             &mut BinOp {
@@ -121,59 +303,54 @@ impl TyEnv {
                 ref mut r,
             } => {
                 if ["+", "-", "*"].contains(&op.0.as_str()) {
-                    let mut lty = TyDefer::new(Some(Type::Int));
-                    self.infer_expr(l, &mut lty).or_else(|_| {
-                        *lty.get_mut() = Some(Type::Float);
-                        self.infer_expr(l, &mut lty)
+                    let mut lty = self.pool.ty(Typing::Int);
+                    self.infer_expr(l, lty).or_else(|_| {
+                        lty = self.pool.ty(Typing::Float);
+                        self.infer_expr(l, lty)
                     })?;
-                    self.infer_expr(r, &mut lty)?;
-                    unify(&mut lty, given)?;
-                    unify(ty, given)?;
+                    self.infer_expr(r, lty)?;
+                    self.unify(lty, given)?;
+                    self.unify(*ty, given)?;
                     Ok(())
                 } else if ["=", "<>", ">", ">=", "<", "<="].contains(&op.0.as_str()) {
-                    let mut lty = TyDefer::new(Some(Type::Int));
-                    self.infer_expr(l, &mut lty).or_else(|_| {
-                        *lty.get_mut() = Some(Type::Float);
-                        self.infer_expr(l, &mut lty)
+                    let mut lty = self.pool.ty(Typing::Int);
+                    self.infer_expr(l, lty).or_else(|_| {
+                        lty = self.pool.ty(Typing::Float);
+                        self.infer_expr(l, lty)
                     })?;
-                    self.infer_expr(r, &mut lty)?;
-                    let mut ret_ty = TyDefer::new(Some(Type::Bool));
-                    unify(&mut ret_ty, given)?;
-                    unify(ty, given)?;
+                    self.infer_expr(r, lty)?;
+                    self.give(*ty, Typing::Bool)?;
+                    self.unify(*ty, given)?;
                     Ok(())
                 } else if ["div", "mod"].contains(&op.0.as_str()) {
-                    let mut lty = TyDefer::new(Some(Type::Int));
-                    self.infer_expr(l, &mut lty)?;
-                    self.infer_expr(r, &mut lty)?;
-                    unify(&mut lty, given)?;
-                    unify(ty, given)?;
+                    let lty = self.pool.ty(Typing::Int);
+                    self.infer_expr(l, lty)?;
+                    self.infer_expr(r, lty)?;
+                    self.unify(lty, given)?;
+                    self.unify(*ty, given)?;
                     Ok(())
                 } else if ["/"].contains(&op.0.as_str()) {
-                    let mut lty = TyDefer::new(Some(Type::Float));
-                    self.infer_expr(l, &mut lty)?;
-                    self.infer_expr(r, &mut lty)?;
-                    unify(&mut lty, given)?;
-                    unify(ty, given)?;
+                    let lty = self.pool.ty(Typing::Float);
+                    self.infer_expr(l, lty)?;
+                    self.infer_expr(r, lty)?;
+                    self.unify(lty, given)?;
+                    self.unify(*ty, given)?;
                     Ok(())
                 } else {
                     unimplemented!()
                 }
             }
             &mut Fun {
-                ref mut param_ty,
+                ref mut ty,
                 ref mut param,
-                ref mut body_ty,
                 ref mut body,
             } => {
-                self.insert(param.clone(), param_ty.clone());
-
+                let param_ty = self.pool.tyvar();
+                let body_ty = self.pool.tyvar();
+                self.insert(param.clone(), param_ty);
                 self.infer_expr(body, body_ty)?;
-                let mut fn_ty = match (param_ty.defined(), body_ty.defined()) {
-                    (Some(p), Some(b)) => TyDefer::new(Some(Type::fun(p, b))),
-                    _ => TyDefer::new(None),
-                };
-                unify(&mut fn_ty, given)?;
-
+                self.give(*ty, Typing::Fun(param_ty, body_ty))?;
+                self.unify(*ty, given)?;
                 Ok(())
             }
             &mut App {
@@ -181,17 +358,20 @@ impl TyEnv {
                 ref mut fun,
                 ref mut arg,
             } => {
-                let mut fun_ty = TyDefer::new(Some(Type::Fun(TyDefer::new(None), ty.clone())));
-                self.infer_expr(fun, &mut fun_ty)?;
-                match fun_ty.get_mut().deref_mut() {
-                    &mut Some(Type::Fun(ref mut param, ref mut ret)) => {
+                let arg_ty = self.pool.tyvar();
+                let fun_ty = self.pool.ty(Typing::Fun(arg_ty, *ty));
+                self.infer_expr(fun, fun_ty)?;
+                match self.pool.value_of(fun_ty) {
+                    Typing::Fun(param, ret) => {
+                        let param = *param;
+                        let ret = *ret;
                         self.infer_expr(arg, param)?;
-                        unify(given, ret)?;
+                        self.unify(given, ret)?;
                     }
-                    _ => return Err(TypeError::NotFunction(fun.deref_mut().clone())),
+                    _ => return Err(TypeError::NotFunction(self.pool.typed_expr(*fun.clone()))),
                 };
 
-                unify(ty, given)?;
+                self.unify(*ty, given)?;
                 Ok(())
             }
             &mut If {
@@ -200,10 +380,11 @@ impl TyEnv {
                 ref mut then,
                 ref mut else_,
             } => {
-                let _cond_ty = self.infer_expr(cond, &mut TyDefer::new(Some(Type::Bool)))?;
+                let bool_ty = self.pool.ty(Typing::Bool);
+                let _cond_ty = self.infer_expr(cond, bool_ty)?;
                 self.infer_expr(then, given)?;
                 self.infer_expr(else_, given)?;
-                unify(ty, given)?;
+                self.unify(*ty, given)?;
                 Ok(())
             }
             &mut Case {
@@ -211,16 +392,17 @@ impl TyEnv {
                 ref mut ty,
                 ref mut clauses,
             } => {
-                let mut cond_ty = TyDefer::empty();
+                let cond_ty = self.pool.tyvar();
                 // ignore error to allow to be inferred by patterns
-                let _ = self.infer_expr(cond, &mut cond_ty);
+                let _ = self.infer_expr(cond, cond_ty);
                 for &mut (ref mut pat, ref mut branch) in clauses.iter_mut() {
-                    self.infer_pat(pat, &mut cond_ty)?;
+                    self.infer_pat(pat, cond_ty)?;
                     self.infer_expr(branch, given)?;
                 }
                 // re-infer
-                self.infer_expr(cond, &mut cond_ty)?;
-                unify(ty, given)?;
+                // FIXME: maybe no need
+                self.infer_expr(cond, cond_ty)?;
+                self.unify(*ty, given)?;
                 Ok(())
             }
             &mut Tuple {
@@ -228,7 +410,7 @@ impl TyEnv {
                 ref mut tuple,
             } => {
                 self.infer_tuple(tuple, given)?;
-                unify(ty, given)?;
+                self.unify(*ty, given)?;
                 Ok(())
             }
             &mut Sym {
@@ -236,7 +418,7 @@ impl TyEnv {
                 ref mut name,
             } => {
                 self.infer_symbol(name, given)?;
-                unify(ty, given)?;
+                self.unify(*ty, given)?;
                 Ok(())
             }
             &mut Lit {
@@ -244,19 +426,22 @@ impl TyEnv {
                 ref mut value,
             } => {
                 self.infer_literal(value, given)?;
-                unify(ty, given)?;
+                self.unify(*ty, given)?;
                 Ok(())
             }
         }
     }
 
-    fn infer_symbol<'b, 'r>(&'b mut self, sym: &mut Symbol, given: &mut TyDefer) -> Result<'r, ()> {
-        match self.get_mut(&sym) {
-            Some(t) => unify(t, given),
+    fn infer_symbol<'b, 'r>(&'b mut self, sym: &mut Symbol, given: NodeId) -> Result<'r, ()> {
+        match self.get(&sym) {
+            Some(t) => self.unify(t, given),
             None => {
                 if &sym.0 == "print" {
-                    *given.get_mut() = Some(Type::fun(Type::Int, Type::unit()));
-                    Ok(())
+                    let fun_ty = Typing::Fun(
+                        self.pool.ty(Typing::Int),
+                        self.pool.ty(Typing::Tuple(vec![])),
+                    );
+                    self.give(given, fun_ty)
                 } else {
                     Err(TypeError::FreeVar)
                 }
@@ -264,64 +449,68 @@ impl TyEnv {
         }
     }
 
-    fn infer_literal<'b, 'r>(
-        &'b mut self,
-        lit: &mut Literal,
-        given: &mut TyDefer,
-    ) -> Result<'r, ()> {
+    fn infer_literal<'b, 'r>(&'b mut self, lit: &mut Literal, given: NodeId) -> Result<'r, ()> {
         use crate::prim::Literal::*;
         let ty = match lit {
-            &mut Int(_) => Type::Int,
-            &mut Float(_) => Type::Float,
-            &mut Bool(_) => Type::Bool,
+            &mut Int(_) => Typing::Int,
+            &mut Float(_) => Typing::Float,
+            &mut Bool(_) => Typing::Bool,
         };
-        match (ty, given.get_mut().deref_mut()) {
-            (Type::Int, &mut Some(Type::Int)) => Ok(()),
-            (Type::Bool, &mut Some(Type::Bool)) => Ok(()),
-            (Type::Float, &mut Some(Type::Float)) => Ok(()),
-            (ty, g @ &mut None) => {
-                *g = Some(ty.clone());
-                Ok(())
-            }
-            (ref ty, &mut Some(ref exp)) => Err(TypeError::MisMatch {
-                expected: exp.clone(),
-                actual: ty.clone(),
-            }),
-        }
+        self.give(given, ty)?;
+        Ok(())
     }
 
-    fn infer_pat<'b, 'r>(&'b mut self, pat: &mut Pattern, given: &mut TyDefer) -> Result<'r, ()> {
+    fn infer_pat<'b, 'r>(&'b mut self, pat: &mut Pattern<NodeId>, given: NodeId) -> Result<'r, ()> {
         use self::Pattern::*;
         match *pat {
             Lit {
                 ref mut ty,
                 ref mut value,
             } => {
-                self.infer_literal(value, ty)?;
+                self.infer_literal(value, *ty)?;
             }
-            Tuple { .. } | Wildcard { .. } | Var { .. } => (),
+            Tuple {
+                ref mut ty,
+                ref mut tuple,
+            } => {
+                let tuple_ty = self.pool.ty(Typing::Tuple(
+                    tuple.iter().map(|(node_id, _)| *node_id).collect(),
+                ));
+                self.unify(*ty, tuple_ty)?;
+            }
+            Wildcard { .. } | Var { .. } => (),
         };
-        let mut ty = pat.ty_defer();
-        unify(&mut ty, given)?;
+        let ty = pat.ty();
+        self.unify(ty, given)?;
         for (name, ty) in pat.binds() {
-            self.insert(name.clone(), ty.clone());
+            self.insert(name.clone(), *ty);
         }
         Ok(())
     }
 
     fn infer_tuple<'b, 'r>(
         &'b mut self,
-        tuple: &mut Vec<Expr>,
-        given: &mut TyDefer,
+        tuple: &mut Vec<Expr<NodeId>>,
+        given: NodeId,
     ) -> Result<'r, ()> {
-        let mut tys = vec![TyDefer::empty(); tuple.len()];
+        let mut tys = vec![self.pool.tyvar(); tuple.len()];
 
         for (e, t) in tuple.iter_mut().zip(tys.iter_mut()) {
             // ignoring the error of infering. Right, maybe.
-            let _res = self.infer_expr(e, t);
+            let _res = self.infer_expr(e, *t);
         }
-        unify(&mut TyDefer::new(Some(Type::Tuple(tys))), given)?;
+        let tuple_ty = self.pool.ty(Typing::Tuple(tys));
+        self.unify(tuple_ty, given)?;
         Ok(())
+    }
+
+    fn unify<'b, 'r>(&'b mut self, id1: NodeId, id2: NodeId) -> Result<'r, ()> {
+        self.pool.try_unify_with(id1, id2, try_unify).map(|_| ())
+    }
+
+    fn give<'b, 'r>(&'b mut self, id1: NodeId, ty: Typing) -> Result<'r, ()> {
+        let id2 = self.pool.node_new(ty);
+        self.unify(id1, id2)
     }
 }
 
@@ -329,21 +518,24 @@ impl TyEnv {
     pub fn new() -> Self {
         TyEnv {
             env: HashMap::new(),
+            pool: TypePool::new(),
         }
     }
 
-    pub fn infer<'a, 'b>(&'a mut self, ast: &mut ast::AST) -> Result<'b, ()> {
+    pub fn infer<'a, 'b>(&'a mut self, ast: &mut ast::AST<NodeId>) -> Result<'b, ()> {
         self.infer_ast(ast)?;
         Ok(())
     }
 }
 
 use crate::pass::Pass;
-impl<'a> Pass<ast::AST, TypeError<'a>> for TyEnv {
-    type Target = ast::AST;
+impl<'a> Pass<ast::UntypedAst, TypeError<'a>> for TyEnv {
+    type Target = ast::TypedAst;
 
-    fn trans<'b>(&'b mut self, mut ast: ast::AST, _: &Config) -> Result<'a, Self::Target> {
-        self.infer(&mut ast)?;
-        Ok(ast)
+    fn trans<'b>(&'b mut self, ast: ast::UntypedAst, _: &Config) -> Result<'a, Self::Target> {
+        let mut typing_ast = self.pool.typing_ast(ast);
+        self.infer(&mut typing_ast)?;
+        let typed_ast = self.pool.typed_ast(typing_ast);
+        Ok(typed_ast)
     }
 }

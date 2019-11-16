@@ -2,7 +2,7 @@ use crate::ast::*;
 use crate::util::PP;
 use std::io;
 
-impl PP for AST {
+impl<Ty> PP for AST<Ty> {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         for bind in &self.0 {
             bind.pp(w, indent)?;
@@ -12,7 +12,7 @@ impl PP for AST {
     }
 }
 
-impl PP for Val {
+impl<Ty> PP for Val<Ty> {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         write!(w, "{}", Self::nspaces(indent))?;
         if self.rec {
@@ -29,7 +29,7 @@ impl PP for Val {
     }
 }
 
-impl PP for Expr {
+impl<Ty> PP for Expr<Ty> {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         use crate::ast::Expr::*;
         match self {
@@ -130,7 +130,7 @@ impl PP for Expr {
     }
 }
 
-impl PP for Pattern {
+impl<Ty> PP for Pattern<Ty> {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         match self {
             Pattern::Lit { ref value, .. } => value.pp(w, indent),
@@ -155,18 +155,19 @@ impl PP for Type {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         use self::Type::*;
         match *self {
+            Var(id) => write!(w, "'{}", id)?,
             Bool => write!(w, "bool")?,
             Int => write!(w, "int")?,
             Float => write!(w, "float")?,
             Fun(ref t1, ref t2) => {
-                t1.clone().force("type not settled in pp").pp(w, indent)?;
+                t1.pp(w, indent)?;
                 write!(w, " -> ")?;
-                t2.clone().force("type not settled in pp").pp(w, indent)?;
+                t2.pp(w, indent)?;
             }
             Tuple(ref tys) => {
                 write!(w, "(")?;
                 for ty in tys.iter() {
-                    ty.clone().force("type not settled in pp").pp(w, indent)?;
+                    ty.pp(w, indent)?;
                     write!(w, ", ")?;
                 }
                 write!(w, ")")?;
