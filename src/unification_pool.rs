@@ -18,11 +18,11 @@ impl<T> Node<T> {
 }
 
 #[derive(Debug)]
-pub struct UnionFindPool<T> {
+pub struct UnificationPool<T> {
     pool: Vec<Node<T>>,
 }
 
-impl<T> UnionFindPool<T> {
+impl<T> UnificationPool<T> {
     pub fn new() -> Self {
         Self { pool: vec![] }
     }
@@ -72,13 +72,18 @@ impl<T> UnionFindPool<T> {
         }
     }
 
-    pub fn unify_with(&mut self, id1: NodeId, id2: NodeId, unify: impl FnOnce(&T, &T) -> T) -> &T {
+    pub fn try_unify_with<E>(
+        &mut self,
+        id1: NodeId,
+        id2: NodeId,
+        try_unify: impl FnOnce(&mut Self, &T, &T) -> Result<T, E>,
+    ) -> Result<NodeId, E> {
         let l = self.value_of(id1);
         let r = self.value_of(id2);
-        let new = unify(l, r);
+        let new = try_unify(self, l, r)?;
         let new_id = self.node_new(new);
         self.new_origin(id1, new_id);
         self.new_origin(id2, new_id);
-        self.value_of(new_id)
+        Ok(new_id)
     }
 }

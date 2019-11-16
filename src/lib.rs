@@ -10,7 +10,7 @@ pub mod mir;
 mod parser;
 pub mod pass;
 pub mod prim;
-mod union_find;
+mod unification_pool;
 
 pub use crate::ast::TypeError;
 pub use crate::config::Config;
