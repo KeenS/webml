@@ -228,19 +228,19 @@ impl TypePool {
 }
 
 impl TyEnv {
-    fn infer_ast<'b, 'r>(&'b mut self, ast: &mut AST<NodeId>) -> Result<'r, ()> {
-        for mut val in ast.0.iter_mut() {
-            self.infer_val(&mut val)?;
+    fn infer_ast<'b, 'r>(&'b mut self, ast: &AST<NodeId>) -> Result<'r, ()> {
+        for val in ast.0.iter() {
+            self.infer_val(&val)?;
         }
         Ok(())
     }
 
-    fn infer_val<'b, 'r>(&'b mut self, val: &mut Val<NodeId>) -> Result<'r, ()> {
-        let &mut ast::Val {
-            ref mut ty,
-            ref rec,
-            ref mut pattern,
-            ref mut expr,
+    fn infer_val<'b, 'r>(&'b mut self, val: &Val<NodeId>) -> Result<'r, ()> {
+        let ast::Val {
+            ty,
+            rec,
+            pattern,
+            expr,
         } = val;
         let names = pattern.binds();
         if *rec {
@@ -261,27 +261,18 @@ impl TyEnv {
         Ok(())
     }
 
-    fn infer_expr<'b, 'r>(&'b mut self, expr: &mut Expr<NodeId>) -> Result<'r, ()> {
+    fn infer_expr<'b, 'r>(&'b mut self, expr: &Expr<NodeId>) -> Result<'r, ()> {
         use crate::ast::Expr::*;
         match expr {
-            &mut Binds {
-                ref mut ty,
-                ref mut binds,
-                ref mut ret,
-            } => {
-                for mut bind in binds {
-                    self.infer_val(&mut bind)?;
+            Binds { ty, binds, ret } => {
+                for bind in binds {
+                    self.infer_val(bind)?;
                 }
                 self.unify(ret.ty(), *ty)?;
                 self.infer_expr(ret)?;
                 Ok(())
             }
-            &mut BinOp {
-                ref mut op,
-                ref mut ty,
-                ref mut l,
-                ref mut r,
-            } => {
+            BinOp { op, ty, l, r } => {
                 if ["+", "-", "*"].contains(&op.0.as_str()) {
                     self.infer_expr(l)?;
                     self.infer_expr(r)?;
@@ -316,32 +307,24 @@ impl TyEnv {
                     unimplemented!()
                 }
             }
-            &mut Fun {
-                ref mut ty,
-                ref mut param,
-                ref mut body,
-            } => {
+            Fun { ty, param, body } => {
                 let param_ty = self.pool.tyvar();
                 self.insert(param.clone(), param_ty);
                 self.infer_expr(body)?;
                 self.give(*ty, Typing::Fun(param_ty, body.ty()))?;
                 Ok(())
             }
-            &mut App {
-                ref mut ty,
-                ref mut fun,
-                ref mut arg,
-            } => {
+            App { ty, fun, arg } => {
                 self.infer_expr(fun)?;
                 self.infer_expr(arg)?;
                 self.give(fun.ty(), Typing::Fun(arg.ty(), *ty))?;
                 Ok(())
             }
-            &mut If {
-                ref mut cond,
-                ref mut ty,
-                ref mut then,
-                ref mut else_,
+            If {
+                cond,
+                ty,
+                then,
+                else_,
             } => {
                 let bool_ty = self.pool.ty(Typing::Bool);
                 self.unify(cond.ty(), bool_ty)?;
@@ -352,13 +335,9 @@ impl TyEnv {
                 self.infer_expr(else_)?;
                 Ok(())
             }
-            &mut Case {
-                ref mut cond,
-                ref mut ty,
-                ref mut clauses,
-            } => {
+            Case { cond, ty, clauses } => {
                 self.infer_expr(cond)?;
-                for &mut (ref mut pat, ref mut branch) in clauses.iter_mut() {
+                for (pat, branch) in clauses {
                     self.infer_pat(pat)?;
                     self.unify(pat.ty(), cond.ty())?;
                     self.infer_expr(branch)?;
@@ -366,31 +345,22 @@ impl TyEnv {
                 }
                 Ok(())
             }
-            &mut Tuple {
-                ref mut ty,
-                ref mut tuple,
-            } => {
+            Tuple { ty, tuple } => {
                 self.infer_tuple(tuple, *ty)?;
                 Ok(())
             }
-            &mut Sym {
-                ref mut ty,
-                ref mut name,
-            } => {
+            Sym { ty, name } => {
                 self.infer_symbol(name, *ty)?;
                 Ok(())
             }
-            &mut Lit {
-                ref mut ty,
-                ref mut value,
-            } => {
+            Lit { ty, value } => {
                 self.infer_literal(value, *ty)?;
                 Ok(())
             }
         }
     }
 
-    fn infer_symbol<'b, 'r>(&'b mut self, sym: &mut Symbol, given: NodeId) -> Result<'r, ()> {
+    fn infer_symbol<'b, 'r>(&'b mut self, sym: &Symbol, given: NodeId) -> Result<'r, ()> {
         match self.get(&sym) {
             Some(t) => self.unify(t, given),
             None => {
@@ -407,30 +377,24 @@ impl TyEnv {
         }
     }
 
-    fn infer_literal<'b, 'r>(&'b mut self, lit: &mut Literal, given: NodeId) -> Result<'r, ()> {
+    fn infer_literal<'b, 'r>(&'b mut self, lit: &Literal, given: NodeId) -> Result<'r, ()> {
         use crate::prim::Literal::*;
         let ty = match lit {
-            &mut Int(_) => Typing::Int,
-            &mut Float(_) => Typing::Float,
-            &mut Bool(_) => Typing::Bool,
+            Int(_) => Typing::Int,
+            Float(_) => Typing::Float,
+            Bool(_) => Typing::Bool,
         };
         self.give(given, ty)?;
         Ok(())
     }
 
-    fn infer_pat<'b, 'r>(&'b mut self, pat: &mut Pattern<NodeId>) -> Result<'r, ()> {
+    fn infer_pat<'b, 'r>(&'b mut self, pat: &Pattern<NodeId>) -> Result<'r, ()> {
         use self::Pattern::*;
-        match *pat {
-            Lit {
-                ref mut ty,
-                ref mut value,
-            } => {
+        match pat {
+            Lit { ty, value } => {
                 self.infer_literal(value, *ty)?;
             }
-            Tuple {
-                ref mut ty,
-                ref mut tuple,
-            } => {
+            Tuple { ty, tuple } => {
                 let tuple_ty = self.pool.ty(Typing::Tuple(
                     tuple.iter().map(|(node_id, _)| *node_id).collect(),
                 ));
@@ -446,12 +410,12 @@ impl TyEnv {
 
     fn infer_tuple<'b, 'r>(
         &'b mut self,
-        tuple: &mut Vec<Expr<NodeId>>,
+        tuple: &Vec<Expr<NodeId>>,
         given: NodeId,
     ) -> Result<'r, ()> {
-        let mut tys = vec![self.pool.tyvar(); tuple.len()];
+        let tys = vec![self.pool.tyvar(); tuple.len()];
 
-        for (e, t) in tuple.iter_mut().zip(tys.iter_mut()) {
+        for (e, t) in tuple.iter().zip(tys.iter()) {
             self.infer_expr(e)?;
             self.unify(e.ty(), *t)?;
         }
