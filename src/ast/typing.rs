@@ -120,10 +120,6 @@ impl TypePool {
     ) -> Result<'r, NodeId> {
         self.pool.try_unify_with(id1, id2, try_unify)
     }
-
-    fn value_of(&self, id: NodeId) -> &Typing {
-        self.pool.value_of(id)
-    }
 }
 
 impl<Ty> AST<Ty> {
@@ -226,26 +222,8 @@ impl TypePool {
 }
 
 impl TypePool {
-    fn resolve(&self, id: NodeId) -> Type {
-        use Typing::*;
-        match self.pool.value_of(id) {
-            Var(id) => Type::Var(*id),
-            Bool => Type::Bool,
-            Int => Type::Int,
-            Float => Type::Float,
-            Fun(param, body) => Type::Fun(
-                Box::new(self.resolve(*param)),
-                Box::new(self.resolve(*body)),
-            ),
-            Tuple(tys) => Type::Tuple(tys.into_iter().map(|ty| self.resolve(*ty)).collect()),
-        }
-    }
-
     fn typed_ast(&self, ast: AST<NodeId>) -> TypedAst {
         ast.map_ty(&mut |ty| resolve(&self.pool, ty))
-    }
-    fn typed_expr(&self, expr: Expr<NodeId>) -> Expr<Type> {
-        expr.map_ty(&mut |ty| resolve(&self.pool, ty))
     }
 }
 
@@ -269,19 +247,21 @@ impl TyEnv {
             for (name, ty) in names {
                 self.insert(name.clone(), ty.clone());
             }
-            self.infer_expr(expr, *ty)?;
+            self.unify(expr.ty(), *ty)?;
+            self.infer_expr(expr)?;
         } else {
-            self.infer_expr(expr, *ty)?;
+            self.unify(expr.ty(), *ty)?;
+            self.infer_expr(expr)?;
             for (name, ty) in names {
                 self.insert(name.clone(), ty.clone());
             }
         }
-        self.infer_pat(pattern, *ty)?;
-
+        self.infer_pat(pattern)?;
+        self.unify(*ty, pattern.ty())?;
         Ok(())
     }
 
-    fn infer_expr<'b, 'r>(&'b mut self, expr: &mut Expr<NodeId>, given: NodeId) -> Result<'r, ()> {
+    fn infer_expr<'b, 'r>(&'b mut self, expr: &mut Expr<NodeId>) -> Result<'r, ()> {
         use crate::ast::Expr::*;
         match expr {
             &mut Binds {
@@ -292,8 +272,8 @@ impl TyEnv {
                 for mut bind in binds {
                     self.infer_val(&mut bind)?;
                 }
-                self.infer_expr(ret, *ty)?;
-                self.unify(*ty, given)?;
+                self.unify(ret.ty(), *ty)?;
+                self.infer_expr(ret)?;
                 Ok(())
             }
             &mut BinOp {
@@ -303,38 +283,34 @@ impl TyEnv {
                 ref mut r,
             } => {
                 if ["+", "-", "*"].contains(&op.0.as_str()) {
-                    let mut lty = self.pool.ty(Typing::Int);
-                    self.infer_expr(l, lty).or_else(|_| {
-                        lty = self.pool.ty(Typing::Float);
-                        self.infer_expr(l, lty)
-                    })?;
-                    self.infer_expr(r, lty)?;
-                    self.unify(lty, given)?;
-                    self.unify(*ty, given)?;
+                    self.infer_expr(l)?;
+                    self.infer_expr(r)?;
+                    self.unify(l.ty(), r.ty())?;
+                    self.give(l.ty(), Typing::Int)
+                        .or_else(|_| self.give(l.ty(), Typing::Float))?;
+                    self.unify(*ty, l.ty())?;
                     Ok(())
                 } else if ["=", "<>", ">", ">=", "<", "<="].contains(&op.0.as_str()) {
-                    let mut lty = self.pool.ty(Typing::Int);
-                    self.infer_expr(l, lty).or_else(|_| {
-                        lty = self.pool.ty(Typing::Float);
-                        self.infer_expr(l, lty)
-                    })?;
-                    self.infer_expr(r, lty)?;
+                    self.infer_expr(l)?;
+                    self.infer_expr(r)?;
+                    self.unify(l.ty(), r.ty())?;
+                    self.give(l.ty(), Typing::Int)
+                        .or_else(|_| self.give(l.ty(), Typing::Float))?;
                     self.give(*ty, Typing::Bool)?;
-                    self.unify(*ty, given)?;
                     Ok(())
                 } else if ["div", "mod"].contains(&op.0.as_str()) {
-                    let lty = self.pool.ty(Typing::Int);
-                    self.infer_expr(l, lty)?;
-                    self.infer_expr(r, lty)?;
-                    self.unify(lty, given)?;
-                    self.unify(*ty, given)?;
+                    self.give(l.ty(), Typing::Int)?;
+                    self.give(r.ty(), Typing::Int)?;
+                    self.give(*ty, Typing::Int)?;
+                    self.infer_expr(l)?;
+                    self.infer_expr(r)?;
                     Ok(())
                 } else if ["/"].contains(&op.0.as_str()) {
-                    let lty = self.pool.ty(Typing::Float);
-                    self.infer_expr(l, lty)?;
-                    self.infer_expr(r, lty)?;
-                    self.unify(lty, given)?;
-                    self.unify(*ty, given)?;
+                    self.give(l.ty(), Typing::Float)?;
+                    self.give(r.ty(), Typing::Float)?;
+                    self.give(*ty, Typing::Float)?;
+                    self.infer_expr(l)?;
+                    self.infer_expr(r)?;
                     Ok(())
                 } else {
                     unimplemented!()
@@ -346,11 +322,9 @@ impl TyEnv {
                 ref mut body,
             } => {
                 let param_ty = self.pool.tyvar();
-                let body_ty = self.pool.tyvar();
                 self.insert(param.clone(), param_ty);
-                self.infer_expr(body, body_ty)?;
-                self.give(*ty, Typing::Fun(param_ty, body_ty))?;
-                self.unify(*ty, given)?;
+                self.infer_expr(body)?;
+                self.give(*ty, Typing::Fun(param_ty, body.ty()))?;
                 Ok(())
             }
             &mut App {
@@ -358,20 +332,9 @@ impl TyEnv {
                 ref mut fun,
                 ref mut arg,
             } => {
-                let arg_ty = self.pool.tyvar();
-                let fun_ty = self.pool.ty(Typing::Fun(arg_ty, *ty));
-                self.infer_expr(fun, fun_ty)?;
-                match self.pool.value_of(fun_ty) {
-                    Typing::Fun(param, ret) => {
-                        let param = *param;
-                        let ret = *ret;
-                        self.infer_expr(arg, param)?;
-                        self.unify(given, ret)?;
-                    }
-                    _ => return Err(TypeError::NotFunction(self.pool.typed_expr(*fun.clone()))),
-                };
-
-                self.unify(*ty, given)?;
+                self.infer_expr(fun)?;
+                self.infer_expr(arg)?;
+                self.give(fun.ty(), Typing::Fun(arg.ty(), *ty))?;
                 Ok(())
             }
             &mut If {
@@ -381,10 +344,12 @@ impl TyEnv {
                 ref mut else_,
             } => {
                 let bool_ty = self.pool.ty(Typing::Bool);
-                let _cond_ty = self.infer_expr(cond, bool_ty)?;
-                self.infer_expr(then, given)?;
-                self.infer_expr(else_, given)?;
-                self.unify(*ty, given)?;
+                self.unify(cond.ty(), bool_ty)?;
+                self.infer_expr(cond)?;
+                self.unify(*ty, then.ty())?;
+                self.unify(then.ty(), else_.ty())?;
+                self.infer_expr(then)?;
+                self.infer_expr(else_)?;
                 Ok(())
             }
             &mut Case {
@@ -392,41 +357,34 @@ impl TyEnv {
                 ref mut ty,
                 ref mut clauses,
             } => {
-                let cond_ty = self.pool.tyvar();
-                // ignore error to allow to be inferred by patterns
-                let _ = self.infer_expr(cond, cond_ty);
+                self.infer_expr(cond)?;
                 for &mut (ref mut pat, ref mut branch) in clauses.iter_mut() {
-                    self.infer_pat(pat, cond_ty)?;
-                    self.infer_expr(branch, given)?;
+                    self.infer_pat(pat)?;
+                    self.unify(pat.ty(), cond.ty())?;
+                    self.infer_expr(branch)?;
+                    self.unify(branch.ty(), *ty)?;
                 }
-                // re-infer
-                // FIXME: maybe no need
-                self.infer_expr(cond, cond_ty)?;
-                self.unify(*ty, given)?;
                 Ok(())
             }
             &mut Tuple {
                 ref mut ty,
                 ref mut tuple,
             } => {
-                self.infer_tuple(tuple, given)?;
-                self.unify(*ty, given)?;
+                self.infer_tuple(tuple, *ty)?;
                 Ok(())
             }
             &mut Sym {
                 ref mut ty,
                 ref mut name,
             } => {
-                self.infer_symbol(name, given)?;
-                self.unify(*ty, given)?;
+                self.infer_symbol(name, *ty)?;
                 Ok(())
             }
             &mut Lit {
                 ref mut ty,
                 ref mut value,
             } => {
-                self.infer_literal(value, given)?;
-                self.unify(*ty, given)?;
+                self.infer_literal(value, *ty)?;
                 Ok(())
             }
         }
@@ -460,7 +418,7 @@ impl TyEnv {
         Ok(())
     }
 
-    fn infer_pat<'b, 'r>(&'b mut self, pat: &mut Pattern<NodeId>, given: NodeId) -> Result<'r, ()> {
+    fn infer_pat<'b, 'r>(&'b mut self, pat: &mut Pattern<NodeId>) -> Result<'r, ()> {
         use self::Pattern::*;
         match *pat {
             Lit {
@@ -480,8 +438,6 @@ impl TyEnv {
             }
             Wildcard { .. } | Var { .. } => (),
         };
-        let ty = pat.ty();
-        self.unify(ty, given)?;
         for (name, ty) in pat.binds() {
             self.insert(name.clone(), *ty);
         }
@@ -496,8 +452,8 @@ impl TyEnv {
         let mut tys = vec![self.pool.tyvar(); tuple.len()];
 
         for (e, t) in tuple.iter_mut().zip(tys.iter_mut()) {
-            // ignoring the error of infering. Right, maybe.
-            let _res = self.infer_expr(e, *t);
+            self.infer_expr(e)?;
+            self.unify(e.ty(), *t)?;
         }
         let tuple_ty = self.pool.ty(Typing::Tuple(tys));
         self.unify(tuple_ty, given)?;

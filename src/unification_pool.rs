@@ -12,10 +12,6 @@ impl<T> Node<T> {
         Node::Value(t)
     }
 
-    fn refer(node_id: NodeId) -> Self {
-        Node::Refer(node_id)
-    }
-
     fn take(&mut self) -> Option<T> {
         let node = std::mem::replace(self, Node::Refer(NodeId(std::usize::MAX)));
         match node {
