@@ -69,11 +69,10 @@ impl HIR2MIR {
     ) -> Symbol {
         // tmp name
         let wrapper_name = self.wrapper_name(fname.clone());
-        let wrapper_name = self.closure_wrapper.entry(fname).or_insert((
-            wrapper_name,
-            param_ty,
-            body_ty,
-        ));
+        let wrapper_name =
+            self.closure_wrapper
+                .entry(fname)
+                .or_insert((wrapper_name, param_ty, body_ty));
         wrapper_name.0.clone()
     }
 
@@ -249,8 +248,7 @@ impl HIR2MIR {
                             hir::Pattern::Tuple { tys, tuple } => {
                                 let ty = hir::HTy::Tuple(tys.clone());
                                 let var = self.gensym("tuple");
-                                let mut eb =
-                                    EBBBuilder::new(label, vec![(from(ty), var.clone())]);
+                                let mut eb = EBBBuilder::new(label, vec![(from(ty), var.clone())]);
                                 for (i, (t, ty)) in tuple.into_iter().zip(tys).enumerate() {
                                     eb.proj(t, from(ty), i as u32, var.clone());
                                 }
@@ -327,12 +325,12 @@ impl HIR2MIR {
             }
             Constructor { ty, name: cname } if cname == Symbol::new("true") => {
                 assert_eq!(ty, ty_);
-                eb.lit(name, EbbTy::Bool, Literal::Bool(true));
+                eb.lit(name, EbbTy::Bool, Literal::Int(1));
                 eb
             }
             Constructor { ty, name: cname } if cname == Symbol::new("false") => {
                 assert_eq!(ty, ty_);
-                eb.lit(name, EbbTy::Bool, Literal::Bool(false));
+                eb.lit(name, EbbTy::Bool, Literal::Int(0));
                 eb
             }
             Constructor { .. } => unimplemented!(),

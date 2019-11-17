@@ -71,7 +71,6 @@ impl MIR2LIR {
                         &m::Lit {
                             ref var, ref value, ..
                         } => match value {
-                            &Literal::Bool(b) => ops.push(ConstI32(reg!(var), b as u32)),
                             &Literal::Int(i) => ops.push(ConstI32(reg!(var), i as u32)),
                             &Literal::Real(f) => ops.push(ConstF64(reg!(var), f as f64)),
                         },
@@ -83,7 +82,6 @@ impl MIR2LIR {
                             match ty {
                                 &mir::EbbTy::Unit => {
                                     // do nothing
-                                    
                                 }
                                 &mir::EbbTy::Bool => ops.push(MoveI32(reg!(var), reg!(sym))),
                                 &mir::EbbTy::Int
@@ -249,7 +247,6 @@ impl MIR2LIR {
                                 match ty {
                                     LTy::Unit => {
                                         // do nothing
-                                        
                                     }
                                     LTy::I32 => {
                                         ops.push(StoreI32(Addr(reg.clone(), acc), reg!(var)))
@@ -330,7 +327,6 @@ impl MIR2LIR {
                                     LTy::Unit => {
                                         // FIXME: remove unit from closure
                                         // do nothing
-                                        
                                     }
                                     LTy::I32 => {
                                         ops.push(StoreI32(Addr(reg.clone(), acc), reg!(var)))
@@ -392,7 +388,6 @@ impl MIR2LIR {
                                     match p.0 {
                                         LTy::Unit => {
                                             // do nothing
-                                            
                                         }
                                         LTy::I32 => ops.push(MoveI32(p.clone(), reg!(cond))),
                                         LTy::I64 => ops.push(MoveI64(p.clone(), reg!(cond))),
@@ -451,7 +446,6 @@ impl MIR2LIR {
                                 match p.0 {
                                     LTy::Unit => {
                                         // do nothing
-                                        
                                     }
                                     LTy::I32 => ops.push(MoveI32(p.clone(), reg!(a))),
                                     LTy::I64 => ops.push(MoveI64(p.clone(), reg!(a))),

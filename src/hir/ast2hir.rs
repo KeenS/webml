@@ -185,10 +185,7 @@ impl AST2HIR {
                             name: name.clone(),
                             expr: case,
                         }];
-                        let tuple = Box::new(Expr::Sym {
-                            ty: tuple_ty,
-                            name,
-                        });
+                        let tuple = Box::new(Expr::Sym { ty: tuple_ty, name });
                         for (index, (var, ty)) in binds.into_iter().enumerate() {
                             let ty = conv_ty(ty.clone());
                             ret.push(Val {
@@ -298,25 +295,10 @@ impl AST2HIR {
                 value,
                 ty: conv_ty(ty),
             },
-            ast::Pattern::Constructor { ty, name }
-                if ty == ast::Type::Datatype(Symbol::new("bool"))
-                    && name == Symbol::new("true") =>
-            {
-                Pattern::Lit {
-                    ty: conv_ty(ty),
-                    value: Literal::Bool(true),
-                }
-            }
-            ast::Pattern::Constructor { ty, name }
-                if ty == ast::Type::Datatype(Symbol::new("bool"))
-                    && name == Symbol::new("false") =>
-            {
-                Pattern::Lit {
-                    ty: conv_ty(ty),
-                    value: Literal::Bool(true),
-                }
-            }
-            ast::Pattern::Constructor { .. } => unimplemented!(),
+            ast::Pattern::Constructor { ty, name } => Pattern::Constructor {
+                ty: conv_ty(ty),
+                name,
+            },
             ast::Pattern::Tuple { tuple, .. } => {
                 let (tys, tuple) = tuple
                     .into_iter()

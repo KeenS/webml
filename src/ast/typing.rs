@@ -161,18 +161,9 @@ impl<Ty> Expr<Ty> {
                 tuple: tuple.into_iter().map(|t| t.map_ty(f)).collect(),
             },
 
-            Symbol { ty, name } => Symbol {
-                ty: f(ty),
-                name,
-            },
-            Constructor { ty, name } => Constructor {
-                ty: f(ty),
-                name,
-            },
-            Literal { ty, value } => Literal {
-                ty: f(ty),
-                value,
-            },
+            Symbol { ty, name } => Symbol { ty: f(ty), name },
+            Constructor { ty, name } => Constructor { ty: f(ty), name },
+            Literal { ty, value } => Literal { ty: f(ty), value },
         }
     }
 }
@@ -343,11 +334,9 @@ impl TyEnv {
                 }
                 let params_ty = params.iter().map(|(ty, _)| *ty);
                 let body_ty = expr.ty();
-                let fun_ty = params_ty
-                    .rev()
-                    .fold(body_ty, |body_ty, param_ty| {
-                        self.pool.ty(Typing::Fun(param_ty, body_ty))
-                    });
+                let fun_ty = params_ty.rev().fold(body_ty, |body_ty, param_ty| {
+                    self.pool.ty(Typing::Fun(param_ty, body_ty))
+                });
                 self.insert(name.clone(), fun_ty);
                 // self.infer_pat(pattern)?;
                 self.infer_expr(expr)?;
@@ -482,7 +471,6 @@ impl TyEnv {
         let ty = match lit {
             Int(_) => self.pool.ty_int(),
             Real(_) => self.pool.ty_real(),
-            Bool(_) => self.pool.ty_bool(),
         };
         self.unify(given, ty)?;
         Ok(())

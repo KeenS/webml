@@ -21,20 +21,16 @@ impl PP for Symbol {
 pub enum Literal {
     Int(i64),
     Real(f64),
-    Bool(bool),
 }
 
 impl PP for Literal {
     fn pp<W: io::Write>(&self, w: &mut W, _indent: usize) -> io::Result<()> {
         use self::Literal::*;
         match self {
-            &Int(ref v) => {
+            Int(v) => {
                 write!(w, "{}", v)?;
             }
-            &Real(ref v) => {
-                write!(w, "{}", v)?;
-            }
-            &Bool(ref v) => {
+            Real(v) => {
                 write!(w, "{}", v)?;
             }
         }

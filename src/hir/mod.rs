@@ -106,7 +106,6 @@ impl Pattern {
         match self {
             Lit { value, .. } => match *value {
                 Literal::Int(key) => key as u64,
-                Literal::Bool(key) => key as u64,
                 Literal::Real(f) => panic!(
                     "bug: float literal pattern given, which is not supported: {:?}",
                     f
