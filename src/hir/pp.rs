@@ -176,7 +176,13 @@ impl PP for HTy {
                 write!(w, " -> ")?;
                 t2.pp(w, indent)?;
             }
-            Datatype(name) => name.pp(w, indent)?,
+            Datatype(descriminants) => inter_iter!(
+                descriminants.iter(),
+                write!(w, " | ")?,
+                |descriminanst| => {
+                    write!(w,"{}", descriminanst)?;
+                }
+            ),
         }
         Ok(())
     }

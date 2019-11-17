@@ -92,7 +92,8 @@ impl MIR2LIR {
                                     ops.push(MoveI64(reg!(var), reg!(sym)))
                                 }
                                 &mir::EbbTy::Float => ops.push(MoveF64(reg!(var), reg!(sym))),
-                                &mir::EbbTy::Union(_) => unimplemented!(),
+                                // FIXME: consider `union { () }`
+                                &mir::EbbTy::Union(_) => ops.push(MoveI64(reg!(var), reg!(sym))),
                             }
                         }
                         &m::Add {

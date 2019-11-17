@@ -126,7 +126,7 @@ pub enum HTy {
     Real,
     Tuple(Vec<HTy>),
     Fun(Box<HTy>, Box<HTy>),
-    Datatype(Symbol),
+    Datatype(Vec<(u32)>),
 }
 
 impl Expr {

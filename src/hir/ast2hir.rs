@@ -11,30 +11,6 @@ pub struct AST2HIR {
     symbol_table: Option<ast::SymbolTable>,
 }
 
-fn force_into(ty: ast::Type) -> HTy {
-    use crate::ast::Type::*;
-    match ty {
-        Int => HTy::Int,
-        Real => HTy::Real,
-        Tuple(tys) => HTy::Tuple(tys.into_iter().map(conv_ty).collect()),
-        Fun(arg, ret) => HTy::fun(conv_ty(*arg), conv_ty(*ret)),
-        Datatype(name) => HTy::Datatype(name),
-        Variable(_) => panic!("polymorphism is not supported yet"),
-    }
-}
-
-fn force_tuple(ty: ast::Type) -> Vec<HTy> {
-    use crate::ast::Type::*;
-    match ty {
-        Tuple(tys) => tys.into_iter().map(conv_ty).collect(),
-        _ => panic!(),
-    }
-}
-
-fn conv_ty(ty: ast::Type) -> HTy {
-    force_into(ty)
-}
-
 impl AST2HIR {
     pub fn new(id: Id) -> Self {
         Self {
@@ -54,6 +30,38 @@ impl AST2HIR {
     pub fn gensym(&mut self) -> Symbol {
         let id = self.id.next();
         Symbol("#g".into(), id)
+    }
+
+    fn force_tuple(&self, ty: ast::Type) -> Vec<HTy> {
+        use crate::ast::Type::*;
+        match ty {
+            Tuple(tys) => tys.into_iter().map(|ty| self.conv_ty(ty)).collect(),
+            _ => panic!(),
+        }
+    }
+
+    fn conv_ty(&self, ty: ast::Type) -> HTy {
+        use crate::ast::Type::*;
+        match ty {
+            Int => HTy::Int,
+            Real => HTy::Real,
+            Tuple(tys) => HTy::Tuple(tys.into_iter().map(|ty| self.conv_ty(ty)).collect()),
+            Fun(arg, ret) => HTy::fun(self.conv_ty(*arg), self.conv_ty(*ret)),
+            Datatype(name) => {
+                let constructors = &self
+                    .symbol_table()
+                    .get_type(&name)
+                    .expect("internal error: type not found")
+                    .constructors;
+                let descriminants = constructors
+                    .into_iter()
+                    .enumerate()
+                    .map(|(i, _)| i as u32)
+                    .collect();
+                HTy::Datatype(descriminants)
+            }
+            Variable(_) => panic!("polymorphism is not supported yet"),
+        }
     }
 
     fn conv_ast(&mut self, ast: ast::TypedAst) -> HIR {
@@ -77,13 +85,13 @@ impl AST2HIR {
             ast::Statement::Val { rec, pattern, expr } => {
                 match pattern {
                     ast::Pattern::Variable { name, ty } => vec![Val {
-                        ty: conv_ty(ty),
+                        ty: self.conv_ty(ty),
                         rec: false,
                         name: name,
                         expr: self.conv_expr(expr),
                     }],
                     ast::Pattern::Wildcard { ty } => vec![Val {
-                        ty: conv_ty(ty),
+                        ty: self.conv_ty(ty),
                         rec: false,
                         name: self.gensym(),
                         expr: self.conv_expr(expr),
@@ -102,7 +110,7 @@ impl AST2HIR {
                     //
                     // FIXME: raise Match error when not match
                     ast::Pattern::Constant { ty, .. } => vec![Val {
-                        ty: conv_ty(ty),
+                        ty: self.conv_ty(ty),
                         rec: false,
                         name: self.gensym(),
                         expr: self.conv_expr(expr),
@@ -124,7 +132,7 @@ impl AST2HIR {
                     //
                     // FIXME: raise Match error when not match
                     ast::Pattern::Constructor { ty, .. } => vec![Val {
-                        ty: conv_ty(ty),
+                        ty: self.conv_ty(ty),
                         rec: false,
                         name: self.gensym(),
                         expr: self.conv_expr(expr),
@@ -154,7 +162,7 @@ impl AST2HIR {
                                 .binds()
                                 .iter()
                                 .map(|&(name, ty)| {
-                                    let ty = conv_ty(ty.clone());
+                                    let ty = self.conv_ty(ty.clone());
                                     let expr = Expr::Sym {
                                         ty: ty.clone(),
                                         name: name.clone(),
@@ -187,7 +195,7 @@ impl AST2HIR {
                         }];
                         let tuple = Box::new(Expr::Sym { ty: tuple_ty, name });
                         for (index, (var, ty)) in binds.into_iter().enumerate() {
-                            let ty = conv_ty(ty.clone());
+                            let ty = self.conv_ty(ty.clone());
                             ret.push(Val {
                                 ty: ty.clone(),
                                 rec,
@@ -210,7 +218,7 @@ impl AST2HIR {
         use crate::ast::Expr as E;
         match expr {
             E::Binds { ty, binds, ret } => Expr::Binds {
-                ty: conv_ty(ty),
+                ty: self.conv_ty(ty),
                 binds: binds
                     .into_iter()
                     .flat_map(|s| self.conv_statement(s))
@@ -218,7 +226,7 @@ impl AST2HIR {
                 ret: Box::new(self.conv_expr(*ret)),
             },
             E::BinOp { op, ty, l, r } => Expr::BinOp {
-                ty: conv_ty(ty),
+                ty: self.conv_ty(ty),
                 name: op,
                 l: Box::new(self.conv_expr(*l)),
                 r: Box::new(self.conv_expr(*r)),
@@ -229,19 +237,21 @@ impl AST2HIR {
                     _ => panic!("internal error: functon is not typed as function"),
                 };
                 Expr::Fun {
-                    param: (conv_ty(param_ty), param),
-                    body_ty: conv_ty(body_ty),
+                    param: (self.conv_ty(param_ty), param),
+                    body_ty: self.conv_ty(body_ty),
                     body: Box::new(self.conv_expr(*body)),
                     captures: Vec::new(),
                 }
             }
-            E::App { ty, fun, arg } => self.conv_expr(*fun).app1(conv_ty(ty), self.conv_expr(*arg)),
+            E::App { ty, fun, arg } => self
+                .conv_expr(*fun)
+                .app1(self.conv_ty(ty), self.conv_expr(*arg)),
             e @ E::If { .. } => {
                 let expr = self.desugar.desugar_expr(e);
                 self.conv_expr(expr)
             }
             E::Case { ty, cond, clauses } => Expr::Case {
-                ty: conv_ty(ty),
+                ty: self.conv_ty(ty),
                 expr: Box::new(self.conv_expr(*cond)),
                 arms: clauses
                     .into_iter()
@@ -249,19 +259,19 @@ impl AST2HIR {
                     .collect(),
             },
             E::Tuple { ty, tuple } => Expr::Tuple {
-                tys: force_tuple(ty),
+                tys: self.force_tuple(ty),
                 tuple: tuple.into_iter().map(|e| self.conv_expr(e)).collect(),
             },
             E::Constructor { ty, name } => Expr::Constructor {
-                ty: conv_ty(ty),
+                ty: self.conv_ty(ty),
                 descriminant: self.conv_constructor_name(&name),
             },
             E::Symbol { ty, name } => Expr::Sym {
-                ty: conv_ty(ty),
+                ty: self.conv_ty(ty),
                 name,
             },
             E::Literal { ty, value } => Expr::Lit {
-                ty: conv_ty(ty),
+                ty: self.conv_ty(ty),
                 value,
             },
         }
@@ -270,26 +280,26 @@ impl AST2HIR {
         match pat {
             ast::Pattern::Constant { value, ty } => Pattern::Constant {
                 value,
-                ty: conv_ty(ty),
+                ty: self.conv_ty(ty),
             },
             ast::Pattern::Constructor { ty, name } => Pattern::Constructor {
-                ty: conv_ty(ty),
+                ty: self.conv_ty(ty),
                 descriminant: self.conv_constructor_name(&name),
             },
             ast::Pattern::Tuple { tuple, .. } => {
                 let (tys, tuple) = tuple
                     .into_iter()
-                    .map(|(ty, sym)| (conv_ty(ty), sym))
+                    .map(|(ty, sym)| (self.conv_ty(ty), sym))
                     .unzip();
                 Pattern::Tuple { tuple, tys }
             }
             ast::Pattern::Variable { name, ty } => Pattern::Var {
                 name,
-                ty: conv_ty(ty),
+                ty: self.conv_ty(ty),
             },
             ast::Pattern::Wildcard { ty } => Pattern::Var {
                 name: Symbol::new("_"),
-                ty: conv_ty(ty),
+                ty: self.conv_ty(ty),
             },
         }
     }

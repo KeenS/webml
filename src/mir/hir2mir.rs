@@ -13,30 +13,6 @@ pub struct HIR2MIR {
     closure_wrapper: HashMap<Symbol, (Symbol, EbbTy, EbbTy)>,
 }
 
-fn from(ty: hir::HTy) -> EbbTy {
-    use crate::hir::HTy::*;
-    match ty {
-        Int => EbbTy::Int,
-        Real => EbbTy::Float,
-        Tuple(tys) => match tys.len() {
-            0 => EbbTy::Unit,
-            // TODO: treat 1-tuple as inner type
-            _ => EbbTy::Tuple(tys.into_iter().map(from).collect()),
-        },
-        Fun(arg, ret) => EbbTy::Cls {
-            closures: vec![],
-            param: Box::new(from(*arg)),
-            ret: Box::new(from(*ret)),
-        },
-        Datatype(name) if name == Symbol::new("bool") => EbbTy::Bool,
-        Datatype(_name) => {
-            // unimplemented!()
-            // FIXME
-            EbbTy::Int
-        }
-    }
-}
-
 impl HIR2MIR {
     pub fn new(id: Id) -> Self {
         HIR2MIR {
@@ -57,6 +33,25 @@ impl HIR2MIR {
         let name = name.to_string();
         let id = self.id.next();
         Symbol(name, id)
+    }
+
+    fn trans_ty(&mut self, ty: hir::HTy) -> EbbTy {
+        use crate::hir::HTy::*;
+        match ty {
+            Int => EbbTy::Int,
+            Real => EbbTy::Float,
+            Tuple(tys) => match tys.len() {
+                0 => EbbTy::Unit,
+                // TODO: treat 1-tuple as inner type
+                _ => EbbTy::Tuple(tys.into_iter().map(|t| self.trans_ty(t)).collect()),
+            },
+            Fun(arg, ret) => EbbTy::Cls {
+                closures: vec![],
+                param: Box::new(self.trans_ty(*arg)),
+                ret: Box::new(self.trans_ty(*ret)),
+            },
+            Datatype(_name) => EbbTy::Int,
+        }
     }
 
     fn wrapper_name(&mut self, mut name: Symbol) -> Symbol {
@@ -153,13 +148,13 @@ impl HIR2MIR {
                 captures,
             } => {
                 //                assert_eq!(body_ty, ty_);
-                let param = (from(param.0), param.1);
+                let param = (self.trans_ty(param.0), param.1);
                 let mut eb_;
                 if !captures.is_empty() {
                     // make closured function
                     let (tuples, vars): (Vec<_>, Vec<_>) = captures
                         .into_iter()
-                        .map(|(ty, var)| (from(ty), var))
+                        .map(|(ty, var)| (self.trans_ty(ty), var))
                         .unzip();
                     let closure = Symbol::new("env");
                     eb_ = EBBBuilder::new(
@@ -173,7 +168,7 @@ impl HIR2MIR {
                     // make pure function
                     eb_ = EBBBuilder::new(Symbol::new("entry"), vec![param]);
                 }
-                let mut fb = FunctionBuilder::new(name, from(body_ty.clone()));
+                let mut fb = FunctionBuilder::new(name, self.trans_ty(body_ty.clone()));
                 let ebb = self.trans_expr(&mut fb, eb_, body_ty, *body);
                 fb.add_ebb(ebb);
                 let function = fb.build();
@@ -182,20 +177,20 @@ impl HIR2MIR {
             }
             e @ Sym { .. } | e @ Binds { .. } => {
                 let (mut eb, var) = self.trans_expr_block(fb, eb, ty_.clone(), e);
-                eb.alias(name, from(ty_), var);
+                eb.alias(name, self.trans_ty(ty_), var);
                 eb
             }
             BuiltinCall { ty, fun, arg } => {
                 assert_eq!(ty, ty_);
                 let arg = force_symbol(*arg);
-                eb.builtin_call(name, from(ty), fun, vec![arg]);
+                eb.builtin_call(name, self.trans_ty(ty), fun, vec![arg]);
                 eb
             }
             App { ty, fun, arg } => {
                 assert_eq!(ty, ty_);
                 let arg = force_symbol(*arg);
                 let fun = force_symbol(*fun);
-                eb.call(name, from(ty), fun, vec![arg]);
+                eb.call(name, self.trans_ty(ty), fun, vec![arg]);
                 eb
             }
             Case { ty, expr, arms } => {
@@ -246,15 +241,16 @@ impl HIR2MIR {
                     (Some((pat, arm)), Some((label, _))) => {
                         let eb = match pat {
                             hir::Pattern::Var { name, ty } => {
-                                let eb = EBBBuilder::new(label, vec![(from(ty), name)]);
+                                let eb = EBBBuilder::new(label, vec![(self.trans_ty(ty), name)]);
                                 eb
                             }
                             hir::Pattern::Tuple { tys, tuple } => {
                                 let ty = hir::HTy::Tuple(tys.clone());
                                 let var = self.gensym("tuple");
-                                let mut eb = EBBBuilder::new(label, vec![(from(ty), var.clone())]);
+                                let mut eb =
+                                    EBBBuilder::new(label, vec![(self.trans_ty(ty), var.clone())]);
                                 for (i, (t, ty)) in tuple.into_iter().zip(tys).enumerate() {
-                                    eb.proj(t, from(ty), i as u32, var.clone());
+                                    eb.proj(t, self.trans_ty(ty), i as u32, var.clone());
                                 }
                                 eb
                             }
@@ -269,17 +265,17 @@ impl HIR2MIR {
                     }
                     _ => (),
                 }
-                let eb = EBBBuilder::new(joinlabel, vec![(from(ty), name)]);
+                let eb = EBBBuilder::new(joinlabel, vec![(self.trans_ty(ty), name)]);
                 eb
             }
             Tuple { tys, tuple } => {
-                let tys = tys.into_iter().map(from).collect();
+                let tys = tys.into_iter().map(|ty| self.trans_ty(ty)).collect();
                 let tuple = tuple.into_iter().map(force_symbol).collect();
                 eb.tuple(name, tys, tuple);
                 eb
             }
             Proj { ty, index, tuple } => {
-                let ty = from(ty);
+                let ty = self.trans_ty(ty);
                 let tuple = force_symbol(*tuple);
                 eb.proj(name, ty, index, tuple);
                 eb
@@ -294,18 +290,18 @@ impl HIR2MIR {
                 let l = force_symbol(*l);
                 let r = force_symbol(*r);
                 match name_.0.as_ref() {
-                    "+" => eb.add(name, from(ty), l, r),
-                    "-" => eb.sub(name, from(ty), l, r),
-                    "*" => eb.mul(name, from(ty), l, r),
-                    "div" => eb.div_int(name, from(ty), l, r),
-                    "/" => eb.div_float(name, from(ty), l, r),
-                    "mod" => eb.mod_(name, from(ty), l, r),
-                    "=" => eb.eq(name, from(ty), l, r),
-                    "<>" => eb.neq(name, from(ty), l, r),
-                    ">" => eb.gt(name, from(ty), l, r),
-                    ">=" => eb.ge(name, from(ty), l, r),
-                    "<" => eb.lt(name, from(ty), l, r),
-                    "<=" => eb.le(name, from(ty), l, r),
+                    "+" => eb.add(name, self.trans_ty(ty), l, r),
+                    "-" => eb.sub(name, self.trans_ty(ty), l, r),
+                    "*" => eb.mul(name, self.trans_ty(ty), l, r),
+                    "div" => eb.div_int(name, self.trans_ty(ty), l, r),
+                    "/" => eb.div_float(name, self.trans_ty(ty), l, r),
+                    "mod" => eb.mod_(name, self.trans_ty(ty), l, r),
+                    "=" => eb.eq(name, self.trans_ty(ty), l, r),
+                    "<>" => eb.neq(name, self.trans_ty(ty), l, r),
+                    ">" => eb.gt(name, self.trans_ty(ty), l, r),
+                    ">=" => eb.ge(name, self.trans_ty(ty), l, r),
+                    "<" => eb.lt(name, self.trans_ty(ty), l, r),
+                    "<=" => eb.le(name, self.trans_ty(ty), l, r),
                     op => panic!("internal error, unknow, op '{}'", op),
                 };
                 eb
@@ -316,26 +312,28 @@ impl HIR2MIR {
                 body_ty,
                 mut fname,
             } => {
-                let param_ty = from(param_ty);
-                let body_ty = from(body_ty);
+                let param_ty = self.trans_ty(param_ty);
+                let body_ty = self.trans_ty(body_ty);
                 if envs.is_empty() {
                     let wrapper_name =
                         self.to_make_closure_wrapper(fname, param_ty.clone(), body_ty.clone());
                     fname = wrapper_name;
                 }
-                let envs = envs.into_iter().map(|(ty, var)| (from(ty), var)).collect();
+                let envs = envs
+                    .into_iter()
+                    .map(|(ty, var)| (self.trans_ty(ty), var))
+                    .collect();
                 eb.closure(name, param_ty, body_ty, fname, envs);
                 eb
             }
             Constructor { ty, descriminant } => {
                 assert_eq!(ty, ty_);
-                //assert_eq!(ty, hir::HTy::Datatype(Symbol::new("bool")));
                 eb.lit(name, EbbTy::Int, Literal::Int(descriminant as i64));
                 eb
             }
             Lit { ty, value } => {
                 assert_eq!(ty, ty_);
-                eb.lit(name, from(ty), value);
+                eb.lit(name, self.trans_ty(ty), value);
                 eb
             }
         }
@@ -357,11 +355,11 @@ impl HIR2MIR {
                     eb = self.trans_val(&mut funs, fb, eb, val);
                 }
                 assert_eq!(funs.len(), 0);
-                eb.ret(force_symbol(*ret), from(ty))
+                eb.ret(force_symbol(*ret), self.trans_ty(ty))
             }
             Sym { ty, name } => {
                 assert_eq!(ty, ty_);
-                eb.ret(name, from(ty))
+                eb.ret(name, self.trans_ty(ty))
             }
             _ => panic!("internal error"),
         }
