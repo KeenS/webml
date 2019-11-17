@@ -93,7 +93,7 @@ pub enum Expr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Pattern {
-    Lit { value: Literal, ty: HTy },
+    Constant { value: i64, ty: HTy },
     Constructor { name: Symbol, ty: HTy },
     Var { name: Symbol, ty: HTy },
     Tuple { tys: Vec<HTy>, tuple: Vec<Symbol> },
@@ -104,13 +104,7 @@ impl Pattern {
         use self::Pattern::*;
         // FIXME do not panic
         match self {
-            Lit { value, .. } => match *value {
-                Literal::Int(key) => key as u64,
-                Literal::Real(f) => panic!(
-                    "bug: float literal pattern given, which is not supported: {:?}",
-                    f
-                ),
-            },
+            Constant { value, .. } => *value as u64,
             Tuple { .. } => panic!("bug: non-variant expression does not have keys"),
             Constructor { name, .. } if name == &Symbol::new("true") => true as u64,
             Constructor { name, .. } if name == &Symbol::new("false") => false as u64,
@@ -122,7 +116,7 @@ impl Pattern {
     pub fn is_irrefutable(&self) -> bool {
         use self::Pattern::*;
         match *self {
-            Constructor { .. } | Lit { .. } => false,
+            Constructor { .. } | Constant { .. } => false,
             Tuple { .. } | Var { .. } => true,
         }
     }

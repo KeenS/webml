@@ -136,7 +136,7 @@ impl PP for Expr {
 impl PP for Pattern {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         match self {
-            Pattern::Lit { value, .. } => value.pp(w, indent),
+            Pattern::Constant { value, .. } => write!(w, "{}", value),
             Pattern::Constructor { name, .. } => name.pp(w, indent),
             Pattern::Tuple { tuple, .. } => {
                 write!(w, "(")?;

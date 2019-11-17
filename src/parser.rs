@@ -342,9 +342,9 @@ named!(pattern_wildcard <&str, Pattern<()>>, map!(tag!("_"), |name| Pattern::Wil
     ty: ()
 }));
 
-named!(pattern_int <&str, Pattern<()>>, map!(digit, |s: &str| Pattern::Literal{
+named!(pattern_int <&str, Pattern<()>>, map!(digit, |s: &str| Pattern::Constant{
     ty: (),
-    value: Literal::Int(s.parse().unwrap())}));
+    value: s.parse().unwrap()}));
 
 pub fn parse(input: &str) -> ::std::result::Result<UntypedAst, Err<&str>> {
     let iresult = top(input);

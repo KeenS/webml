@@ -94,12 +94,27 @@ pub enum Expr<Ty> {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Pattern<Ty> {
-    Literal { value: Literal, ty: Ty },
-    Constructor { name: Symbol, ty: Ty },
+    Constant {
+        // same type as Literal::Int
+        value: i64,
+        ty: Ty,
+    },
+    Constructor {
+        name: Symbol,
+        ty: Ty,
+    },
     // having redundant types for now
-    Tuple { tuple: Vec<(Ty, Symbol)>, ty: Ty },
-    Variable { name: Symbol, ty: Ty },
-    Wildcard { ty: Ty },
+    Tuple {
+        tuple: Vec<(Ty, Symbol)>,
+        ty: Ty,
+    },
+    Variable {
+        name: Symbol,
+        ty: Ty,
+    },
+    Wildcard {
+        ty: Ty,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -151,7 +166,7 @@ impl<Ty> Pattern<Ty> {
     pub fn binds(&self) -> Vec<(&Symbol, &Ty)> {
         use self::Pattern::*;
         match *self {
-            Literal { .. } | Wildcard { .. } => vec![],
+            Constant { .. } | Wildcard { .. } => vec![],
             Variable { ref name, ref ty } => vec![(name, ty)],
             Tuple { ref tuple, .. } => tuple.iter().map(|&(ref ty, ref sym)| (sym, ty)).collect(),
             Constructor { .. } => vec![],
@@ -163,7 +178,7 @@ impl<Ty: Clone> Pattern<Ty> {
     fn ty(&self) -> Ty {
         use self::Pattern::*;
         match *self {
-            Literal { ref ty, .. }
+            Constant { ref ty, .. }
             | Variable { ref ty, .. }
             | Wildcard { ref ty }
             | Tuple { ref ty, .. }

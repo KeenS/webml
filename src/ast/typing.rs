@@ -172,7 +172,7 @@ impl<Ty> Pattern<Ty> {
     fn map_ty<Ty2>(self, f: &mut dyn FnMut(Ty) -> Ty2) -> Pattern<Ty2> {
         use Pattern::*;
         match self {
-            Literal { value, ty } => Literal { value, ty: f(ty) },
+            Constant { value, ty } => Constant { value, ty: f(ty) },
             Constructor { name, ty } => Constructor { name, ty: f(ty) },
             Tuple { tuple, ty } => Tuple {
                 tuple: tuple.into_iter().map(|(ty, sym)| (f(ty), sym)).collect(),
@@ -476,11 +476,17 @@ impl TyEnv {
         Ok(())
     }
 
+    fn infer_constant<'b, 'r>(&'b mut self, _: &i64, given: NodeId) -> Result<'r, ()> {
+        let ty = self.pool.ty_int();
+        self.unify(given, ty)?;
+        Ok(())
+    }
+
     fn infer_pat<'b, 'r>(&'b mut self, pat: &Pattern<NodeId>) -> Result<'r, ()> {
         use self::Pattern::*;
         match pat {
-            Literal { ty, value } => {
-                self.infer_literal(value, *ty)?;
+            Constant { ty, value } => {
+                self.infer_constant(value, *ty)?;
             }
             Constructor { ty, name } => {
                 let type_name = self

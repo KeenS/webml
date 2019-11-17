@@ -101,7 +101,7 @@ impl AST2HIR {
                     // ```
                     //
                     // FIXME: raise Match error when not match
-                    ast::Pattern::Literal { ty, .. } => vec![Val {
+                    ast::Pattern::Constant { ty, .. } => vec![Val {
                         ty: conv_ty(ty),
                         rec: false,
                         name: self.gensym(),
@@ -291,7 +291,7 @@ impl AST2HIR {
     }
     fn conv_pat(&mut self, pat: ast::Pattern<ast::Type>) -> Pattern {
         match pat {
-            ast::Pattern::Literal { value, ty } => Pattern::Lit {
+            ast::Pattern::Constant { value, ty } => Pattern::Constant {
                 value,
                 ty: conv_ty(ty),
             },

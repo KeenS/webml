@@ -254,7 +254,7 @@ impl HIR2MIR {
                                 }
                                 eb
                             }
-                            hir::Pattern::Constructor { .. } | hir::Pattern::Lit { .. } => {
+                            hir::Pattern::Constructor { .. } | hir::Pattern::Constant { .. } => {
                                 unreachable!()
                             }
                         };

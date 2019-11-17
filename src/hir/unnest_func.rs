@@ -124,11 +124,7 @@ impl<'a> Scope<'a> {
                     })
                     .collect();
                 ret = Box::new(self.conv_expr(cls, *ret, None));
-                Binds {
-                    ty,
-                    binds,
-                    ret,
-                }
+                Binds { ty, binds, ret }
             }
             BinOp {
                 ty,
@@ -138,12 +134,7 @@ impl<'a> Scope<'a> {
             } => {
                 l = Box::new(self.conv_expr(cls, *l, None));
                 r = Box::new(self.conv_expr(cls, *r, None));
-                BinOp {
-                    ty,
-                    name,
-                    l,
-                    r,
-                }
+                BinOp { ty, name, l, r }
             }
 
             Fun {
@@ -191,11 +182,7 @@ impl<'a> Scope<'a> {
             }
             BuiltinCall { ty, fun, mut arg } => {
                 arg = Box::new(self.conv_expr(cls, *arg, None));
-                BuiltinCall {
-                    ty,
-                    fun,
-                    arg,
-                }
+                BuiltinCall { ty, fun, arg }
             }
             App {
                 ty,
@@ -204,11 +191,7 @@ impl<'a> Scope<'a> {
             } => {
                 fun = Box::new(self.conv_expr(cls, *fun, None));
                 arg = Box::new(self.conv_expr(cls, *arg, None));
-                App {
-                    ty,
-                    fun,
-                    arg,
-                }
+                App { ty, fun, arg }
             }
             Case {
                 ty,
@@ -220,21 +203,14 @@ impl<'a> Scope<'a> {
                     .into_iter()
                     .map(|(pat, arm)| (pat, self.conv_expr(cls, arm, None)))
                     .collect();
-                Case {
-                    ty,
-                    expr,
-                    arms,
-                }
+                Case { ty, expr, arms }
             }
             Tuple { tys, tuple } => {
                 let tuple = tuple
                     .into_iter()
                     .map(|t| self.conv_expr(cls, t, None))
                     .collect();
-                Tuple {
-                    tys,
-                    tuple,
-                }
+                Tuple { tys, tuple }
             }
             Proj { ty, index, tuple } => {
                 let tuple = self.conv_expr(cls, *tuple, None);
@@ -304,7 +280,7 @@ impl<'a> Scope<'a> {
                 for &(ref pat, ref arm) in arms.iter() {
                     use self::Pattern::*;
                     match *pat {
-                        Constructor { .. } | Lit { .. } => (),
+                        Constructor { .. } | Constant { .. } => (),
                         Tuple { ref tuple, .. } => {
                             for name in tuple {
                                 scope.add_scope(name.clone())

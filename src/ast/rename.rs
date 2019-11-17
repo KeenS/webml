@@ -82,7 +82,7 @@ impl<'a> Scope<'a> {
     fn new_symbol_pattern<Ty>(&mut self, pat: &mut Pattern<Ty>) {
         use Pattern::*;
         match pat {
-            Constructor { .. } | Wildcard { .. } | Literal { .. } => (),
+            Constructor { .. } | Wildcard { .. } | Constant { .. } => (),
             Variable { name, .. } => self.new_variable(name),
             Tuple { tuple, .. } => {
                 for (_, sym) in tuple {

@@ -1,7 +1,6 @@
 use super::util::Traverse;
 use crate::ast::*;
 use crate::config::Config;
-use crate::prim::*;
 use std::collections::HashSet;
 
 #[derive(Debug)]
@@ -70,17 +69,14 @@ impl Traverse<Type> for CaseCheck {
                         panic!("pattern after default case is redundant");
                     }
                     match pat {
-                        &Pattern::Literal {
-                            value: Literal::Int(ref i),
-                            ..
-                        } => {
+                        Pattern::Constant { value: i, .. } => {
                             if matched.insert(i) {
                                 // ok
                             } else {
                                 panic!("redundant patterns")
                             }
                         }
-                        &Pattern::Variable { .. } | &Pattern::Wildcard { .. } => defaulted = true,
+                        Pattern::Variable { .. } | Pattern::Wildcard { .. } => defaulted = true,
                         _ => unreachable!("expression and pattern doesn't match. It'a bug"),
                     }
                 }
