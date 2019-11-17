@@ -39,7 +39,7 @@ impl<Ty> PP for Statement<Ty> {
                 write!(w, "fun ")?;
                 name.pp(w, indent)?;
                 write!(w, " ")?;
-                for (_, param) in params {
+                for param in params {
                     param.pp(w, indent)?;
                     write!(w, " ")?;
                 }

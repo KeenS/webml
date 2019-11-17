@@ -1,10 +1,22 @@
 use crate::ast::util::Transform;
 use crate::ast::*;
+use crate::id::Id;
 use crate::prim::Symbol;
 
-pub struct Desugar;
+pub struct Desugar {
+    id: Id,
+}
 
 impl Desugar {
+    pub fn new(id: Id) -> Self {
+        Self { id }
+    }
+
+    pub fn gensym(&mut self) -> Symbol {
+        let id = self.id.next();
+        Symbol("#arg".into(), id)
+    }
+
     pub fn desugar_statement(&mut self, stmt: Statement<Type>) -> Statement<Type> {
         self.transform_statement(stmt)
     }
@@ -18,17 +30,26 @@ impl Transform<Type> for Desugar {
     fn transform_fun(
         &mut self,
         name: Symbol,
-        params: Vec<(Type, Symbol)>,
+        params: Vec<Pattern<Type>>,
         expr: Expr<Type>,
     ) -> Statement<Type> {
-        let fun = params
-            .into_iter()
-            .rev()
-            .fold(expr, |body, (ty, sym)| Expr::Fn {
-                ty: Type::Fun(Box::new(ty), Box::new(body.ty())),
-                param: sym,
-                body: Box::new(body),
-            });
+        let fun = params.into_iter().rev().fold(expr, |body, param| {
+            let param_sym = self.gensym();
+            Expr::Fn {
+                ty: Type::Fun(Box::new(param.ty()), Box::new(body.ty())),
+                param: param_sym.clone(),
+                body: Expr::Case {
+                    ty: body.ty(),
+                    cond: Expr::Symbol {
+                        name: param_sym,
+                        ty: param.ty(),
+                    }
+                    .boxed(),
+                    clauses: vec![(param, body)],
+                }
+                .boxed(),
+            }
+        });
         Statement::Val {
             rec: true,
             pattern: Pattern::Variable {

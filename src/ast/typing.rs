@@ -98,10 +98,7 @@ impl<Ty> Statement<Ty> {
 
             Fun { name, params, expr } => Fun {
                 name,
-                params: params
-                    .into_iter()
-                    .map(|(ty, param)| (f(ty), param))
-                    .collect(),
+                params: params.into_iter().map(|param| param.map_ty(f)).collect(),
                 expr: expr.map_ty(f),
             },
             Val { pattern, expr, rec } => Val {
@@ -337,10 +334,17 @@ impl TyEnv {
                 Ok(())
             }
             Fun { name, params, expr } => {
-                for (ty, param) in params {
-                    self.insert(param.clone(), ty.clone());
+                for param in params {
+                    self.infer_pat(param)?;
                 }
-                let params_ty = params.iter().map(|(ty, _)| *ty);
+
+                for param in params {
+                    for (name, ty) in param.binds() {
+                        self.insert(name.clone(), ty.clone());
+                    }
+                }
+
+                let params_ty = params.iter().map(|param| param.ty());
                 let body_ty = expr.ty();
                 let fun_ty = params_ty.rev().fold(body_ty, |body_ty, param_ty| {
                     self.pool.ty(Typing::Fun(param_ty, body_ty))

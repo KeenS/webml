@@ -26,10 +26,13 @@ pub trait Traverse<Ty> {
     fn traverse_fun(
         &mut self,
         _name: &mut Symbol,
-        _params: &mut Vec<(Ty, Symbol)>,
+        params: &mut Vec<Pattern<Ty>>,
         expr: &mut Expr<Ty>,
     ) {
-        self.traverse_expr(expr)
+        for param in params {
+            self.traverse_pattern(param);
+        }
+        self.traverse_expr(expr);
     }
 
     fn traverse_expr(&mut self, expr: &mut Expr<Ty>) {
@@ -156,12 +159,15 @@ pub trait Transform<Ty> {
     fn transform_fun(
         &mut self,
         name: Symbol,
-        params: Vec<(Ty, Symbol)>,
+        params: Vec<Pattern<Ty>>,
         expr: Expr<Ty>,
     ) -> Statement<Ty> {
         Statement::Fun {
             name,
-            params,
+            params: params
+                .into_iter()
+                .map(|param| self.transform_pattern(param))
+                .collect(),
             expr: self.transform_expr(expr),
         }
     }

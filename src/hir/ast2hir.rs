@@ -7,6 +7,7 @@ use crate::prim::*;
 
 pub struct AST2HIR {
     id: Id,
+    desugar: ast::Desugar,
     symbol_table: Option<ast::SymbolTable>,
 }
 
@@ -37,6 +38,7 @@ fn conv_ty(ty: ast::Type) -> HTy {
 impl AST2HIR {
     pub fn new(id: Id) -> Self {
         Self {
+            desugar: ast::Desugar::new(id.clone()),
             id,
             symbol_table: None,
         }
@@ -69,7 +71,8 @@ impl AST2HIR {
                 vec![]
             }
             s @ ast::Statement::Fun { .. } => {
-                self.conv_statement(ast::Desugar.desugar_statement(s))
+                let stmt = self.desugar.desugar_statement(s);
+                self.conv_statement(stmt)
             }
             ast::Statement::Val { rec, pattern, expr } => {
                 match pattern {
@@ -233,7 +236,10 @@ impl AST2HIR {
                 }
             }
             E::App { ty, fun, arg } => self.conv_expr(*fun).app1(conv_ty(ty), self.conv_expr(*arg)),
-            e @ E::If { .. } => self.conv_expr(ast::Desugar.desugar_expr(e)),
+            e @ E::If { .. } => {
+                let expr = self.desugar.desugar_expr(e);
+                self.conv_expr(expr)
+            }
             E::Case { ty, cond, clauses } => Expr::Case {
                 ty: conv_ty(ty),
                 expr: Box::new(self.conv_expr(*cond)),

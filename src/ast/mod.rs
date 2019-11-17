@@ -38,7 +38,7 @@ pub enum Statement<Ty> {
     Fun {
         name: Symbol,
         // TODO: let it patterns
-        params: Vec<(Ty, Symbol)>,
+        params: Vec<Pattern<Ty>>,
         expr: Expr<Ty>,
     },
 }

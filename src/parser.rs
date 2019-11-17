@@ -59,14 +59,14 @@ named!(bind_val <&str, Statement<()>>, do_parse!(
 
 named!(bind_fun <&str, Statement<()>>, do_parse!(
     tag_s!("fun") >> multispace >>
-        name: symbol >> multispace >>
-        params: separated_nonempty_list!(multispace, symbol) >>
+        name: symbol >> opt!(multispace) >>
+        params: separated_nonempty_list!(multispace, pattern) >>
         opt!(multispace) >>
         tag_s!("=") >>
         opt!(multispace) >>
         e: expr >>
         ({
-            Statement::Fun{ name, params:params.into_iter().map(|p| ((), p)).collect(), expr: e}
+            Statement::Fun{ name, params: params, expr: e}
         })
 ));
 

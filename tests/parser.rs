@@ -144,7 +144,10 @@ fn parse_fun_unary() {
         ast,
         AST(vec![Statement::Fun {
             name: Symbol::new("f"),
-            params: vec![((), Symbol::new("x"))],
+            params: vec![Pattern::Variable {
+                name: Symbol::new("x"),
+                ty: ()
+            }],
             expr: Expr::Symbol {
                 ty: (),
                 name: Symbol::new("x"),
@@ -161,7 +164,36 @@ fn parse_fun_binary() {
         ast,
         AST(vec![Statement::Fun {
             name: Symbol::new("f"),
-            params: vec![((), Symbol::new("x")), ((), Symbol::new("y"))],
+            params: vec![
+                Pattern::Variable {
+                    name: Symbol::new("x"),
+                    ty: ()
+                },
+                Pattern::Variable {
+                    name: Symbol::new("y"),
+                    ty: ()
+                }
+            ],
+            expr: Expr::Symbol {
+                ty: (),
+                name: Symbol::new("x"),
+            },
+        },])
+    )
+}
+
+#[test]
+fn parse_fun_pattern() {
+    let input = r#"fun f (x, y) = x"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![Statement::Fun {
+            name: Symbol::new("f"),
+            params: vec![Pattern::Tuple {
+                ty: (),
+                tuple: vec![((), Symbol::new("x")), ((), Symbol::new("y")),]
+            }],
             expr: Expr::Symbol {
                 ty: (),
                 name: Symbol::new("x"),

@@ -147,13 +147,13 @@ impl<'a, Ty> util::Traverse<Ty> for Scope<'a> {
     fn traverse_fun<'b, 'c>(
         &'b mut self,
         name: &mut Symbol,
-        params: &mut Vec<(Ty, Symbol)>,
+        params: &mut Vec<Pattern<Ty>>,
         expr: &mut Expr<Ty>,
     ) {
         self.new_variable(name);
         let mut scope = self.new_scope();
-        for (_, param) in params {
-            scope.new_variable(param);
+        for param in params {
+            scope.new_symbol_pattern(param);
         }
         scope.traverse_expr(expr);
     }
