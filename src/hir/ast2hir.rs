@@ -16,8 +16,7 @@ fn force_into(ty: ast::Type) -> HTy {
         Real => HTy::Real,
         Tuple(tys) => HTy::Tuple(tys.into_iter().map(conv_ty).collect()),
         Fun(arg, ret) => HTy::fun(conv_ty(*arg), conv_ty(*ret)),
-        Datatype(name) if name == Symbol::new("bool") => HTy::Bool,
-        Datatype(_name) => unimplemented!(),
+        Datatype(name) => HTy::Datatype(name),
         Variable(_) => panic!("polymorphism is not supported yet"),
     }
 }
@@ -54,7 +53,10 @@ impl AST2HIR {
 
     fn conv_statement(&mut self, stmt: ast::Statement<ast::Type>) -> Vec<Val> {
         match stmt {
-            ast::Statement::Datatype { name, constructors } => unimplemented!(),
+            ast::Statement::Datatype { .. } => {
+                // ignore
+                vec![]
+            }
             ast::Statement::Fun { name, params, expr } => {
                 let fun = params
                     .into_iter()
@@ -247,16 +249,18 @@ impl AST2HIR {
                 expr: Box::new(self.conv_expr(*cond)),
                 arms: vec![
                     (
-                        Pattern::Lit {
-                            value: Literal::Bool(true),
-                            ty: HTy::Bool,
+                        Pattern::Constructor {
+                            // FIXME consult it from symbol table
+                            name: Symbol::new("true"),
+                            ty: HTy::Datatype(Symbol::new("bool")),
                         },
                         self.conv_expr(*then),
                     ),
                     (
-                        Pattern::Lit {
-                            value: Literal::Bool(false),
-                            ty: HTy::Bool,
+                        Pattern::Constructor {
+                            // FIXME consult it from symbol table
+                            name: Symbol::new("false"),
+                            ty: HTy::Datatype(Symbol::new("bool")),
                         },
                         self.conv_expr(*else_),
                     ),
@@ -274,25 +278,10 @@ impl AST2HIR {
                 tys: force_tuple(ty),
                 tuple: tuple.into_iter().map(|e| self.conv_expr(e)).collect(),
             },
-            E::Constructor { ty, name }
-                if ty == ast::Type::Datatype(Symbol::new("bool"))
-                    && name == Symbol::new("true") =>
-            {
-                Expr::Lit {
-                    ty: conv_ty(ty),
-                    value: Literal::Bool(true),
-                }
-            }
-            E::Constructor { ty, name }
-                if ty == ast::Type::Datatype(Symbol::new("bool"))
-                    && name == Symbol::new("false") =>
-            {
-                Expr::Lit {
-                    ty: conv_ty(ty),
-                    value: Literal::Bool(true),
-                }
-            }
-            E::Constructor { .. } => unimplemented!(),
+            E::Constructor { ty, name } => Expr::Constructor {
+                ty: conv_ty(ty),
+                name: name,
+            },
             E::Symbol { ty, name } => Expr::Sym {
                 ty: conv_ty(ty),
                 name: name,

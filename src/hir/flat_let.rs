@@ -85,7 +85,11 @@ fn take_binds(mut expr: Expr) -> (Expr, Vec<Val>) {
             };
             (proj, binds)
         }
-        x @ Fun { .. } | x @ Closure { .. } | x @ Sym { .. } | x @ Lit { .. } => (x, Vec::new()),
+        x @ Fun { .. }
+        | x @ Closure { .. }
+        | x @ Constructor { .. }
+        | x @ Sym { .. }
+        | x @ Lit { .. } => (x, Vec::new()),
     }
 }
 

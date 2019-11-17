@@ -77,6 +77,10 @@ pub enum Expr {
         index: u32,
         tuple: Box<Expr>,
     },
+    Constructor {
+        ty: HTy,
+        name: Symbol,
+    },
     Sym {
         ty: HTy,
         name: Symbol,
@@ -90,6 +94,7 @@ pub enum Expr {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Pattern {
     Lit { value: Literal, ty: HTy },
+    Constructor { name: Symbol, ty: HTy },
     Var { name: Symbol, ty: HTy },
     Tuple { tys: Vec<HTy>, tuple: Vec<Symbol> },
 }
@@ -98,16 +103,19 @@ impl Pattern {
     pub fn match_key(&self) -> u64 {
         use self::Pattern::*;
         // FIXME do not panic
-        match *self {
-            Lit { ref value, .. } => match *value {
-                Literal::Int(ref key) => *key as u64,
-                Literal::Bool(ref key) => *key as u64,
-                Literal::Real(ref f) => panic!(
+        match self {
+            Lit { value, .. } => match *value {
+                Literal::Int(key) => key as u64,
+                Literal::Bool(key) => key as u64,
+                Literal::Real(f) => panic!(
                     "bug: float literal pattern given, which is not supported: {:?}",
                     f
                 ),
             },
             Tuple { .. } => panic!("bug: non-variant expression does not have keys"),
+            Constructor { name, .. } if name == &Symbol::new("true") => true as u64,
+            Constructor { name, .. } if name == &Symbol::new("false") => false as u64,
+            Constructor { .. } => unimplemented!(),
             Var { .. } => panic!("bug: default like branch does not have keys"),
         }
     }
@@ -115,7 +123,7 @@ impl Pattern {
     pub fn is_irrefutable(&self) -> bool {
         use self::Pattern::*;
         match *self {
-            Lit { .. } => false,
+            Constructor { .. } | Lit { .. } => false,
             Tuple { .. } | Var { .. } => true,
         }
     }
@@ -123,11 +131,11 @@ impl Pattern {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum HTy {
-    Bool,
     Int,
     Real,
     Tuple(Vec<HTy>),
     Fun(Box<HTy>, Box<HTy>),
+    Datatype(Symbol),
 }
 
 impl Expr {
@@ -160,6 +168,7 @@ impl Expr {
             | &BuiltinCall { ref ty, .. }
             | &App { ref ty, .. }
             | &Case { ref ty, .. }
+            | &Constructor { ref ty, .. }
             | &Sym { ref ty, .. }
             | &Lit { ref ty, .. } => ty.clone(),
         }

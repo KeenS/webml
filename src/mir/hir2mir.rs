@@ -16,7 +16,6 @@ pub struct HIR2MIR {
 fn from(ty: hir::HTy) -> EbbTy {
     use crate::hir::HTy::*;
     match ty {
-        Bool => EbbTy::Bool,
         Int => EbbTy::Int,
         Real => EbbTy::Float,
         Tuple(tys) => match tys.len() {
@@ -29,6 +28,8 @@ fn from(ty: hir::HTy) -> EbbTy {
             param: Box::new(from(*arg)),
             ret: Box::new(from(*ret)),
         },
+        Datatype(name) if name == Symbol::new("bool") => EbbTy::Bool,
+        Datatype(_name) => unimplemented!(),
     }
 }
 
@@ -255,7 +256,9 @@ impl HIR2MIR {
                                 }
                                 eb
                             }
-                            hir::Pattern::Lit { .. } => unreachable!(),
+                            hir::Pattern::Constructor { .. } | hir::Pattern::Lit { .. } => {
+                                unreachable!()
+                            }
                         };
 
                         let (eb, var) = self.trans_expr_block(fb, eb, ty.clone(), arm);
@@ -322,6 +325,17 @@ impl HIR2MIR {
                 eb.closure(name, param_ty, body_ty, fname, envs);
                 eb
             }
+            Constructor { ty, name: cname } if cname == Symbol::new("true") => {
+                assert_eq!(ty, ty_);
+                eb.lit(name, EbbTy::Bool, Literal::Bool(true));
+                eb
+            }
+            Constructor { ty, name: cname } if cname == Symbol::new("false") => {
+                assert_eq!(ty, ty_);
+                eb.lit(name, EbbTy::Bool, Literal::Bool(false));
+                eb
+            }
+            Constructor { .. } => unimplemented!(),
             Lit { ty, value } => {
                 assert_eq!(ty, ty_);
                 eb.lit(name, from(ty), value);

@@ -122,6 +122,14 @@ impl<'a> Traverse for Trav<'a> {
                 return;
             }
 
+            Constructor {
+                ref mut ty,
+                ref mut name,
+            } => {
+                self.traverse_constructor(ty, name);
+                return;
+            }
+
             Sym {
                 ref mut ty,
                 ref mut name,

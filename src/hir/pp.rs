@@ -140,6 +140,9 @@ impl PP for Expr {
                 write!(w, " ")?;
                 arg.pp(w, indent)?;
             }
+            &Constructor { ref name, .. } => {
+                name.pp(w, indent)?;
+            }
             &Sym { ref name, .. } => {
                 name.pp(w, indent)?;
             }
@@ -155,6 +158,7 @@ impl PP for Pattern {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         match *self {
             Pattern::Lit { ref value, .. } => value.pp(w, indent),
+            Pattern::Constructor { ref name, .. } => name.pp(w, indent),
             Pattern::Tuple { ref tuple, .. } => {
                 write!(w, "(")?;
                 inter_iter! {
@@ -174,11 +178,10 @@ impl PP for Pattern {
 impl PP for HTy {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         use crate::hir::HTy::*;
-        match *self {
-            Bool => write!(w, "bool")?,
+        match self {
             Int => write!(w, "int")?,
             Real => write!(w, "real")?,
-            Tuple(ref tys) => {
+            Tuple(tys) => {
                 write!(w, "(")?;
                 inter_iter! {
                     tys.iter(),
@@ -189,11 +192,12 @@ impl PP for HTy {
                 }
                 write!(w, ")")?;
             }
-            Fun(ref t1, ref t2) => {
+            Fun(t1, t2) => {
                 t1.pp(w, indent)?;
                 write!(w, " -> ")?;
                 t2.pp(w, indent)?;
             }
+            Datatype(name) => name.pp(w, indent)?,
         }
         Ok(())
     }

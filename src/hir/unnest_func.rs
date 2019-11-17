@@ -244,6 +244,7 @@ impl<'a> Scope<'a> {
                     index,
                 }
             }
+            Constructor { name, ty } => Constructor { ty: ty, name: name },
             Sym { name, ty } => Sym { ty: ty, name: name },
             expr @ Closure { .. } | expr @ Lit { .. } => expr,
         }
@@ -303,7 +304,7 @@ impl<'a> Scope<'a> {
                 for &(ref pat, ref arm) in arms.iter() {
                     use self::Pattern::*;
                     match *pat {
-                        Lit { .. } => (),
+                        Constructor { .. } | Lit { .. } => (),
                         Tuple { ref tuple, .. } => {
                             for name in tuple {
                                 scope.add_scope(name.clone())
@@ -332,7 +333,7 @@ impl<'a> Scope<'a> {
                     }
                 }
             }
-            &Lit { .. } => (),
+            &Constructor { .. } | &Lit { .. } => (),
         }
     }
 
@@ -393,7 +394,7 @@ impl<'a> Scope<'a> {
                     *name = to.clone()
                 }
             }
-            Closure { .. } | Lit { .. } => (),
+            Closure { .. } | Constructor { .. } | Lit { .. } => (),
         }
     }
 }
