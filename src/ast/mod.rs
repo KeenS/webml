@@ -3,16 +3,18 @@ mod pp;
 pub mod rename;
 pub mod typing;
 mod util;
+pub mod var2constructor;
 
 pub use self::case_check::CaseCheck;
 pub use self::rename::Rename;
 pub use self::typing::TyEnv as Typer;
-use nom;
-use std::error::Error;
-use std::fmt;
-
+pub use self::var2constructor::VarToConstructor;
 use crate::ast;
 use crate::prim::*;
+use nom;
+pub use std::collections::HashMap;
+use std::error::Error;
+use std::fmt;
 
 pub type UntypedAst = AST<()>;
 pub type TypedAst = AST<Type>;
@@ -22,6 +24,10 @@ pub struct AST<Ty>(pub Vec<Statement<Ty>>);
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Statement<Ty> {
+    Datatype {
+        name: Symbol,
+        constructors: Vec<Symbol>,
+    },
     Val {
         pattern: Pattern<Ty>,
         expr: Expr<Ty>,
@@ -76,6 +82,10 @@ pub enum Expr<Ty> {
         ty: Ty,
         name: Symbol,
     },
+    Constructor {
+        ty: Ty,
+        name: Symbol,
+    },
     Literal {
         ty: Ty,
         value: Literal,
@@ -85,20 +95,32 @@ pub enum Expr<Ty> {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Pattern<Ty> {
     Literal { value: Literal, ty: Ty },
+    Constructor { name: Symbol, ty: Ty },
     // having redundant types for now
     Tuple { tuple: Vec<(Ty, Symbol)>, ty: Ty },
     Variable { name: Symbol, ty: Ty },
     Wildcard { ty: Ty },
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct SymbolTable {
+    types: HashMap<Symbol, TypeInfo>,
+    constructors: HashMap<Symbol, Symbol>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Type {
     Variable(u64),
-    Bool,
     Int,
     Real,
     Fun(Box<Type>, Box<Type>),
     Tuple(Vec<Type>),
+    Datatype(Symbol),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypeInfo {
+    constructors: Vec<Symbol>,
 }
 
 impl<Ty> Expr<Ty> {
@@ -118,6 +140,7 @@ impl<Ty: Clone> Expr<Ty> {
             | Case { ref ty, .. }
             | Tuple { ref ty, .. }
             | Symbol { ref ty, .. }
+            | Constructor { ref ty, .. }
             | Literal { ref ty, .. }
             | Fn { ref ty, .. } => ty.clone(),
         }
@@ -131,6 +154,7 @@ impl<Ty> Pattern<Ty> {
             Literal { .. } | Wildcard { .. } => vec![],
             Variable { ref name, ref ty } => vec![(name, ty)],
             Tuple { ref tuple, .. } => tuple.iter().map(|&(ref ty, ref sym)| (sym, ty)).collect(),
+            Constructor { .. } => vec![],
         }
     }
 }
@@ -142,7 +166,8 @@ impl<Ty: Clone> Pattern<Ty> {
             Literal { ref ty, .. }
             | Variable { ref ty, .. }
             | Wildcard { ref ty }
-            | Tuple { ref ty, .. } => ty.clone(),
+            | Tuple { ref ty, .. }
+            | Constructor { ref ty, .. } => ty.clone(),
         }
     }
 }
@@ -153,6 +178,30 @@ impl Type {
     }
     pub fn unit() -> Type {
         Type::Tuple(Vec::new())
+    }
+}
+
+impl SymbolTable {
+    pub fn new() -> Self {
+        Self {
+            types: HashMap::new(),
+            constructors: HashMap::new(),
+        }
+    }
+
+    pub fn register_type(&mut self, name: Symbol, info: TypeInfo) {
+        for cname in &info.constructors {
+            self.constructors.insert(cname.clone(), name.clone());
+        }
+        self.types.insert(name, info);
+    }
+
+    pub fn get_type(&self, name: &Symbol) -> Option<&TypeInfo> {
+        self.types.get(&name)
+    }
+
+    pub fn get_datatype_of_constructor(&self, name: &Symbol) -> Option<&Symbol> {
+        self.constructors.get(name)
     }
 }
 

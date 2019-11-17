@@ -8,23 +8,25 @@ use std::collections::HashMap;
 #[derive(Debug)]
 pub struct TyEnv {
     env: HashMap<Symbol, NodeId>,
+    symbol_table: Option<SymbolTable>,
     pool: TypePool,
 }
 
 #[derive(Debug)]
 struct TypePool {
+    cache: HashMap<Typing, NodeId>,
     pool: UnificationPool<Typing>,
     id: Id,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum Typing {
     Variable(u64),
-    Bool,
     Int,
     Real,
     Fun(NodeId, NodeId),
     Tuple(Vec<NodeId>),
+    Datatype(Symbol),
 }
 
 fn resolve(pool: &UnificationPool<Typing>, id: NodeId) -> Type {
@@ -35,7 +37,6 @@ fn conv_ty(pool: &UnificationPool<Typing>, ty: Typing) -> Type {
     use Typing::*;
     match ty {
         Variable(id) => Type::Variable(id),
-        Bool => Type::Bool,
         Int => Type::Int,
         Real => Type::Real,
         Fun(param, body) => Type::Fun(
@@ -43,6 +44,7 @@ fn conv_ty(pool: &UnificationPool<Typing>, ty: Typing) -> Type {
             Box::new(resolve(pool, body)),
         ),
         Tuple(tys) => Type::Tuple(tys.into_iter().map(|ty| resolve(pool, ty)).collect()),
+        Datatype(type_id) => Type::Datatype(type_id),
     }
 }
 
@@ -82,46 +84,6 @@ fn try_unify<'b, 'r>(
     }
 }
 
-impl TyEnv {
-    fn get(&self, name: &Symbol) -> Option<NodeId> {
-        self.env.get(name).cloned()
-    }
-
-    fn insert(&mut self, k: Symbol, v: NodeId) -> Option<NodeId> {
-        self.env.insert(k, v)
-    }
-}
-
-impl TypePool {
-    fn new() -> Self {
-        Self {
-            pool: UnificationPool::new(),
-            id: Id::new(),
-        }
-    }
-
-    fn tyvar(&mut self) -> NodeId {
-        self.pool.node_new(Typing::Variable(self.id.next()))
-    }
-
-    fn ty(&mut self, ty: Typing) -> NodeId {
-        self.pool.node_new(ty)
-    }
-
-    fn node_new(&mut self, t: Typing) -> NodeId {
-        self.pool.node_new(t)
-    }
-
-    fn try_unify_with<'r>(
-        &mut self,
-        id1: NodeId,
-        id2: NodeId,
-        try_unify: impl FnOnce(&mut UnificationPool<Typing>, Typing, Typing) -> Result<'r, Typing>,
-    ) -> Result<'r, NodeId> {
-        self.pool.try_unify_with(id1, id2, try_unify)
-    }
-}
-
 impl<Ty> AST<Ty> {
     fn map_ty<Ty2>(self, f: &mut dyn FnMut(Ty) -> Ty2) -> AST<Ty2> {
         AST(self.0.into_iter().map(move |val| val.map_ty(f)).collect())
@@ -132,6 +94,8 @@ impl<Ty> Statement<Ty> {
     fn map_ty<Ty2>(self, f: &mut dyn FnMut(Ty) -> Ty2) -> Statement<Ty2> {
         use Statement::*;
         match self {
+            Datatype { name, constructors } => Datatype { name, constructors },
+
             Fun { name, params, expr } => Fun {
                 name,
                 params: params
@@ -201,6 +165,10 @@ impl<Ty> Expr<Ty> {
                 ty: f(ty),
                 name: name,
             },
+            Constructor { ty, name } => Constructor {
+                ty: f(ty),
+                name: name,
+            },
             Literal { ty, value } => Literal {
                 ty: f(ty),
                 value: value,
@@ -214,6 +182,7 @@ impl<Ty> Pattern<Ty> {
         use Pattern::*;
         match self {
             Literal { value, ty } => Literal { value, ty: f(ty) },
+            Constructor { name, ty } => Constructor { name, ty: f(ty) },
             Tuple { tuple, ty } => Tuple {
                 tuple: tuple.into_iter().map(|(ty, sym)| (f(ty), sym)).collect(),
                 ty: f(ty),
@@ -221,6 +190,72 @@ impl<Ty> Pattern<Ty> {
             Variable { name, ty } => Variable { name, ty: f(ty) },
             Wildcard { ty } => Wildcard { ty: f(ty) },
         }
+    }
+}
+
+impl TypePool {
+    fn new() -> Self {
+        let mut ret = Self {
+            cache: HashMap::new(),
+            pool: UnificationPool::new(),
+            id: Id::new(),
+        };
+        ret.init();
+        ret
+    }
+
+    fn init(&mut self) {
+        self.node_new(Typing::Int);
+        self.node_new(Typing::Real);
+    }
+
+    fn feed_symbol_table(&mut self, symbol_table: &SymbolTable) {
+        for typename in symbol_table.types.keys() {
+            self.node_new(Typing::Datatype(typename.clone()));
+        }
+    }
+
+    fn tyvar(&mut self) -> NodeId {
+        self.pool.node_new(Typing::Variable(self.id.next()))
+    }
+
+    fn ty(&mut self, ty: Typing) -> NodeId {
+        self.pool.node_new(ty)
+    }
+
+    fn ty_int(&mut self) -> NodeId {
+        *self.cache.get(&Typing::Int).unwrap()
+    }
+
+    fn ty_bool(&mut self) -> NodeId {
+        *self
+            .cache
+            .get(&Typing::Datatype(Symbol::new("bool")))
+            .unwrap()
+    }
+
+    fn ty_real(&mut self) -> NodeId {
+        *self.cache.get(&Typing::Real).unwrap()
+    }
+
+    fn node_new(&mut self, t: Typing) -> NodeId {
+        let node_id = self.pool.node_new(t.clone());
+        match t {
+            t @ Typing::Int | t @ Typing::Real | t @ Typing::Datatype(_) => {
+                self.cache.insert(t, node_id);
+            }
+            _ => (), // no cache
+        }
+        node_id
+    }
+
+    fn try_unify_with<'r>(
+        &mut self,
+        id1: NodeId,
+        id2: NodeId,
+        try_unify: impl FnOnce(&mut UnificationPool<Typing>, Typing, Typing) -> Result<'r, Typing>,
+    ) -> Result<'r, NodeId> {
+        self.pool.try_unify_with(id1, id2, try_unify)
     }
 }
 
@@ -237,6 +272,50 @@ impl TypePool {
 }
 
 impl TyEnv {
+    pub fn new() -> Self {
+        let mut ret = TyEnv {
+            env: HashMap::new(),
+            symbol_table: None,
+            pool: TypePool::new(),
+        };
+        let fun_ty = Typing::Fun(ret.pool.ty_int(), ret.pool.ty(Typing::Tuple(vec![])));
+        let node_id = ret.pool.ty(fun_ty);
+        ret.insert(Symbol::new("print"), node_id);
+        ret
+    }
+
+    pub fn init(&mut self, symbol_table: SymbolTable) {
+        self.pool.feed_symbol_table(&symbol_table);
+        for (cname, name) in &symbol_table.constructors {
+            let ty = self.pool.ty(Typing::Datatype(name.clone()));
+            self.insert(cname.clone(), ty);
+        }
+        self.symbol_table = Some(symbol_table);
+    }
+
+    pub fn infer<'a, 'b>(&'a mut self, ast: &mut ast::AST<NodeId>) -> Result<'b, ()> {
+        self.infer_ast(ast)?;
+        Ok(())
+    }
+
+    fn symbol_table(&self) -> &SymbolTable {
+        self.symbol_table.as_ref().unwrap()
+    }
+
+    pub fn generate_symbol_table(&mut self) -> SymbolTable {
+        self.symbol_table.take().unwrap()
+    }
+
+    fn get(&self, name: &Symbol) -> Option<NodeId> {
+        self.env.get(name).cloned()
+    }
+
+    fn insert(&mut self, k: Symbol, v: NodeId) -> Option<NodeId> {
+        self.env.insert(k, v)
+    }
+}
+
+impl TyEnv {
     fn infer_ast<'b, 'r>(&'b mut self, ast: &AST<NodeId>) -> Result<'r, ()> {
         for stmt in ast.0.iter() {
             self.infer_statement(&stmt)?;
@@ -247,6 +326,7 @@ impl TyEnv {
     fn infer_statement<'b, 'r>(&'b mut self, stmt: &Statement<NodeId>) -> Result<'r, ()> {
         use Statement::*;
         match stmt {
+            Datatype { .. } => Ok(()),
             Val { pattern, expr } => {
                 let names = pattern.binds();
                 self.infer_expr(expr)?;
@@ -279,6 +359,9 @@ impl TyEnv {
 
     fn infer_expr<'b, 'r>(&'b mut self, expr: &Expr<NodeId>) -> Result<'r, ()> {
         use crate::ast::Expr::*;
+        let int = self.pool.ty_int();
+        let real = self.pool.ty_real();
+        let bool = self.pool.ty_bool();
         match expr {
             Binds { ty, binds, ret } => {
                 for stmt in binds {
@@ -290,32 +373,34 @@ impl TyEnv {
             }
             BinOp { op, ty, l, r } => {
                 if ["+", "-", "*"].contains(&op.0.as_str()) {
+                    // TODO: support these cases
+                    // fun add x y = x + y + 1.0
                     self.infer_expr(l)?;
                     self.infer_expr(r)?;
                     self.unify(l.ty(), r.ty())?;
-                    self.give(l.ty(), Typing::Int)
-                        .or_else(|_| self.give(l.ty(), Typing::Real))?;
+                    self.unify(l.ty(), int)
+                        .or_else(|_| self.unify(l.ty(), real))?;
                     self.unify(*ty, l.ty())?;
                     Ok(())
                 } else if ["=", "<>", ">", ">=", "<", "<="].contains(&op.0.as_str()) {
                     self.infer_expr(l)?;
                     self.infer_expr(r)?;
                     self.unify(l.ty(), r.ty())?;
-                    self.give(l.ty(), Typing::Int)
-                        .or_else(|_| self.give(l.ty(), Typing::Real))?;
-                    self.give(*ty, Typing::Bool)?;
+                    self.unify(l.ty(), int)
+                        .or_else(|_| self.unify(l.ty(), real))?;
+                    self.unify(*ty, bool)?;
                     Ok(())
                 } else if ["div", "mod"].contains(&op.0.as_str()) {
-                    self.give(l.ty(), Typing::Int)?;
-                    self.give(r.ty(), Typing::Int)?;
-                    self.give(*ty, Typing::Int)?;
+                    self.unify(l.ty(), int)?;
+                    self.unify(r.ty(), int)?;
+                    self.unify(*ty, int)?;
                     self.infer_expr(l)?;
                     self.infer_expr(r)?;
                     Ok(())
                 } else if ["/"].contains(&op.0.as_str()) {
-                    self.give(l.ty(), Typing::Real)?;
-                    self.give(r.ty(), Typing::Real)?;
-                    self.give(*ty, Typing::Real)?;
+                    self.unify(l.ty(), real)?;
+                    self.unify(r.ty(), real)?;
+                    self.unify(*ty, real)?;
                     self.infer_expr(l)?;
                     self.infer_expr(r)?;
                     Ok(())
@@ -342,8 +427,7 @@ impl TyEnv {
                 then,
                 else_,
             } => {
-                let bool_ty = self.pool.ty(Typing::Bool);
-                self.unify(cond.ty(), bool_ty)?;
+                self.unify(cond.ty(), bool)?;
                 self.infer_expr(cond)?;
                 self.unify(*ty, then.ty())?;
                 self.unify(then.ty(), else_.ty())?;
@@ -365,6 +449,10 @@ impl TyEnv {
                 self.infer_tuple(tuple, *ty)?;
                 Ok(())
             }
+            Constructor { ty, name } => {
+                self.infer_constructor(name, *ty)?;
+                Ok(())
+            }
             Symbol { ty, name } => {
                 self.infer_symbol(name, *ty)?;
                 Ok(())
@@ -376,31 +464,28 @@ impl TyEnv {
         }
     }
 
+    fn infer_constructor<'b, 'r>(&'b mut self, sym: &Symbol, given: NodeId) -> Result<'r, ()> {
+        match self.get(&sym) {
+            Some(t) => self.unify(t, given),
+            None => Err(TypeError::FreeVar),
+        }
+    }
+
     fn infer_symbol<'b, 'r>(&'b mut self, sym: &Symbol, given: NodeId) -> Result<'r, ()> {
         match self.get(&sym) {
             Some(t) => self.unify(t, given),
-            None => {
-                if &sym.0 == "print" {
-                    let fun_ty = Typing::Fun(
-                        self.pool.ty(Typing::Int),
-                        self.pool.ty(Typing::Tuple(vec![])),
-                    );
-                    self.give(given, fun_ty)
-                } else {
-                    Err(TypeError::FreeVar)
-                }
-            }
+            None => Err(TypeError::FreeVar),
         }
     }
 
     fn infer_literal<'b, 'r>(&'b mut self, lit: &Literal, given: NodeId) -> Result<'r, ()> {
         use crate::prim::Literal::*;
         let ty = match lit {
-            Int(_) => Typing::Int,
-            Real(_) => Typing::Real,
-            Bool(_) => Typing::Bool,
+            Int(_) => self.pool.ty_int(),
+            Real(_) => self.pool.ty_real(),
+            Bool(_) => self.pool.ty_bool(),
         };
-        self.give(given, ty)?;
+        self.unify(given, ty)?;
         Ok(())
     }
 
@@ -409,6 +494,14 @@ impl TyEnv {
         match pat {
             Literal { ty, value } => {
                 self.infer_literal(value, *ty)?;
+            }
+            Constructor { ty, name } => {
+                let type_name = self
+                    .symbol_table()
+                    .get_datatype_of_constructor(name)
+                    .expect("internal error: typing")
+                    .clone();
+                self.give(*ty, Typing::Datatype(type_name))?;
             }
             Tuple { ty, tuple } => {
                 let tuple_ty = self.pool.ty(Typing::Tuple(
@@ -450,28 +543,21 @@ impl TyEnv {
     }
 }
 
-impl TyEnv {
-    pub fn new() -> Self {
-        TyEnv {
-            env: HashMap::new(),
-            pool: TypePool::new(),
-        }
-    }
-
-    pub fn infer<'a, 'b>(&'a mut self, ast: &mut ast::AST<NodeId>) -> Result<'b, ()> {
-        self.infer_ast(ast)?;
-        Ok(())
-    }
-}
-
 use crate::pass::Pass;
-impl<'a> Pass<ast::UntypedAst, TypeError<'a>> for TyEnv {
-    type Target = ast::TypedAst;
+impl<'a> Pass<(SymbolTable, UntypedAst), TypeError<'a>> for TyEnv {
+    type Target = (SymbolTable, TypedAst);
 
-    fn trans<'b>(&'b mut self, ast: ast::UntypedAst, _: &Config) -> Result<'a, Self::Target> {
+    fn trans<'b>(
+        &'b mut self,
+        (symbol_table, ast): (SymbolTable, UntypedAst),
+        _: &Config,
+    ) -> Result<'a, Self::Target> {
+        self.init(symbol_table);
         let mut typing_ast = self.pool.typing_ast(ast);
         self.infer(&mut typing_ast)?;
         let typed_ast = self.pool.typed_ast(typing_ast);
-        Ok(typed_ast)
+
+        let symbol_table = self.generate_symbol_table();
+        Ok((symbol_table, typed_ast))
     }
 }

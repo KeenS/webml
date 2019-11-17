@@ -12,12 +12,13 @@ pub struct AST2HIR {
 fn force_into(ty: ast::Type) -> HTy {
     use crate::ast::Type::*;
     match ty {
-        Bool => HTy::Bool,
         Int => HTy::Int,
         Real => HTy::Real,
         Tuple(tys) => HTy::Tuple(tys.into_iter().map(conv_ty).collect()),
         Fun(arg, ret) => HTy::fun(conv_ty(*arg), conv_ty(*ret)),
-        Variable(_) => panic!(),
+        Datatype(name) if name == Symbol::new("bool") => HTy::Bool,
+        Datatype(_name) => unimplemented!(),
+        Variable(_) => panic!("polymorphism is not supported yet"),
     }
 }
 
@@ -53,6 +54,7 @@ impl AST2HIR {
 
     fn conv_statement(&mut self, stmt: ast::Statement<ast::Type>) -> Vec<Val> {
         match stmt {
+            ast::Statement::Datatype { name, constructors } => unimplemented!(),
             ast::Statement::Fun { name, params, expr } => {
                 let fun = params
                     .into_iter()
@@ -78,23 +80,64 @@ impl AST2HIR {
                         name: name,
                         expr: self.conv_expr(expr),
                     }],
-                    ast::Pattern::Literal { ty, .. } | ast::Pattern::Wildcard { ty } => vec![Val {
+                    ast::Pattern::Wildcard { ty } => vec![Val {
+                        ty: conv_ty(ty),
+                        rec: false,
+                        name: self.gensym(),
+                        expr: self.conv_expr(expr),
+                    }],
+
+                    // TODO: implement
+                    // ```
+                    // val 1 = 2
+                    // ```
+                    //
+                    // to
+                    //
+                    // ```
+                    // val _ = case 1 of 2 => ()
+                    // ```
+                    //
+                    // FIXME: raise Match error when not match
+                    ast::Pattern::Literal { ty, .. } => vec![Val {
+                        ty: conv_ty(ty),
+                        rec: false,
+                        name: self.gensym(),
+                        expr: self.conv_expr(expr),
+                    }],
+                    // when C(p1, p2, p3) binds var1 var2 var3, convert
+                    //
+                    // ```
+                    // val C(p1, p2, p3) = expr
+                    // ```
+                    //
+                    // to
+                    //
+                    // ```
+                    // val tmp = case expr of C(p1, p2, p3)  => (var1, var2, var3)
+                    // val var1 = #1 tmp
+                    // val var2 = #2 tmp
+                    // val var3 = #3 tmp
+                    // ```
+                    //
+                    // FIXME: raise Match error when not match
+                    ast::Pattern::Constructor { ty, .. } => vec![Val {
                         ty: conv_ty(ty),
                         rec: false,
                         name: self.gensym(),
                         expr: self.conv_expr(expr),
                     }],
                     ast::Pattern::Tuple { .. } => {
-                        // when C(p1, p2, p3) binds var1 var2 var3, convert
+                        // when (p1, p2, p3) binds var1 var2 var3, convert
                         //
                         // ```
-                        // val C(p1, p2, p3) = expr
+                        // val (p1, p2, p3) = expr
                         // ```
                         //
                         // to
                         //
                         // ```
-                        // val tmp = case expr of C(p1, p2, p3)  => (var1, var2, var3)
+                        // val tmp = case expr of (p1, p2, p3)  => (var1, var2, var3)
                         // val var1 = #1 tmp
                         // val var2 = #2 tmp
                         // val var3 = #3 tmp
@@ -231,6 +274,25 @@ impl AST2HIR {
                 tys: force_tuple(ty),
                 tuple: tuple.into_iter().map(|e| self.conv_expr(e)).collect(),
             },
+            E::Constructor { ty, name }
+                if ty == ast::Type::Datatype(Symbol::new("bool"))
+                    && name == Symbol::new("true") =>
+            {
+                Expr::Lit {
+                    ty: conv_ty(ty),
+                    value: Literal::Bool(true),
+                }
+            }
+            E::Constructor { ty, name }
+                if ty == ast::Type::Datatype(Symbol::new("bool"))
+                    && name == Symbol::new("false") =>
+            {
+                Expr::Lit {
+                    ty: conv_ty(ty),
+                    value: Literal::Bool(true),
+                }
+            }
+            E::Constructor { .. } => unimplemented!(),
             E::Symbol { ty, name } => Expr::Sym {
                 ty: conv_ty(ty),
                 name: name,
@@ -247,6 +309,25 @@ impl AST2HIR {
                 value: value,
                 ty: conv_ty(ty),
             },
+            ast::Pattern::Constructor { ty, name }
+                if ty == ast::Type::Datatype(Symbol::new("bool"))
+                    && name == Symbol::new("true") =>
+            {
+                Pattern::Lit {
+                    ty: conv_ty(ty),
+                    value: Literal::Bool(true),
+                }
+            }
+            ast::Pattern::Constructor { ty, name }
+                if ty == ast::Type::Datatype(Symbol::new("bool"))
+                    && name == Symbol::new("false") =>
+            {
+                Pattern::Lit {
+                    ty: conv_ty(ty),
+                    value: Literal::Bool(true),
+                }
+            }
+            ast::Pattern::Constructor { .. } => unimplemented!(),
             ast::Pattern::Tuple { tuple, .. } => {
                 let (tys, tuple) = tuple
                     .into_iter()

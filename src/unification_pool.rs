@@ -1,4 +1,4 @@
-#[derive(Debug, Clone, PartialEq, Eq, Copy)]
+#[derive(Debug, Clone, PartialEq, Eq, Copy, Hash)]
 pub struct NodeId(usize);
 
 #[derive(Debug, Clone)]

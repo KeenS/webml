@@ -263,8 +263,8 @@ named!(expr1_float <&str, Expr<()>>, map!(double_s, |s| Expr::Literal{
     value: Literal::Real(s)}));
 
 named!(expr1_bool <&str, Expr<()>>, alt!(
-    map!(tag!("true"),  |_| Expr::Literal{ty: (), value: Literal::Bool(true)}) |
-    map!(tag!("false"), |_| Expr::Literal{ty: (), value: Literal::Bool(false)})));
+    map!(tag!("true"),  |_| Expr::Constructor{ name: Symbol::new("true"), ty: ()}) |
+    map!(tag!("false"), |_| Expr::Constructor{ name: Symbol::new("false"), ty: ()})));
 
 named!(expr1_paren <&str, Expr<()>>, do_parse!(
     tag!("(") >>
@@ -312,8 +312,8 @@ named!(pattern <&str, Pattern<()>>, alt_complete!(
     pattern_wildcard));
 
 named!(pattern_bool <&str, Pattern<()>>, alt!(
-    map!(tag!("true"),  |_| Pattern::Literal{value: Literal::Bool(true), ty: ()}) |
-    map!(tag!("false"), |_| Pattern::Literal{value: Literal::Bool(false), ty: ()})));
+    map!(tag!("true"),  |_| Pattern::Constructor{ name: Symbol::new("true"), ty: ()}) |
+    map!(tag!("false"), |_| Pattern::Constructor{ name: Symbol::new("false"), ty: ()})));
 
 named!(pattern_tuple <&str, Pattern<()>>, do_parse!(
     tag!("(") >>

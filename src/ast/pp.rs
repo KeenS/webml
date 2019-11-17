@@ -2,6 +2,12 @@ use crate::ast::*;
 use crate::util::PP;
 use std::io;
 
+impl<Ty> PP for (SymbolTable, AST<Ty>) {
+    fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
+        self.1.pp(w, indent)
+    }
+}
+
 impl<Ty> PP for AST<Ty> {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         for bind in &self.0 {
@@ -16,6 +22,16 @@ impl<Ty> PP for Statement<Ty> {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         use Statement::*;
         match self {
+            Datatype { name, constructors } => {
+                write!(w, "datatype ")?;
+                name.pp(w, indent)?;
+                write!(w, " =")?;
+                inter_iter!(constructors, write!(w, " |")?, |name| =>{
+                    write!(w, " ")?;
+                    name.pp(w, indent)?;
+                });
+                Ok(())
+            }
             Fun {
                 name, expr, params, ..
             } => {
@@ -137,7 +153,7 @@ impl<Ty> PP for Expr<Ty> {
                 }
                 write!(w, ")")?;
             }
-            &Symbol { ref name, .. } => {
+            &Symbol { ref name, .. } | &Constructor { ref name, .. } => {
                 name.pp(w, indent)?;
             }
             &Literal { ref value, .. } => {
@@ -152,6 +168,7 @@ impl<Ty> PP for Pattern<Ty> {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         match self {
             Pattern::Literal { ref value, .. } => value.pp(w, indent),
+            Pattern::Constructor { ref name, .. } => name.pp(w, indent),
             Pattern::Tuple { ref tuple, .. } => {
                 write!(w, "(")?;
                 inter_iter! {
@@ -172,9 +189,8 @@ impl<Ty> PP for Pattern<Ty> {
 impl PP for Type {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         use self::Type::*;
-        match *self {
+        match self {
             Variable(id) => write!(w, "'{}", id)?,
-            Bool => write!(w, "bool")?,
             Int => write!(w, "int")?,
             Real => write!(w, "float")?,
             Fun(ref t1, ref t2) => {
@@ -190,6 +206,7 @@ impl PP for Type {
                 }
                 write!(w, ")")?;
             }
+            Datatype(name) => name.pp(w, indent)?,
         }
         Ok(())
     }

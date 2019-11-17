@@ -53,9 +53,9 @@ fn parse_bool_true() {
                 name: Symbol::new("x"),
                 ty: (),
             },
-            expr: Expr::Literal {
+            expr: Expr::Constructor {
                 ty: (),
-                value: Literal::Bool(true),
+                name: Symbol::new("true")
             },
         },])
     )
@@ -72,9 +72,9 @@ fn parse_bool_false() {
                 name: Symbol::new("x"),
                 ty: (),
             },
-            expr: Expr::Literal {
+            expr: Expr::Constructor {
                 ty: (),
-                value: Literal::Bool(false),
+                name: Symbol::new("false")
             },
         },])
     )
@@ -150,17 +150,17 @@ fn parse_if() {
             },
             expr: Expr::If {
                 ty: (),
-                cond: Box::new(Expr::Literal {
+                cond: Box::new(Expr::Constructor {
                     ty: (),
-                    value: Literal::Bool(true),
+                    name: Symbol::new("true")
                 }),
-                then: Box::new(Expr::Literal {
+                then: Box::new(Expr::Constructor {
                     ty: (),
-                    value: Literal::Bool(false),
+                    name: Symbol::new("false")
                 }),
-                else_: Box::new(Expr::Literal {
+                else_: Box::new(Expr::Constructor {
                     ty: (),
-                    value: Literal::Bool(true),
+                    name: Symbol::new("true")
                 }),
             },
         },])
@@ -180,29 +180,29 @@ fn parse_case_bool() {
             },
             expr: Expr::Case {
                 ty: (),
-                cond: Box::new(Expr::Literal {
+                cond: Box::new(Expr::Constructor {
                     ty: (),
-                    value: Literal::Bool(true),
+                    name: Symbol::new("true")
                 }),
                 clauses: vec![
                     (
-                        Pattern::Literal {
-                            value: Literal::Bool(true),
+                        Pattern::Constructor {
                             ty: (),
+                            name: Symbol::new("true")
                         },
-                        Expr::Literal {
+                        Expr::Constructor {
                             ty: (),
-                            value: Literal::Bool(false),
+                            name: Symbol::new("false")
                         },
                     ),
                     (
-                        Pattern::Literal {
-                            value: Literal::Bool(false),
+                        Pattern::Constructor {
                             ty: (),
+                            name: Symbol::new("false")
                         },
-                        Expr::Literal {
+                        Expr::Constructor {
                             ty: (),
-                            value: Literal::Bool(true),
+                            name: Symbol::new("true")
                         },
                     ),
                 ],
@@ -224,19 +224,19 @@ fn parse_case_var() {
             },
             expr: Expr::Case {
                 ty: (),
-                cond: Box::new(Expr::Literal {
+                cond: Box::new(Expr::Constructor {
                     ty: (),
-                    value: Literal::Bool(true),
+                    name: Symbol::new("true")
                 }),
                 clauses: vec![
                     (
-                        Pattern::Literal {
-                            value: Literal::Bool(true),
+                        Pattern::Constructor {
                             ty: (),
+                            name: Symbol::new("true")
                         },
-                        Expr::Literal {
+                        Expr::Constructor {
                             ty: (),
-                            value: Literal::Bool(false),
+                            name: Symbol::new("false")
                         },
                     ),
                     (
@@ -244,9 +244,9 @@ fn parse_case_var() {
                             name: Symbol::new("x"),
                             ty: (),
                         },
-                        Expr::Literal {
+                        Expr::Constructor {
                             ty: (),
-                            value: Literal::Bool(true),
+                            name: Symbol::new("true")
                         },
                     ),
                 ],
@@ -268,26 +268,26 @@ fn parse_case_wildcard() {
             },
             expr: Expr::Case {
                 ty: (),
-                cond: Box::new(Expr::Literal {
+                cond: Box::new(Expr::Constructor {
                     ty: (),
-                    value: Literal::Bool(true),
+                    name: Symbol::new("true")
                 }),
                 clauses: vec![
                     (
-                        Pattern::Literal {
-                            value: Literal::Bool(true),
+                        Pattern::Constructor {
                             ty: (),
+                            name: Symbol::new("true")
                         },
-                        Expr::Literal {
+                        Expr::Constructor {
                             ty: (),
-                            value: Literal::Bool(false),
+                            name: Symbol::new("false")
                         },
                     ),
                     (
                         Pattern::Wildcard { ty: () },
-                        Expr::Literal {
+                        Expr::Constructor {
                             ty: (),
-                            value: Literal::Bool(true),
+                            name: Symbol::new("true")
                         },
                     ),
                 ],

@@ -5,11 +5,16 @@ use crate::prim::*;
 use std::collections::HashSet;
 
 #[derive(Debug)]
-pub struct CaseCheck;
+pub struct CaseCheck {
+    symbol_table: Option<SymbolTable>,
+}
 
 impl CaseCheck {
     pub fn new() -> Self {
-        CaseCheck
+        CaseCheck { symbol_table: None }
+    }
+    fn symbol_table(&self) -> &SymbolTable {
+        self.symbol_table.as_ref().unwrap()
     }
 }
 
@@ -25,13 +30,15 @@ impl Traverse<Type> for CaseCheck {
         let ty = cond.ty();
         match ty {
             // variants like
-            Type::Bool => {
-                let variants = {
-                    let mut set = HashSet::new();
-                    set.insert(true);
-                    set.insert(false);
-                    set
-                };
+            Type::Datatype(type_name) => {
+                let variants = self
+                    .symbol_table()
+                    .get_type(&type_name)
+                    .expect("internal error: type not found")
+                    .constructors
+                    .clone()
+                    .into_iter()
+                    .collect::<HashSet<_>>();
                 let mut matched = HashSet::new();
                 let mut defaulted = false;
                 for &mut (ref pat, _) in arms {
@@ -39,17 +46,14 @@ impl Traverse<Type> for CaseCheck {
                         panic!("pattern after default case is redundant");
                     }
                     match pat {
-                        &Pattern::Literal {
-                            value: Literal::Bool(ref b),
-                            ..
-                        } => {
-                            if matched.insert(*b) {
+                        Pattern::Constructor { name, .. } => {
+                            if matched.insert(name.clone()) {
                                 // ok
                             } else {
                                 panic!("redundant patterns")
                             }
                         }
-                        &Pattern::Variable { .. } | &Pattern::Wildcard { .. } => defaulted = true,
+                        Pattern::Variable { .. } | Pattern::Wildcard { .. } => defaulted = true,
                         _ => unreachable!("expression and pattern doesn't match. It'a bug"),
                     }
                 }
@@ -105,10 +109,15 @@ impl Traverse<Type> for CaseCheck {
 }
 
 use crate::pass::Pass;
-impl<'a> Pass<ast::TypedAst, TypeError<'a>> for CaseCheck {
+impl<'a> Pass<(SymbolTable, ast::TypedAst), TypeError<'a>> for CaseCheck {
     type Target = ast::TypedAst;
 
-    fn trans<'b>(&'b mut self, mut ast: ast::TypedAst, _: &Config) -> Result<'a, Self::Target> {
+    fn trans<'b>(
+        &'b mut self,
+        (symbol_table, mut ast): (SymbolTable, ast::TypedAst),
+        _: &Config,
+    ) -> Result<'a, Self::Target> {
+        self.symbol_table = Some(symbol_table);
         self.traverse_ast(&mut ast);
         Ok(ast)
     }
