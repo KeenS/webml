@@ -7,6 +7,7 @@ use crate::prim::*;
 
 pub struct AST2HIR {
     id: Id,
+    symbol_table: Option<ast::SymbolTable>,
 }
 
 fn force_into(ty: ast::Type) -> HTy {
@@ -35,7 +36,17 @@ fn conv_ty(ty: ast::Type) -> HTy {
 
 impl AST2HIR {
     pub fn new(id: Id) -> Self {
-        Self { id }
+        Self {
+            id,
+            symbol_table: None,
+        }
+    }
+    fn init(&mut self, symbol_table: ast::SymbolTable) {
+        self.symbol_table = Some(symbol_table)
+    }
+
+    fn symbol_table(&self) -> &ast::SymbolTable {
+        self.symbol_table.as_ref().unwrap()
     }
 
     pub fn gensym(&mut self) -> Symbol {
@@ -248,7 +259,7 @@ impl AST2HIR {
                     (
                         Pattern::Constructor {
                             // FIXME consult it from symbol table
-                            name: Symbol::new("true"),
+                            descriminant: 1,
                             ty: HTy::Datatype(Symbol::new("bool")),
                         },
                         self.conv_expr(*then),
@@ -256,7 +267,7 @@ impl AST2HIR {
                     (
                         Pattern::Constructor {
                             // FIXME consult it from symbol table
-                            name: Symbol::new("false"),
+                            descriminant: 0,
                             ty: HTy::Datatype(Symbol::new("bool")),
                         },
                         self.conv_expr(*else_),
@@ -277,7 +288,7 @@ impl AST2HIR {
             },
             E::Constructor { ty, name } => Expr::Constructor {
                 ty: conv_ty(ty),
-                name,
+                descriminant: self.conv_constructor_name(&name),
             },
             E::Symbol { ty, name } => Expr::Sym {
                 ty: conv_ty(ty),
@@ -297,7 +308,7 @@ impl AST2HIR {
             },
             ast::Pattern::Constructor { ty, name } => Pattern::Constructor {
                 ty: conv_ty(ty),
-                name,
+                descriminant: self.conv_constructor_name(&name),
             },
             ast::Pattern::Tuple { tuple, .. } => {
                 let (tys, tuple) = tuple
@@ -316,12 +327,33 @@ impl AST2HIR {
             },
         }
     }
+
+    fn conv_constructor_name(&mut self, name: &Symbol) -> u32 {
+        let typename = self
+            .symbol_table()
+            .get_datatype_of_constructor(name)
+            .expect("internal error: type not found for construcor");
+        let type_info = self
+            .symbol_table()
+            .get_type(typename)
+            .expect("internal error: type not found");
+        type_info
+            .constructors
+            .iter()
+            .position(|cname| cname == name)
+            .expect("internal error: constructor is not a memberof its ADT") as u32
+    }
 }
 
-impl<E> Pass<ast::TypedAst, E> for AST2HIR {
+impl<E> Pass<(ast::SymbolTable, ast::TypedAst), E> for AST2HIR {
     type Target = HIR;
 
-    fn trans(&mut self, ast: ast::TypedAst, _: &Config) -> ::std::result::Result<Self::Target, E> {
+    fn trans(
+        &mut self,
+        (symbol_table, ast): (ast::SymbolTable, ast::TypedAst),
+        _: &Config,
+    ) -> ::std::result::Result<Self::Target, E> {
+        self.init(symbol_table);
         Ok(self.conv_ast(ast))
     }
 }

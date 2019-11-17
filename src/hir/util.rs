@@ -63,8 +63,8 @@ pub trait Traverse {
             } => self.traverse_proj(ty, index, tuple),
             Constructor {
                 ref mut ty,
-                ref mut name,
-            } => self.traverse_constructor(ty, name),
+                ref mut descriminant,
+            } => self.traverse_constructor(ty, descriminant),
             Sym {
                 ref mut ty,
                 ref mut name,
@@ -143,7 +143,7 @@ pub trait Traverse {
         self.traverse_expr(tuple)
     }
 
-    fn traverse_constructor(&mut self, _ty: &mut HTy, _name: &mut Symbol) {}
+    fn traverse_constructor(&mut self, _ty: &mut HTy, _name: &mut u32) {}
 
     fn traverse_sym(&mut self, _ty: &mut HTy, _name: &mut Symbol) {}
 
@@ -187,7 +187,7 @@ pub trait Transform {
                 body_ty,
                 fname,
             } => self.transform_closure(envs, param_ty, body_ty, fname),
-            Constructor { ty, name } => self.transform_constructor(ty, name),
+            Constructor { ty, descriminant } => self.transform_constructor(ty, descriminant),
             Sym { ty, name } => self.transform_sym(ty, name),
             Lit { ty, value } => self.transform_lit(ty, value),
         }
@@ -287,8 +287,8 @@ pub trait Transform {
         }
     }
 
-    fn transform_constructor(&mut self, ty: HTy, name: Symbol) -> Expr {
-        Expr::Constructor { ty, name }
+    fn transform_constructor(&mut self, ty: HTy, descriminant: u32) -> Expr {
+        Expr::Constructor { ty, descriminant }
     }
 
     fn transform_sym(&mut self, ty: HTy, name: Symbol) -> Expr {

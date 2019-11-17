@@ -15,6 +15,9 @@ impl CaseCheck {
     fn symbol_table(&self) -> &SymbolTable {
         self.symbol_table.as_ref().unwrap()
     }
+    fn generate_symbol_table(&mut self) -> SymbolTable {
+        self.symbol_table.take().unwrap()
+    }
 }
 
 impl Traverse<Type> for CaseCheck {
@@ -106,7 +109,7 @@ impl Traverse<Type> for CaseCheck {
 
 use crate::pass::Pass;
 impl<'a> Pass<(SymbolTable, ast::TypedAst), TypeError<'a>> for CaseCheck {
-    type Target = ast::TypedAst;
+    type Target = (SymbolTable, ast::TypedAst);
 
     fn trans<'b>(
         &'b mut self,
@@ -115,6 +118,7 @@ impl<'a> Pass<(SymbolTable, ast::TypedAst), TypeError<'a>> for CaseCheck {
     ) -> Result<'a, Self::Target> {
         self.symbol_table = Some(symbol_table);
         self.traverse_ast(&mut ast);
-        Ok(ast)
+        let symbol_table = self.generate_symbol_table();
+        Ok((symbol_table, ast))
     }
 }

@@ -119,8 +119,8 @@ impl PP for Expr {
                 write!(w, " ")?;
                 arg.pp(w, indent)?;
             }
-            Constructor { name, .. } => {
-                name.pp(w, indent)?;
+            Constructor { descriminant, .. } => {
+                write!(w, "{}", descriminant)?;
             }
             Sym { name, .. } => {
                 name.pp(w, indent)?;
@@ -137,7 +137,7 @@ impl PP for Pattern {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         match self {
             Pattern::Constant { value, .. } => write!(w, "{}", value),
-            Pattern::Constructor { name, .. } => name.pp(w, indent),
+            Pattern::Constructor { descriminant, .. } => write!(w, "{}", descriminant),
             Pattern::Tuple { tuple, .. } => {
                 write!(w, "(")?;
                 inter_iter! {

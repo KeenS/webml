@@ -135,7 +135,7 @@ pub enum Type {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypeInfo {
-    constructors: Vec<Symbol>,
+    pub constructors: Vec<Symbol>,
 }
 
 impl<Ty> Expr<Ty> {

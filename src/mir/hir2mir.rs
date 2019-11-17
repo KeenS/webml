@@ -29,7 +29,11 @@ fn from(ty: hir::HTy) -> EbbTy {
             ret: Box::new(from(*ret)),
         },
         Datatype(name) if name == Symbol::new("bool") => EbbTy::Bool,
-        Datatype(_name) => unimplemented!(),
+        Datatype(_name) => {
+            // unimplemented!()
+            // FIXME
+            EbbTy::Int
+        }
     }
 }
 
@@ -323,17 +327,12 @@ impl HIR2MIR {
                 eb.closure(name, param_ty, body_ty, fname, envs);
                 eb
             }
-            Constructor { ty, name: cname } if cname == Symbol::new("true") => {
+            Constructor { ty, descriminant } => {
                 assert_eq!(ty, ty_);
-                eb.lit(name, EbbTy::Bool, Literal::Int(1));
+                //assert_eq!(ty, hir::HTy::Datatype(Symbol::new("bool")));
+                eb.lit(name, EbbTy::Int, Literal::Int(descriminant as i64));
                 eb
             }
-            Constructor { ty, name: cname } if cname == Symbol::new("false") => {
-                assert_eq!(ty, ty_);
-                eb.lit(name, EbbTy::Bool, Literal::Int(0));
-                eb
-            }
-            Constructor { .. } => unimplemented!(),
             Lit { ty, value } => {
                 assert_eq!(ty, ty_);
                 eb.lit(name, from(ty), value);

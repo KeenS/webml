@@ -124,9 +124,9 @@ impl<'a> Traverse for Trav<'a> {
 
             Constructor {
                 ref mut ty,
-                ref mut name,
+                ref mut descriminant,
             } => {
-                self.traverse_constructor(ty, name);
+                self.traverse_constructor(ty, descriminant);
                 return;
             }
 
@@ -198,10 +198,7 @@ struct Reg<'a> {
 
 impl<'a> Reg<'a> {
     fn new(t: &'a mut ForceClosure, bound_name: Option<Symbol>) -> Self {
-        Reg {
-            t,
-            bound_name,
-        }
+        Reg { t, bound_name }
     }
 
     fn with_bound_name<F: FnOnce(&mut Self)>(&mut self, bound_name: Option<Symbol>, f: F) {

@@ -220,7 +220,7 @@ impl<'a> Scope<'a> {
                     index,
                 }
             }
-            Constructor { name, ty } => Constructor { ty, name },
+            Constructor { descriminant, ty } => Constructor { descriminant, ty },
             Sym { name, ty } => Sym { ty, name },
             expr @ Closure { .. } | expr @ Lit { .. } => expr,
         }

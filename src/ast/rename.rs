@@ -133,7 +133,6 @@ impl<'a, Ty> util::Traverse<Ty> for Scope<'a> {
         scope.new_type(name);
         for cname in constructors.iter_mut() {
             scope.new_constructor(cname);
-            scope.new_variable(cname);
             // handle arg types
         }
 

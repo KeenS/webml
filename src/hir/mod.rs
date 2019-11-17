@@ -79,7 +79,7 @@ pub enum Expr {
     },
     Constructor {
         ty: HTy,
-        name: Symbol,
+        descriminant: u32,
     },
     Sym {
         ty: HTy,
@@ -94,7 +94,7 @@ pub enum Expr {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Pattern {
     Constant { value: i64, ty: HTy },
-    Constructor { name: Symbol, ty: HTy },
+    Constructor { descriminant: u32, ty: HTy },
     Var { name: Symbol, ty: HTy },
     Tuple { tys: Vec<HTy>, tuple: Vec<Symbol> },
 }
@@ -106,9 +106,7 @@ impl Pattern {
         match self {
             Constant { value, .. } => *value as u64,
             Tuple { .. } => panic!("bug: non-variant expression does not have keys"),
-            Constructor { name, .. } if name == &Symbol::new("true") => true as u64,
-            Constructor { name, .. } if name == &Symbol::new("false") => false as u64,
-            Constructor { .. } => unimplemented!(),
+            Constructor { descriminant, .. } => *descriminant as u64,
             Var { .. } => panic!("bug: default like branch does not have keys"),
         }
     }
