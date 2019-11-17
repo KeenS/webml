@@ -139,8 +139,8 @@ impl<Ty> PP for Pattern<Ty> {
                 inter_iter! {
                     tuple.iter(),
                     write!(w, ", ")?,
-                    |&(_, ref sym)| => {
-                        sym.pp(w, indent)?
+                    |pat| => {
+                        pat.pp(w, indent)?
                     }
                 }
                 write!(w, ")")

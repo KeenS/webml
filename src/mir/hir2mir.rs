@@ -245,8 +245,8 @@ impl HIR2MIR {
                                 let eb = EBBBuilder::new(label, vec![(from(ty.clone()), name)]);
                                 eb
                             }
-                            hir::Pattern::Tuple { tys, tuple } => {
-                                let ty = hir::HTy::Tuple(tys.clone());
+                            hir::Pattern::Tuple { ty, tuple } => {
+                                let ty = from(ty);
                                 let var = self.gensym("tuple");
                                 let mut eb =
                                     EBBBuilder::new(label, vec![(from(ty.clone()), var.clone())]);

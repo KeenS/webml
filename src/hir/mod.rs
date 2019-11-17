@@ -2,6 +2,7 @@ pub mod ast2hir;
 pub mod find_builtin;
 pub mod flat_expr;
 pub mod flat_let;
+pub mod flat_pattern;
 pub mod force_closure;
 pub mod pp;
 pub mod unnest_func;
@@ -91,10 +92,19 @@ pub enum Expr {
 pub enum Pattern {
     Lit { value: Literal, ty: HTy },
     Var { name: Symbol, ty: HTy },
-    Tuple { tys: Vec<HTy>, tuple: Vec<Symbol> },
+    Tuple { tuple: Vec<Pattern>, ty: HTy },
 }
 
 impl Pattern {
+    pub fn binds(&self) -> Vec<&Symbol> {
+        use Pattern::*;
+        match self {
+            Lit { .. } => vec![],
+            Var { name, .. } => vec![name],
+            Tuple { tuple, .. } => tuple.iter().flat_map(Pattern::binds).collect(),
+        }
+    }
+
     pub fn match_key(&self) -> u64 {
         use self::Pattern::*;
         // FIXME do not panic
@@ -109,6 +119,38 @@ impl Pattern {
             },
             Tuple { .. } => panic!("bug: non-variant expression does not have keys"),
             Var { .. } => panic!("bug: default like branch does not have keys"),
+        }
+    }
+
+    pub fn is_variable(&self) -> bool {
+        use self::Pattern::*;
+        match *self {
+            Var { .. } => true,
+            Tuple { .. } | Lit { .. } => false,
+        }
+    }
+
+    pub fn variable(self) -> (HTy, Symbol) {
+        use self::Pattern::*;
+        match self {
+            Var { name, ty } => (ty, name),
+            Tuple { .. } | Lit { .. } => panic!("forcing non-variable pattern as variable"),
+        }
+    }
+
+    pub fn is_tuple(&self) -> bool {
+        use self::Pattern::*;
+        match *self {
+            Tuple { .. } => true,
+            Var { .. } | Lit { .. } => false,
+        }
+    }
+
+    pub fn is_constructor(&self) -> bool {
+        use self::Pattern::*;
+        match *self {
+            Lit { .. } => true,
+            Var { .. } | Tuple { .. } => false,
         }
     }
 
@@ -169,5 +211,13 @@ impl Expr {
 impl HTy {
     pub fn fun(arg: HTy, ret: HTy) -> HTy {
         HTy::Fun(Box::new(arg), Box::new(ret))
+    }
+
+    pub fn take_tuple(self) -> Vec<HTy> {
+        use HTy::*;
+        match self {
+            Tuple(t) => t,
+            _ => panic!(),
+        }
     }
 }

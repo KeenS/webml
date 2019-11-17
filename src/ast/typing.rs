@@ -206,7 +206,7 @@ impl<Ty> Pattern<Ty> {
         match self {
             Lit { value, ty } => Lit { value, ty: f(ty) },
             Tuple { tuple, ty } => Tuple {
-                tuple: tuple.into_iter().map(|(ty, sym)| (f(ty), sym)).collect(),
+                tuple: tuple.into_iter().map(|pat| pat.map_ty(f)).collect(),
                 ty: f(ty),
             },
             Var { name, ty } => Var { name, ty: f(ty) },
@@ -395,9 +395,12 @@ impl TyEnv {
                 self.infer_literal(value, *ty)?;
             }
             Tuple { ty, tuple } => {
-                let tuple_ty = self.pool.ty(Typing::Tuple(
-                    tuple.iter().map(|(node_id, _)| *node_id).collect(),
-                ));
+                for t in tuple {
+                    self.infer_pat(t)?;
+                }
+                let tuple_ty = self
+                    .pool
+                    .ty(Typing::Tuple(tuple.iter().map(|pat| pat.ty()).collect()));
                 self.unify(*ty, tuple_ty)?;
             }
             Wildcard { .. } | Var { .. } => (),

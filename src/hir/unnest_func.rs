@@ -301,15 +301,8 @@ impl<'a> Scope<'a> {
                 self.analyze_free_expr(frees, bound, expr);
                 let scope = self;
                 for &(ref pat, ref arm) in arms.iter() {
-                    use self::Pattern::*;
-                    match *pat {
-                        Lit { .. } => (),
-                        Tuple { ref tuple, .. } => {
-                            for name in tuple {
-                                scope.add_scope(name.clone())
-                            }
-                        }
-                        Var { ref name, .. } => scope.add_scope(name.clone()),
+                    for name in pat.binds() {
+                        scope.add_scope(name.clone());
                     }
                     scope.analyze_free_expr(frees, bound, arm);
                 }

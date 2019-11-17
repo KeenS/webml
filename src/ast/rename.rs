@@ -64,8 +64,8 @@ impl<'a> Scope<'a> {
             Wildcard { .. } | Lit { .. } => (),
             Var { name, .. } => self.new_symbol(name),
             Tuple { tuple, .. } => {
-                for (_, sym) in tuple {
-                    self.new_symbol(sym)
+                for pat in tuple {
+                    self.new_symbol_pattern(pat)
                 }
             }
         }
