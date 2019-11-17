@@ -56,7 +56,7 @@ fn try_unify<'b, 'r>(
     use Typing::*;
     match (t1, t2) {
         (t1, t2) if t1 == t2 => Ok(t1),
-        (Variable(_), ty) | (ty, Variable(_)) => Ok(ty.clone()),
+        (Variable(_), ty) | (ty, Variable(_)) => Ok(ty),
         (Fun(p1, b1), Fun(p2, b2)) => {
             let p = pool.try_unify_with(p1, p2, try_unify)?;
             let b = pool.try_unify_with(b1, b2, try_unify)?;
@@ -64,22 +64,22 @@ fn try_unify<'b, 'r>(
         }
         (Tuple(tu1), Tuple(tu2)) => {
             if tu1.len() != tu2.len() {
-                return Err(TypeError::MisMatch {
-                    expected: conv_ty(pool, Tuple(tu1).clone()),
-                    actual: conv_ty(pool, Tuple(tu2).clone()),
-                });
+                Err(TypeError::MisMatch {
+                    expected: conv_ty(pool, Tuple(tu1)),
+                    actual: conv_ty(pool, Tuple(tu2)),
+                })
             } else {
                 let tu = tu1
                     .into_iter()
                     .zip(tu2)
                     .map(|(t1, t2)| pool.try_unify_with(t1, t2, try_unify))
-                    .collect::<Result<Vec<_>>>()?;
+                    .collect::<Result<'_, Vec<_>>>()?;
                 Ok(Tuple(tu))
             }
         }
         (t1, t2) => Err(TypeError::MisMatch {
-            expected: conv_ty(pool, t1.clone()),
-            actual: conv_ty(pool, t2.clone()),
+            expected: conv_ty(pool, t1),
+            actual: conv_ty(pool, t2),
         }),
     }
 }
@@ -128,7 +128,7 @@ impl<Ty> Expr<Ty> {
                 r: r.map_ty(f).boxed(),
             },
             Fn { param, ty, body } => Fn {
-                param: param,
+                param,
                 ty: f(ty),
                 body: body.map_ty(f).boxed(),
             },
@@ -163,15 +163,15 @@ impl<Ty> Expr<Ty> {
 
             Symbol { ty, name } => Symbol {
                 ty: f(ty),
-                name: name,
+                name,
             },
             Constructor { ty, name } => Constructor {
                 ty: f(ty),
-                name: name,
+                name,
             },
             Literal { ty, value } => Literal {
                 ty: f(ty),
-                value: value,
+                value,
             },
         }
     }
@@ -344,7 +344,6 @@ impl TyEnv {
                 let params_ty = params.iter().map(|(ty, _)| *ty);
                 let body_ty = expr.ty();
                 let fun_ty = params_ty
-                    .into_iter()
                     .rev()
                     .fold(body_ty, |body_ty, param_ty| {
                         self.pool.ty(Typing::Fun(param_ty, body_ty))

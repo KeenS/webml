@@ -215,7 +215,7 @@ pub enum TypeError<'a> {
 }
 
 impl<'a> fmt::Display for TypeError<'a> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Debug::fmt(self, f)
     }
 }

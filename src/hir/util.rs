@@ -195,7 +195,7 @@ pub trait Transform {
 
     fn transform_binds(&mut self, ty: HTy, binds: Vec<Val>, ret: Box<Expr>) -> Expr {
         Expr::Binds {
-            ty: ty,
+            ty,
             binds: binds
                 .into_iter()
                 .map(|val| self.transform_val(val))
@@ -245,15 +245,15 @@ pub trait Transform {
 
     fn transform_builtin_call(&mut self, ty: HTy, fun: BIF, arg: Box<Expr>) -> Expr {
         Expr::BuiltinCall {
-            ty: ty,
-            fun: fun,
+            ty,
+            fun,
             arg: Box::new(self.transform_expr(*arg)),
         }
     }
 
     fn transform_app(&mut self, ty: HTy, fun: Box<Expr>, arg: Box<Expr>) -> Expr {
         Expr::App {
-            ty: ty,
+            ty,
             fun: Box::new(self.transform_expr(*fun)),
             arg: Box::new(self.transform_expr(*arg)),
         }
@@ -261,7 +261,7 @@ pub trait Transform {
 
     fn transform_case(&mut self, ty: HTy, cond: Box<Expr>, arms: Vec<(Pattern, Expr)>) -> Expr {
         Expr::Case {
-            ty: ty,
+            ty,
             expr: Box::new(self.transform_expr(*cond)),
             arms: arms
                 .into_iter()
@@ -274,7 +274,7 @@ pub trait Transform {
 
     fn transform_tuple(&mut self, tys: Vec<HTy>, tuple: Vec<Expr>) -> Expr {
         Expr::Tuple {
-            tys: tys,
+            tys,
             tuple: tuple.into_iter().map(|e| self.transform_expr(e)).collect(),
         }
     }

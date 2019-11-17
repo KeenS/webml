@@ -240,7 +240,7 @@ named!(expr0_app <&str, Expr<()>>, do_parse!(
             let mut rest = args.into_iter();
             let arg = rest.next().unwrap();
             let init = Expr::App {ty: (), fun: Box::new(fun), arg: Box::new(arg)};
-            rest.into_iter()
+            rest
                 .fold(init, |acc, elm| Expr::App {
                     ty: (),
                     fun: Box::new(acc),

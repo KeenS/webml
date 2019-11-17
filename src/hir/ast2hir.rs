@@ -187,7 +187,7 @@ impl AST2HIR {
                         }];
                         let tuple = Box::new(Expr::Sym {
                             ty: tuple_ty,
-                            name: name,
+                            name,
                         });
                         for (index, (var, ty)) in binds.into_iter().enumerate() {
                             let ty = conv_ty(ty.clone());
@@ -280,22 +280,22 @@ impl AST2HIR {
             },
             E::Constructor { ty, name } => Expr::Constructor {
                 ty: conv_ty(ty),
-                name: name,
+                name,
             },
             E::Symbol { ty, name } => Expr::Sym {
                 ty: conv_ty(ty),
-                name: name,
+                name,
             },
             E::Literal { ty, value } => Expr::Lit {
                 ty: conv_ty(ty),
-                value: value,
+                value,
             },
         }
     }
     fn conv_pat(&mut self, pat: ast::Pattern<ast::Type>) -> Pattern {
         match pat {
             ast::Pattern::Literal { value, ty } => Pattern::Lit {
-                value: value,
+                value,
                 ty: conv_ty(ty),
             },
             ast::Pattern::Constructor { ty, name }
@@ -325,7 +325,7 @@ impl AST2HIR {
                 Pattern::Tuple { tuple, tys }
             }
             ast::Pattern::Variable { name, ty } => Pattern::Var {
-                name: name,
+                name,
                 ty: conv_ty(ty),
             },
             ast::Pattern::Wildcard { ty } => Pattern::Var {

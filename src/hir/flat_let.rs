@@ -24,10 +24,10 @@ fn take_binds(mut expr: Expr) -> (Expr, Vec<Val>) {
             r = Box::new(r_);
             lbinds.append(&mut rbinds);
             let expr = BinOp {
-                ty: ty,
-                name: name,
-                l: l,
-                r: r,
+                ty,
+                name,
+                l,
+                r,
             };
             (expr, lbinds)
         }
@@ -35,9 +35,9 @@ fn take_binds(mut expr: Expr) -> (Expr, Vec<Val>) {
             let (a, binds) = take_binds(*arg);
             arg = Box::new(a);
             let expr = BuiltinCall {
-                fun: fun,
-                arg: arg,
-                ty: ty,
+                fun,
+                arg,
+                ty,
             };
             (expr, binds)
         }
@@ -52,9 +52,9 @@ fn take_binds(mut expr: Expr) -> (Expr, Vec<Val>) {
             arg = Box::new(a);
             fbinds.append(&mut abinds);
             let expr = App {
-                fun: fun,
-                arg: arg,
-                ty: ty,
+                fun,
+                arg,
+                ty,
             };
             (expr, fbinds)
         }
@@ -62,17 +62,17 @@ fn take_binds(mut expr: Expr) -> (Expr, Vec<Val>) {
             let (e, ebinds) = take_binds(*expr);
             expr = Box::new(e);
             let expr = Case {
-                expr: expr,
-                arms: arms,
-                ty: ty,
+                expr,
+                arms,
+                ty,
             };
             (expr, ebinds)
         }
         Tuple { tys, tuple } => {
             let (tuple, bindss): (_, Vec<_>) = tuple.into_iter().map(take_binds).unzip();
             let expr = Tuple {
-                tys: tys,
-                tuple: tuple,
+                tys,
+                tuple,
             };
             (expr, bindss.into_iter().flat_map(Vec::into_iter).collect())
         }
@@ -109,9 +109,9 @@ impl Transform for FlatLet {
         vec.append(&mut binds_);
         binds = vec;
         Expr::Binds {
-            binds: binds,
-            ret: ret,
-            ty: ty,
+            binds,
+            ret,
+            ty,
         }
     }
 }

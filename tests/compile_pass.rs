@@ -13,6 +13,6 @@ fn examples_compile_pass() {
         let path = entry.unwrap().into_path();
         let input = fs::read_to_string(&path).unwrap();
         compile_str(&input, &config)
-            .expect(&format!("failed to compile {}", path.to_str().unwrap()));
+            .unwrap_or_else(|_| panic!("failed to compile {}", path.to_str().unwrap()));
     }
 }

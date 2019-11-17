@@ -145,7 +145,7 @@ impl UnAlias {
                     }
                 }
                 &mut Ret { ref mut value, .. } => {
-                    value.as_mut().map(|v| self.resolv_alias(v));
+                    if let Some(v) = value.as_mut() { self.resolv_alias(v) }
                 }
                 &mut Lit { .. } => (),
                 &mut Branch { ref mut cond, .. } => self.resolv_alias(cond),

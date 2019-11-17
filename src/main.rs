@@ -26,7 +26,7 @@ fn main() {
     let pretty_print_ir = matches
         .values_of("PRINT_IR")
         .into_iter()
-        .flat_map(|vs| vs)
+        .flatten()
         .map(|s| s.to_string())
         .collect::<HashSet<String>>();
 

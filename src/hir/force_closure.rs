@@ -11,7 +11,7 @@ struct Trav<'a> {
 
 impl<'a> Trav<'a> {
     fn new(t: &'a mut ForceClosure, bound: bool) -> Self {
-        Trav { t: t, bound: bound }
+        Trav { t, bound }
     }
 
     fn to(&mut self, bound: bool) -> &mut Self {
@@ -199,8 +199,8 @@ struct Reg<'a> {
 impl<'a> Reg<'a> {
     fn new(t: &'a mut ForceClosure, bound_name: Option<Symbol>) -> Self {
         Reg {
-            t: t,
-            bound_name: bound_name,
+            t,
+            bound_name,
         }
     }
 

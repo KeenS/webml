@@ -43,14 +43,14 @@ impl HIR2MIR {
     }
 
     fn genlabel(&mut self, name: &str) -> Symbol {
-        let name = format!("{}", name);
+        let name = name.to_string();
         let label = self.label;
         self.label += 1;
         Symbol(name, label)
     }
 
     fn gensym(&mut self, name: &str) -> Symbol {
-        let name = format!("{}", name);
+        let name = name.to_string();
         let id = self.id.next();
         Symbol(name, id)
     }
@@ -71,8 +71,8 @@ impl HIR2MIR {
         let wrapper_name = self.wrapper_name(fname.clone());
         let wrapper_name = self.closure_wrapper.entry(fname).or_insert((
             wrapper_name,
-            param_ty.clone(),
-            body_ty.clone(),
+            param_ty,
+            body_ty,
         ));
         wrapper_name.0.clone()
     }
@@ -243,14 +243,14 @@ impl HIR2MIR {
                     (Some((pat, arm)), Some((label, _))) => {
                         let eb = match pat {
                             hir::Pattern::Var { name, ty } => {
-                                let eb = EBBBuilder::new(label, vec![(from(ty.clone()), name)]);
+                                let eb = EBBBuilder::new(label, vec![(from(ty), name)]);
                                 eb
                             }
                             hir::Pattern::Tuple { tys, tuple } => {
                                 let ty = hir::HTy::Tuple(tys.clone());
                                 let var = self.gensym("tuple");
                                 let mut eb =
-                                    EBBBuilder::new(label, vec![(from(ty.clone()), var.clone())]);
+                                    EBBBuilder::new(label, vec![(from(ty), var.clone())]);
                                 for (i, (t, ty)) in tuple.into_iter().zip(tys).enumerate() {
                                     eb.proj(t, from(ty), i as u32, var.clone());
                                 }

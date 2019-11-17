@@ -30,9 +30,7 @@ impl PP for Expr {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         use crate::hir::Expr::*;
         match self {
-            &Binds {
-                ref binds, ref ret, ..
-            } => {
+            Binds { binds, ret, .. } => {
                 let ind = Self::nspaces(indent);
                 let nextind = Self::nspaces(indent + 4);
                 write!(w, "let\n")?;
@@ -44,29 +42,24 @@ impl PP for Expr {
                 ret.pp(w, indent + 4)?;
                 write!(w, "\n{}end", ind)?;
             }
-            &BinOp {
-                ref name,
-                ref l,
-                ref r,
-                ..
-            } => {
+            BinOp { name, l, r, .. } => {
                 l.pp(w, indent)?;
                 write!(w, " ")?;
                 name.pp(w, indent)?;
                 write!(w, " ")?;
                 r.pp(w, indent)?;
             }
-            &Fun {
-                ref body,
-                ref param,
-                ref captures,
+            Fun {
+                body,
+                param,
+                captures,
                 ..
             } => {
                 write!(w, "fun(")?;
                 inter_iter! {
                     captures,
                     write!(w, ", ")?,
-                    |&(_, ref cap)| => {
+                    |(_,  cap)| => {
                         cap.pp(w, indent)?
                     }
                 }
@@ -75,46 +68,38 @@ impl PP for Expr {
                 write!(w, " => ")?;
                 body.pp(w, indent + 4)?;
             }
-            &Closure {
-                ref envs,
-                ref fname,
-                ..
-            } => {
+            Closure { envs, fname, .. } => {
                 write!(w, "<closure ")?;
                 fname.pp(w, indent)?;
                 write!(w, " (")?;
                 inter_iter! {
                     envs.iter(),
                     write!(w, ", ")?,
-                    |&(_, ref var)| => {
+                    |(_,  var)| => {
                         var.pp(w, indent)?
                     }
                 }
                 write!(w, ")>")?;
             }
-            &App {
-                ref fun, ref arg, ..
-            } => {
+            App { fun, arg, .. } => {
                 write!(w, "(")?;
                 fun.pp(w, indent)?;
                 write!(w, ") ")?;
                 arg.pp(w, indent + 4)?;
             }
-            &Case {
-                ref expr, ref arms, ..
-            } => {
+            Case { expr, arms, .. } => {
                 let ind = Self::nspaces(indent);
                 write!(w, "case ")?;
                 expr.pp(w, indent + 4)?;
                 write!(w, " of")?;
-                for &(ref pat, ref arm) in arms {
+                for (pat, arm) in arms {
                     write!(w, "\n{}", ind)?;
                     pat.pp(w, indent + 4)?;
                     write!(w, " => ")?;
                     arm.pp(w, indent + 4)?;
                 }
             }
-            &Tuple { ref tuple, .. } => {
+            Tuple { tuple, .. } => {
                 write!(w, "(")?;
                 inter_iter! {
                     tuple.iter(),
@@ -125,28 +110,22 @@ impl PP for Expr {
                 }
                 write!(w, ")")?;
             }
-            &Proj {
-                ref index,
-                ref tuple,
-                ..
-            } => {
+            Proj { index, tuple, .. } => {
                 write!(w, "#{} ", index)?;
                 tuple.pp(w, indent + 4)?;
             }
-            &BuiltinCall {
-                ref fun, ref arg, ..
-            } => {
+            BuiltinCall { fun, arg, .. } => {
                 fun.pp(w, indent)?;
                 write!(w, " ")?;
                 arg.pp(w, indent)?;
             }
-            &Constructor { ref name, .. } => {
+            Constructor { name, .. } => {
                 name.pp(w, indent)?;
             }
-            &Sym { ref name, .. } => {
+            Sym { name, .. } => {
                 name.pp(w, indent)?;
             }
-            &Lit { ref value, .. } => {
+            Lit { value, .. } => {
                 value.pp(w, indent)?;
             }
         }
@@ -156,10 +135,10 @@ impl PP for Expr {
 
 impl PP for Pattern {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
-        match *self {
-            Pattern::Lit { ref value, .. } => value.pp(w, indent),
-            Pattern::Constructor { ref name, .. } => name.pp(w, indent),
-            Pattern::Tuple { ref tuple, .. } => {
+        match self {
+            Pattern::Lit { value, .. } => value.pp(w, indent),
+            Pattern::Constructor { name, .. } => name.pp(w, indent),
+            Pattern::Tuple { tuple, .. } => {
                 write!(w, "(")?;
                 inter_iter! {
                     tuple.iter(),
@@ -170,7 +149,7 @@ impl PP for Pattern {
                 }
                 write!(w, ")")
             }
-            Pattern::Var { ref name, .. } => name.pp(w, indent),
+            Pattern::Var { name, .. } => name.pp(w, indent),
         }
     }
 }

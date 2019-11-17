@@ -54,7 +54,7 @@ impl<'a> Scope<'a> {
         Scope(inner)
     }
 
-    fn new_scope(&mut self) -> Scope {
+    fn new_scope(&mut self) -> Scope<'_> {
         Scope::new(self)
     }
 

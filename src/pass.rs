@@ -79,8 +79,8 @@ pub struct Chain<F, FO, S, SO> {
 impl<F, FO, S, SO> Chain<F, FO, S, SO> {
     pub fn new(fst: F, snd: S) -> Self {
         Chain {
-            fst: fst,
-            snd: snd,
+            fst,
+            snd,
             phantom: PhantomData,
         }
     }
@@ -113,7 +113,7 @@ pub struct ConvError<P, FE, O> {
 impl<P, FE, O> ConvError<P, FE, O> {
     pub fn new(pass: P) -> Self {
         ConvError {
-            pass: pass,
+            pass,
             phantom: PhantomData,
         }
     }

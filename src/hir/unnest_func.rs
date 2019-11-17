@@ -48,7 +48,7 @@ impl<'a> Scope<'a> {
 
     fn new_fname(&mut self, name: Option<Symbol>) -> Symbol {
         let new_name = match name {
-            None => format!("<anonfun>"),
+            None => "<anonfun>".to_string(),
             Some(name) => format!("<{}>", name.0),
         };
         let id = self.id.next();
@@ -125,9 +125,9 @@ impl<'a> Scope<'a> {
                     .collect();
                 ret = Box::new(self.conv_expr(cls, *ret, None));
                 Binds {
-                    ty: ty,
-                    binds: binds,
-                    ret: ret,
+                    ty,
+                    binds,
+                    ret,
                 }
             }
             BinOp {
@@ -139,10 +139,10 @@ impl<'a> Scope<'a> {
                 l = Box::new(self.conv_expr(cls, *l, None));
                 r = Box::new(self.conv_expr(cls, *r, None));
                 BinOp {
-                    ty: ty,
-                    name: name,
-                    l: l,
-                    r: r,
+                    ty,
+                    name,
+                    l,
+                    r,
                 }
             }
 
@@ -161,12 +161,12 @@ impl<'a> Scope<'a> {
                 let fname = self.new_fname(bind_name.clone());
                 self.rename(&mut body, &bind_name, &fname);
                 captures.extend(frees.clone());
-                let is_closure = captures.len() != 0;
+                let is_closure = !captures.is_empty();
                 let anonfun = Fun {
                     param: (param_ty.clone(), param),
                     body_ty: body_ty.clone(),
-                    body: body,
-                    captures: captures,
+                    body,
+                    captures,
                 };
                 let fty = anonfun.ty();
                 cls.push(Val {
@@ -178,9 +178,9 @@ impl<'a> Scope<'a> {
                 if is_closure {
                     Closure {
                         envs: frees,
-                        param_ty: param_ty,
-                        body_ty: body_ty,
-                        fname: fname,
+                        param_ty,
+                        body_ty,
+                        fname,
                     }
                 } else {
                     Expr::Sym {
@@ -192,9 +192,9 @@ impl<'a> Scope<'a> {
             BuiltinCall { ty, fun, mut arg } => {
                 arg = Box::new(self.conv_expr(cls, *arg, None));
                 BuiltinCall {
-                    ty: ty,
-                    fun: fun,
-                    arg: arg,
+                    ty,
+                    fun,
+                    arg,
                 }
             }
             App {
@@ -205,9 +205,9 @@ impl<'a> Scope<'a> {
                 fun = Box::new(self.conv_expr(cls, *fun, None));
                 arg = Box::new(self.conv_expr(cls, *arg, None));
                 App {
-                    ty: ty,
-                    fun: fun,
-                    arg: arg,
+                    ty,
+                    fun,
+                    arg,
                 }
             }
             Case {
@@ -221,9 +221,9 @@ impl<'a> Scope<'a> {
                     .map(|(pat, arm)| (pat, self.conv_expr(cls, arm, None)))
                     .collect();
                 Case {
-                    ty: ty,
-                    expr: expr,
-                    arms: arms,
+                    ty,
+                    expr,
+                    arms,
                 }
             }
             Tuple { tys, tuple } => {
@@ -232,8 +232,8 @@ impl<'a> Scope<'a> {
                     .map(|t| self.conv_expr(cls, t, None))
                     .collect();
                 Tuple {
-                    tys: tys,
-                    tuple: tuple,
+                    tys,
+                    tuple,
                 }
             }
             Proj { ty, index, tuple } => {
@@ -244,8 +244,8 @@ impl<'a> Scope<'a> {
                     index,
                 }
             }
-            Constructor { name, ty } => Constructor { ty: ty, name: name },
-            Sym { name, ty } => Sym { ty: ty, name: name },
+            Constructor { name, ty } => Constructor { ty, name },
+            Sym { name, ty } => Sym { ty, name },
             expr @ Closure { .. } | expr @ Lit { .. } => expr,
         }
     }
@@ -359,8 +359,8 @@ impl<'a> Scope<'a> {
                 self.rename(r, from, to);
             }
 
-            Fun { ref mut body, .. } => {
-                Box::new(self.rename(body, from, to));
+            Fun { body: _, .. } => {
+                Box::new(());
             }
             BuiltinCall { ref mut arg, .. } => {
                 self.rename(arg, from, to);

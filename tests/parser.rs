@@ -1,4 +1,4 @@
-extern crate webml;
+
 
 use webml::ast::{Expr, Pattern, Statement, AST};
 use webml::parse;

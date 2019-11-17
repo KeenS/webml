@@ -83,7 +83,7 @@ impl MIR2LIR {
                             match ty {
                                 &mir::EbbTy::Unit => {
                                     // do nothing
-                                    ()
+                                    
                                 }
                                 &mir::EbbTy::Bool => ops.push(MoveI32(reg!(var), reg!(sym))),
                                 &mir::EbbTy::Int
@@ -249,7 +249,7 @@ impl MIR2LIR {
                                 match ty {
                                     LTy::Unit => {
                                         // do nothing
-                                        ()
+                                        
                                     }
                                     LTy::I32 => {
                                         ops.push(StoreI32(Addr(reg.clone(), acc), reg!(var)))
@@ -279,6 +279,7 @@ impl MIR2LIR {
                             ref index,
                             ref tuple,
                         } => {
+                            #[allow(clippy::never_loop)]
                             loop {
                                 let ctor = match self.ebbty_to_lty(ty) {
                                     LTy::F32 => LoadF32,
@@ -329,7 +330,7 @@ impl MIR2LIR {
                                     LTy::Unit => {
                                         // FIXME: remove unit from closure
                                         // do nothing
-                                        ()
+                                        
                                     }
                                     LTy::I32 => {
                                         ops.push(StoreI32(Addr(reg.clone(), acc), reg!(var)))
@@ -391,7 +392,7 @@ impl MIR2LIR {
                                     match p.0 {
                                         LTy::Unit => {
                                             // do nothing
-                                            ()
+                                            
                                         }
                                         LTy::I32 => ops.push(MoveI32(p.clone(), reg!(cond))),
                                         LTy::I64 => ops.push(MoveI64(p.clone(), reg!(cond))),
@@ -435,7 +436,7 @@ impl MIR2LIR {
                                     ));
                                     ops.push(JumpIfI32(boolean.clone(), Label(label)))
                                 }
-                                for label in default_label {
+                                if let Some(label) = default_label {
                                     ops.push(Jump(label))
                                 }
                             }
@@ -450,7 +451,7 @@ impl MIR2LIR {
                                 match p.0 {
                                     LTy::Unit => {
                                         // do nothing
-                                        ()
+                                        
                                     }
                                     LTy::I32 => ops.push(MoveI32(p.clone(), reg!(a))),
                                     LTy::I64 => ops.push(MoveI64(p.clone(), reg!(a))),
@@ -474,13 +475,13 @@ impl MIR2LIR {
             }
         }
 
-        let regs = regs.into_iter().map(|r| r.0.clone()).collect::<Vec<_>>();
+        let regs = regs.into_iter().map(|r| r.0).collect::<Vec<_>>();
 
         Function {
-            name: name,
-            nparams: nparams,
-            regs: regs,
-            ret_ty: ret_ty,
+            name,
+            nparams,
+            regs,
+            ret_ty,
             body: blocks,
         }
     }

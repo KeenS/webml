@@ -141,7 +141,7 @@ pub enum HTy {
 impl Expr {
     fn app1(self, ty: HTy, e: Expr) -> Expr {
         Expr::App {
-            ty: ty,
+            ty,
             fun: Box::new(self),
             arg: Box::new(e),
         }

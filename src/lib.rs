@@ -40,7 +40,7 @@ pub fn compile_str<'a>(input: &'a str, config: &Config) -> Result<Vec<u8>, TypeE
        flattening_let: hir::FlatLet::new(),
        unnest_functions: hir::UnnestFunc::new(id.clone()),
        closure_conversion: hir::ForceClosure::new(),
-       hir_to_mir: mir::HIR2MIR::new(id.clone()),
+       hir_to_mir: mir::HIR2MIR::new(id),
        unalias: mir::UnAlias::new(),
        block_arrange: mir::BlockArrange::new(),
        mir_to_lir: lir::MIR2LIR::new(),

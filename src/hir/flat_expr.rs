@@ -27,14 +27,14 @@ impl FlatExpr {
 
     fn make_val(&mut self, expr: Expr) -> (Box<Expr>, Val) {
         let name = self.gensym();
-        let ty = expr.ty().clone();
+        let ty = expr.ty();
         let val = Val {
             ty: ty.clone(),
             rec: false,
             name: name.clone(),
-            expr: expr,
+            expr,
         };
-        let sym = Expr::Sym { name: name, ty: ty };
+        let sym = Expr::Sym { name, ty };
         (Box::new(sym), val)
     }
 }
@@ -53,9 +53,9 @@ impl Transform for FlatExpr {
         let (ret, retval) = self.flat_make_val(*ret);
         binds.push(retval);
         Binds {
-            binds: binds,
-            ret: ret,
-            ty: ty,
+            binds,
+            ret,
+            ty,
         }
     }
 
@@ -64,14 +64,14 @@ impl Transform for FlatExpr {
         let (r, rval) = self.flat_make_val(*r);
         let (ret, retval) = self.make_val(BinOp {
             ty: ty.clone(),
-            name: name,
-            l: l,
-            r: r,
+            name,
+            l,
+            r,
         });
         Binds {
-            ty: ty.clone(),
+            ty,
             binds: vec![lval, rval, retval],
-            ret: ret,
+            ret,
         }
     }
 
@@ -86,13 +86,13 @@ impl Transform for FlatExpr {
         body = Box::new(Binds {
             ty: body_ty.clone(),
             binds: vec![bodyval],
-            ret: ret,
+            ret,
         });
         Fun {
-            body: body,
-            param: param,
-            body_ty: body_ty,
-            captures: captures,
+            body,
+            param,
+            body_ty,
+            captures,
         }
     }
 
@@ -114,14 +114,14 @@ impl Transform for FlatExpr {
     fn transform_builtin_call(&mut self, ty: HTy, fun: BIF, arg: Box<Expr>) -> Expr {
         let (arg, argval) = self.flat_make_val(*arg);
         let (ret, retval) = self.make_val(BuiltinCall {
-            fun: fun,
-            arg: arg,
+            fun,
+            arg,
             ty: ty.clone(),
         });
         Binds {
-            ty: ty.clone(),
+            ty,
             binds: vec![argval, retval],
-            ret: ret,
+            ret,
         }
     }
 
@@ -129,14 +129,14 @@ impl Transform for FlatExpr {
         let (fun, funval) = self.flat_make_val(*fun);
         let (arg, argval) = self.flat_make_val(*arg);
         let (ret, retval) = self.make_val(App {
-            fun: fun,
-            arg: arg,
+            fun,
+            arg,
             ty: ty.clone(),
         });
         Binds {
-            ty: ty.clone(),
+            ty,
             binds: vec![funval, argval, retval],
-            ret: ret,
+            ret,
         }
     }
 
@@ -162,14 +162,14 @@ impl Transform for FlatExpr {
         };
         let e = Case {
             ty: ty.clone(),
-            expr: expr,
-            arms: arms,
+            expr,
+            arms,
         };
         let (ret, retval) = self.make_val(e);
         Binds {
-            ty: ty,
+            ty,
             binds: vec![exprval, retval],
-            ret: ret,
+            ret,
         }
     }
 
@@ -183,13 +183,13 @@ impl Transform for FlatExpr {
             .unzip();
         let (ret, tupleval) = self.make_val(Tuple {
             tys: tys.clone(),
-            tuple: tuple,
+            tuple,
         });
         vals.push(tupleval);
         Binds {
-            ty: HTy::Tuple(tys.clone()),
+            ty: HTy::Tuple(tys),
             binds: vals,
-            ret: ret,
+            ret,
         }
     }
 }

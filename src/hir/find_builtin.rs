@@ -16,11 +16,11 @@ impl Transform for FindBuiltin {
                     name => unreachable!("unknown builtin function found: {}", name),
                 };
                 let arg = self.transform_expr(*arg);
-                return BuiltinCall {
-                    ty: ty.clone(),
-                    fun: fun,
+                BuiltinCall {
+                    ty,
+                    fun,
                     arg: Box::new(arg),
-                };
+                }
             }
             _ => {
                 let arg = self.transform_expr(*arg);
@@ -29,7 +29,7 @@ impl Transform for FindBuiltin {
                 App {
                     fun: Box::new(fun),
                     arg: Box::new(arg),
-                    ty: ty,
+                    ty,
                 }
             }
         }

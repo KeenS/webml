@@ -716,7 +716,7 @@ impl LIR2WASM {
         // 1. calculate minimum coverings of loops, blocks and insert them
         // 2. adjust interleavings (lift down loopends and lift up blocks)
 
-        let ret = v.into_iter().map(Control::Body).collect();
+        let ret = v.iter().map(Control::Body).collect();
         let ret = self.insert_loop_block(ret);
         let ret = self.adjust_loop_block(ret);
         ret
