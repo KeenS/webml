@@ -112,6 +112,9 @@ impl UnAlias {
                 &mut Proj { ref mut tuple, .. } => {
                     self.resolv_alias(tuple);
                 }
+                &mut Select { ref mut union, .. } => {
+                    self.resolv_alias(union);
+                }
 
                 &mut Closure {
                     ref mut fun,
@@ -145,7 +148,9 @@ impl UnAlias {
                     }
                 }
                 &mut Ret { ref mut value, .. } => {
-                    if let Some(v) = value.as_mut() { self.resolv_alias(v) }
+                    if let Some(v) = value.as_mut() {
+                        self.resolv_alias(v)
+                    }
                 }
                 &mut Lit { .. } => (),
                 &mut Branch { ref mut cond, .. } => self.resolv_alias(cond),

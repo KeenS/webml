@@ -20,6 +20,7 @@ impl MIR2LIR {
             Float => LTy::F64,
             Bool => LTy::I32,
             Tuple(_) => LTy::Ptr,
+            Union(_) => unimplemented!(),
             Cls { .. } => LTy::Ptr,
             Ebb { .. } => LTy::FPtr,
         }
@@ -91,6 +92,7 @@ impl MIR2LIR {
                                     ops.push(MoveI64(reg!(var), reg!(sym)))
                                 }
                                 &mir::EbbTy::Float => ops.push(MoveF64(reg!(var), reg!(sym))),
+                                &mir::EbbTy::Union(_) => unimplemented!(),
                             }
                         }
                         &m::Add {
@@ -268,6 +270,31 @@ impl MIR2LIR {
                                     }
                                 }
                                 acc += 8;
+                            }
+                        }
+                        &m::Select {
+                            ref var,
+                            ref ty,
+                            ref union,
+                            ..
+                        } => {
+                            #[allow(clippy::never_loop)]
+                            loop {
+                                let ctor = match self.ebbty_to_lty(ty) {
+                                    LTy::F32 => MoveF32,
+                                    LTy::F64 => MoveF64,
+                                    LTy::I32 => MoveI32,
+                                    LTy::I64 => MoveI64,
+                                    LTy::Ptr => MoveI64,
+                                    LTy::FPtr => MoveI64,
+                                    LTy::Unit =>
+                                    // do nothing
+                                    {
+                                        break
+                                    }
+                                };
+                                ops.push(ctor(reg!(var), reg!(union)));
+                                break;
                             }
                         }
                         &m::Proj {

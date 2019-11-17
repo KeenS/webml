@@ -144,6 +144,13 @@ pub enum Op {
         index: u32,
         tuple: Symbol,
     },
+    Select {
+        var: Symbol,
+        ty: EbbTy,
+        /// 0-origin
+        index: u32,
+        union: Symbol,
+    },
 
     Branch {
         cond: Symbol,
@@ -168,6 +175,7 @@ pub enum EbbTy {
     Float,
     Bool,
     Tuple(Vec<EbbTy>),
+    Union(Vec<EbbTy>),
     Cls {
         closures: Vec<EbbTy>,
         param: Box<EbbTy>,

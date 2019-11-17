@@ -56,6 +56,15 @@ impl PP for EbbTy {
                 }
                 write!(w, ")")?;
             }
+            Union(tys) => {
+                write!(w, "union {{")?;
+                inter_iter! {
+                    tys,
+                    write!(w, ", ")?,
+                    |t| => t.pp(w, indent)?
+                }
+                write!(w, "}}")?;
+            }
             Cls {
                 closures,
                 param,
@@ -288,6 +297,19 @@ impl PP for Op {
                 ty.pp(w, indent)?;
                 write!(w, " := #{} ", index)?;
                 tuple.pp(w, indent)?;
+            }
+            Select {
+                var,
+                ty,
+                index,
+                union,
+            } => {
+                write!(w, "{}", space)?;
+                var.pp(w, indent)?;
+                write!(w, ": ")?;
+                ty.pp(w, indent)?;
+                write!(w, " := select {} ", index)?;
+                union.pp(w, indent)?;
             }
             Branch {
                 cond,
