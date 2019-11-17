@@ -85,7 +85,7 @@ impl AST2HIR {
                     expr: fun,
                 }]
             }
-            ast::Statement::Val { pattern, expr } => {
+            ast::Statement::Val { rec, pattern, expr } => {
                 match pattern {
                     ast::Pattern::Variable { name, ty } => vec![Val {
                         ty: conv_ty(ty),
@@ -201,7 +201,7 @@ impl AST2HIR {
                             let ty = conv_ty(ty.clone());
                             ret.push(Val {
                                 ty: ty.clone(),
-                                rec: false,
+                                rec,
                                 name: var.clone(),
                                 expr: Expr::Proj {
                                     ty: ty.clone(),

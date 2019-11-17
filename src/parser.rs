@@ -54,7 +54,7 @@ named!(bind_val <&str, Statement<()>>, do_parse!(
         tag_s!("=") >>
         opt!(multispace) >>
         e: expr >>
-        (Statement::Val{ pattern: pat, expr: e})
+        (Statement::Val{ rec: false, pattern: pat, expr: e})
 ));
 
 named!(bind_fun <&str, Statement<()>>, do_parse!(

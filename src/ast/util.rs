@@ -11,14 +11,14 @@ pub trait Traverse<Ty> {
         use Statement::*;
         match stmt {
             Datatype { name, constructors } => self.traverse_datatype(name, constructors),
-            Val { pattern, expr } => self.traverse_val(pattern, expr),
+            Val { rec, pattern, expr } => self.traverse_val(rec, pattern, expr),
             Fun { name, params, expr } => self.traverse_fun(name, params, expr),
         }
     }
 
     fn traverse_datatype(&mut self, _name: &mut Symbol, _constructors: &mut Vec<Symbol>) {}
 
-    fn traverse_val(&mut self, pattern: &mut Pattern<Ty>, expr: &mut Expr<Ty>) {
+    fn traverse_val(&mut self, _rec: &mut bool, pattern: &mut Pattern<Ty>, expr: &mut Expr<Ty>) {
         self.traverse_expr(expr);
         self.traverse_pattern(pattern)
     }
@@ -136,7 +136,7 @@ pub trait Transform<Ty> {
         use Statement::*;
         match stmt {
             Datatype { name, constructors } => self.transform_datatype(name, constructors),
-            Val { pattern, expr } => self.transform_val(pattern, expr),
+            Val { rec, pattern, expr } => self.transform_val(rec, pattern, expr),
             Fun { name, params, expr } => self.transform_fun(name, params, expr),
         }
     }
@@ -145,8 +145,9 @@ pub trait Transform<Ty> {
         Statement::Datatype { name, constructors }
     }
 
-    fn transform_val(&mut self, pattern: Pattern<Ty>, expr: Expr<Ty>) -> Statement<Ty> {
+    fn transform_val(&mut self, rec: bool, pattern: Pattern<Ty>, expr: Expr<Ty>) -> Statement<Ty> {
         Statement::Val {
+            rec,
             pattern: self.transform_pattern(pattern),
             expr: self.transform_expr(expr),
         }

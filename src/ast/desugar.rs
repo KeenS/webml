@@ -30,6 +30,7 @@ impl Transform<Type> for Desugar {
                 body: Box::new(body),
             });
         Statement::Val {
+            rec: true,
             pattern: Pattern::Variable {
                 name: name,
                 ty: fun.ty(),

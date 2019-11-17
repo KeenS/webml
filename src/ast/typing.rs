@@ -104,7 +104,8 @@ impl<Ty> Statement<Ty> {
                     .collect(),
                 expr: expr.map_ty(f),
             },
-            Val { pattern, expr } => Val {
+            Val { pattern, expr, rec } => Val {
+                rec,
                 pattern: pattern.map_ty(&mut *f),
                 expr: expr.map_ty(f),
             },
@@ -318,13 +319,20 @@ impl TyEnv {
         use Statement::*;
         match stmt {
             Datatype { .. } => Ok(()),
-            Val { pattern, expr } => {
+            Val { rec, pattern, expr } => {
                 let names = pattern.binds();
+                if *rec {
+                    for &(name, ty) in &names {
+                        self.insert(name.clone(), ty.clone());
+                    }
+                }
                 self.infer_expr(expr)?;
                 self.infer_pat(pattern)?;
                 self.unify(expr.ty(), pattern.ty())?;
-                for (name, ty) in names {
-                    self.insert(name.clone(), ty.clone());
+                if !rec {
+                    for &(name, ty) in &names {
+                        self.insert(name.clone(), ty.clone());
+                    }
                 }
                 Ok(())
             }

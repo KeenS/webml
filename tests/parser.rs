@@ -9,6 +9,7 @@ fn parse_int() {
     assert_eq!(
         ast,
         AST(vec![Statement::Val {
+            rec: false,
             pattern: Pattern::Variable {
                 name: Symbol::new("x"),
                 ty: (),
@@ -28,6 +29,7 @@ fn parse_float() {
     assert_eq!(
         ast,
         AST(vec![Statement::Val {
+            rec: false,
             pattern: Pattern::Variable {
                 name: Symbol::new("x"),
                 ty: (),
@@ -47,6 +49,7 @@ fn parse_bool_true() {
     assert_eq!(
         ast,
         AST(vec![Statement::Val {
+            rec: false,
             pattern: Pattern::Variable {
                 name: Symbol::new("x"),
                 ty: (),
@@ -66,6 +69,7 @@ fn parse_bool_false() {
     assert_eq!(
         ast,
         AST(vec![Statement::Val {
+            rec: false,
             pattern: Pattern::Variable {
                 name: Symbol::new("x"),
                 ty: (),
@@ -85,6 +89,7 @@ fn parse_fn_unary() {
     assert_eq!(
         ast,
         AST(vec![Statement::Val {
+            rec: false,
             pattern: Pattern::Variable {
                 name: Symbol::new("f"),
                 ty: (),
@@ -172,6 +177,7 @@ fn parse_if() {
     assert_eq!(
         ast,
         AST(vec![Statement::Val {
+            rec: false,
             pattern: Pattern::Variable {
                 name: Symbol::new("x"),
                 ty: (),
@@ -202,6 +208,7 @@ fn parse_case_bool() {
     assert_eq!(
         ast,
         AST(vec![Statement::Val {
+            rec: false,
             pattern: Pattern::Variable {
                 name: Symbol::new("x"),
                 ty: (),
@@ -246,6 +253,7 @@ fn parse_case_var() {
     assert_eq!(
         ast,
         AST(vec![Statement::Val {
+            rec: false,
             pattern: Pattern::Variable {
                 name: Symbol::new("x"),
                 ty: (),
@@ -290,6 +298,7 @@ fn parse_case_wildcard() {
     assert_eq!(
         ast,
         AST(vec![Statement::Val {
+            rec: false,
             pattern: Pattern::Variable {
                 name: Symbol::new("x"),
                 ty: (),
@@ -331,6 +340,7 @@ fn parse_case_int() {
     assert_eq!(
         ast,
         AST(vec![Statement::Val {
+            rec: false,
             pattern: Pattern::Variable {
                 name: Symbol::new("x"),
                 ty: (),
@@ -376,6 +386,7 @@ fn parse_case_tuple() {
     assert_eq!(
         ast,
         AST(vec![Statement::Val {
+            rec: false,
             pattern: Pattern::Variable {
                 name: Symbol::new("x"),
                 ty: (),
@@ -425,6 +436,7 @@ fn parse_case_val_pattern_wildcard() {
     assert_eq!(
         ast,
         AST(vec![Statement::Val {
+            rec: false,
             pattern: Pattern::Wildcard { ty: () },
             expr: Expr::Literal {
                 ty: (),

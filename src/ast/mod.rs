@@ -31,6 +31,7 @@ pub enum Statement<Ty> {
         constructors: Vec<Symbol>,
     },
     Val {
+        rec: bool,
         pattern: Pattern<Ty>,
         expr: Expr<Ty>,
     },

@@ -158,10 +158,20 @@ impl<'a, Ty> util::Traverse<Ty> for Scope<'a> {
         scope.traverse_expr(expr);
     }
 
-    fn traverse_val<'b, 'c>(&'b mut self, pattern: &mut Pattern<Ty>, expr: &mut Expr<Ty>) {
+    fn traverse_val<'b, 'c>(
+        &'b mut self,
+        rec: &mut bool,
+        pattern: &mut Pattern<Ty>,
+        expr: &mut Expr<Ty>,
+    ) {
         let scope = self;
-        scope.traverse_expr(expr);
-        scope.new_symbol_pattern(pattern);
+        if *rec {
+            scope.new_symbol_pattern(pattern);
+            scope.traverse_expr(expr);
+        } else {
+            scope.traverse_expr(expr);
+            scope.new_symbol_pattern(pattern);
+        }
     }
 
     fn traverse_binds(

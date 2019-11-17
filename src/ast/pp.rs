@@ -49,9 +49,12 @@ impl<Ty> PP for Statement<Ty> {
                 expr.pp(w, indent + 4)?;
                 Ok(())
             }
-            Val { pattern, expr } => {
+            Val { pattern, expr, rec } => {
                 write!(w, "{}", Self::nspaces(indent))?;
                 write!(w, "val ")?;
+                if *rec {
+                    write!(w, "rec ")?;
+                }
                 pattern.pp(w, indent)?;
                 // write!(w, ": ")?;
                 // self.ty.pp(w, indent)?;
