@@ -1,5 +1,3 @@
-
-
 use webml::ast::{Expr, Pattern, Statement, AST};
 use webml::parse;
 use webml::prim::*;
@@ -99,6 +97,36 @@ fn parse_fn_unary() {
                     name: Symbol::new("x"),
                 }),
             },
+        },])
+    )
+}
+
+#[test]
+fn parse_datatype_single() {
+    let input = r#"datatype hoge = Hoge"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![Statement::Datatype {
+            name: Symbol::new("hoge"),
+            constructors: vec![Symbol::new("Hoge")]
+        },])
+    )
+}
+
+#[test]
+fn parse_datatype_multi() {
+    let input = r#"datatype hoge = Hoge | Fuga | Piyo"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![Statement::Datatype {
+            name: Symbol::new("hoge"),
+            constructors: vec![
+                Symbol::new("Hoge"),
+                Symbol::new("Fuga"),
+                Symbol::new("Piyo")
+            ]
         },])
     )
 }
@@ -315,20 +343,14 @@ fn parse_case_int() {
                 }),
                 clauses: vec![
                     (
-                        Pattern::Literal {
-                            value: Literal::Int(1),
-                            ty: (),
-                        },
+                        Pattern::Constant { value: 1, ty: () },
                         Expr::Literal {
                             ty: (),
                             value: Literal::Int(1),
                         },
                     ),
                     (
-                        Pattern::Literal {
-                            value: Literal::Int(2),
-                            ty: (),
-                        },
+                        Pattern::Constant { value: 2, ty: () },
                         Expr::Literal {
                             ty: (),
                             value: Literal::Int(2),

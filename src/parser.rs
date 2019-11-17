@@ -30,7 +30,21 @@ named!(top <&str, UntypedAst >, do_parse!(
         (AST(tops))
 ));
 
-named!(bind <&str, Statement<()>>, alt_complete!(bind_val | bind_fun));
+named!(bind <&str, Statement<()>>, alt_complete!(bind_datatype | bind_val | bind_fun));
+
+named!(bind_datatype <&str, Statement<()>>, do_parse!(
+    tag_s!("datatype") >>
+        multispace >>
+        name: symbol >>
+        opt!(multispace) >>
+        tag_s!("=") >>
+        opt!(multispace) >>
+        constructors: separated_nonempty_list!(
+            do_parse!(opt!(multispace) >> tag!("|") >> opt!(multispace) >> (())),
+            constructor_def
+        ) >>
+        (Statement::Datatype{ name, constructors})
+));
 
 named!(bind_val <&str, Statement<()>>, do_parse!(
     tag_s!("val") >>
@@ -55,6 +69,8 @@ named!(bind_fun <&str, Statement<()>>, do_parse!(
             Statement::Fun{ name, params:params.into_iter().map(|p| ((), p)).collect(), expr: e}
         })
 ));
+
+named!(constructor_def <&str, Symbol>, do_parse!(name: symbol >> (name)));
 
 named!(expr <&str, Expr<()>>, alt_complete!(
     expr_bind |
