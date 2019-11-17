@@ -1,11 +1,13 @@
-pub mod case_check;
+mod case_check;
+mod desugar;
 mod pp;
-pub mod rename;
-pub mod typing;
+mod rename;
+mod typing;
 mod util;
-pub mod var2constructor;
+mod var2constructor;
 
 pub use self::case_check::CaseCheck;
+pub use self::desugar::Desugar;
 pub use self::rename::Rename;
 pub use self::typing::TyEnv as Typer;
 pub use self::var2constructor::VarToConstructor;

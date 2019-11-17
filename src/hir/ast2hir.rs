@@ -247,33 +247,7 @@ impl AST2HIR {
                 }
             }
             E::App { ty, fun, arg } => self.conv_expr(*fun).app1(conv_ty(ty), self.conv_expr(*arg)),
-            E::If {
-                ty,
-                cond,
-                then,
-                else_,
-            } => Expr::Case {
-                ty: conv_ty(ty),
-                expr: Box::new(self.conv_expr(*cond)),
-                arms: vec![
-                    (
-                        Pattern::Constructor {
-                            // FIXME consult it from symbol table
-                            descriminant: 1,
-                            ty: HTy::Datatype(Symbol::new("bool")),
-                        },
-                        self.conv_expr(*then),
-                    ),
-                    (
-                        Pattern::Constructor {
-                            // FIXME consult it from symbol table
-                            descriminant: 0,
-                            ty: HTy::Datatype(Symbol::new("bool")),
-                        },
-                        self.conv_expr(*else_),
-                    ),
-                ],
-            },
+            e @ E::If { .. } => self.conv_expr(ast::Desugar.desugar_expr(e)),
             E::Case { ty, cond, clauses } => Expr::Case {
                 ty: conv_ty(ty),
                 expr: Box::new(self.conv_expr(*cond)),
