@@ -2,13 +2,30 @@ use crate::ast::*;
 
 pub trait Traverse<Ty> {
     fn traverse_ast(&mut self, ast: &mut AST<Ty>) {
-        for val in ast.0.iter_mut() {
-            self.traverse_val(val)
+        for stmt in ast.0.iter_mut() {
+            self.traverse_statement(stmt)
         }
     }
 
-    fn traverse_val(&mut self, val: &mut Val<Ty>) {
-        self.traverse_expr(&mut val.expr)
+    fn traverse_statement(&mut self, stmt: &mut Statement<Ty>) {
+        use Statement::*;
+        match stmt {
+            Val { pattern, expr } => self.traverse_val(pattern, expr),
+            Fun { name, params, expr } => self.traverse_fun(name, params, expr),
+        }
+    }
+
+    fn traverse_val(&mut self, __pattern: &mut Pattern<Ty>, expr: &mut Expr<Ty>) {
+        self.traverse_expr(expr)
+    }
+
+    fn traverse_fun(
+        &mut self,
+        _name: &mut Symbol,
+        _params: &mut Vec<(Ty, Symbol)>,
+        expr: &mut Expr<Ty>,
+    ) {
+        self.traverse_expr(expr)
     }
 
     fn traverse_expr(&mut self, expr: &mut Expr<Ty>) {
@@ -25,11 +42,11 @@ pub trait Traverse<Ty> {
                 ref mut l,
                 ref mut r,
             } => self.traverse_binop(ty, op, l, r),
-            Fun {
+            Fn {
                 ref mut ty,
                 ref mut param,
                 ref mut body,
-            } => self.traverse_fun(ty, param, body),
+            } => self.traverse_fn(ty, param, body),
             App {
                 ref mut ty,
                 ref mut fun,
@@ -51,19 +68,24 @@ pub trait Traverse<Ty> {
                 ref mut tuple,
             } => self.traverse_tuple(ty, tuple),
 
-            Sym {
+            Symbol {
                 ref mut ty,
                 ref mut name,
             } => self.traverse_sym(ty, name),
-            Lit {
+            Literal {
                 ref mut ty,
                 ref mut value,
             } => self.traverse_lit(ty, value),
         }
     }
-    fn traverse_binds(&mut self, _ty: &mut Ty, binds: &mut Vec<Val<Ty>>, ret: &mut Box<Expr<Ty>>) {
-        for val in binds.iter_mut() {
-            self.traverse_val(val)
+    fn traverse_binds(
+        &mut self,
+        _ty: &mut Ty,
+        binds: &mut Vec<Statement<Ty>>,
+        ret: &mut Box<Expr<Ty>>,
+    ) {
+        for stmt in binds.iter_mut() {
+            self.traverse_statement(stmt)
         }
         self.traverse_expr(ret)
     }
@@ -79,7 +101,7 @@ pub trait Traverse<Ty> {
         self.traverse_expr(r)
     }
 
-    fn traverse_fun(&mut self, _ty: &mut Ty, _param: &mut Symbol, body: &mut Box<Expr<Ty>>) {
+    fn traverse_fn(&mut self, _ty: &mut Ty, _param: &mut Symbol, body: &mut Box<Expr<Ty>>) {
         self.traverse_expr(body)
     }
 

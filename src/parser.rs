@@ -30,9 +30,9 @@ named!(top <&str, UntypedAst >, do_parse!(
         (AST(tops))
 ));
 
-named!(bind <&str, Val<()>>, alt_complete!(bind_val | bind_fun));
+named!(bind <&str, Statement<()>>, alt_complete!(bind_val | bind_fun));
 
-named!(bind_val <&str, Val<()>>, do_parse!(
+named!(bind_val <&str, Statement<()>>, do_parse!(
     tag_s!("val") >>
         multispace >>
         pat: pattern >>
@@ -40,10 +40,10 @@ named!(bind_val <&str, Val<()>>, do_parse!(
         tag_s!("=") >>
         opt!(multispace) >>
         e: expr >>
-        (Val{ty: (), rec: false, pattern: pat, expr: e})
+        (Statement::Val{ pattern: pat, expr: e})
 ));
 
-named!(bind_fun <&str, Val<()>>, do_parse!(
+named!(bind_fun <&str, Statement<()>>, do_parse!(
     tag_s!("fun") >> multispace >>
         name: symbol >> multispace >>
         params: separated_nonempty_list!(multispace, symbol) >>
@@ -52,15 +52,7 @@ named!(bind_fun <&str, Val<()>>, do_parse!(
         opt!(multispace) >>
         e: expr >>
         ({
-            let expr =  params.into_iter().rev().fold(
-                e, |acc, param|
-                Expr::Fun{
-                    ty: (),
-                    param: param,
-                    body: Box::new(acc)
-                }
-            );
-            Val{ty: (), rec: true, pattern: Pattern::Var{name: name, ty: ()}, expr: expr}
+            Statement::Fun{ name, params:params.into_iter().map(|p| ((), p)).collect(), expr: e}
         })
 ));
 
@@ -130,7 +122,7 @@ named!(expr_fun <&str, Expr<()>>, do_parse!(
         tag_s!("=>") >>
         opt!(multispace) >>
         body: expr >>
-        (Expr::Fun {
+        (Expr::Fn {
             ty: (),
             param: param,
             body: Box::new(body)
@@ -257,22 +249,22 @@ named!(expr0_app <&str, Expr<()>>, do_parse!(
           })
 ));
 
-named!(expr1_sym <&str, Expr<()>>, map!(symbol, |s| Expr::Sym{
+named!(expr1_sym <&str, Expr<()>>, map!(symbol, |s| Expr::Symbol{
     ty: (),
     name: s
 }));
 
-named!(expr1_int <&str, Expr<()>>, map!(digit, |s: &str| Expr::Lit{
+named!(expr1_int <&str, Expr<()>>, map!(digit, |s: &str| Expr::Literal{
     ty: (),
     value: Literal::Int(s.parse().unwrap())}));
 
-named!(expr1_float <&str, Expr<()>>, map!(double_s, |s| Expr::Lit{
+named!(expr1_float <&str, Expr<()>>, map!(double_s, |s| Expr::Literal{
     ty: (),
-    value: Literal::Float(s)}));
+    value: Literal::Real(s)}));
 
 named!(expr1_bool <&str, Expr<()>>, alt!(
-    map!(tag!("true"),  |_| Expr::Lit{ty: (), value: Literal::Bool(true)}) |
-    map!(tag!("false"), |_| Expr::Lit{ty: (), value: Literal::Bool(false)})));
+    map!(tag!("true"),  |_| Expr::Literal{ty: (), value: Literal::Bool(true)}) |
+    map!(tag!("false"), |_| Expr::Literal{ty: (), value: Literal::Bool(false)})));
 
 named!(expr1_paren <&str, Expr<()>>, do_parse!(
     tag!("(") >>
@@ -320,8 +312,8 @@ named!(pattern <&str, Pattern<()>>, alt_complete!(
     pattern_wildcard));
 
 named!(pattern_bool <&str, Pattern<()>>, alt!(
-    map!(tag!("true"),  |_| Pattern::Lit{value: Literal::Bool(true), ty: ()}) |
-    map!(tag!("false"), |_| Pattern::Lit{value: Literal::Bool(false), ty: ()})));
+    map!(tag!("true"),  |_| Pattern::Literal{value: Literal::Bool(true), ty: ()}) |
+    map!(tag!("false"), |_| Pattern::Literal{value: Literal::Bool(false), ty: ()})));
 
 named!(pattern_tuple <&str, Pattern<()>>, do_parse!(
     tag!("(") >>
@@ -341,7 +333,7 @@ named!(pattern_tuple <&str, Pattern<()>>, do_parse!(
         ))
 );
 
-named!(pattern_var <&str, Pattern<()>>, map!(symbol, |name| Pattern::Var {
+named!(pattern_var <&str, Pattern<()>>, map!(symbol, |name| Pattern::Variable {
     name: name,
     ty: ()
 }));
@@ -350,7 +342,7 @@ named!(pattern_wildcard <&str, Pattern<()>>, map!(tag!("_"), |name| Pattern::Wil
     ty: ()
 }));
 
-named!(pattern_int <&str, Pattern<()>>, map!(digit, |s: &str| Pattern::Lit{
+named!(pattern_int <&str, Pattern<()>>, map!(digit, |s: &str| Pattern::Literal{
     ty: (),
     value: Literal::Int(s.parse().unwrap())}));
 

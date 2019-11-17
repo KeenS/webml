@@ -12,20 +12,38 @@ impl<Ty> PP for AST<Ty> {
     }
 }
 
-impl<Ty> PP for Val<Ty> {
+impl<Ty> PP for Statement<Ty> {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
-        write!(w, "{}", Self::nspaces(indent))?;
-        if self.rec {
-            write!(w, "fun ")?;
-        } else {
-            write!(w, "val ")?;
-        };
-        self.pattern.pp(w, indent)?;
-        // write!(w, ": ")?;
-        // self.ty.pp(w, indent)?;
-        write!(w, " = ")?;
-        self.expr.pp(w, indent + 4)?;
-        Ok(())
+        use Statement::*;
+        match self {
+            Fun {
+                name, expr, params, ..
+            } => {
+                write!(w, "{}", Self::nspaces(indent))?;
+                write!(w, "fun ")?;
+                name.pp(w, indent)?;
+                write!(w, " ")?;
+                for (_, param) in params {
+                    param.pp(w, indent)?;
+                    write!(w, " ")?;
+                }
+                // write!(w, ": ")?;
+                // self.ty.pp(w, indent)?;
+                write!(w, " = ")?;
+                expr.pp(w, indent + 4)?;
+                Ok(())
+            }
+            Val { pattern, expr } => {
+                write!(w, "{}", Self::nspaces(indent))?;
+                write!(w, "val ")?;
+                pattern.pp(w, indent)?;
+                // write!(w, ": ")?;
+                // self.ty.pp(w, indent)?;
+                write!(w, " = ")?;
+                expr.pp(w, indent + 4)?;
+                Ok(())
+            }
+        }
     }
 }
 
@@ -59,7 +77,7 @@ impl<Ty> PP for Expr<Ty> {
                 write!(w, " ")?;
                 r.pp(w, indent)?;
             }
-            &Fun {
+            &Fn {
                 ref body,
                 ref param,
                 ..
@@ -119,10 +137,10 @@ impl<Ty> PP for Expr<Ty> {
                 }
                 write!(w, ")")?;
             }
-            &Sym { ref name, .. } => {
+            &Symbol { ref name, .. } => {
                 name.pp(w, indent)?;
             }
-            &Lit { ref value, .. } => {
+            &Literal { ref value, .. } => {
                 value.pp(w, indent)?;
             }
         }
@@ -133,7 +151,7 @@ impl<Ty> PP for Expr<Ty> {
 impl<Ty> PP for Pattern<Ty> {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         match self {
-            Pattern::Lit { ref value, .. } => value.pp(w, indent),
+            Pattern::Literal { ref value, .. } => value.pp(w, indent),
             Pattern::Tuple { ref tuple, .. } => {
                 write!(w, "(")?;
                 inter_iter! {
@@ -145,7 +163,7 @@ impl<Ty> PP for Pattern<Ty> {
                 }
                 write!(w, ")")
             }
-            Pattern::Var { ref name, .. } => name.pp(w, indent),
+            Pattern::Variable { ref name, .. } => name.pp(w, indent),
             Pattern::Wildcard { .. } => write!(w, "_"),
         }
     }
@@ -155,10 +173,10 @@ impl PP for Type {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         use self::Type::*;
         match *self {
-            Var(id) => write!(w, "'{}", id)?,
+            Variable(id) => write!(w, "'{}", id)?,
             Bool => write!(w, "bool")?,
             Int => write!(w, "int")?,
-            Float => write!(w, "float")?,
+            Real => write!(w, "float")?,
             Fun(ref t1, ref t2) => {
                 t1.pp(w, indent)?;
                 write!(w, " -> ")?;

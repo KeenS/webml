@@ -1,6 +1,6 @@
 extern crate webml;
 
-use webml::ast::{Expr, Pattern, Val, AST};
+use webml::ast::{Expr, Pattern, Statement, AST};
 use webml::parse;
 use webml::prim::*;
 
@@ -10,14 +10,12 @@ fn parse_int() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Val {
-            ty: (),
-            rec: false,
-            pattern: Pattern::Var {
+        AST(vec![Statement::Val {
+            pattern: Pattern::Variable {
                 name: Symbol::new("x"),
                 ty: (),
             },
-            expr: Expr::Lit {
+            expr: Expr::Literal {
                 ty: (),
                 value: Literal::Int(1),
             },
@@ -31,16 +29,14 @@ fn parse_float() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Val {
-            ty: (),
-            rec: false,
-            pattern: Pattern::Var {
+        AST(vec![Statement::Val {
+            pattern: Pattern::Variable {
                 name: Symbol::new("x"),
                 ty: (),
             },
-            expr: Expr::Lit {
+            expr: Expr::Literal {
                 ty: (),
-                value: Literal::Float(1.0),
+                value: Literal::Real(1.0),
             },
         },])
     )
@@ -52,14 +48,12 @@ fn parse_bool_true() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Val {
-            ty: (),
-            rec: false,
-            pattern: Pattern::Var {
+        AST(vec![Statement::Val {
+            pattern: Pattern::Variable {
                 name: Symbol::new("x"),
                 ty: (),
             },
-            expr: Expr::Lit {
+            expr: Expr::Literal {
                 ty: (),
                 value: Literal::Bool(true),
             },
@@ -73,14 +67,12 @@ fn parse_bool_false() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Val {
-            ty: (),
-            rec: false,
-            pattern: Pattern::Var {
+        AST(vec![Statement::Val {
+            pattern: Pattern::Variable {
                 name: Symbol::new("x"),
                 ty: (),
             },
-            expr: Expr::Lit {
+            expr: Expr::Literal {
                 ty: (),
                 value: Literal::Bool(false),
             },
@@ -94,17 +86,15 @@ fn parse_fn_unary() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Val {
-            ty: (),
-            rec: false,
-            pattern: Pattern::Var {
+        AST(vec![Statement::Val {
+            pattern: Pattern::Variable {
                 name: Symbol::new("f"),
                 ty: (),
             },
-            expr: Expr::Fun {
+            expr: Expr::Fn {
                 ty: (),
                 param: Symbol::new("x"),
-                body: Box::new(Expr::Sym {
+                body: Box::new(Expr::Symbol {
                     ty: (),
                     name: Symbol::new("x"),
                 }),
@@ -119,20 +109,12 @@ fn parse_fun_unary() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Val {
-            ty: (),
-            rec: true,
-            pattern: Pattern::Var {
-                name: Symbol::new("f"),
+        AST(vec![Statement::Fun {
+            name: Symbol::new("f"),
+            params: vec![((), Symbol::new("x"))],
+            expr: Expr::Symbol {
                 ty: (),
-            },
-            expr: Expr::Fun {
-                ty: (),
-                param: Symbol::new("x"),
-                body: Box::new(Expr::Sym {
-                    ty: (),
-                    name: Symbol::new("x"),
-                }),
+                name: Symbol::new("x"),
             },
         },])
     )
@@ -144,24 +126,12 @@ fn parse_fun_binary() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Val {
-            ty: (),
-            rec: true,
-            pattern: Pattern::Var {
-                name: Symbol::new("f"),
+        AST(vec![Statement::Fun {
+            name: Symbol::new("f"),
+            params: vec![((), Symbol::new("x")), ((), Symbol::new("y"))],
+            expr: Expr::Symbol {
                 ty: (),
-            },
-            expr: Expr::Fun {
-                ty: (),
-                param: Symbol::new("x"),
-                body: Box::new(Expr::Fun {
-                    ty: (),
-                    param: Symbol::new("y"),
-                    body: Box::new(Expr::Sym {
-                        ty: (),
-                        name: Symbol::new("x"),
-                    }),
-                }),
+                name: Symbol::new("x"),
             },
         },])
     )
@@ -173,24 +143,22 @@ fn parse_if() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Val {
-            ty: (),
-            rec: false,
-            pattern: Pattern::Var {
+        AST(vec![Statement::Val {
+            pattern: Pattern::Variable {
                 name: Symbol::new("x"),
                 ty: (),
             },
             expr: Expr::If {
                 ty: (),
-                cond: Box::new(Expr::Lit {
+                cond: Box::new(Expr::Literal {
                     ty: (),
                     value: Literal::Bool(true),
                 }),
-                then: Box::new(Expr::Lit {
+                then: Box::new(Expr::Literal {
                     ty: (),
                     value: Literal::Bool(false),
                 }),
-                else_: Box::new(Expr::Lit {
+                else_: Box::new(Expr::Literal {
                     ty: (),
                     value: Literal::Bool(true),
                 }),
@@ -205,36 +173,34 @@ fn parse_case_bool() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Val {
-            ty: (),
-            rec: false,
-            pattern: Pattern::Var {
+        AST(vec![Statement::Val {
+            pattern: Pattern::Variable {
                 name: Symbol::new("x"),
                 ty: (),
             },
             expr: Expr::Case {
                 ty: (),
-                cond: Box::new(Expr::Lit {
+                cond: Box::new(Expr::Literal {
                     ty: (),
                     value: Literal::Bool(true),
                 }),
                 clauses: vec![
                     (
-                        Pattern::Lit {
+                        Pattern::Literal {
                             value: Literal::Bool(true),
                             ty: (),
                         },
-                        Expr::Lit {
+                        Expr::Literal {
                             ty: (),
                             value: Literal::Bool(false),
                         },
                     ),
                     (
-                        Pattern::Lit {
+                        Pattern::Literal {
                             value: Literal::Bool(false),
                             ty: (),
                         },
-                        Expr::Lit {
+                        Expr::Literal {
                             ty: (),
                             value: Literal::Bool(true),
                         },
@@ -251,36 +217,34 @@ fn parse_case_var() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Val {
-            ty: (),
-            rec: false,
-            pattern: Pattern::Var {
+        AST(vec![Statement::Val {
+            pattern: Pattern::Variable {
                 name: Symbol::new("x"),
                 ty: (),
             },
             expr: Expr::Case {
                 ty: (),
-                cond: Box::new(Expr::Lit {
+                cond: Box::new(Expr::Literal {
                     ty: (),
                     value: Literal::Bool(true),
                 }),
                 clauses: vec![
                     (
-                        Pattern::Lit {
+                        Pattern::Literal {
                             value: Literal::Bool(true),
                             ty: (),
                         },
-                        Expr::Lit {
+                        Expr::Literal {
                             ty: (),
                             value: Literal::Bool(false),
                         },
                     ),
                     (
-                        Pattern::Var {
+                        Pattern::Variable {
                             name: Symbol::new("x"),
                             ty: (),
                         },
-                        Expr::Lit {
+                        Expr::Literal {
                             ty: (),
                             value: Literal::Bool(true),
                         },
@@ -297,33 +261,31 @@ fn parse_case_wildcard() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Val {
-            ty: (),
-            rec: false,
-            pattern: Pattern::Var {
+        AST(vec![Statement::Val {
+            pattern: Pattern::Variable {
                 name: Symbol::new("x"),
                 ty: (),
             },
             expr: Expr::Case {
                 ty: (),
-                cond: Box::new(Expr::Lit {
+                cond: Box::new(Expr::Literal {
                     ty: (),
                     value: Literal::Bool(true),
                 }),
                 clauses: vec![
                     (
-                        Pattern::Lit {
+                        Pattern::Literal {
                             value: Literal::Bool(true),
                             ty: (),
                         },
-                        Expr::Lit {
+                        Expr::Literal {
                             ty: (),
                             value: Literal::Bool(false),
                         },
                     ),
                     (
                         Pattern::Wildcard { ty: () },
-                        Expr::Lit {
+                        Expr::Literal {
                             ty: (),
                             value: Literal::Bool(true),
                         },
@@ -340,43 +302,41 @@ fn parse_case_int() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Val {
-            ty: (),
-            rec: false,
-            pattern: Pattern::Var {
+        AST(vec![Statement::Val {
+            pattern: Pattern::Variable {
                 name: Symbol::new("x"),
                 ty: (),
             },
             expr: Expr::Case {
                 ty: (),
-                cond: Box::new(Expr::Lit {
+                cond: Box::new(Expr::Literal {
                     ty: (),
                     value: Literal::Int(3),
                 }),
                 clauses: vec![
                     (
-                        Pattern::Lit {
+                        Pattern::Literal {
                             value: Literal::Int(1),
                             ty: (),
                         },
-                        Expr::Lit {
+                        Expr::Literal {
                             ty: (),
                             value: Literal::Int(1),
                         },
                     ),
                     (
-                        Pattern::Lit {
+                        Pattern::Literal {
                             value: Literal::Int(2),
                             ty: (),
                         },
-                        Expr::Lit {
+                        Expr::Literal {
                             ty: (),
                             value: Literal::Int(2),
                         },
                     ),
                     (
                         Pattern::Wildcard { ty: () },
-                        Expr::Lit {
+                        Expr::Literal {
                             ty: (),
                             value: Literal::Int(10),
                         },
@@ -393,10 +353,8 @@ fn parse_case_tuple() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Val {
-            ty: (),
-            rec: false,
-            pattern: Pattern::Var {
+        AST(vec![Statement::Val {
+            pattern: Pattern::Variable {
                 name: Symbol::new("x"),
                 ty: (),
             },
@@ -405,15 +363,15 @@ fn parse_case_tuple() {
                 cond: Box::new(Expr::Tuple {
                     ty: (),
                     tuple: vec![
-                        Expr::Lit {
+                        Expr::Literal {
                             ty: (),
                             value: Literal::Int(1),
                         },
-                        Expr::Lit {
+                        Expr::Literal {
                             ty: (),
                             value: Literal::Int(2),
                         },
-                        Expr::Lit {
+                        Expr::Literal {
                             ty: (),
                             value: Literal::Int(3),
                         },
@@ -428,7 +386,7 @@ fn parse_case_tuple() {
                         ],
                         ty: ()
                     },
-                    Expr::Sym {
+                    Expr::Symbol {
                         ty: (),
                         name: Symbol::new("z"),
                     },
@@ -444,11 +402,9 @@ fn parse_case_val_pattern_wildcard() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Val {
-            ty: (),
-            rec: false,
+        AST(vec![Statement::Val {
             pattern: Pattern::Wildcard { ty: () },
-            expr: Expr::Lit {
+            expr: Expr::Literal {
                 ty: (),
                 value: Literal::Int(1),
             },

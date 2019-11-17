@@ -20,7 +20,7 @@ impl PP for Symbol {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Literal {
     Int(i64),
-    Float(f64),
+    Real(f64),
     Bool(bool),
 }
 
@@ -31,7 +31,7 @@ impl PP for Literal {
             &Int(ref v) => {
                 write!(w, "{}", v)?;
             }
-            &Float(ref v) => {
+            &Real(ref v) => {
                 write!(w, "{}", v)?;
             }
             &Bool(ref v) => {

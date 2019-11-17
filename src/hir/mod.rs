@@ -102,7 +102,7 @@ impl Pattern {
             Lit { ref value, .. } => match *value {
                 Literal::Int(ref key) => *key as u64,
                 Literal::Bool(ref key) => *key as u64,
-                Literal::Float(ref f) => panic!(
+                Literal::Real(ref f) => panic!(
                     "bug: float literal pattern given, which is not supported: {:?}",
                     f
                 ),
@@ -125,7 +125,7 @@ impl Pattern {
 pub enum HTy {
     Bool,
     Int,
-    Float,
+    Real,
     Tuple(Vec<HTy>),
     Fun(Box<HTy>, Box<HTy>),
 }

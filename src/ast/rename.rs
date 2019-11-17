@@ -61,8 +61,8 @@ impl<'a> Scope<'a> {
     fn new_symbol_pattern<Ty>(&mut self, pat: &mut Pattern<Ty>) {
         use Pattern::*;
         match pat {
-            Wildcard { .. } | Lit { .. } => (),
-            Var { name, .. } => self.new_symbol(name),
+            Wildcard { .. } | Literal { .. } => (),
+            Variable { name, .. } => self.new_symbol(name),
             Tuple { tuple, .. } => {
                 for (_, sym) in tuple {
                     self.new_symbol(sym)
@@ -86,28 +86,35 @@ impl<'a> Scope<'a> {
 }
 
 impl<'a, Ty> util::Traverse<Ty> for Scope<'a> {
-    fn traverse_ast<'b, 'c>(&'b mut self, hir: &'c mut AST<Ty>) {
-        let scope = self;
-        for val in hir.0.iter_mut() {
-            if val.rec {
-                scope.new_symbol_pattern(&mut val.pattern);
-                scope.traverse_val(val);
-            } else {
-                scope.traverse_val(val);
-                scope.new_symbol_pattern(&mut val.pattern);
-            }
+    fn traverse_fun<'b, 'c>(
+        &'b mut self,
+        name: &mut Symbol,
+        params: &mut Vec<(Ty, Symbol)>,
+        expr: &mut Expr<Ty>,
+    ) {
+        self.new_symbol(name);
+        let mut scope = self.new_scope();
+        for (_, param) in params {
+            scope.new_symbol(param);
         }
+        scope.traverse_expr(expr);
     }
 
-    fn traverse_val<'b, 'c>(&'b mut self, val: &'c mut Val<Ty>) {
-        self.traverse_expr(&mut val.expr);
+    fn traverse_val<'b, 'c>(&'b mut self, pattern: &mut Pattern<Ty>, expr: &mut Expr<Ty>) {
+        let scope = self;
+        scope.traverse_expr(expr);
+        scope.new_symbol_pattern(pattern);
     }
 
-    fn traverse_binds(&mut self, _ty: &mut Ty, binds: &mut Vec<Val<Ty>>, ret: &mut Box<Expr<Ty>>) {
+    fn traverse_binds(
+        &mut self,
+        _ty: &mut Ty,
+        binds: &mut Vec<Statement<Ty>>,
+        ret: &mut Box<Expr<Ty>>,
+    ) {
         let mut scope = self.new_scope();
         for bind in binds.iter_mut() {
-            scope.traverse_val(bind);
-            scope.new_symbol_pattern(&mut bind.pattern);
+            scope.traverse_statement(bind);
         }
         scope.traverse_expr(ret);
     }
@@ -124,7 +131,7 @@ impl<'a, Ty> util::Traverse<Ty> for Scope<'a> {
         self.traverse_expr(r);
     }
 
-    fn traverse_fun(&mut self, _ty: &mut Ty, param: &mut Symbol, body: &mut Box<Expr<Ty>>) {
+    fn traverse_fn(&mut self, _ty: &mut Ty, param: &mut Symbol, body: &mut Box<Expr<Ty>>) {
         let mut scope = self.new_scope();
         scope.new_symbol(param);
         scope.traverse_expr(body);

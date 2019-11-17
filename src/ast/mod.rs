@@ -18,21 +18,27 @@ pub type UntypedAst = AST<()>;
 pub type TypedAst = AST<Type>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct AST<Ty>(pub Vec<Val<Ty>>);
+pub struct AST<Ty>(pub Vec<Statement<Ty>>);
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Val<Ty> {
-    pub ty: Ty,
-    pub rec: bool,
-    pub pattern: Pattern<Ty>,
-    pub expr: Expr<Ty>,
+pub enum Statement<Ty> {
+    Val {
+        pattern: Pattern<Ty>,
+        expr: Expr<Ty>,
+    },
+    Fun {
+        name: Symbol,
+        // TODO: let it patterns
+        params: Vec<(Ty, Symbol)>,
+        expr: Expr<Ty>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Expr<Ty> {
     Binds {
         ty: Ty,
-        binds: Vec<Val<Ty>>,
+        binds: Vec<Statement<Ty>>,
         ret: Box<Expr<Ty>>,
     },
     BinOp {
@@ -41,7 +47,7 @@ pub enum Expr<Ty> {
         l: Box<Expr<Ty>>,
         r: Box<Expr<Ty>>,
     },
-    Fun {
+    Fn {
         ty: Ty,
         param: Symbol,
         body: Box<Expr<Ty>>,
@@ -66,11 +72,11 @@ pub enum Expr<Ty> {
         ty: Ty,
         tuple: Vec<Expr<Ty>>,
     },
-    Sym {
+    Symbol {
         ty: Ty,
         name: Symbol,
     },
-    Lit {
+    Literal {
         ty: Ty,
         value: Literal,
     },
@@ -78,19 +84,19 @@ pub enum Expr<Ty> {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Pattern<Ty> {
-    Lit { value: Literal, ty: Ty },
+    Literal { value: Literal, ty: Ty },
     // having redundant types for now
     Tuple { tuple: Vec<(Ty, Symbol)>, ty: Ty },
-    Var { name: Symbol, ty: Ty },
+    Variable { name: Symbol, ty: Ty },
     Wildcard { ty: Ty },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Type {
-    Var(u64),
+    Variable(u64),
     Bool,
     Int,
-    Float,
+    Real,
     Fun(Box<Type>, Box<Type>),
     Tuple(Vec<Type>),
 }
@@ -111,9 +117,9 @@ impl<Ty: Clone> Expr<Ty> {
             | If { ref ty, .. }
             | Case { ref ty, .. }
             | Tuple { ref ty, .. }
-            | Sym { ref ty, .. }
-            | Lit { ref ty, .. }
-            | Fun { ref ty, .. } => ty.clone(),
+            | Symbol { ref ty, .. }
+            | Literal { ref ty, .. }
+            | Fn { ref ty, .. } => ty.clone(),
         }
     }
 }
@@ -122,8 +128,8 @@ impl<Ty> Pattern<Ty> {
     pub fn binds(&self) -> Vec<(&Symbol, &Ty)> {
         use self::Pattern::*;
         match *self {
-            Lit { .. } | Wildcard { .. } => vec![],
-            Var { ref name, ref ty } => vec![(name, ty)],
+            Literal { .. } | Wildcard { .. } => vec![],
+            Variable { ref name, ref ty } => vec![(name, ty)],
             Tuple { ref tuple, .. } => tuple.iter().map(|&(ref ty, ref sym)| (sym, ty)).collect(),
         }
     }
@@ -133,8 +139,8 @@ impl<Ty: Clone> Pattern<Ty> {
     fn ty(&self) -> Ty {
         use self::Pattern::*;
         match *self {
-            Lit { ref ty, .. }
-            | Var { ref ty, .. }
+            Literal { ref ty, .. }
+            | Variable { ref ty, .. }
             | Wildcard { ref ty }
             | Tuple { ref ty, .. } => ty.clone(),
         }

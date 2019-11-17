@@ -39,7 +39,7 @@ impl Traverse<Type> for CaseCheck {
                         panic!("pattern after default case is redundant");
                     }
                     match pat {
-                        &Pattern::Lit {
+                        &Pattern::Literal {
                             value: Literal::Bool(ref b),
                             ..
                         } => {
@@ -49,7 +49,7 @@ impl Traverse<Type> for CaseCheck {
                                 panic!("redundant patterns")
                             }
                         }
-                        &Pattern::Var { .. } | &Pattern::Wildcard { .. } => defaulted = true,
+                        &Pattern::Variable { .. } | &Pattern::Wildcard { .. } => defaulted = true,
                         _ => unreachable!("expression and pattern doesn't match. It'a bug"),
                     }
                 }
@@ -66,7 +66,7 @@ impl Traverse<Type> for CaseCheck {
                         panic!("pattern after default case is redundant");
                     }
                     match pat {
-                        &Pattern::Lit {
+                        &Pattern::Literal {
                             value: Literal::Int(ref i),
                             ..
                         } => {
@@ -76,7 +76,7 @@ impl Traverse<Type> for CaseCheck {
                                 panic!("redundant patterns")
                             }
                         }
-                        &Pattern::Var { .. } | &Pattern::Wildcard { .. } => defaulted = true,
+                        &Pattern::Variable { .. } | &Pattern::Wildcard { .. } => defaulted = true,
                         _ => unreachable!("expression and pattern doesn't match. It'a bug"),
                     }
                 }
@@ -91,7 +91,7 @@ impl Traverse<Type> for CaseCheck {
                 for &mut (ref pat, _) in arms {
                     match pat {
                         &Pattern::Tuple { .. }
-                        | &Pattern::Var { .. }
+                        | &Pattern::Variable { .. }
                         | &Pattern::Wildcard { .. } => {
                             // ok
                         }

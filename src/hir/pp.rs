@@ -177,7 +177,7 @@ impl PP for HTy {
         match *self {
             Bool => write!(w, "bool")?,
             Int => write!(w, "int")?,
-            Float => write!(w, "float")?,
+            Real => write!(w, "real")?,
             Tuple(ref tys) => {
                 write!(w, "(")?;
                 inter_iter! {

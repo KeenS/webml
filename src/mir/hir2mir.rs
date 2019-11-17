@@ -18,7 +18,7 @@ fn from(ty: hir::HTy) -> EbbTy {
     match ty {
         Bool => EbbTy::Bool,
         Int => EbbTy::Int,
-        Float => EbbTy::Float,
+        Real => EbbTy::Float,
         Tuple(tys) => match tys.len() {
             0 => EbbTy::Unit,
             // TODO: treat 1-tuple as inner type
