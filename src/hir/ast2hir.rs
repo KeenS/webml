@@ -68,22 +68,8 @@ impl AST2HIR {
                 // ignore
                 vec![]
             }
-            ast::Statement::Fun { name, params, expr } => {
-                let fun = params
-                    .into_iter()
-                    .rev()
-                    .fold(self.conv_expr(expr), |body, (ty, sym)| Expr::Fun {
-                        param: (conv_ty(ty), sym),
-                        body_ty: body.ty(),
-                        body: Box::new(body),
-                        captures: vec![],
-                    });
-                vec![Val {
-                    rec: true,
-                    name,
-                    ty: fun.ty(),
-                    expr: fun,
-                }]
+            s @ ast::Statement::Fun { .. } => {
+                self.conv_statement(ast::Desugar.desugar_statement(s))
             }
             ast::Statement::Val { rec, pattern, expr } => {
                 match pattern {
