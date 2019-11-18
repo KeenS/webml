@@ -38,8 +38,8 @@ impl Traverse<Type> for CaseCheck {
                     .get_type(&type_name)
                     .expect("internal error: type not found")
                     .constructors
-                    .clone()
-                    .into_iter()
+                    .iter()
+                    .map(|(name, _)| name.clone())
                     .collect::<HashSet<_>>();
                 let mut matched = HashSet::new();
                 let mut defaulted = false;
@@ -108,12 +108,12 @@ impl Traverse<Type> for CaseCheck {
 }
 
 use crate::pass::Pass;
-impl<'a> Pass<(SymbolTable, ast::TypedAst), TypeError<'a>> for CaseCheck {
-    type Target = (SymbolTable, ast::TypedAst);
+impl<'a> Pass<(SymbolTable, TypedAst), TypeError<'a>> for CaseCheck {
+    type Target = (SymbolTable, TypedAst);
 
     fn trans<'b>(
         &'b mut self,
-        (symbol_table, mut ast): (SymbolTable, ast::TypedAst),
+        (symbol_table, mut ast): (SymbolTable, TypedAst),
         _: &Config,
     ) -> Result<'a, Self::Target> {
         self.symbol_table = Some(symbol_table);

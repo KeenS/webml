@@ -2,13 +2,13 @@ use crate::ast::*;
 use crate::util::PP;
 use std::io;
 
-impl<Ty> PP for (SymbolTable, AST<Ty>) {
+impl<Ty: PP> PP for (SymbolTable, AST<Ty>) {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         self.1.pp(w, indent)
     }
 }
 
-impl<Ty> PP for AST<Ty> {
+impl<Ty: PP> PP for AST<Ty> {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         for bind in &self.0 {
             bind.pp(w, indent)?;
@@ -18,7 +18,7 @@ impl<Ty> PP for AST<Ty> {
     }
 }
 
-impl<Ty> PP for Statement<Ty> {
+impl<Ty: PP> PP for Statement<Ty> {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         use Statement::*;
         match self {
@@ -26,9 +26,13 @@ impl<Ty> PP for Statement<Ty> {
                 write!(w, "datatype ")?;
                 name.pp(w, indent)?;
                 write!(w, " =")?;
-                inter_iter!(constructors, write!(w, " |")?, |name| =>{
+                inter_iter!(constructors, write!(w, " |")?, |(name, param)| =>{
                     write!(w, " ")?;
                     name.pp(w, indent)?;
+                    if let Some(param) = param {
+                        write!(w, " of ")?;
+                        param.pp(w, indent)?;
+                    }
                 });
                 Ok(())
             }
@@ -66,7 +70,7 @@ impl<Ty> PP for Statement<Ty> {
     }
 }
 
-impl<Ty> PP for Expr<Ty> {
+impl<Ty: PP> PP for Expr<Ty> {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         use crate::ast::Expr::*;
         match self {
@@ -191,6 +195,12 @@ impl PP for Type {
             }
             Datatype(name) => name.pp(w, indent)?,
         }
+        Ok(())
+    }
+}
+
+impl PP for () {
+    fn pp<W: io::Write>(&self, _: &mut W, _: usize) -> io::Result<()> {
         Ok(())
     }
 }

@@ -112,6 +112,11 @@ impl UnAlias {
                 &mut Proj { ref mut tuple, .. } => {
                     self.resolv_alias(tuple);
                 }
+                &mut Union {
+                    ref mut variant, ..
+                } => {
+                    self.resolv_alias(variant);
+                }
                 &mut Select { ref mut union, .. } => {
                     self.resolv_alias(union);
                 }

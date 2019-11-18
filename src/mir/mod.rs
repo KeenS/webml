@@ -144,6 +144,13 @@ pub enum Op {
         index: u32,
         tuple: Symbol,
     },
+    Union {
+        var: Symbol,
+        tys: Vec<EbbTy>,
+        /// 0-origin
+        index: u32,
+        variant: Symbol,
+    },
     Select {
         var: Symbol,
         ty: EbbTy,

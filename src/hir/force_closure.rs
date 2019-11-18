@@ -124,9 +124,10 @@ impl<'a> Traverse for Trav<'a> {
 
             Constructor {
                 ref mut ty,
+                ref mut arg,
                 ref mut descriminant,
             } => {
-                self.traverse_constructor(ty, descriminant);
+                self.traverse_constructor(ty, arg, descriminant);
                 return;
             }
 

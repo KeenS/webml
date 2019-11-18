@@ -50,7 +50,15 @@ impl HIR2MIR {
                 param: Box::new(self.trans_ty(*arg)),
                 ret: Box::new(self.trans_ty(*ret)),
             },
-            Datatype(_name) => EbbTy::Int,
+            Datatype(tys) => {
+                let union = tys
+                    .into_iter()
+                    .map(|(_, arg)| arg)
+                    .map(|arg| arg.map(|ty| self.trans_ty(ty)))
+                    .map(|arg| arg.unwrap_or(EbbTy::Unit))
+                    .collect();
+                EbbTy::Tuple(vec![EbbTy::Int, EbbTy::Union(union)])
+            }
         }
     }
 
@@ -326,9 +334,46 @@ impl HIR2MIR {
                 eb.closure(name, param_ty, body_ty, fname, envs);
                 eb
             }
-            Constructor { ty, descriminant } => {
+            Constructor {
+                ty,
+                arg,
+                descriminant,
+            } => {
                 assert_eq!(ty, ty_);
-                eb.lit(name, EbbTy::Int, Literal::Int(descriminant as i64));
+                let ty = match self.trans_ty(ty) {
+                    EbbTy::Tuple(tys) => tys,
+                    _ => unreachable!(),
+                };
+                assert_eq!(ty.len(), 2);
+                let arg_ty = match &ty[1] {
+                    EbbTy::Union(tys) => tys,
+                    _ => unreachable!(),
+                };
+                let desc_sym = self.gensym("descriminant");
+                eb.lit(
+                    desc_sym.clone(),
+                    EbbTy::Int,
+                    Literal::Int(descriminant as i64),
+                );
+                let arg_sym = self.gensym("arg");
+                // FIXME: create union
+                match arg {
+                    None => {
+                        let void_sym = self.gensym("arg");
+                        eb.tuple(void_sym.clone(), vec![], vec![]);
+                        eb.union(arg_sym.clone(), arg_ty.clone(), descriminant, void_sym);
+                    }
+                    Some(arg) => {
+                        eb.union(
+                            arg_sym.clone(),
+                            arg_ty.clone(),
+                            descriminant,
+                            force_symbol(*arg),
+                        );
+                    }
+                };
+                let tuple = vec![desc_sym, arg_sym];
+                eb.tuple(name, ty, tuple);
                 eb
             }
             Lit { ty, value } => {

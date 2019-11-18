@@ -56,6 +56,7 @@ fn parse_bool_true() {
             },
             expr: Expr::Constructor {
                 ty: (),
+                arg: None,
                 name: Symbol::new("true")
             },
         },])
@@ -76,6 +77,7 @@ fn parse_bool_false() {
             },
             expr: Expr::Constructor {
                 ty: (),
+                arg: None,
                 name: Symbol::new("false")
             },
         },])
@@ -114,7 +116,7 @@ fn parse_datatype_single() {
         ast,
         AST(vec![Statement::Datatype {
             name: Symbol::new("hoge"),
-            constructors: vec![Symbol::new("Hoge")]
+            constructors: vec![(Symbol::new("Hoge"), None)]
         },])
     )
 }
@@ -128,9 +130,9 @@ fn parse_datatype_multi() {
         AST(vec![Statement::Datatype {
             name: Symbol::new("hoge"),
             constructors: vec![
-                Symbol::new("Hoge"),
-                Symbol::new("Fuga"),
-                Symbol::new("Piyo")
+                (Symbol::new("Hoge"), None),
+                (Symbol::new("Fuga"), None),
+                (Symbol::new("Piyo"), None)
             ]
         },])
     )
@@ -218,14 +220,17 @@ fn parse_if() {
                 ty: (),
                 cond: Box::new(Expr::Constructor {
                     ty: (),
+                    arg: None,
                     name: Symbol::new("true")
                 }),
                 then: Box::new(Expr::Constructor {
                     ty: (),
+                    arg: None,
                     name: Symbol::new("false")
                 }),
                 else_: Box::new(Expr::Constructor {
                     ty: (),
+                    arg: None,
                     name: Symbol::new("true")
                 }),
             },
@@ -249,27 +254,32 @@ fn parse_case_bool() {
                 ty: (),
                 cond: Box::new(Expr::Constructor {
                     ty: (),
+                    arg: None,
                     name: Symbol::new("true")
                 }),
                 clauses: vec![
                     (
                         Pattern::Constructor {
                             ty: (),
+                            arg: None,
                             name: Symbol::new("true")
                         },
                         Expr::Constructor {
                             ty: (),
+                            arg: None,
                             name: Symbol::new("false")
                         },
                     ),
                     (
                         Pattern::Constructor {
                             ty: (),
-                            name: Symbol::new("false")
+                            arg: None,
+                            name: Symbol::new("false"),
                         },
                         Expr::Constructor {
                             ty: (),
-                            name: Symbol::new("true")
+                            name: Symbol::new("true"),
+                            arg: None,
                         },
                     ),
                 ],
@@ -294,26 +304,30 @@ fn parse_case_var() {
                 ty: (),
                 cond: Box::new(Expr::Constructor {
                     ty: (),
+                    arg: None,
                     name: Symbol::new("true")
                 }),
                 clauses: vec![
                     (
                         Pattern::Constructor {
                             ty: (),
+                            arg: None,
                             name: Symbol::new("true")
                         },
                         Expr::Constructor {
                             ty: (),
+                            arg: None,
                             name: Symbol::new("false")
                         },
                     ),
                     (
                         Pattern::Variable {
-                            name: Symbol::new("x"),
                             ty: (),
+                            name: Symbol::new("x"),
                         },
                         Expr::Constructor {
                             ty: (),
+                            arg: None,
                             name: Symbol::new("true")
                         },
                     ),
@@ -339,16 +353,19 @@ fn parse_case_wildcard() {
                 ty: (),
                 cond: Box::new(Expr::Constructor {
                     ty: (),
+                    arg: None,
                     name: Symbol::new("true")
                 }),
                 clauses: vec![
                     (
                         Pattern::Constructor {
                             ty: (),
+                            arg: None,
                             name: Symbol::new("true")
                         },
                         Expr::Constructor {
                             ty: (),
+                            arg: None,
                             name: Symbol::new("false")
                         },
                     ),
@@ -356,6 +373,7 @@ fn parse_case_wildcard() {
                         Pattern::Wildcard { ty: () },
                         Expr::Constructor {
                             ty: (),
+                            arg: None,
                             name: Symbol::new("true")
                         },
                     ),

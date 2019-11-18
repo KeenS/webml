@@ -137,7 +137,17 @@ impl PP for Pattern {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         match self {
             Pattern::Constant { value, .. } => write!(w, "{}", value),
-            Pattern::Constructor { descriminant, .. } => write!(w, "{}", descriminant),
+            Pattern::Constructor {
+                descriminant, arg, ..
+            } => match arg {
+                None => write!(w, "{}", descriminant),
+                Some((_, sym)) => {
+                    write!(w, "{}(", descriminant)?;
+                    sym.pp(w, indent)?;
+                    write!(w, ")")?;
+                    Ok(())
+                }
+            },
             Pattern::Tuple { tuple, .. } => {
                 write!(w, "(")?;
                 inter_iter! {
@@ -179,8 +189,12 @@ impl PP for HTy {
             Datatype(descriminants) => inter_iter!(
                 descriminants.iter(),
                 write!(w, " | ")?,
-                |descriminanst| => {
+                |(descriminanst, param)| => {
                     write!(w,"{}", descriminanst)?;
+                    if let Some(param) = param {
+                        write!(w," of ")?;
+                        param.pp(w, indent)?;
+                    }
                 }
             ),
         }

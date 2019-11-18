@@ -74,6 +74,7 @@ impl Transform<Type> for Desugar {
                 (
                     Pattern::Constructor {
                         ty: Type::Datatype(Symbol::new("bool")),
+                        arg: None,
                         name: Symbol::new("true"),
                     },
                     *then,
@@ -81,6 +82,7 @@ impl Transform<Type> for Desugar {
                 (
                     Pattern::Constructor {
                         ty: Type::Datatype(Symbol::new("bool")),
+                        arg: None,
                         name: Symbol::new("false"),
                     },
                     *else_,

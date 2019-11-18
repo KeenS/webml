@@ -70,7 +70,10 @@ named!(bind_fun <&str, Statement<()>>, do_parse!(
         })
 ));
 
-named!(constructor_def <&str, Symbol>, do_parse!(name: symbol >> (name)));
+named!(constructor_def <&str, (Symbol, Option<Type>)>, do_parse!(
+    name: symbol >>
+     //param: opt!(do_parse!(multispace >> tag_s!("of") >> multispace >>))
+        ((name, None))));
 
 named!(expr <&str, Expr<()>>, alt_complete!(
     expr_bind |
@@ -279,8 +282,8 @@ named!(expr1_float <&str, Expr<()>>, map!(double_s, |s| Expr::Literal{
     value: Literal::Real(s)}));
 
 named!(expr1_bool <&str, Expr<()>>, alt!(
-    map!(tag!("true"),  |_| Expr::Constructor{ name: Symbol::new("true"), ty: ()}) |
-    map!(tag!("false"), |_| Expr::Constructor{ name: Symbol::new("false"), ty: ()})));
+    map!(tag!("true"),  |_| Expr::Constructor{ name: Symbol::new("true"),  arg: None, ty: ()}) |
+    map!(tag!("false"), |_| Expr::Constructor{ name: Symbol::new("false"), arg: None,ty: ()})));
 
 named!(expr1_paren <&str, Expr<()>>, do_parse!(
     tag!("(") >>
@@ -328,8 +331,8 @@ named!(pattern <&str, Pattern<()>>, alt_complete!(
     pattern_wildcard));
 
 named!(pattern_bool <&str, Pattern<()>>, alt!(
-    map!(tag!("true"),  |_| Pattern::Constructor{ name: Symbol::new("true"), ty: ()}) |
-    map!(tag!("false"), |_| Pattern::Constructor{ name: Symbol::new("false"), ty: ()})));
+    map!(tag!("true"),  |_| Pattern::Constructor{ name: Symbol::new("true"), arg: None, ty: ()}) |
+    map!(tag!("false"), |_| Pattern::Constructor{ name: Symbol::new("false"), arg: None, ty: ()})));
 
 named!(pattern_tuple <&str, Pattern<()>>, do_parse!(
     tag!("(") >>

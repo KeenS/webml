@@ -37,140 +37,72 @@ impl EBBBuilder {
     }
 
     pub fn lit(&mut self, var: Symbol, ty: EbbTy, value: Literal) -> &mut Self {
-        self.push(Op::Lit {
-            var,
-            ty,
-            value,
-        });
+        self.push(Op::Lit { var, ty, value });
         self
     }
 
     pub fn alias(&mut self, var: Symbol, ty: EbbTy, sym: Symbol) -> &mut Self {
-        self.push(Op::Alias {
-            var,
-            ty,
-            sym,
-        });
+        self.push(Op::Alias { var, ty, sym });
         self
     }
 
     pub fn add(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
-        self.push(Op::Add {
-            var,
-            ty,
-            l,
-            r,
-        });
+        self.push(Op::Add { var, ty, l, r });
         self
     }
 
     pub fn sub(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
-        self.push(Op::Sub {
-            var,
-            ty,
-            l,
-            r,
-        });
+        self.push(Op::Sub { var, ty, l, r });
         self
     }
 
     pub fn mul(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
-        self.push(Op::Mul {
-            var,
-            ty,
-            l,
-            r,
-        });
+        self.push(Op::Mul { var, ty, l, r });
         self
     }
 
     pub fn div_int(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
-        self.push(Op::DivInt {
-            var,
-            ty,
-            l,
-            r,
-        });
+        self.push(Op::DivInt { var, ty, l, r });
         self
     }
 
     pub fn div_float(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
-        self.push(Op::DivFloat {
-            var,
-            ty,
-            l,
-            r,
-        });
+        self.push(Op::DivFloat { var, ty, l, r });
         self
     }
 
     pub fn mod_(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
-        self.push(Op::Mod {
-            var,
-            ty,
-            l,
-            r,
-        });
+        self.push(Op::Mod { var, ty, l, r });
         self
     }
 
     pub fn eq(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
-        self.push(Op::Eq {
-            var,
-            ty,
-            l,
-            r,
-        });
+        self.push(Op::Eq { var, ty, l, r });
         self
     }
 
     pub fn neq(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
-        self.push(Op::Neq {
-            var,
-            ty,
-            l,
-            r,
-        });
+        self.push(Op::Neq { var, ty, l, r });
         self
     }
 
     pub fn gt(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
-        self.push(Op::Gt {
-            var,
-            ty,
-            l,
-            r,
-        });
+        self.push(Op::Gt { var, ty, l, r });
         self
     }
 
     pub fn ge(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
-        self.push(Op::Ge {
-            var,
-            ty,
-            l,
-            r,
-        });
+        self.push(Op::Ge { var, ty, l, r });
         self
     }
 
     pub fn lt(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
-        self.push(Op::Lt {
-            var,
-            ty,
-            l,
-            r,
-        });
+        self.push(Op::Lt { var, ty, l, r });
         self
     }
 
     pub fn le(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
-        self.push(Op::Le {
-            var,
-            ty,
-            l,
-            r,
-        });
+        self.push(Op::Le { var, ty, l, r });
         self
     }
 
@@ -199,31 +131,17 @@ impl EBBBuilder {
         fun: BIF,
         args: Vec<Symbol>,
     ) -> &mut Self {
-        self.push(Op::BuiltinCall {
-            var,
-            ty,
-            fun,
-            args,
-        });
+        self.push(Op::BuiltinCall { var, ty, fun, args });
         self
     }
 
     pub fn call(&mut self, var: Symbol, ty: EbbTy, fun: Symbol, args: Vec<Symbol>) -> &mut Self {
-        self.push(Op::Call {
-            var,
-            ty,
-            fun,
-            args,
-        });
+        self.push(Op::Call { var, ty, fun, args });
         self
     }
 
     pub fn tuple(&mut self, var: Symbol, tys: Vec<EbbTy>, tuple: Vec<Symbol>) -> &mut Self {
-        self.push(Op::Tuple {
-            var,
-            tys,
-            tuple,
-        });
+        self.push(Op::Tuple { var, tys, tuple });
         self
     }
 
@@ -233,6 +151,32 @@ impl EBBBuilder {
             ty,
             index,
             tuple,
+        });
+        self
+    }
+
+    pub fn union(
+        &mut self,
+        var: Symbol,
+        tys: Vec<EbbTy>,
+        index: u32,
+        variant: Symbol,
+    ) -> &mut Self {
+        self.push(Op::Union {
+            var,
+            tys,
+            index,
+            variant,
+        });
+        self
+    }
+
+    pub fn select(&mut self, var: Symbol, ty: EbbTy, index: u32, union: Symbol) -> &mut Self {
+        self.push(Op::Select {
+            var,
+            ty,
+            index,
+            union,
         });
         self
     }

@@ -221,7 +221,18 @@ impl<'a> Scope<'a> {
                     index,
                 }
             }
-            Constructor { descriminant, ty } => Constructor { descriminant, ty },
+            Constructor {
+                descriminant,
+                arg,
+                ty,
+            } => {
+                let arg = arg.map(|a| Box::new(self.conv_expr(cls, *a, None)));
+                Constructor {
+                    descriminant,
+                    arg,
+                    ty,
+                }
+            }
             Sym { name, ty } => Sym { ty, name },
             expr @ Closure { .. } | expr @ Lit { .. } => expr,
         }

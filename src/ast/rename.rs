@@ -127,11 +127,15 @@ impl<'a> Scope<'a> {
     }
 }
 
-impl<'a, Ty> util::Traverse<Ty> for Scope<'a> {
-    fn traverse_datatype<'b, 'c>(&'b mut self, name: &mut Symbol, constructors: &mut Vec<Symbol>) {
+impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
+    fn traverse_datatype<'b, 'c>(
+        &'b mut self,
+        name: &mut Symbol,
+        constructors: &mut Vec<(Symbol, Option<Type>)>,
+    ) {
         let scope = self;
         scope.new_type(name);
-        for cname in constructors.iter_mut() {
+        for (cname, _) in constructors.iter_mut() {
             scope.new_constructor(cname);
             // handle arg types
         }
@@ -245,7 +249,7 @@ impl Rename {
         symbol_table.register_type(
             Symbol::new("bool"),
             TypeInfo {
-                constructors: vec![Symbol::new("false"), Symbol::new("true")],
+                constructors: vec![(Symbol::new("false"), None), (Symbol::new("true"), None)],
             },
         );
 
@@ -272,7 +276,7 @@ impl Rename {
     }
 }
 
-impl<E, Ty> Pass<AST<Ty>, E> for Rename {
+impl<E, Ty: Clone> Pass<AST<Ty>, E> for Rename {
     type Target = (SymbolTable, AST<Ty>);
 
     fn trans(&mut self, mut ast: AST<Ty>, _: &Config) -> ::std::result::Result<Self::Target, E> {

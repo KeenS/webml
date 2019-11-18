@@ -79,6 +79,7 @@ pub enum Expr {
     },
     Constructor {
         ty: HTy,
+        arg: Option<Box<Expr>>,
         descriminant: u32,
     },
     Sym {
@@ -93,10 +94,23 @@ pub enum Expr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Pattern {
-    Constant { value: i64, ty: HTy },
-    Constructor { descriminant: u32, ty: HTy },
-    Var { name: Symbol, ty: HTy },
-    Tuple { tys: Vec<HTy>, tuple: Vec<Symbol> },
+    Constant {
+        value: i64,
+        ty: HTy,
+    },
+    Constructor {
+        descriminant: u32,
+        arg: Option<(HTy, Symbol)>,
+        ty: HTy,
+    },
+    Var {
+        name: Symbol,
+        ty: HTy,
+    },
+    Tuple {
+        tys: Vec<HTy>,
+        tuple: Vec<Symbol>,
+    },
 }
 
 impl Pattern {
@@ -126,7 +140,7 @@ pub enum HTy {
     Real,
     Tuple(Vec<HTy>),
     Fun(Box<HTy>, Box<HTy>),
-    Datatype(Vec<(u32)>),
+    Datatype(Vec<(u32, Option<HTy>)>),
 }
 
 impl Expr {
