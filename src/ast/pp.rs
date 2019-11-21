@@ -155,7 +155,16 @@ impl<Ty> PP for Pattern<Ty> {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         match self {
             Pattern::Constant { value, .. } => write!(w, "{}", value),
-            Pattern::Constructor { name, .. } => name.pp(w, indent),
+            Pattern::Constructor { name, arg, .. } => {
+                name.pp(w, indent)?;
+                if let Some((_, arg)) = arg {
+                    // TODO: handle cases when its in function args
+                    write!(w, " ")?;
+                    arg.pp(w, indent)?;
+                }
+
+                Ok(())
+            }
             Pattern::Tuple { tuple, .. } => {
                 write!(w, "(")?;
                 inter_iter! {

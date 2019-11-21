@@ -371,6 +371,54 @@ fn parse_case_bool() {
 }
 
 #[test]
+fn parse_case_constructor() {
+    let input = r#"val x = case NONE of SOME x => false | NONE => true"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![Statement::Val {
+            rec: false,
+            pattern: Pattern::Variable {
+                name: Symbol::new("x"),
+                ty: (),
+            },
+            expr: Expr::Case {
+                ty: (),
+                cond: Box::new(Expr::Symbol {
+                    ty: (),
+                    name: Symbol::new("NONE")
+                }),
+                clauses: vec![
+                    (
+                        Pattern::Constructor {
+                            ty: (),
+                            name: Symbol::new("SOME"),
+                            arg: Some(((), Symbol::new("x"))),
+                        },
+                        Expr::Constructor {
+                            ty: (),
+                            arg: None,
+                            name: Symbol::new("false")
+                        },
+                    ),
+                    (
+                        Pattern::Variable {
+                            ty: (),
+                            name: Symbol::new("NONE"),
+                        },
+                        Expr::Constructor {
+                            ty: (),
+                            name: Symbol::new("true"),
+                            arg: None,
+                        },
+                    ),
+                ],
+            },
+        },])
+    )
+}
+
+#[test]
 fn parse_case_var() {
     let input = r#"val x = case true of true => false | x => true"#;
     let ast = parse(input).unwrap();

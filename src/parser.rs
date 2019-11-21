@@ -49,7 +49,7 @@ named!(bind_datatype <&str, Statement<()>>, do_parse!(
 named!(bind_val <&str, Statement<()>>, do_parse!(
     tag_s!("val") >>
         multispace >>
-        pat: pattern >>
+        pat: pattern_single >>
         opt!(multispace) >>
         tag_s!("=") >>
         opt!(multispace) >>
@@ -60,7 +60,7 @@ named!(bind_val <&str, Statement<()>>, do_parse!(
 named!(bind_fun <&str, Statement<()>>, do_parse!(
     tag_s!("fun") >> multispace >>
         name: symbol >> opt!(multispace) >>
-        params: separated_nonempty_list!(multispace, pattern) >>
+        params: separated_nonempty_list!(multispace, pattern_multi) >>
         opt!(multispace) >>
         tag_s!("=") >>
         opt!(multispace) >>
@@ -169,7 +169,7 @@ named!(expr_case <&str, Expr<()>>, do_parse!(
         clauses: separated_nonempty_list!(
             do_parse!(opt!(multispace) >> tag!("|") >> opt!(multispace) >> (())),
             do_parse!(
-                pat: pattern >> opt!(multispace) >>
+                pat: pattern_single >> opt!(multispace) >>
                     tag_s!("=>") >> opt!(multispace) >>
                     expr: expr >>
                     (pat, expr))) >>
@@ -381,7 +381,15 @@ named!(symbol <&str, Symbol>, do_parse!(
              ) >>
         sym: alphanumeric >> (Symbol::new(sym.to_string()))));
 
-named!(pattern <&str, Pattern<()>>, alt_complete!(
+named!(pattern_single <&str, Pattern<()>>, alt_complete!(
+    pattern_bool |
+    pattern_int |
+    pattern_tuple |
+    pattern_constructor |
+    pattern_var |
+    pattern_wildcard));
+
+named!(pattern_multi <&str, Pattern<()>>, alt_complete!(
     pattern_bool |
     pattern_int |
     pattern_tuple |
@@ -391,6 +399,10 @@ named!(pattern <&str, Pattern<()>>, alt_complete!(
 named!(pattern_bool <&str, Pattern<()>>, alt!(
     map!(tag!("true"),  |_| Pattern::Constructor{ name: Symbol::new("true"), arg: None, ty: ()}) |
     map!(tag!("false"), |_| Pattern::Constructor{ name: Symbol::new("false"), arg: None, ty: ()})));
+
+named!(pattern_int <&str, Pattern<()>>, map!(digit, |s: &str| Pattern::Constant{
+    ty: (),
+    value: s.parse().unwrap()}));
 
 named!(pattern_tuple <&str, Pattern<()>>, do_parse!(
     tag!("(") >>
@@ -410,6 +422,15 @@ named!(pattern_tuple <&str, Pattern<()>>, do_parse!(
         ))
 );
 
+// require constructor to have arg for now.
+// it will be converted in later phases
+named!(pattern_constructor <&str, Pattern<()>>, do_parse!(
+    name: symbol >>
+        multispace >>
+        arg: symbol >>
+        (Pattern::Constructor { name, arg: Some(((), arg)), ty: ()}))
+);
+
 named!(pattern_var <&str, Pattern<()>>, map!(symbol, |name| Pattern::Variable {
     name: name,
     ty: ()
@@ -418,10 +439,6 @@ named!(pattern_var <&str, Pattern<()>>, map!(symbol, |name| Pattern::Variable {
 named!(pattern_wildcard <&str, Pattern<()>>, map!(tag!("_"), |name| Pattern::Wildcard {
     ty: ()
 }));
-
-named!(pattern_int <&str, Pattern<()>>, map!(digit, |s: &str| Pattern::Constant{
-    ty: (),
-    value: s.parse().unwrap()}));
 
 pub fn parse(input: &str) -> ::std::result::Result<UntypedAst, Err<&str>> {
     let iresult = top(input);

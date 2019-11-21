@@ -75,15 +75,27 @@ impl<'a> Scope<'a> {
     fn new_constructor(&mut self, symbol: &mut Symbol) {
         let pos = self.pos - 1;
         let new_id = self.id.next();
-        self.variable_tables[pos].insert(symbol.clone(), new_id);
+        self.constructor_tables[pos].insert(symbol.clone(), new_id);
         symbol.1 = new_id;
     }
 
     fn new_symbol_pattern<Ty>(&mut self, pat: &mut Pattern<Ty>) {
         use Pattern::*;
         match pat {
-            Constructor { .. } | Wildcard { .. } | Constant { .. } => (),
-            Variable { name, .. } => self.new_variable(name),
+            Wildcard { .. } | Constant { .. } => (),
+            Constructor { name, arg, .. } => {
+                self.rename_constructor(name);
+                if let Some((_, name)) = arg {
+                    self.new_variable(name)
+                }
+            }
+            Variable { name, .. } => {
+                if self.is_constructor(name) {
+                    self.rename_constructor(name)
+                } else {
+                    self.new_variable(name)
+                }
+            }
             Tuple { tuple, .. } => {
                 for (_, sym) in tuple {
                     self.new_variable(sym)
