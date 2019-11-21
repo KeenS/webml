@@ -114,13 +114,13 @@ pub enum Pattern {
 }
 
 impl Pattern {
-    pub fn match_key(&self) -> u64 {
+    pub fn match_key(&self) -> u32 {
         use self::Pattern::*;
         // FIXME do not panic
         match self {
-            Constant { value, .. } => *value as u64,
+            Constant { value, .. } => *value as u32,
             Tuple { .. } => panic!("bug: non-variant expression does not have keys"),
-            Constructor { descriminant, .. } => *descriminant as u64,
+            Constructor { descriminant, .. } => *descriminant as u32,
             Var { .. } => panic!("bug: default like branch does not have keys"),
         }
     }

@@ -3,6 +3,7 @@ use crate::lir::*;
 use crate::mir;
 use crate::pass::Pass;
 use crate::prim::*;
+use log::debug;
 use std::collections::HashMap;
 
 pub struct MIR2LIR;
@@ -69,6 +70,7 @@ impl MIR2LIR {
             for ebb in body.iter() {
                 let mut ops = Vec::new();
                 for op in ebb.body.iter() {
+                    debug!(target: "mir_to_lir", "op: {:?}", op);
                     match op {
                         &m::Lit {
                             ref var, ref value, ..
@@ -316,11 +318,7 @@ impl MIR2LIR {
                                     LTy::I64 => MoveI64,
                                     LTy::Ptr => MoveI64,
                                     LTy::FPtr => MoveI64,
-                                    LTy::Unit =>
-                                    // do nothing
-                                    {
-                                        break
-                                    }
+                                    LTy::Unit => MoveI32,
                                 };
                                 ops.push(ctor(reg!(var), reg!(variant)));
                                 break;
@@ -622,6 +620,10 @@ impl MIR2LIR {
                     &mir::Op::Tuple { ref var, .. } | &mir::Op::Closure { ref var, .. } => {
                         intern!(LTy::Ptr, var);
                     }
+                    &mir::Op::Select {
+                        ref var, ref ty, ..
+                    } => intern!(self.ebbty_to_lty(ty), var),
+                    &mir::Op::Union { ref var, .. } => intern!(LTy::Ptr, var),
                     _ => (),
                 }
             }

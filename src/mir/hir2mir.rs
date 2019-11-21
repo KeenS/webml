@@ -203,7 +203,9 @@ impl HIR2MIR {
             }
             Case { ty, expr, arms } => {
                 let joinlabel = self.genlabel("join");
-                let (eb, var) = self.trans_expr_block(fb, eb, expr.ty(), *expr);
+                let exprty = expr.ty();
+                let (mut eb, var) = self.trans_expr_block(fb, eb, exprty.clone(), *expr);
+
                 let (default, arms): (Vec<_>, _) = arms
                     .into_iter()
                     .partition(|&(ref pat, _)| pat.is_irrefutable());
@@ -228,19 +230,63 @@ impl HIR2MIR {
                     .iter()
                     .map(|&(key, ref label, _)| (key, label.clone(), true))
                     .collect::<Vec<_>>();
+
+                let descriminant = self.gensym("descriminant");
+                let arg = self.gensym("arg");
+                enum MatchTy {
+                    Tuple(Vec<EbbTy>),
+                    Datatype(Vec<EbbTy>),
+                    Int,
+                }
+
+                let exprty = match exprty {
+                    hir::HTy::Tuple(tys) => {
+                        MatchTy::Tuple(tys.into_iter().map(|ty| self.trans_ty(ty)).collect())
+                    }
+                    hir::HTy::Datatype(tys) => MatchTy::Datatype(
+                        tys.into_iter()
+                            .map(|(_, arg)| arg)
+                            .map(|ty| ty.map(|ty| self.trans_ty(ty)).unwrap_or(EbbTy::Unit))
+                            .collect(),
+                    ),
+                    hir::HTy::Int => MatchTy::Int,
+                    _ => unreachable!(),
+                };
+                match &exprty {
+                    MatchTy::Tuple(_) => {
+                        // noop
+                    }
+                    MatchTy::Datatype(tys) => {
+                        eb.proj(descriminant.clone(), EbbTy::Int, 0, var.clone());
+                        eb.proj(arg.clone(), EbbTy::Union(tys.clone()), 1, var.clone());
+                    }
+                    MatchTy::Int => {
+                        eb.alias(descriminant.clone(), EbbTy::Int, var.clone());
+                    }
+                }
                 // an easy optimization of non branching case
                 let ebb;
                 if labels.is_empty() && default_label.is_some() {
                     let (label, is_forward) = default_label.clone().unwrap();
-                    ebb = eb.jump(label, is_forward, vec![var]);
+                    ebb = eb.jump(label, is_forward, vec![var.clone()]);
                 } else {
-                    ebb = eb.branch(var, labels, default_label.clone());
+                    ebb = eb.branch(descriminant, labels, default_label.clone());
                 }
 
                 fb.add_ebb(ebb);
 
-                for (_key, label, arm) in arms {
-                    let eb = EBBBuilder::new(label, Vec::new());
+                for (key, label, arm) in arms {
+                    let mut eb = EBBBuilder::new(label, Vec::new());
+                    match &exprty {
+                        MatchTy::Datatype(tys) => {
+                            let vararg = self.gensym("vararg");
+                            let argty = tys[key as usize].clone();
+                            eb.select(vararg, argty, key, arg.clone());
+                        }
+                        _ => {
+                            //noop
+                        }
+                    }
                     let (eb, var) = self.trans_expr_block(fb, eb, ty.clone(), arm);
                     let ebb = eb.jump(joinlabel.clone(), true, vec![var]);
                     fb.add_ebb(ebb);
@@ -360,7 +406,8 @@ impl HIR2MIR {
                 match arg {
                     None => {
                         let void_sym = self.gensym("arg");
-                        eb.tuple(void_sym.clone(), vec![], vec![]);
+                        // eb.tuple(void_sym.clone(), vec![], vec![]);
+                        eb.lit(void_sym.clone(), EbbTy::Int, Literal::Int(0));
                         eb.union(arg_sym.clone(), arg_ty.clone(), descriminant, void_sym);
                     }
                     Some(arg) => {

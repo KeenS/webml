@@ -184,7 +184,7 @@ impl EBBBuilder {
     pub fn branch(
         mut self,
         cond: Symbol,
-        clauses: Vec<(u64, Symbol, bool)>,
+        clauses: Vec<(u32, Symbol, bool)>,
         default: Option<(Symbol, bool)>,
     ) -> EBB {
         self.push(Op::Branch {

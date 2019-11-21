@@ -4,6 +4,7 @@ use std::fs;
 use webml::{compile_str, Config};
 
 fn main() {
+    env_logger::init();
     let matches = app_from_crate!()
         .arg(
             Arg::with_name("PRINT_IR")
