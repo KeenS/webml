@@ -72,8 +72,11 @@ named!(bind_fun <&str, Statement<()>>, do_parse!(
 
 named!(constructor_def <&str, (Symbol, Option<Type>)>, do_parse!(
     name: symbol >>
-     //param: opt!(do_parse!(multispace >> tag_s!("of") >> multispace >>))
-        ((name, None))));
+        param: opt!(complete!(do_parse!(
+            multispace >> tag_s!("of") >> multispace >>
+                ty: typename >>
+                (ty)))) >>
+        ((name, param))));
 
 named!(expr <&str, Expr<()>>, alt_complete!(
     expr_bind |
@@ -311,6 +314,61 @@ named!(expr1_tuple <&str, Expr<()>>, do_parse!(
             }
         ))
 );
+
+named!(typename <&str, Type>, do_parse!(ty: typename0 >> (ty)));
+
+named!(typename0 <&str, Type>, alt_complete!(typename0_fun | typename1));
+
+named!(typename1 <&str, Type>, alt_complete!(
+    typename1_tuple |
+    typename2
+));
+
+named!(typename2 <&str, Type>, alt_complete!(
+    typename2_int |
+    typename2_real |
+    typename2_unit |
+    typename2_paren |
+    typename2_datatype
+));
+
+named!(typename0_fun <&str, Type>, do_parse!(
+        arg: typename1
+            >> opt!(multispace)
+            >> tag!("->")
+            >> opt!(multispace)
+            >> ret: typename
+            >> (Type::Fun(Box::new(arg), Box::new(ret)))
+    )
+);
+
+named!(typename1_tuple <&str, Type>, do_parse!(
+    tys: many1!(complete!(do_parse!(
+        t: typename2 >> opt!(multispace) >>
+            tag!("*") >> opt!(multispace) >> (t)))
+    ) >>
+        ty: typename2 >>
+        (
+            {
+                let mut tys = tys;
+                tys.push(ty);
+                Type::Tuple(tys)
+            }
+        )));
+
+named!(typename2_int <&str, Type>, map!(tag!("int"),  |_| Type::Int));
+named!(typename2_real <&str, Type>, map!(tag!("real"),  |_| Type::Real));
+named!(typename2_unit <&str, Type>, map!(tag!("()"),  |_| Type::Tuple(vec![])));
+named!(typename2_paren <&str, Type>, do_parse!(
+    tag!("(") >>
+         opt!(multispace) >>
+         ty: typename >>
+         opt!(multispace) >>
+         tag!(")") >>
+    (ty))
+);
+
+named!(typename2_datatype <&str, Type>, map!(symbol,  |name| Type::Datatype(name)));
 
 // TODO: use verify
 named!(symbol <&str, Symbol>, do_parse!(

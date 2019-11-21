@@ -1,4 +1,4 @@
-use webml::ast::{Expr, Pattern, Statement, AST};
+use webml::ast::{Expr, Pattern, Statement, Type, AST};
 use webml::parse;
 use webml::prim::*;
 
@@ -133,6 +133,88 @@ fn parse_datatype_multi() {
                 (Symbol::new("Hoge"), None),
                 (Symbol::new("Fuga"), None),
                 (Symbol::new("Piyo"), None)
+            ]
+        },])
+    )
+}
+
+#[test]
+fn parse_datatype_arg1() {
+    let input = r#"datatype hoge = Hoge of int | Fuga of real"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![Statement::Datatype {
+            name: Symbol::new("hoge"),
+            constructors: vec![
+                (Symbol::new("Hoge"), Some(Type::Int)),
+                (Symbol::new("Fuga"), Some(Type::Real))
+            ]
+        },])
+    )
+}
+
+#[test]
+fn parse_datatype_arg2() {
+    let input = r#"datatype hoge = Hoge of int | Fuga of real | Piyo of bool -> real -> int"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![Statement::Datatype {
+            name: Symbol::new("hoge"),
+            constructors: vec![
+                (Symbol::new("Hoge"), Some(Type::Int)),
+                (Symbol::new("Fuga"), Some(Type::Real)),
+                (
+                    Symbol::new("Piyo"),
+                    Some(Type::Fun(
+                        Box::new(Type::Datatype(Symbol::new("bool"))),
+                        Box::new(Type::Fun(Box::new(Type::Real), Box::new(Type::Int)))
+                    ))
+                )
+            ]
+        },])
+    )
+}
+
+#[test]
+fn parse_datatype_tuple() {
+    let input = r#"datatype hoge = Hoge of int * real"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![Statement::Datatype {
+            name: Symbol::new("hoge"),
+            constructors: vec![(
+                Symbol::new("Hoge"),
+                Some(Type::Tuple(vec![Type::Int, Type::Real]))
+            ),]
+        },])
+    )
+}
+
+#[test]
+fn parse_datatype_arg3() {
+    let input =
+        r#"datatype hoge = Hoge of int | Fuga of real | Piyo of bool -> (real -> int) * real"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![Statement::Datatype {
+            name: Symbol::new("hoge"),
+            constructors: vec![
+                (Symbol::new("Hoge"), Some(Type::Int)),
+                (Symbol::new("Fuga"), Some(Type::Real)),
+                (
+                    Symbol::new("Piyo"),
+                    Some(Type::Fun(
+                        Box::new(Type::Datatype(Symbol::new("bool"))),
+                        Box::new(Type::Tuple(vec![
+                            Type::Fun(Box::new(Type::Real), Box::new(Type::Int)),
+                            Type::Real
+                        ]))
+                    ))
+                )
             ]
         },])
     )
