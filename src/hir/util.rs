@@ -63,8 +63,9 @@ pub trait Traverse {
             } => self.traverse_proj(ty, index, tuple),
             Constructor {
                 ref mut ty,
+                ref mut arg,
                 ref mut descriminant,
-            } => self.traverse_constructor(ty, descriminant),
+            } => self.traverse_constructor(ty, arg, descriminant),
             Sym {
                 ref mut ty,
                 ref mut name,
@@ -143,7 +144,16 @@ pub trait Traverse {
         self.traverse_expr(tuple)
     }
 
-    fn traverse_constructor(&mut self, _ty: &mut HTy, _name: &mut u32) {}
+    fn traverse_constructor(
+        &mut self,
+        _ty: &mut HTy,
+        arg: &mut Option<Box<Expr>>,
+        _name: &mut u32,
+    ) {
+        if let Some(arg) = arg {
+            self.traverse_expr(&mut *arg)
+        }
+    }
 
     fn traverse_sym(&mut self, _ty: &mut HTy, _name: &mut Symbol) {}
 
@@ -187,7 +197,11 @@ pub trait Transform {
                 body_ty,
                 fname,
             } => self.transform_closure(envs, param_ty, body_ty, fname),
-            Constructor { ty, descriminant } => self.transform_constructor(ty, descriminant),
+            Constructor {
+                ty,
+                arg,
+                descriminant,
+            } => self.transform_constructor(ty, arg, descriminant),
             Sym { ty, name } => self.transform_sym(ty, name),
             Lit { ty, value } => self.transform_lit(ty, value),
         }
@@ -287,8 +301,17 @@ pub trait Transform {
         }
     }
 
-    fn transform_constructor(&mut self, ty: HTy, descriminant: u32) -> Expr {
-        Expr::Constructor { ty, descriminant }
+    fn transform_constructor(
+        &mut self,
+        ty: HTy,
+        arg: Option<Box<Expr>>,
+        descriminant: u32,
+    ) -> Expr {
+        Expr::Constructor {
+            ty,
+            arg,
+            descriminant,
+        }
     }
 
     fn transform_sym(&mut self, ty: HTy, name: Symbol) -> Expr {

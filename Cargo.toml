@@ -8,6 +8,8 @@ edition = "2018"
 nom = { version = "2.0.1", features = ["verbose-errors"]}
 petgraph = "0.4.1"
 clap = "2.32.0"
+log = "0.4.8"
+env_logger = "0.7.1"
 
 [dependencies.wasm]
 git = "https://github.com/KeenS/WebAssembler-rs"

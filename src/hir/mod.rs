@@ -79,6 +79,7 @@ pub enum Expr {
     },
     Constructor {
         ty: HTy,
+        arg: Option<Box<Expr>>,
         descriminant: u32,
     },
     Sym {
@@ -93,20 +94,33 @@ pub enum Expr {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Pattern {
-    Constant { value: i64, ty: HTy },
-    Constructor { descriminant: u32, ty: HTy },
-    Var { name: Symbol, ty: HTy },
-    Tuple { tys: Vec<HTy>, tuple: Vec<Symbol> },
+    Constant {
+        value: i64,
+        ty: HTy,
+    },
+    Constructor {
+        descriminant: u32,
+        arg: Option<(HTy, Symbol)>,
+        ty: HTy,
+    },
+    Var {
+        name: Symbol,
+        ty: HTy,
+    },
+    Tuple {
+        tys: Vec<HTy>,
+        tuple: Vec<Symbol>,
+    },
 }
 
 impl Pattern {
-    pub fn match_key(&self) -> u64 {
+    pub fn match_key(&self) -> u32 {
         use self::Pattern::*;
         // FIXME do not panic
         match self {
-            Constant { value, .. } => *value as u64,
+            Constant { value, .. } => *value as u32,
             Tuple { .. } => panic!("bug: non-variant expression does not have keys"),
-            Constructor { descriminant, .. } => *descriminant as u64,
+            Constructor { descriminant, .. } => *descriminant as u32,
             Var { .. } => panic!("bug: default like branch does not have keys"),
         }
     }
@@ -126,7 +140,7 @@ pub enum HTy {
     Real,
     Tuple(Vec<HTy>),
     Fun(Box<HTy>, Box<HTy>),
-    Datatype(Vec<(u32)>),
+    Datatype(Vec<(u32, Option<HTy>)>),
 }
 
 impl Expr {

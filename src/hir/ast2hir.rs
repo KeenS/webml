@@ -56,7 +56,7 @@ impl AST2HIR {
                 let descriminants = constructors
                     .into_iter()
                     .enumerate()
-                    .map(|(i, _)| i as u32)
+                    .map(|(i, (_, ty))| (i as u32, ty.as_ref().map(|ty| self.conv_ty(ty.clone()))))
                     .collect();
                 HTy::Datatype(descriminants)
             }
@@ -262,8 +262,9 @@ impl AST2HIR {
                 tys: self.force_tuple(ty),
                 tuple: tuple.into_iter().map(|e| self.conv_expr(e)).collect(),
             },
-            E::Constructor { ty, name } => Expr::Constructor {
+            E::Constructor { ty, arg, name } => Expr::Constructor {
                 ty: self.conv_ty(ty),
+                arg: arg.map(|a| Box::new(self.conv_expr(*a))),
                 descriminant: self.conv_constructor_name(&name),
             },
             E::Symbol { ty, name } => Expr::Sym {
@@ -282,8 +283,9 @@ impl AST2HIR {
                 value,
                 ty: self.conv_ty(ty),
             },
-            ast::Pattern::Constructor { ty, name } => Pattern::Constructor {
+            ast::Pattern::Constructor { ty, arg, name } => Pattern::Constructor {
                 ty: self.conv_ty(ty),
+                arg: arg.map(|(ty, sym)| (self.conv_ty(ty), sym)),
                 descriminant: self.conv_constructor_name(&name),
             },
             ast::Pattern::Tuple { tuple, .. } => {
@@ -316,7 +318,7 @@ impl AST2HIR {
         type_info
             .constructors
             .iter()
-            .position(|cname| cname == name)
+            .position(|(cname, _)| cname == name)
             .expect("internal error: constructor is not a memberof its ADT") as u32
     }
 }

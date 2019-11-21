@@ -160,7 +160,11 @@ impl<Ty> Expr<Ty> {
             },
 
             Symbol { ty, name } => Symbol { ty: f(ty), name },
-            Constructor { ty, name } => Constructor { ty: f(ty), name },
+            Constructor { ty, arg, name } => Constructor {
+                ty: f(ty),
+                arg: arg.map(|a| a.map_ty(f).boxed()),
+                name,
+            },
             Literal { ty, value } => Literal { ty: f(ty), value },
         }
     }
@@ -171,7 +175,11 @@ impl<Ty> Pattern<Ty> {
         use Pattern::*;
         match self {
             Constant { value, ty } => Constant { value, ty: f(ty) },
-            Constructor { name, ty } => Constructor { name, ty: f(ty) },
+            Constructor { name, arg, ty } => Constructor {
+                name,
+                arg: arg.map(|(ty, sym)| (f(ty), sym)),
+                ty: f(ty),
+            },
             Tuple { tuple, ty } => Tuple {
                 tuple: tuple.into_iter().map(|(ty, sym)| (f(ty), sym)).collect(),
                 ty: f(ty),
@@ -275,9 +283,14 @@ impl TyEnv {
 
     pub fn init(&mut self, symbol_table: SymbolTable) {
         self.pool.feed_symbol_table(&symbol_table);
-        for (cname, name) in &symbol_table.constructors {
-            let ty = self.pool.ty(Typing::Datatype(name.clone()));
-            self.insert(cname.clone(), ty);
+        for cname in symbol_table.constructors.keys() {
+            let ty = symbol_table
+                .get_datatype_of_constructor(cname)
+                .expect("internal error: typing");
+            let ty = Type::Datatype(ty.clone());
+            let typing = self.convert(ty);
+            let node_id = self.pool.ty(typing);
+            self.insert(cname.clone(), node_id);
         }
         self.symbol_table = Some(symbol_table);
     }
@@ -301,6 +314,29 @@ impl TyEnv {
 
     fn insert(&mut self, k: Symbol, v: NodeId) -> Option<NodeId> {
         self.env.insert(k, v)
+    }
+
+    fn convert(&mut self, ty: Type) -> Typing {
+        match ty {
+            Type::Variable(v) => Typing::Variable(v),
+            Type::Int => Typing::Int,
+            Type::Real => Typing::Real,
+            Type::Fun(arg, ret) => {
+                let arg_typing = self.convert(*arg);
+                let ret_typing = self.convert(*ret);
+                Typing::Fun(self.pool.ty(arg_typing), self.pool.ty(ret_typing))
+            }
+            Type::Tuple(tuple) => Typing::Tuple(
+                tuple
+                    .into_iter()
+                    .map(|ty| {
+                        let typing = self.convert(ty);
+                        self.pool.ty(typing)
+                    })
+                    .collect(),
+            ),
+            Type::Datatype(name) => Typing::Datatype(name),
+        }
     }
 }
 
@@ -449,8 +485,8 @@ impl TyEnv {
                 self.infer_tuple(tuple, *ty)?;
                 Ok(())
             }
-            Constructor { ty, name } => {
-                self.infer_constructor(name, *ty)?;
+            Constructor { ty, arg, name } => {
+                self.infer_constructor(name, arg, *ty)?;
                 Ok(())
             }
             Symbol { ty, name } => {
@@ -464,9 +500,21 @@ impl TyEnv {
         }
     }
 
-    fn infer_constructor<'b, 'r>(&'b mut self, sym: &Symbol, given: NodeId) -> Result<'r, ()> {
+    fn infer_constructor<'b, 'r>(
+        &'b mut self,
+        sym: &Symbol,
+        arg: &Option<Box<Expr<NodeId>>>,
+        given: NodeId,
+    ) -> Result<'r, ()> {
         match self.get(&sym) {
-            Some(t) => self.unify(t, given),
+            Some(ty) => {
+                if let Some(arg) = arg {
+                    let ty = self.pool.ty(Typing::Fun(arg.ty(), ty));
+                    self.unify(ty, given)
+                } else {
+                    self.unify(ty, given)
+                }
+            }
             None => Err(TypeError::FreeVar),
         }
     }
@@ -500,13 +548,28 @@ impl TyEnv {
             Constant { ty, value } => {
                 self.infer_constant(value, *ty)?;
             }
-            Constructor { ty, name } => {
+            Constructor { ty, arg, name } => {
                 let type_name = self
                     .symbol_table()
                     .get_datatype_of_constructor(name)
                     .expect("internal error: typing")
                     .clone();
-                self.give(*ty, Typing::Datatype(type_name))?;
+                self.give(*ty, Typing::Datatype(type_name.clone()))?;
+                if let Some(arg) = arg {
+                    let arg_ty = self
+                        .symbol_table()
+                        .get_type(&type_name)
+                        .expect("internal error: typing")
+                        .constructors
+                        .iter()
+                        .find(|(cname, _)| cname == name)
+                        .map(|(_, arg)| arg.clone())
+                        .expect("internal error: typing")
+                        .expect("internal error: typing");
+                    let arg_typing = self.convert(arg_ty);
+                    let arg_ty_id = self.pool.ty(arg_typing);
+                    self.unify(arg.0, arg_ty_id)?;
+                }
             }
             Tuple { ty, tuple } => {
                 let tuple_ty = self.pool.ty(Typing::Tuple(

@@ -16,7 +16,12 @@ pub trait Traverse<Ty> {
         }
     }
 
-    fn traverse_datatype(&mut self, _name: &mut Symbol, _constructors: &mut Vec<Symbol>) {}
+    fn traverse_datatype(
+        &mut self,
+        _name: &mut Symbol,
+        _constructors: &mut Vec<(Symbol, Option<Type>)>,
+    ) {
+    }
 
     fn traverse_val(&mut self, _rec: &mut bool, pattern: &mut Pattern<Ty>, expr: &mut Expr<Ty>) {
         self.traverse_expr(expr);
@@ -50,7 +55,7 @@ pub trait Traverse<Ty> {
             } => self.traverse_if(ty, cond, then, else_),
             Case { ty, cond, clauses } => self.traverse_case(ty, cond, clauses),
             Tuple { ty, tuple } => self.traverse_tuple(ty, tuple),
-            Constructor { ty, name } => self.traverse_constructor(ty, name),
+            Constructor { ty, arg, name } => self.traverse_constructor(ty, arg, name),
             Symbol { ty, name } => self.traverse_sym(ty, name),
             Literal { ty, value } => self.traverse_lit(ty, value),
         }
@@ -118,7 +123,13 @@ pub trait Traverse<Ty> {
         }
     }
 
-    fn traverse_constructor(&mut self, _ty: &mut Ty, _name: &mut Symbol) {}
+    fn traverse_constructor(
+        &mut self,
+        _ty: &mut Ty,
+        _arg: &mut Option<Box<Expr<Ty>>>,
+        _name: &mut Symbol,
+    ) {
+    }
     fn traverse_sym(&mut self, _ty: &mut Ty, _name: &mut Symbol) {}
 
     fn traverse_lit(&mut self, _ty: &mut Ty, _value: &mut Literal) {}
@@ -144,7 +155,11 @@ pub trait Transform<Ty> {
         }
     }
 
-    fn transform_datatype(&mut self, name: Symbol, constructors: Vec<Symbol>) -> Statement<Ty> {
+    fn transform_datatype(
+        &mut self,
+        name: Symbol,
+        constructors: Vec<(Symbol, Option<Type>)>,
+    ) -> Statement<Ty> {
         Statement::Datatype { name, constructors }
     }
 
@@ -187,7 +202,7 @@ pub trait Transform<Ty> {
             } => self.transform_if(ty, cond, then, else_),
             Case { ty, cond, clauses } => self.transform_case(ty, cond, clauses),
             Tuple { ty, tuple } => self.transform_tuple(ty, tuple),
-            Constructor { ty, name } => self.transform_constructor(ty, name),
+            Constructor { ty, arg, name } => self.transform_constructor(ty, arg, name),
             Symbol { ty, name } => self.transform_symbol(ty, name),
             Literal { ty, value } => self.transform_literal(ty, value),
         }
@@ -277,8 +292,13 @@ pub trait Transform<Ty> {
         }
     }
 
-    fn transform_constructor(&mut self, ty: Ty, name: Symbol) -> Expr<Ty> {
-        Expr::Constructor { ty, name }
+    fn transform_constructor(
+        &mut self,
+        ty: Ty,
+        arg: Option<Box<Expr<Ty>>>,
+        name: Symbol,
+    ) -> Expr<Ty> {
+        Expr::Constructor { ty, arg, name }
     }
     fn transform_symbol(&mut self, ty: Ty, name: Symbol) -> Expr<Ty> {
         Expr::Symbol { ty, name }
@@ -292,7 +312,7 @@ pub trait Transform<Ty> {
         use Pattern::*;
         match pattern {
             Constant { ty, value } => self.transform_pat_constant(ty, value),
-            Constructor { ty, name } => self.transform_pat_constructor(ty, name),
+            Constructor { ty, arg, name } => self.transform_pat_constructor(ty, arg, name),
             Tuple { ty, tuple } => self.transform_pat_tuple(ty, tuple),
             Variable { ty, name } => self.transform_pat_variable(ty, name),
             Wildcard { ty } => self.transform_pat_wildcard(ty),
@@ -303,8 +323,13 @@ pub trait Transform<Ty> {
         Pattern::Constant { value, ty }
     }
 
-    fn transform_pat_constructor(&mut self, ty: Ty, name: Symbol) -> Pattern<Ty> {
-        Pattern::Constructor { name, ty }
+    fn transform_pat_constructor(
+        &mut self,
+        ty: Ty,
+        arg: Option<(Ty, Symbol)>,
+        name: Symbol,
+    ) -> Pattern<Ty> {
+        Pattern::Constructor { name, arg, ty }
     }
 
     fn transform_pat_tuple(&mut self, ty: Ty, tuple: Vec<(Ty, Symbol)>) -> Pattern<Ty> {

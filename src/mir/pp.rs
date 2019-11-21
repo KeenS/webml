@@ -298,6 +298,27 @@ impl PP for Op {
                 write!(w, " := #{} ", index)?;
                 tuple.pp(w, indent)?;
             }
+            Union {
+                var,
+                tys,
+                index,
+                variant,
+            } => {
+                write!(w, "{}", space)?;
+                var.pp(w, indent)?;
+                write!(w, ": union {{")?;
+                inter_iter! {
+                    tys.iter(),
+                    write!(w, ", ")?,
+                    |ty| => {
+                        ty.pp(w, indent)?
+                    }
+                }
+                write!(w, "}} := ")?;
+                write!(w, "make_union({}, ", index)?;
+                variant.pp(w, 0)?;
+                write!(w, ")")?;
+            }
             Select {
                 var,
                 ty,
@@ -308,8 +329,9 @@ impl PP for Op {
                 var.pp(w, indent)?;
                 write!(w, ": ")?;
                 ty.pp(w, indent)?;
-                write!(w, " := select {} ", index)?;
+                write!(w, " := select({}, ", index)?;
                 union.pp(w, indent)?;
+                write!(w, ")")?;
             }
             Branch {
                 cond,

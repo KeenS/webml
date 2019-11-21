@@ -3,6 +3,7 @@ use crate::lir::*;
 use crate::mir;
 use crate::pass::Pass;
 use crate::prim::*;
+use log::debug;
 use std::collections::HashMap;
 
 pub struct MIR2LIR;
@@ -14,13 +15,14 @@ impl MIR2LIR {
 
     fn ebbty_to_lty<'a>(&self, ty: &mir::EbbTy) -> LTy {
         use crate::mir::EbbTy::*;
-        match *ty {
+        match ty {
             Unit => LTy::Unit,
             Int => LTy::I32,
             Float => LTy::F64,
             Bool => LTy::I32,
             Tuple(_) => LTy::Ptr,
-            Union(_) => unimplemented!(),
+            //FIXME
+            Union(_) => LTy::Ptr,
             Cls { .. } => LTy::Ptr,
             Ebb { .. } => LTy::FPtr,
         }
@@ -68,6 +70,7 @@ impl MIR2LIR {
             for ebb in body.iter() {
                 let mut ops = Vec::new();
                 for op in ebb.body.iter() {
+                    debug!(target: "mir_to_lir", "op: {:?}", op);
                     match op {
                         &m::Lit {
                             ref var, ref value, ..
@@ -273,31 +276,6 @@ impl MIR2LIR {
                                 acc += 8;
                             }
                         }
-                        &m::Select {
-                            ref var,
-                            ref ty,
-                            ref union,
-                            ..
-                        } => {
-                            #[allow(clippy::never_loop)]
-                            loop {
-                                let ctor = match self.ebbty_to_lty(ty) {
-                                    LTy::F32 => MoveF32,
-                                    LTy::F64 => MoveF64,
-                                    LTy::I32 => MoveI32,
-                                    LTy::I64 => MoveI64,
-                                    LTy::Ptr => MoveI64,
-                                    LTy::FPtr => MoveI64,
-                                    LTy::Unit =>
-                                    // do nothing
-                                    {
-                                        break
-                                    }
-                                };
-                                ops.push(ctor(reg!(var), reg!(union)));
-                                break;
-                            }
-                        }
                         &m::Proj {
                             ref var,
                             ref ty,
@@ -323,6 +301,55 @@ impl MIR2LIR {
                                 break;
                             }
                         }
+
+                        &m::Union {
+                            ref var,
+                            ref tys,
+                            ref variant,
+                            ref index,
+                        } => {
+                            let ty = &tys[*index as usize];
+                            #[allow(clippy::never_loop)]
+                            loop {
+                                let ctor = match self.ebbty_to_lty(ty) {
+                                    LTy::F32 => MoveF32,
+                                    LTy::F64 => MoveF64,
+                                    LTy::I32 => MoveI32,
+                                    LTy::I64 => MoveI64,
+                                    LTy::Ptr => MoveI64,
+                                    LTy::FPtr => MoveI64,
+                                    LTy::Unit => MoveI32,
+                                };
+                                ops.push(ctor(reg!(var), reg!(variant)));
+                                break;
+                            }
+                        }
+                        &m::Select {
+                            ref var,
+                            ref ty,
+                            ref union,
+                            ..
+                        } => {
+                            #[allow(clippy::never_loop)]
+                            loop {
+                                let ctor = match self.ebbty_to_lty(ty) {
+                                    LTy::F32 => MoveF32,
+                                    LTy::F64 => MoveF64,
+                                    LTy::I32 => MoveI32,
+                                    LTy::I64 => MoveI64,
+                                    LTy::Ptr => MoveI64,
+                                    LTy::FPtr => MoveI64,
+                                    LTy::Unit =>
+                                    // do nothing
+                                    {
+                                        break
+                                    }
+                                };
+                                ops.push(ctor(reg!(var), reg!(union)));
+                                break;
+                            }
+                        }
+
                         &m::Closure {
                             ref var,
                             ref fun,
@@ -593,6 +620,10 @@ impl MIR2LIR {
                     &mir::Op::Tuple { ref var, .. } | &mir::Op::Closure { ref var, .. } => {
                         intern!(LTy::Ptr, var);
                     }
+                    &mir::Op::Select {
+                        ref var, ref ty, ..
+                    } => intern!(self.ebbty_to_lty(ty), var),
+                    &mir::Op::Union { ref var, .. } => intern!(LTy::Ptr, var),
                     _ => (),
                 }
             }

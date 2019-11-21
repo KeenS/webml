@@ -1,15 +1,20 @@
 use crate::ast::util::Transform;
 use crate::ast::*;
 use crate::config::Config;
+use crate::id::Id;
 use crate::pass::Pass;
 
 pub struct VarToConstructor {
     symbol_table: Option<SymbolTable>,
+    id: Id,
 }
 
 impl VarToConstructor {
-    pub fn new() -> VarToConstructor {
-        Self { symbol_table: None }
+    pub fn new(id: Id) -> Self {
+        Self {
+            symbol_table: None,
+            id,
+        }
     }
 
     fn init(&mut self, symbol_table: SymbolTable) {
@@ -29,32 +34,63 @@ impl VarToConstructor {
             .get_datatype_of_constructor(&name)
             .is_some()
     }
+
+    fn arg_type(&self, name: &Symbol) -> Option<&Type> {
+        self.symbol_table().get_argtype_of_constructor(&name)
+    }
+
+    fn gensym(&mut self) -> Symbol {
+        let id = self.id.next();
+        Symbol("#arg".into(), id)
+    }
 }
 
-impl<Ty: std::fmt::Debug> Transform<Ty> for VarToConstructor {
-    fn transform_symbol(&mut self, ty: Ty, name: Symbol) -> Expr<Ty> {
+impl Transform<()> for VarToConstructor {
+    fn transform_symbol(&mut self, ty: (), name: Symbol) -> Expr<()> {
         if self.is_constructor(&name) {
-            Expr::Constructor { ty, name }
+            if let Some(_) = self.arg_type(&name) {
+                let sym = self.gensym();
+                Expr::Fn {
+                    ty,
+                    param: sym.clone(),
+                    body: Expr::Constructor {
+                        ty: (),
+                        arg: Some(Expr::Symbol { name: sym, ty: () }.boxed()),
+                        name,
+                    }
+                    .boxed(),
+                }
+            } else {
+                Expr::Constructor {
+                    ty,
+                    arg: None,
+                    name,
+                }
+            }
         } else {
             Expr::Symbol { ty, name }
         }
     }
 
-    fn transform_pat_variable(&mut self, ty: Ty, name: Symbol) -> Pattern<Ty> {
+    fn transform_pat_variable(&mut self, ty: (), name: Symbol) -> Pattern<()> {
         if self.is_constructor(&name) {
-            Pattern::Constructor { ty, name }
+            Pattern::Constructor {
+                ty,
+                arg: None,
+                name,
+            }
         } else {
             Pattern::Variable { ty, name }
         }
     }
 }
 
-impl<E, Ty: Clone + std::fmt::Debug> Pass<(SymbolTable, AST<Ty>), E> for VarToConstructor {
-    type Target = (SymbolTable, AST<Ty>);
+impl<E> Pass<(SymbolTable, AST<()>), E> for VarToConstructor {
+    type Target = (SymbolTable, AST<()>);
 
     fn trans(
         &mut self,
-        (symbol_table, ast): (SymbolTable, AST<Ty>),
+        (symbol_table, ast): (SymbolTable, AST<()>),
         _: &Config,
     ) -> ::std::result::Result<Self::Target, E> {
         self.init(symbol_table);

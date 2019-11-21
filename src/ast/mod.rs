@@ -28,7 +28,7 @@ pub struct AST<Ty>(pub Vec<Statement<Ty>>);
 pub enum Statement<Ty> {
     Datatype {
         name: Symbol,
-        constructors: Vec<Symbol>,
+        constructors: Vec<(Symbol, Option<Type>)>,
     },
     Val {
         rec: bool,
@@ -87,6 +87,7 @@ pub enum Expr<Ty> {
     },
     Constructor {
         ty: Ty,
+        arg: Option<Box<Expr<Ty>>>,
         name: Symbol,
     },
     Literal {
@@ -104,6 +105,7 @@ pub enum Pattern<Ty> {
     },
     Constructor {
         name: Symbol,
+        arg: Option<(Ty, Symbol)>,
         ty: Ty,
     },
     // having redundant types for now
@@ -138,7 +140,7 @@ pub enum Type {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypeInfo {
-    pub constructors: Vec<Symbol>,
+    pub constructors: Vec<(Symbol, Option<Type>)>,
 }
 
 impl<Ty> Expr<Ty> {
@@ -208,7 +210,7 @@ impl SymbolTable {
     }
 
     pub fn register_type(&mut self, name: Symbol, info: TypeInfo) {
-        for cname in &info.constructors {
+        for (cname, _) in &info.constructors {
             self.constructors.insert(cname.clone(), name.clone());
         }
         self.types.insert(name, info);
@@ -220,6 +222,17 @@ impl SymbolTable {
 
     pub fn get_datatype_of_constructor(&self, name: &Symbol) -> Option<&Symbol> {
         self.constructors.get(name)
+    }
+
+    pub fn get_argtype_of_constructor(&self, name: &Symbol) -> Option<&Type> {
+        let type_name = self.constructors.get(name)?;
+        let param_ty = self
+            .get_type(type_name)?
+            .constructors
+            .iter()
+            .find(|(cname, _)| cname == name)
+            .map(|(_, param)| param)?;
+        param_ty.as_ref()
     }
 }
 
