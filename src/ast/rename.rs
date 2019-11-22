@@ -79,31 +79,6 @@ impl<'a> Scope<'a> {
         symbol.1 = new_id;
     }
 
-    fn new_symbol_pattern<Ty>(&mut self, pat: &mut Pattern<Ty>) {
-        use Pattern::*;
-        match pat {
-            Wildcard { .. } | Constant { .. } => (),
-            Constructor { name, arg, .. } => {
-                self.rename_constructor(name);
-                if let Some((_, name)) = arg {
-                    self.new_variable(name)
-                }
-            }
-            Variable { name, .. } => {
-                if self.is_constructor(name) {
-                    self.rename_constructor(name)
-                } else {
-                    self.new_variable(name)
-                }
-            }
-            Tuple { tuple, .. } => {
-                for (_, sym) in tuple {
-                    self.new_variable(sym)
-                }
-            }
-        }
-    }
-
     fn is_constructor(&mut self, symbol: &Symbol) -> bool {
         let pos = self.pos;
         self.constructor_tables[0..pos]
@@ -169,7 +144,7 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
         self.new_variable(name);
         let mut scope = self.new_scope();
         for param in params {
-            scope.new_symbol_pattern(param);
+            scope.traverse_pattern(param);
         }
         scope.traverse_expr(expr);
     }
@@ -182,11 +157,11 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
     ) {
         let scope = self;
         if *rec {
-            scope.new_symbol_pattern(pattern);
+            scope.traverse_pattern(pattern);
             scope.traverse_expr(expr);
         } else {
             scope.traverse_expr(expr);
-            scope.new_symbol_pattern(pattern);
+            scope.traverse_pattern(pattern);
         }
     }
 
@@ -230,7 +205,7 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
         self.traverse_expr(expr);
         for &mut (ref mut pat, ref mut arm) in arms.iter_mut() {
             let mut scope = self.new_scope();
-            scope.new_symbol_pattern(pat);
+            scope.traverse_pattern(pat);
             scope.traverse_expr(arm);
         }
     }
@@ -240,6 +215,32 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
             self.rename_constructor(name);
         } else {
             self.rename(name);
+        }
+    }
+
+    fn traverse_pat_constructor(
+        &mut self,
+        _ty: &mut Ty,
+        name: &mut Symbol,
+        arg: &mut Option<(Ty, Symbol)>,
+    ) {
+        self.rename_constructor(name);
+        if let Some((_, name)) = arg {
+            self.new_variable(name)
+        }
+    }
+
+    fn traverse_pat_variable(&mut self, _ty: &mut Ty, name: &mut Symbol) {
+        if self.is_constructor(name) {
+            self.rename_constructor(name)
+        } else {
+            self.new_variable(name)
+        }
+    }
+
+    fn traverse_pat_tuple(&mut self, _ty: &mut Ty, tuple: &mut Vec<(Ty, Symbol)>) {
+        for (_, sym) in tuple {
+            self.new_variable(sym)
         }
     }
 }
