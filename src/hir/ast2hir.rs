@@ -246,10 +246,6 @@ impl AST2HIR {
             E::App { ty, fun, arg } => self
                 .conv_expr(*fun)
                 .app1(self.conv_ty(ty), self.conv_expr(*arg)),
-            e @ E::If { .. } => {
-                let expr = self.desugar.desugar_expr(e);
-                self.conv_expr(expr)
-            }
             E::Case { ty, cond, clauses } => Expr::Case {
                 ty: self.conv_ty(ty),
                 expr: Box::new(self.conv_expr(*cond)),
@@ -275,6 +271,10 @@ impl AST2HIR {
                 ty: self.conv_ty(ty),
                 value,
             },
+            e @ E::D(ast::Derived::If { .. }) => {
+                let expr = self.desugar.desugar_expr(e);
+                self.conv_expr(expr)
+            }
         }
     }
     fn conv_pat(&mut self, pat: ast::Pattern<ast::Type>) -> Pattern {
