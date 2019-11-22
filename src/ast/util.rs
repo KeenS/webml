@@ -134,7 +134,28 @@ pub trait Traverse<Ty> {
 
     fn traverse_lit(&mut self, _ty: &mut Ty, _value: &mut Literal) {}
 
-    fn traverse_pattern(&mut self, _pattern: &mut Pattern<Ty>) {}
+    fn traverse_pattern(&mut self, pattern: &mut Pattern<Ty>) {
+        use Pattern::*;
+        match pattern {
+            Constant { ty, value } => self.traverse_pat_constant(ty, value),
+            Constructor { ty, name, arg } => self.traverse_pat_constructor(ty, name, arg),
+            Tuple { ty, tuple } => self.traverse_pat_tuple(ty, tuple),
+            Variable { ty, name } => self.traverse_pat_variable(ty, name),
+            Wildcard { ty } => self.traverse_pat_wildcard(ty),
+        }
+    }
+
+    fn traverse_pat_constant(&mut self, _ty: &mut Ty, _value: &mut i64) {}
+    fn traverse_pat_constructor(
+        &mut self,
+        _ty: &mut Ty,
+        _name: &mut Symbol,
+        _arg: &mut Option<(Ty, Symbol)>,
+    ) {
+    }
+    fn traverse_pat_tuple(&mut self, _ty: &mut Ty, _tuple: &mut Vec<(Ty, Symbol)>) {}
+    fn traverse_pat_variable(&mut self, _ty: &mut Ty, _value: &mut Symbol) {}
+    fn traverse_pat_wildcard(&mut self, _ty: &mut Ty) {}
 }
 
 pub trait Transform<Ty> {
