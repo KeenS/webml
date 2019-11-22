@@ -1,4 +1,4 @@
-use webml::ast::{Expr, Pattern, Statement, Type, AST};
+use webml::ast::{DerivedExpr, Expr, Pattern, Statement, Type, AST};
 use webml::parse;
 use webml::prim::*;
 
@@ -298,7 +298,7 @@ fn parse_if() {
                 name: Symbol::new("x"),
                 ty: (),
             },
-            expr: Expr::If {
+            expr: Expr::D(DerivedExpr::If {
                 ty: (),
                 cond: Box::new(Expr::Constructor {
                     ty: (),
@@ -315,7 +315,7 @@ fn parse_if() {
                     arg: None,
                     name: Symbol::new("true")
                 }),
-            },
+            }),
         },])
     )
 }

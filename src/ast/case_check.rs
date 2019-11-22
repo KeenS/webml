@@ -26,8 +26,8 @@ impl Traverse<Type> for CaseCheck {
     fn traverse_case(
         &mut self,
         _ty: &mut Type,
-        cond: &mut Box<Expr<Type>>,
-        arms: &mut Vec<(Pattern<Type>, Expr<Type>)>,
+        cond: &mut Box<TypedCoreExpr>,
+        arms: &mut Vec<(TypedPattern, TypedCoreExpr)>,
     ) {
         let ty = cond.ty();
         match ty {
@@ -108,12 +108,12 @@ impl Traverse<Type> for CaseCheck {
 }
 
 use crate::pass::Pass;
-impl<'a> Pass<(SymbolTable, TypedAst), TypeError<'a>> for CaseCheck {
-    type Target = (SymbolTable, TypedAst);
+impl<'a> Pass<(SymbolTable, TypedCore), TypeError<'a>> for CaseCheck {
+    type Target = (SymbolTable, TypedCore);
 
     fn trans<'b>(
         &'b mut self,
-        (symbol_table, mut ast): (SymbolTable, TypedAst),
+        (symbol_table, mut ast): (SymbolTable, TypedCore),
         _: &Config,
     ) -> Result<'a, Self::Target> {
         self.symbol_table = Some(symbol_table);

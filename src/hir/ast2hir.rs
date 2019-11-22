@@ -7,14 +7,12 @@ use crate::prim::*;
 
 pub struct AST2HIR {
     id: Id,
-    desugar: ast::Desugar,
     symbol_table: Option<ast::SymbolTable>,
 }
 
 impl AST2HIR {
     pub fn new(id: Id) -> Self {
         Self {
-            desugar: ast::Desugar::new(id.clone()),
             id,
             symbol_table: None,
         }
@@ -64,7 +62,7 @@ impl AST2HIR {
         }
     }
 
-    fn conv_ast(&mut self, ast: ast::TypedAst) -> HIR {
+    fn conv_ast(&mut self, ast: ast::TypedCore) -> HIR {
         HIR(ast
             .0
             .into_iter()
@@ -72,16 +70,13 @@ impl AST2HIR {
             .collect())
     }
 
-    fn conv_statement(&mut self, stmt: ast::Statement<ast::Type>) -> Vec<Val> {
+    fn conv_statement(&mut self, stmt: ast::TypedCoreStatement) -> Vec<Val> {
         match stmt {
             ast::Statement::Datatype { .. } => {
                 // ignore
                 vec![]
             }
-            s @ ast::Statement::Fun { .. } => {
-                let stmt = self.desugar.desugar_statement(s);
-                self.conv_statement(stmt)
-            }
+            s @ ast::Statement::Fun { .. } => self.conv_statement(s),
             ast::Statement::Val { rec, pattern, expr } => {
                 match pattern {
                     ast::Pattern::Variable { name, ty } => vec![Val {
@@ -214,7 +209,7 @@ impl AST2HIR {
         }
     }
 
-    fn conv_expr(&mut self, expr: ast::Expr<ast::Type>) -> Expr {
+    fn conv_expr(&mut self, expr: ast::TypedCoreExpr) -> Expr {
         use crate::ast::Expr as E;
         match expr {
             E::Binds { ty, binds, ret } => Expr::Binds {
@@ -271,13 +266,10 @@ impl AST2HIR {
                 ty: self.conv_ty(ty),
                 value,
             },
-            e @ E::D(ast::Derived::If { .. }) => {
-                let expr = self.desugar.desugar_expr(e);
-                self.conv_expr(expr)
-            }
+            E::D(d) => match d {},
         }
     }
-    fn conv_pat(&mut self, pat: ast::Pattern<ast::Type>) -> Pattern {
+    fn conv_pat(&mut self, pat: ast::TypedPattern) -> Pattern {
         match pat {
             ast::Pattern::Constant { value, ty } => Pattern::Constant {
                 value,
@@ -323,12 +315,12 @@ impl AST2HIR {
     }
 }
 
-impl<E> Pass<(ast::SymbolTable, ast::TypedAst), E> for AST2HIR {
+impl<E> Pass<(ast::SymbolTable, ast::TypedCore), E> for AST2HIR {
     type Target = HIR;
 
     fn trans(
         &mut self,
-        (symbol_table, ast): (ast::SymbolTable, ast::TypedAst),
+        (symbol_table, ast): (ast::SymbolTable, ast::TypedCore),
         _: &Config,
     ) -> ::std::result::Result<Self::Target, E> {
         self.init(symbol_table);

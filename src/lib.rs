@@ -30,6 +30,7 @@ pub fn compile_str<'a>(input: &'a str, config: &Config) -> Result<Vec<u8>, TypeE
 
     let mut passes = compile_pass![
        parse: ConvError::new(parse),
+       desugar: ast::Desugar::new(id.clone()),
        rename: ast::Rename::new(id.clone()),
        var_to_constructor: ast::VarToConstructor::new(id.clone()),
        typing: ast::Typer::new(),

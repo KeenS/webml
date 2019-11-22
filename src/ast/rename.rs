@@ -139,7 +139,7 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
         &'b mut self,
         name: &mut Symbol,
         params: &mut Vec<Pattern<Ty>>,
-        expr: &mut Expr<Ty>,
+        expr: &mut CoreExpr<Ty>,
     ) {
         self.new_variable(name);
         let mut scope = self.new_scope();
@@ -153,7 +153,7 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
         &'b mut self,
         rec: &mut bool,
         pattern: &mut Pattern<Ty>,
-        expr: &mut Expr<Ty>,
+        expr: &mut CoreExpr<Ty>,
     ) {
         let scope = self;
         if *rec {
@@ -168,8 +168,8 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
     fn traverse_binds(
         &mut self,
         _ty: &mut Ty,
-        binds: &mut Vec<Statement<Ty>>,
-        ret: &mut Box<Expr<Ty>>,
+        binds: &mut Vec<CoreStatement<Ty>>,
+        ret: &mut Box<CoreExpr<Ty>>,
     ) {
         let mut scope = self.new_scope();
         for bind in binds.iter_mut() {
@@ -182,15 +182,15 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
         &mut self,
         _ty: &mut Ty,
         op: &mut Symbol,
-        l: &mut Box<Expr<Ty>>,
-        r: &mut Box<Expr<Ty>>,
+        l: &mut Box<CoreExpr<Ty>>,
+        r: &mut Box<CoreExpr<Ty>>,
     ) {
         self.rename(op);
         self.traverse_expr(l);
         self.traverse_expr(r);
     }
 
-    fn traverse_fn(&mut self, _ty: &mut Ty, param: &mut Symbol, body: &mut Box<Expr<Ty>>) {
+    fn traverse_fn(&mut self, _ty: &mut Ty, param: &mut Symbol, body: &mut Box<CoreExpr<Ty>>) {
         let mut scope = self.new_scope();
         scope.new_variable(param);
         scope.traverse_expr(body);
@@ -199,8 +199,8 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
     fn traverse_case(
         &mut self,
         _ty: &mut Ty,
-        expr: &mut Box<Expr<Ty>>,
-        arms: &mut Vec<(Pattern<Ty>, Expr<Ty>)>,
+        expr: &mut Box<CoreExpr<Ty>>,
+        arms: &mut Vec<(Pattern<Ty>, CoreExpr<Ty>)>,
     ) {
         self.traverse_expr(expr);
         for &mut (ref mut pat, ref mut arm) in arms.iter_mut() {
@@ -289,10 +289,10 @@ impl Rename {
     }
 }
 
-impl<E, Ty: Clone> Pass<AST<Ty>, E> for Rename {
-    type Target = (SymbolTable, AST<Ty>);
+impl<E, Ty: Clone> Pass<Core<Ty>, E> for Rename {
+    type Target = (SymbolTable, Core<Ty>);
 
-    fn trans(&mut self, mut ast: AST<Ty>, _: &Config) -> ::std::result::Result<Self::Target, E> {
+    fn trans(&mut self, mut ast: Core<Ty>, _: &Config) -> ::std::result::Result<Self::Target, E> {
         self.scope().traverse_ast(&mut ast);
         let symbol_table = self.generate_symbol_table();
         Ok((symbol_table, ast))

@@ -19,13 +19,20 @@ use std::error::Error;
 use std::fmt;
 
 pub type UntypedAst = AST<()>;
-pub type TypedAst = AST<Type>;
+pub type Core<Ty> = AST<Ty, Nothing>;
+pub type UntypedCore = Core<()>;
+pub type TypedCore = Core<Type>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct AST<Ty>(pub Vec<Statement<Ty>>);
+pub struct AST<Ty, D = DerivedExpr<Ty>>(pub Vec<Statement<Ty, D>>);
+
+pub type UntypedStatement = Statement<()>;
+pub type CoreStatement<Ty> = Statement<Ty, Nothing>;
+pub type UntypedCoreStatement = CoreStatement<()>;
+pub type TypedCoreStatement = CoreStatement<Type>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Statement<Ty> {
+pub enum Statement<Ty, D = DerivedExpr<Ty>> {
     Datatype {
         name: Symbol,
         constructors: Vec<(Symbol, Option<Type>)>,
@@ -33,53 +40,65 @@ pub enum Statement<Ty> {
     Val {
         rec: bool,
         pattern: Pattern<Ty>,
-        expr: Expr<Ty>,
+        expr: Expr<Ty, D>,
     },
     Fun {
         name: Symbol,
         // TODO: let it patterns
         params: Vec<Pattern<Ty>>,
-        expr: Expr<Ty>,
+        expr: Expr<Ty, D>,
     },
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Expr<Ty> {
+pub enum DerivedExpr<Ty> {
+    If {
+        ty: Ty,
+        cond: Box<Expr<Ty, DerivedExpr<Ty>>>,
+        then: Box<Expr<Ty, DerivedExpr<Ty>>>,
+        else_: Box<Expr<Ty, DerivedExpr<Ty>>>,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Nothing {}
+
+pub type UntypedExpr = Expr<()>;
+pub type CoreExpr<Ty> = Expr<Ty, Nothing>;
+pub type UntypedCoreExpr = CoreExpr<()>;
+pub type TypedCoreExpr = CoreExpr<Type>;
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum Expr<Ty, D = DerivedExpr<Ty>> {
     Binds {
         ty: Ty,
-        binds: Vec<Statement<Ty>>,
-        ret: Box<Expr<Ty>>,
+        binds: Vec<Statement<Ty, D>>,
+        ret: Box<Expr<Ty, D>>,
     },
     BinOp {
         op: Symbol,
         ty: Ty,
-        l: Box<Expr<Ty>>,
-        r: Box<Expr<Ty>>,
+        l: Box<Expr<Ty, D>>,
+        r: Box<Expr<Ty, D>>,
     },
     Fn {
         ty: Ty,
         param: Symbol,
-        body: Box<Expr<Ty>>,
+        body: Box<Expr<Ty, D>>,
     },
     App {
         ty: Ty,
-        fun: Box<Expr<Ty>>,
-        arg: Box<Expr<Ty>>,
-    },
-    If {
-        ty: Ty,
-        cond: Box<Expr<Ty>>,
-        then: Box<Expr<Ty>>,
-        else_: Box<Expr<Ty>>,
+        fun: Box<Expr<Ty, D>>,
+        arg: Box<Expr<Ty, D>>,
     },
     Case {
         ty: Ty,
-        cond: Box<Expr<Ty>>,
-        clauses: Vec<(Pattern<Ty>, Expr<Ty>)>,
+        cond: Box<Expr<Ty, D>>,
+        clauses: Vec<(Pattern<Ty>, Expr<Ty, D>)>,
     },
     Tuple {
         ty: Ty,
-        tuple: Vec<Expr<Ty>>,
+        tuple: Vec<Expr<Ty, D>>,
     },
     Symbol {
         ty: Ty,
@@ -87,14 +106,18 @@ pub enum Expr<Ty> {
     },
     Constructor {
         ty: Ty,
-        arg: Option<Box<Expr<Ty>>>,
+        arg: Option<Box<Expr<Ty, D>>>,
         name: Symbol,
     },
     Literal {
         ty: Ty,
         value: Literal,
     },
+    D(D),
 }
+
+pub type UntypedPattern = Pattern<()>;
+pub type TypedPattern = Pattern<Type>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Pattern<Ty> {
@@ -143,26 +166,26 @@ pub struct TypeInfo {
     pub constructors: Vec<(Symbol, Option<Type>)>,
 }
 
-impl<Ty> Expr<Ty> {
+impl<Ty, D> Expr<Ty, D> {
     fn boxed(self) -> Box<Self> {
         Box::new(self)
     }
 }
 
-impl<Ty: Clone> Expr<Ty> {
+impl<Ty: Clone> CoreExpr<Ty> {
     fn ty(&self) -> Ty {
         use self::Expr::*;
         match *self {
             Binds { ref ty, .. }
             | BinOp { ref ty, .. }
             | App { ref ty, .. }
-            | If { ref ty, .. }
             | Case { ref ty, .. }
             | Tuple { ref ty, .. }
             | Symbol { ref ty, .. }
             | Constructor { ref ty, .. }
             | Literal { ref ty, .. }
             | Fn { ref ty, .. } => ty.clone(),
+            D(ref d) => match *d {},
         }
     }
 }

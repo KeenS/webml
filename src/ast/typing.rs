@@ -84,14 +84,14 @@ fn try_unify<'b, 'r>(
     }
 }
 
-impl<Ty> AST<Ty> {
-    fn map_ty<Ty2>(self, f: &mut dyn FnMut(Ty) -> Ty2) -> AST<Ty2> {
+impl<Ty> Core<Ty> {
+    fn map_ty<Ty2>(self, f: &mut dyn FnMut(Ty) -> Ty2) -> Core<Ty2> {
         AST(self.0.into_iter().map(move |val| val.map_ty(f)).collect())
     }
 }
 
-impl<Ty> Statement<Ty> {
-    fn map_ty<Ty2>(self, f: &mut dyn FnMut(Ty) -> Ty2) -> Statement<Ty2> {
+impl<Ty> CoreStatement<Ty> {
+    fn map_ty<Ty2>(self, f: &mut dyn FnMut(Ty) -> Ty2) -> CoreStatement<Ty2> {
         use Statement::*;
         match self {
             Datatype { name, constructors } => Datatype { name, constructors },
@@ -110,8 +110,8 @@ impl<Ty> Statement<Ty> {
     }
 }
 
-impl<Ty> Expr<Ty> {
-    fn map_ty<Ty2>(self, f: &mut dyn FnMut(Ty) -> Ty2) -> Expr<Ty2> {
+impl<Ty> CoreExpr<Ty> {
+    fn map_ty<Ty2>(self, f: &mut dyn FnMut(Ty) -> Ty2) -> CoreExpr<Ty2> {
         use crate::ast::Expr::*;
         match self {
             Binds { ty, binds, ret } => Binds {
@@ -135,17 +135,6 @@ impl<Ty> Expr<Ty> {
                 fun: fun.map_ty(f).boxed(),
                 arg: arg.map_ty(f).boxed(),
             },
-            If {
-                ty,
-                cond,
-                then,
-                else_,
-            } => If {
-                ty: f(ty),
-                cond: cond.map_ty(f).boxed(),
-                then: then.map_ty(f).boxed(),
-                else_: else_.map_ty(f).boxed(),
-            },
             Case { ty, cond, clauses } => Case {
                 ty: f(ty),
                 cond: cond.map_ty(&mut *f).boxed(),
@@ -166,6 +155,7 @@ impl<Ty> Expr<Ty> {
                 name,
             },
             Literal { ty, value } => Literal { ty: f(ty), value },
+            D(d) => match d {},
         }
     }
 }
@@ -257,13 +247,13 @@ impl TypePool {
 }
 
 impl TypePool {
-    fn typing_ast(&mut self, ast: UntypedAst) -> AST<NodeId> {
+    fn typing_ast(&mut self, ast: UntypedCore) -> Core<NodeId> {
         ast.map_ty(&mut |_| self.tyvar())
     }
 }
 
 impl TypePool {
-    fn typed_ast(&self, ast: AST<NodeId>) -> TypedAst {
+    fn typed_ast(&self, ast: Core<NodeId>) -> TypedCore {
         ast.map_ty(&mut |ty| resolve(&self.pool, ty))
     }
 }
@@ -295,7 +285,7 @@ impl TyEnv {
         self.symbol_table = Some(symbol_table);
     }
 
-    pub fn infer<'a, 'b>(&'a mut self, ast: &mut ast::AST<NodeId>) -> Result<'b, ()> {
+    pub fn infer<'a, 'b>(&'a mut self, ast: &mut ast::Core<NodeId>) -> Result<'b, ()> {
         self.infer_ast(ast)?;
         Ok(())
     }
@@ -341,14 +331,14 @@ impl TyEnv {
 }
 
 impl TyEnv {
-    fn infer_ast<'b, 'r>(&'b mut self, ast: &AST<NodeId>) -> Result<'r, ()> {
+    fn infer_ast<'b, 'r>(&'b mut self, ast: &Core<NodeId>) -> Result<'r, ()> {
         for stmt in ast.0.iter() {
             self.infer_statement(&stmt)?;
         }
         Ok(())
     }
 
-    fn infer_statement<'b, 'r>(&'b mut self, stmt: &Statement<NodeId>) -> Result<'r, ()> {
+    fn infer_statement<'b, 'r>(&'b mut self, stmt: &CoreStatement<NodeId>) -> Result<'r, ()> {
         use Statement::*;
         match stmt {
             Datatype { .. } => Ok(()),
@@ -393,7 +383,7 @@ impl TyEnv {
         }
     }
 
-    fn infer_expr<'b, 'r>(&'b mut self, expr: &Expr<NodeId>) -> Result<'r, ()> {
+    fn infer_expr<'b, 'r>(&'b mut self, expr: &CoreExpr<NodeId>) -> Result<'r, ()> {
         use crate::ast::Expr::*;
         let int = self.pool.ty_int();
         let real = self.pool.ty_real();
@@ -457,20 +447,6 @@ impl TyEnv {
                 self.give(fun.ty(), Typing::Fun(arg.ty(), *ty))?;
                 Ok(())
             }
-            If {
-                cond,
-                ty,
-                then,
-                else_,
-            } => {
-                self.unify(cond.ty(), bool)?;
-                self.infer_expr(cond)?;
-                self.unify(*ty, then.ty())?;
-                self.unify(then.ty(), else_.ty())?;
-                self.infer_expr(then)?;
-                self.infer_expr(else_)?;
-                Ok(())
-            }
             Case { cond, ty, clauses } => {
                 self.infer_expr(cond)?;
                 for (pat, branch) in clauses {
@@ -497,13 +473,14 @@ impl TyEnv {
                 self.infer_literal(value, *ty)?;
                 Ok(())
             }
+            D(d) => match *d {},
         }
     }
 
     fn infer_constructor<'b, 'r>(
         &'b mut self,
         sym: &Symbol,
-        arg: &Option<Box<Expr<NodeId>>>,
+        arg: &Option<Box<CoreExpr<NodeId>>>,
         given: NodeId,
     ) -> Result<'r, ()> {
         match self.get(&sym) {
@@ -587,7 +564,7 @@ impl TyEnv {
 
     fn infer_tuple<'b, 'r>(
         &'b mut self,
-        tuple: &Vec<Expr<NodeId>>,
+        tuple: &Vec<CoreExpr<NodeId>>,
         given: NodeId,
     ) -> Result<'r, ()> {
         let tys = vec![self.pool.tyvar(); tuple.len()];
@@ -612,12 +589,12 @@ impl TyEnv {
 }
 
 use crate::pass::Pass;
-impl<'a> Pass<(SymbolTable, UntypedAst), TypeError<'a>> for TyEnv {
-    type Target = (SymbolTable, TypedAst);
+impl<'a> Pass<(SymbolTable, UntypedCore), TypeError<'a>> for TyEnv {
+    type Target = (SymbolTable, TypedCore);
 
     fn trans<'b>(
         &'b mut self,
-        (symbol_table, ast): (SymbolTable, UntypedAst),
+        (symbol_table, ast): (SymbolTable, UntypedCore),
         _: &Config,
     ) -> Result<'a, Self::Target> {
         self.init(symbol_table);

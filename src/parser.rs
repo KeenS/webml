@@ -155,12 +155,12 @@ named!(expr_if <&str, Expr<()>>, do_parse!(
     tag_s!("if") >> multispace >> cond: expr >> multispace >>
         tag_s!("then") >> multispace >> then: expr >> multispace >>
         tag_s!("else") >> multispace >> else_: expr >>
-        (Expr::If {
+        (Expr::D(DerivedExpr::If {
             ty: (),
             cond: Box::new(cond),
             then: Box::new(then),
             else_: Box::new(else_)
-        })
+        }))
 ));
 
 named!(expr_case <&str, Expr<()>>, do_parse!(

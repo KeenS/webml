@@ -46,7 +46,7 @@ impl VarToConstructor {
 }
 
 impl Transform<()> for VarToConstructor {
-    fn transform_symbol(&mut self, ty: (), name: Symbol) -> Expr<()> {
+    fn transform_symbol(&mut self, ty: (), name: Symbol) -> UntypedCoreExpr {
         if self.is_constructor(&name) {
             if let Some(_) = self.arg_type(&name) {
                 let sym = self.gensym();
@@ -72,7 +72,7 @@ impl Transform<()> for VarToConstructor {
         }
     }
 
-    fn transform_pat_variable(&mut self, ty: (), name: Symbol) -> Pattern<()> {
+    fn transform_pat_variable(&mut self, ty: (), name: Symbol) -> UntypedPattern {
         if self.is_constructor(&name) {
             Pattern::Constructor {
                 ty,
@@ -85,12 +85,12 @@ impl Transform<()> for VarToConstructor {
     }
 }
 
-impl<E> Pass<(SymbolTable, AST<()>), E> for VarToConstructor {
-    type Target = (SymbolTable, AST<()>);
+impl<E> Pass<(SymbolTable, UntypedCore), E> for VarToConstructor {
+    type Target = (SymbolTable, UntypedCore);
 
     fn trans(
         &mut self,
-        (symbol_table, ast): (SymbolTable, AST<()>),
+        (symbol_table, ast): (SymbolTable, UntypedCore),
         _: &Config,
     ) -> ::std::result::Result<Self::Target, E> {
         self.init(symbol_table);

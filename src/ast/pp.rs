@@ -2,13 +2,13 @@ use crate::ast::*;
 use crate::util::PP;
 use std::io;
 
-impl<Ty: PP> PP for (SymbolTable, AST<Ty>) {
+impl<Ty: PP, D: PP> PP for (SymbolTable, AST<Ty, D>) {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         self.1.pp(w, indent)
     }
 }
 
-impl<Ty: PP> PP for AST<Ty> {
+impl<Ty: PP, D: PP> PP for AST<Ty, D> {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         for bind in &self.0 {
             bind.pp(w, indent)?;
@@ -18,7 +18,7 @@ impl<Ty: PP> PP for AST<Ty> {
     }
 }
 
-impl<Ty: PP> PP for Statement<Ty> {
+impl<Ty: PP, D: PP> PP for Statement<Ty, D> {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         use Statement::*;
         match self {
@@ -70,7 +70,7 @@ impl<Ty: PP> PP for Statement<Ty> {
     }
 }
 
-impl<Ty: PP> PP for Expr<Ty> {
+impl<Ty: PP, D: PP> PP for Expr<Ty, D> {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         use crate::ast::Expr::*;
         match self {
@@ -105,18 +105,6 @@ impl<Ty: PP> PP for Expr<Ty> {
                 write!(w, ") ")?;
                 arg.pp(w, indent + 4)?;
             }
-            If {
-                cond, then, else_, ..
-            } => {
-                let ind = Self::nspaces(indent);
-                write!(w, "if ")?;
-                cond.pp(w, indent + 4)?;
-                write!(w, "\n{}then ", ind)?;
-                then.pp(w, indent + 4)?;
-                write!(w, "\n{}else ", ind)?;
-                else_.pp(w, indent + 4)?;
-            }
-
             Case { cond, clauses, .. } => {
                 let ind = Self::nspaces(indent);
                 write!(w, "case ")?;
@@ -146,8 +134,37 @@ impl<Ty: PP> PP for Expr<Ty> {
             Literal { value, .. } => {
                 value.pp(w, indent)?;
             }
+            D(d) => {
+                d.pp(w, indent)?;
+            }
         }
         Ok(())
+    }
+}
+
+impl<Ty: PP> PP for DerivedExpr<Ty> {
+    fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
+        use DerivedExpr::*;
+        match self {
+            If {
+                cond, then, else_, ..
+            } => {
+                let ind = Self::nspaces(indent);
+                write!(w, "if ")?;
+                cond.pp(w, indent + 4)?;
+                write!(w, "\n{}then ", ind)?;
+                then.pp(w, indent + 4)?;
+                write!(w, "\n{}else ", ind)?;
+                else_.pp(w, indent + 4)?;
+            }
+        }
+        Ok(())
+    }
+}
+
+impl PP for Nothing {
+    fn pp<W: io::Write>(&self, _: &mut W, _: usize) -> io::Result<()> {
+        match *self {}
     }
 }
 
