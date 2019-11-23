@@ -174,7 +174,7 @@ impl<Ty> PP for Pattern<Ty> {
             Pattern::Constant { value, .. } => write!(w, "{}", value),
             Pattern::Constructor { name, arg, .. } => {
                 name.pp(w, indent)?;
-                if let Some((_, arg)) = arg {
+                if let Some(arg) = arg {
                     // TODO: handle cases when its in function args
                     write!(w, " ")?;
                     arg.pp(w, indent)?;
@@ -187,8 +187,8 @@ impl<Ty> PP for Pattern<Ty> {
                 inter_iter! {
                     tuple.iter(),
                     write!(w, ", ")?,
-                    |(_,  sym)| => {
-                        sym.pp(w, indent)?
+                    |pat| => {
+                        pat.pp(w, indent)?
                     }
                 }
                 write!(w, ")")

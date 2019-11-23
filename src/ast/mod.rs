@@ -130,12 +130,12 @@ pub enum Pattern<Ty> {
     },
     Constructor {
         name: Symbol,
-        arg: Option<(Ty, Symbol)>,
+        arg: Option<Box<Pattern<Ty>>>,
         ty: Ty,
     },
     // having redundant types for now
     Tuple {
-        tuple: Vec<(Ty, Symbol)>,
+        tuple: Vec<Pattern<Ty>>,
         ty: Ty,
     },
     Variable {
@@ -195,11 +195,11 @@ impl<Ty: Clone> CoreExpr<Ty> {
 impl<Ty> Pattern<Ty> {
     pub fn binds(&self) -> Vec<(&Symbol, &Ty)> {
         use self::Pattern::*;
-        match *self {
+        match self {
             Constant { .. } | Wildcard { .. } => vec![],
-            Variable { ref name, ref ty } => vec![(name, ty)],
-            Tuple { ref tuple, .. } => tuple.iter().map(|&(ref ty, ref sym)| (sym, ty)).collect(),
-            Constructor { .. } => vec![],
+            Variable { name, ty } => vec![(name, ty)],
+            Tuple { tuple, .. } => tuple.iter().flat_map(|pat| pat.binds()).collect(),
+            Constructor { arg, .. } => arg.iter().flat_map(|pat| pat.binds()).collect(),
         }
     }
 }
@@ -207,12 +207,12 @@ impl<Ty> Pattern<Ty> {
 impl<Ty: Clone> Pattern<Ty> {
     fn ty(&self) -> Ty {
         use self::Pattern::*;
-        match *self {
-            Constant { ref ty, .. }
-            | Variable { ref ty, .. }
-            | Wildcard { ref ty }
-            | Tuple { ref ty, .. }
-            | Constructor { ref ty, .. } => ty.clone(),
+        match self {
+            Constant { ty, .. }
+            | Variable { ty, .. }
+            | Wildcard { ty }
+            | Tuple { ty, .. }
+            | Constructor { ty, .. } => ty.clone(),
         }
     }
 }

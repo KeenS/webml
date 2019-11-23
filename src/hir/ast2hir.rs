@@ -277,13 +277,19 @@ impl AST2HIR {
             },
             ast::Pattern::Constructor { ty, arg, name } => Pattern::Constructor {
                 ty: self.conv_ty(ty),
-                arg: arg.map(|(ty, sym)| (self.conv_ty(ty), sym)),
+                arg: arg.map(|pat| match *pat {
+                    ast::Pattern::Variable { name, ty } => (self.conv_ty(ty), name),
+                    _ => panic!("internal error: pattern"),
+                }),
                 descriminant: self.conv_constructor_name(&name),
             },
             ast::Pattern::Tuple { tuple, .. } => {
                 let (tys, tuple) = tuple
                     .into_iter()
-                    .map(|(ty, sym)| (self.conv_ty(ty), sym))
+                    .map(|pat| match pat {
+                        ast::Pattern::Variable { name, ty } => (self.conv_ty(ty), name),
+                        _ => panic!("internal error: pattern"),
+                    })
                     .unzip();
                 Pattern::Tuple { tuple, tys }
             }

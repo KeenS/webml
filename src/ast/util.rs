@@ -158,10 +158,10 @@ pub trait Traverse<Ty> {
         &mut self,
         _ty: &mut Ty,
         _name: &mut Symbol,
-        _arg: &mut Option<(Ty, Symbol)>,
+        _arg: &mut Option<Box<Pattern<Ty>>>,
     ) {
     }
-    fn traverse_pat_tuple(&mut self, _ty: &mut Ty, _tuple: &mut Vec<(Ty, Symbol)>) {}
+    fn traverse_pat_tuple(&mut self, _ty: &mut Ty, _tuple: &mut Vec<Pattern<Ty>>) {}
     fn traverse_pat_variable(&mut self, _ty: &mut Ty, _value: &mut Symbol) {}
     fn traverse_pat_wildcard(&mut self, _ty: &mut Ty) {}
 }
@@ -349,13 +349,13 @@ pub trait Transform<Ty> {
     fn transform_pat_constructor(
         &mut self,
         ty: Ty,
-        arg: Option<(Ty, Symbol)>,
+        arg: Option<Box<Pattern<Ty>>>,
         name: Symbol,
     ) -> Pattern<Ty> {
         Pattern::Constructor { name, arg, ty }
     }
 
-    fn transform_pat_tuple(&mut self, ty: Ty, tuple: Vec<(Ty, Symbol)>) -> Pattern<Ty> {
+    fn transform_pat_tuple(&mut self, ty: Ty, tuple: Vec<Pattern<Ty>>) -> Pattern<Ty> {
         Pattern::Tuple { ty, tuple }
     }
 

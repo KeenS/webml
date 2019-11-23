@@ -222,11 +222,11 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
         &mut self,
         _ty: &mut Ty,
         name: &mut Symbol,
-        arg: &mut Option<(Ty, Symbol)>,
+        arg: &mut Option<Box<Pattern<Ty>>>,
     ) {
         self.rename_constructor(name);
-        if let Some((_, name)) = arg {
-            self.new_variable(name)
+        if let Some(pat) = arg {
+            self.traverse_pattern(&mut *pat)
         }
     }
 
@@ -238,9 +238,9 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
         }
     }
 
-    fn traverse_pat_tuple(&mut self, _ty: &mut Ty, tuple: &mut Vec<(Ty, Symbol)>) {
-        for (_, sym) in tuple {
-            self.new_variable(sym)
+    fn traverse_pat_tuple(&mut self, _ty: &mut Ty, tuple: &mut Vec<Pattern<Ty>>) {
+        for pat in tuple {
+            self.traverse_pattern(pat)
         }
     }
 }
