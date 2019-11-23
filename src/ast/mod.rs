@@ -1,4 +1,5 @@
 mod case_check;
+mod case_simplify;
 mod desugar;
 mod pp;
 mod rename;
@@ -7,6 +8,7 @@ mod util;
 mod var2constructor;
 
 pub use self::case_check::CaseCheck;
+pub use self::case_simplify::CaseSimplify;
 pub use self::desugar::Desugar;
 pub use self::rename::Rename;
 pub use self::typing::TyEnv as Typer;
