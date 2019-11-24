@@ -207,7 +207,8 @@ impl LIR2WASM {
                         .iter()
                         .rev()
                         .position(|x| *x == $label)
-                        .expect("internal error: label not found") as u32
+                        .unwrap_or_else(|| panic!("internal error: label not found: {:?}", $label))
+                        as u32
                 };
             }
 
@@ -729,16 +730,15 @@ impl LIR2WASM {
     }
 
     fn insert_loop<'a>(&mut self, v: Vec<Control<'a>>) -> Vec<Control<'a>> {
-        let mut ret = Vec::new();
         let mut loop_targets = HashSet::new();
-        let mut labels = HashSet::new();
-        for c in v.iter() {
+        let mut labels = HashMap::new();
+        for (i, c) in v.iter().enumerate() {
             match *c {
                 Control::Body(ref block) => {
-                    labels.insert(&block.name);
+                    labels.insert(&block.name, i);
 
                     for label in block.branches().into_iter() {
-                        if labels.contains(&label) {
+                        if labels.contains_key(&label) {
                             loop_targets.insert(label);
                         }
                     }
@@ -747,6 +747,7 @@ impl LIR2WASM {
             }
         }
 
+        let mut ret = Vec::new();
         let mut closed_loops = HashSet::new();
         // note: iterating reverse order
         for c in v.into_iter().rev() {
@@ -755,7 +756,13 @@ impl LIR2WASM {
                     let name = &block.name;
 
                     // loopend
-                    for label in block.branches().into_iter() {
+                    let mut targets = block
+                        .branches()
+                        .into_iter()
+                        .map(|label| (labels[&label], label))
+                        .collect::<Vec<_>>();
+                    targets.sort_by_key(|(n, _)| *n);
+                    for (_, label) in targets {
                         if loop_targets.contains(&label) && !closed_loops.contains(&label) {
                             ret.push(Control::LoopEnd(&label));
                             closed_loops.insert(label);
@@ -777,16 +784,15 @@ impl LIR2WASM {
     }
 
     fn insert_block<'a>(&mut self, v: Vec<Control<'a>>) -> Vec<Control<'a>> {
-        let mut ret = Vec::new();
         let mut block_targets = HashSet::new();
-        let mut labels = HashSet::new();
-        for c in v.iter() {
+        let mut labels = HashMap::new();
+        for (i, c) in v.iter().enumerate() {
             match *c {
                 Control::Body(ref block) => {
-                    labels.insert(&block.name);
+                    labels.insert(&block.name, i);
 
                     for label in block.branches().into_iter() {
-                        if !labels.contains(&label) {
+                        if !labels.contains_key(&label) {
                             block_targets.insert(label);
                         }
                     }
@@ -795,8 +801,8 @@ impl LIR2WASM {
             }
         }
 
+        let mut ret = Vec::new();
         let mut opened_blocks = HashSet::new();
-
         for c in v.into_iter() {
             match c {
                 Control::Body(block) => {
@@ -808,7 +814,13 @@ impl LIR2WASM {
                     }
 
                     // block
-                    for label in block.branches().into_iter() {
+                    let mut targets = block
+                        .branches()
+                        .into_iter()
+                        .map(|label| (labels[&label], label))
+                        .collect::<Vec<_>>();
+                    targets.sort_by_key(|(n, _)| *n);
+                    for (_, label) in targets {
                         if block_targets.contains(&label) && !opened_blocks.contains(&label) {
                             ret.push(Control::Block(&label));
                             opened_blocks.insert(label);
@@ -859,7 +871,7 @@ impl LIR2WASM {
                 Control::Body(_) | Control::Block(_) | Control::BlockEnd(_) => ret.push(c),
             }
         }
-
+        assert!(defers.is_empty());
         ret
     }
 
@@ -891,6 +903,7 @@ impl LIR2WASM {
                 c => tmp.push(c),
             }
         }
+        assert!(defers.is_empty());
         tmp.into_iter().rev().collect()
     }
 
