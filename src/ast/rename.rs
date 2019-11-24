@@ -68,7 +68,7 @@ impl<'a> Scope<'a> {
     fn new_type(&mut self, symbol: &mut Symbol) {
         let pos = self.pos - 1;
         let new_id = self.id.next();
-        self.variable_tables[pos].insert(symbol.clone(), new_id);
+        self.type_tables[pos].insert(symbol.clone(), new_id);
         symbol.1 = new_id;
     }
 
@@ -112,6 +112,38 @@ impl<'a> Scope<'a> {
             }
         }
     }
+
+    fn rename_type(&mut self, ty: &mut Type) {
+        use Type::*;
+
+        match ty {
+            Variable(_) | Int | Real => {
+                // noop
+                ()
+            }
+            Fun(arg, body) => {
+                self.rename_type(arg);
+                self.rename_type(body);
+            }
+            Tuple(tuple) => {
+                for t in tuple {
+                    self.rename_type(t)
+                }
+            }
+            Datatype(name) => {
+                let pos = self.pos;
+                for table in self.type_tables[0..pos].iter_mut().rev() {
+                    match table.get(name) {
+                        Some(new_id) => {
+                            name.1 = *new_id;
+                            return;
+                        }
+                        None => {}
+                    }
+                }
+            }
+        }
+    }
 }
 
 impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
@@ -122,9 +154,11 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
     ) {
         let scope = self;
         scope.new_type(name);
-        for (cname, _) in constructors.iter_mut() {
+        for (cname, argty) in constructors.iter_mut() {
             scope.new_constructor(cname);
-            // handle arg types
+            if let Some(argty) = argty {
+                scope.rename_type(argty);
+            }
         }
 
         let constructor_info = TypeInfo {
@@ -226,7 +260,7 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
     ) {
         self.rename_constructor(name);
         if let Some(pat) = arg {
-            self.traverse_pattern(&mut *pat)
+            self.traverse_pattern(&mut *pat);
         }
     }
 
