@@ -352,11 +352,21 @@ pub trait Transform<Ty> {
         arg: Option<Box<Pattern<Ty>>>,
         name: Symbol,
     ) -> Pattern<Ty> {
-        Pattern::Constructor { name, arg, ty }
+        Pattern::Constructor {
+            name,
+            arg: arg.map(|pat| Box::new(self.transform_pattern(*pat))),
+            ty,
+        }
     }
 
     fn transform_pat_tuple(&mut self, ty: Ty, tuple: Vec<Pattern<Ty>>) -> Pattern<Ty> {
-        Pattern::Tuple { ty, tuple }
+        Pattern::Tuple {
+            ty,
+            tuple: tuple
+                .into_iter()
+                .map(|pat| self.transform_pattern(pat))
+                .collect(),
+        }
     }
 
     fn transform_pat_variable(&mut self, ty: Ty, name: Symbol) -> Pattern<Ty> {

@@ -536,6 +536,7 @@ impl TyEnv {
                     .clone();
                 self.give(*ty, Typing::Datatype(type_name.clone()))?;
                 if let Some(arg) = arg {
+                    self.infer_pat(arg)?;
                     let arg_ty = self
                         .symbol_table()
                         .get_type(&type_name)
@@ -552,6 +553,9 @@ impl TyEnv {
                 }
             }
             Tuple { ty, tuple } => {
+                for t in tuple {
+                    self.infer_pat(t)?;
+                }
                 let tuple_ty = self
                     .pool
                     .ty(Typing::Tuple(tuple.iter().map(|pat| pat.ty()).collect()));
