@@ -52,7 +52,9 @@ impl CaseSimplify {
         } else if clauses[0].0.iter().all(|p| p.is_variable()) {
             self.match_compile_variable(cond, ty, clauses)
         } else if clauses[0].0.iter().any(|p| p.is_tuple()) {
-            self.compile_tuple(cond, ty, clauses)
+            self.match_compile_tuple(cond, ty, clauses)
+        } else if clauses[0].0.iter().any(|p| p.is_constant()) {
+            self.match_compile_constant(cond, ty, clauses)
         } else {
             self.match_compile_mixture(cond, ty, clauses)
         }
@@ -89,7 +91,7 @@ impl CaseSimplify {
             })
     }
 
-    fn compile_tuple(
+    fn match_compile_tuple(
         &mut self,
         mut cond: Stack<(Type, Symbol)>,
         ty: Type,
@@ -159,6 +161,63 @@ impl CaseSimplify {
         }
     }
 
+    fn match_compile_constant(
+        &mut self,
+        mut cond: Stack<(Type, Symbol)>,
+        ret_ty: Type,
+        clauses: Vec<(Stack<TypedPattern>, TypedCoreExpr)>,
+    ) -> TypedCoreExpr {
+        let pos = self.find_constant(&clauses);
+
+        let (cty, c) = cond.swap_remove(pos);
+        let clause_with_heads = clauses
+            .into_iter()
+            .map(|mut clause| {
+                let head = clause.0.swap_remove(pos);
+                (head, clause)
+            })
+            .collect::<Vec<_>>();
+        let constants = clause_with_heads
+            .iter()
+            .filter_map(|(head, _)| match head {
+                Pattern::Constant { value, ty } => Some((*value, ty.clone())),
+                _ => None,
+            })
+            .collect::<HashMap<_, _>>();
+        let mut clauses = constants
+            .iter()
+            .map(|(value, ty)| {
+                let clauses = self.specialized_patterns_for_constant(
+                    (cty.clone(), c.clone()),
+                    *value,
+                    clause_with_heads.iter(),
+                );
+                (
+                    Pattern::Constant {
+                        value: *value,
+                        ty: ty.clone(),
+                    },
+                    self.match_compile(cond.clone(), ret_ty.clone(), clauses),
+                )
+            })
+            .collect::<Vec<_>>();
+
+        // no check for exhausitiveness
+        let default =
+            self.default_patterns(c.clone(), cond, ret_ty.clone(), clause_with_heads.iter());
+        clauses.push((
+            Pattern::Variable {
+                name: self.gensym("_"),
+                ty: cty.clone(),
+            },
+            default,
+        ));
+        Expr::Case {
+            cond: Box::new(Expr::Symbol { name: c, ty: cty }),
+            clauses: clauses,
+            ty: ret_ty,
+        }
+    }
     fn match_compile_mixture(
         &mut self,
         mut cond: Stack<(Type, Symbol)>,
@@ -254,6 +313,10 @@ impl CaseSimplify {
         clauses[0].0.iter().rposition(|p| p.is_tuple()).unwrap()
     }
 
+    fn find_constant(&mut self, clauses: &[(Stack<TypedPattern>, TypedCoreExpr)]) -> usize {
+        clauses[0].0.iter().rposition(|p| p.is_constant()).unwrap()
+    }
+
     fn find_constructor(&mut self, clauses: &[(Stack<TypedPattern>, TypedCoreExpr)]) -> usize {
         clauses[0]
             .0
@@ -306,6 +369,38 @@ impl CaseSimplify {
             .map(|(patterns, (mut pat, arm))| {
                 pat.extend(patterns.into_iter());
                 (pat, arm)
+            })
+            .collect()
+    }
+
+    fn specialized_patterns_for_constant<'a, 'b>(
+        &'a mut self,
+        (cty, cond): (Type, Symbol),
+        value: i64,
+        clause_with_heads: impl Iterator<
+            Item = &'b (TypedPattern, (Stack<TypedPattern>, TypedCoreExpr)),
+        >,
+    ) -> Vec<(Stack<TypedPattern>, TypedCoreExpr)> {
+        clause_with_heads
+            .filter_map(|(head, clause)| match head {
+                Pattern::Constant { value: value1, .. } if value == *value1 => Some(clause.clone()),
+                v @ Pattern::Variable { .. } => {
+                    let (pat, arm) = clause.clone();
+                    let arm = Expr::Binds {
+                        binds: vec![Statement::Val {
+                            rec: false,
+                            pattern: v.clone(),
+                            expr: Expr::Symbol {
+                                name: cond.clone(),
+                                ty: cty.clone(),
+                            },
+                        }],
+                        ty: arm.ty(),
+                        ret: Box::new(arm),
+                    };
+                    Some((pat, arm))
+                }
+                _ => None,
             })
             .collect()
     }

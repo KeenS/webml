@@ -219,6 +219,14 @@ impl<Ty> Pattern<Ty> {
         }
     }
 
+    pub fn is_constant(&self) -> bool {
+        use self::Pattern::*;
+        match self {
+            Constant { .. } => true,
+            _ => false,
+        }
+    }
+
     pub fn is_tuple(&self) -> bool {
         use self::Pattern::*;
         match self {
