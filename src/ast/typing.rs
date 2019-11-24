@@ -485,12 +485,15 @@ impl TyEnv {
     ) -> Result<'r, ()> {
         match self.get(&sym) {
             Some(ty) => {
-                if let Some(arg) = arg {
-                    let ty = self.pool.ty(Typing::Fun(arg.ty(), ty));
-                    self.unify(ty, given)
-                } else {
-                    self.unify(ty, given)
+                self.unify(ty, given)?;
+                let arg_ty = self.symbol_table().get_argtype_of_constructor(sym);
+                if let (Some(arg), Some(arg_ty)) = (arg.clone(), arg_ty.cloned()) {
+                    self.infer_expr(&arg)?;
+                    let arg_typing = self.convert(arg_ty);
+                    let arg_ty_id = self.pool.ty(arg_typing);
+                    self.unify(arg.ty(), arg_ty_id)?;
                 }
+                Ok(())
             }
             None => Err(TypeError::FreeVar),
         }
