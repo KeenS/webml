@@ -221,6 +221,7 @@ impl HIR2MIR {
                     .map(|(n, (pat, expr))| {
                         (
                             pat.match_key(),
+                            pat.binds(),
                             self.genlabel(&format!("branch_arm_{}", n)),
                             expr,
                         )
@@ -228,7 +229,7 @@ impl HIR2MIR {
                     .collect::<Vec<_>>();
                 let labels = arms
                     .iter()
-                    .map(|&(key, ref label, _)| (key, label.clone(), true))
+                    .map(|&(key, _, ref label, _)| (key, label.clone(), true))
                     .collect::<Vec<_>>();
 
                 let descriminant = self.gensym("descriminant");
@@ -275,11 +276,14 @@ impl HIR2MIR {
 
                 fb.add_ebb(ebb);
 
-                for (key, label, arm) in arms {
+                for (key, binds, label, arm) in arms {
                     let mut eb = EBBBuilder::new(label, Vec::new());
                     match &exprty {
                         MatchTy::Datatype(tys) => {
-                            let vararg = self.gensym("vararg");
+                            let vararg = match binds {
+                                Some(s) => s,
+                                None => self.gensym("vararg"),
+                            };
                             let argty = tys[key as usize].clone();
                             eb.select(vararg, argty, key, arg.clone());
                         }

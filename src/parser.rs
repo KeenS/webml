@@ -408,16 +408,16 @@ named!(pattern_tuple <&str, Pattern<()>>, do_parse!(
     tag!("(") >>
         opt!(multispace) >>
         es: many1!(do_parse!(
-            e: symbol >> opt!(multispace)
+            e: pattern_single >> opt!(multispace)
                 >> tag!(",") >> opt!(multispace) >> (e))
         ) >>
-        e: symbol >>  opt!(multispace) >>
+        e: pattern_single >>  opt!(multispace) >>
         tag!(")") >>
         (
             {
                 let mut es = es;
                 es.push(e);
-                Pattern::Tuple{tuple: es.into_iter().map(|e| ((), e)).collect(), ty: ()}
+                Pattern::Tuple{tuple: es, ty: ()}
             }
         ))
 );
@@ -427,8 +427,8 @@ named!(pattern_tuple <&str, Pattern<()>>, do_parse!(
 named!(pattern_constructor <&str, Pattern<()>>, do_parse!(
     name: symbol >>
         multispace >>
-        arg: symbol >>
-        (Pattern::Constructor { name, arg: Some(((), arg)), ty: ()}))
+        arg: pattern_multi >>
+        (Pattern::Constructor { name, arg: Some(Box::new(arg)), ty: ()}))
 );
 
 named!(pattern_var <&str, Pattern<()>>, map!(symbol, |name| Pattern::Variable {

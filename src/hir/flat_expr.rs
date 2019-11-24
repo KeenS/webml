@@ -52,11 +52,7 @@ impl Transform for FlatExpr {
             .collect();
         let (ret, retval) = self.flat_make_val(*ret);
         binds.push(retval);
-        Binds {
-            binds,
-            ret,
-            ty,
-        }
+        Binds { binds, ret, ty }
     }
 
     fn transform_binop(&mut self, ty: HTy, name: Symbol, l: Box<Expr>, r: Box<Expr>) -> Expr {
@@ -170,6 +166,38 @@ impl Transform for FlatExpr {
             ty,
             binds: vec![exprval, retval],
             ret,
+        }
+    }
+
+    fn transform_constructor(
+        &mut self,
+        ty: HTy,
+        arg: Option<Box<Expr>>,
+        descriminant: u32,
+    ) -> Expr {
+        if let Some(arg) = arg {
+            let (arg, exprval) = self.flat_make_val(*arg);
+            let (ret, constval) = self.make_val(Constructor {
+                ty: ty.clone(),
+                descriminant,
+                arg: Some(arg),
+            });
+            Binds {
+                ty,
+                binds: vec![exprval, constval],
+                ret,
+            }
+        } else {
+            let (ret, constval) = self.make_val(Constructor {
+                ty: ty.clone(),
+                descriminant,
+                arg,
+            });
+            Binds {
+                ty,
+                binds: vec![constval],
+                ret,
+            }
         }
     }
 

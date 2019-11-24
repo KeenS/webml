@@ -62,7 +62,7 @@ impl MIR2LIR {
                 ($var: expr) => {
                     symbol_table
                         .get(&$var)
-                        .expect("variable resolution failed")
+                        .unwrap_or_else(|| panic!("variable resolution failed: {:?}", &$var))
                         .clone()
                 };
             }
@@ -609,6 +609,9 @@ impl MIR2LIR {
                     | &mir::Op::Proj {
                         ref var, ref ty, ..
                     }
+                    | &mir::Op::Select {
+                        ref var, ref ty, ..
+                    }
                     | &mir::Op::BuiltinCall {
                         ref var, ref ty, ..
                     }
@@ -620,9 +623,6 @@ impl MIR2LIR {
                     &mir::Op::Tuple { ref var, .. } | &mir::Op::Closure { ref var, .. } => {
                         intern!(LTy::Ptr, var);
                     }
-                    &mir::Op::Select {
-                        ref var, ref ty, ..
-                    } => intern!(self.ebbty_to_lty(ty), var),
                     &mir::Op::Union { ref var, .. } => intern!(LTy::Ptr, var),
                     _ => (),
                 }

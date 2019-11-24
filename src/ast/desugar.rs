@@ -238,39 +238,7 @@ impl Desugar {
     }
 
     fn transform_pattern(&mut self, pattern: UntypedPattern) -> UntypedPattern {
-        use Pattern::*;
-        match pattern {
-            Constant { ty, value } => self.transform_pat_constant(ty, value),
-            Constructor { ty, arg, name } => self.transform_pat_constructor(ty, arg, name),
-            Tuple { ty, tuple } => self.transform_pat_tuple(ty, tuple),
-            Variable { ty, name } => self.transform_pat_variable(ty, name),
-            Wildcard { ty } => self.transform_pat_wildcard(ty),
-        }
-    }
-
-    fn transform_pat_constant(&mut self, ty: (), value: i64) -> UntypedPattern {
-        Pattern::Constant { value, ty }
-    }
-
-    fn transform_pat_constructor(
-        &mut self,
-        ty: (),
-        arg: Option<((), Symbol)>,
-        name: Symbol,
-    ) -> UntypedPattern {
-        Pattern::Constructor { name, arg, ty }
-    }
-
-    fn transform_pat_tuple(&mut self, ty: (), tuple: Vec<((), Symbol)>) -> UntypedPattern {
-        Pattern::Tuple { ty, tuple }
-    }
-
-    fn transform_pat_variable(&mut self, ty: (), name: Symbol) -> UntypedPattern {
-        Pattern::Variable { name, ty }
-    }
-
-    fn transform_pat_wildcard(&mut self, ty: ()) -> UntypedPattern {
-        Pattern::Wildcard { ty }
+        pattern
     }
 }
 

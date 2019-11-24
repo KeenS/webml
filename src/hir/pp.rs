@@ -119,9 +119,17 @@ impl PP for Expr {
                 write!(w, " ")?;
                 arg.pp(w, indent)?;
             }
-            Constructor { descriminant, .. } => {
-                write!(w, "{}", descriminant)?;
-            }
+            Constructor {
+                descriminant, arg, ..
+            } => match arg {
+                None => {
+                    write!(w, "{}", descriminant)?;
+                }
+                Some(arg) => {
+                    write!(w, "{} ", descriminant)?;
+                    arg.pp(w, indent)?;
+                }
+            },
             Sym { name, .. } => {
                 name.pp(w, indent)?;
             }

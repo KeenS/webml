@@ -1,4 +1,5 @@
 mod case_check;
+mod case_simplify;
 mod desugar;
 mod pp;
 mod rename;
@@ -7,6 +8,7 @@ mod util;
 mod var2constructor;
 
 pub use self::case_check::CaseCheck;
+pub use self::case_simplify::CaseSimplify;
 pub use self::desugar::Desugar;
 pub use self::rename::Rename;
 pub use self::typing::TyEnv as Typer;
@@ -128,12 +130,12 @@ pub enum Pattern<Ty> {
     },
     Constructor {
         name: Symbol,
-        arg: Option<(Ty, Symbol)>,
+        arg: Option<Box<Pattern<Ty>>>,
         ty: Ty,
     },
     // having redundant types for now
     Tuple {
-        tuple: Vec<(Ty, Symbol)>,
+        tuple: Vec<Pattern<Ty>>,
         ty: Ty,
     },
     Variable {
@@ -193,11 +195,43 @@ impl<Ty: Clone> CoreExpr<Ty> {
 impl<Ty> Pattern<Ty> {
     pub fn binds(&self) -> Vec<(&Symbol, &Ty)> {
         use self::Pattern::*;
-        match *self {
+        match self {
             Constant { .. } | Wildcard { .. } => vec![],
-            Variable { ref name, ref ty } => vec![(name, ty)],
-            Tuple { ref tuple, .. } => tuple.iter().map(|&(ref ty, ref sym)| (sym, ty)).collect(),
-            Constructor { .. } => vec![],
+            Variable { name, ty } => vec![(name, ty)],
+            Tuple { tuple, .. } => tuple.iter().flat_map(|pat| pat.binds()).collect(),
+            Constructor { arg, .. } => arg.iter().flat_map(|pat| pat.binds()).collect(),
+        }
+    }
+
+    pub fn is_variable(&self) -> bool {
+        use self::Pattern::*;
+        match self {
+            Variable { .. } => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_constructor(&self) -> bool {
+        use self::Pattern::*;
+        match self {
+            Constructor { .. } => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_constant(&self) -> bool {
+        use self::Pattern::*;
+        match self {
+            Constant { .. } => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_tuple(&self) -> bool {
+        use self::Pattern::*;
+        match self {
+            Tuple { .. } => true,
+            _ => false,
         }
     }
 }
@@ -205,12 +239,12 @@ impl<Ty> Pattern<Ty> {
 impl<Ty: Clone> Pattern<Ty> {
     fn ty(&self) -> Ty {
         use self::Pattern::*;
-        match *self {
-            Constant { ref ty, .. }
-            | Variable { ref ty, .. }
-            | Wildcard { ref ty }
-            | Tuple { ref ty, .. }
-            | Constructor { ref ty, .. } => ty.clone(),
+        match self {
+            Constant { ty, .. }
+            | Variable { ty, .. }
+            | Wildcard { ty }
+            | Tuple { ty, .. }
+            | Constructor { ty, .. } => ty.clone(),
         }
     }
 }
@@ -256,6 +290,20 @@ impl SymbolTable {
             .find(|(cname, _)| cname == name)
             .map(|(_, param)| param)?;
         param_ty.as_ref()
+    }
+
+    pub fn constructor_to_id(&self, name: &Symbol) -> u32 {
+        let typename = self
+            .get_datatype_of_constructor(name)
+            .expect("internal error: type not found for construcor");
+        let type_info = self
+            .get_type(typename)
+            .expect("internal error: type not found");
+        type_info
+            .constructors
+            .iter()
+            .position(|(cname, _)| cname == name)
+            .expect("internal error: constructor is not a memberof its ADT") as u32
     }
 }
 

@@ -167,11 +167,11 @@ impl<Ty> Pattern<Ty> {
             Constant { value, ty } => Constant { value, ty: f(ty) },
             Constructor { name, arg, ty } => Constructor {
                 name,
-                arg: arg.map(|(ty, sym)| (f(ty), sym)),
+                arg: arg.map(|pat| Box::new(pat.map_ty(f))),
                 ty: f(ty),
             },
             Tuple { tuple, ty } => Tuple {
-                tuple: tuple.into_iter().map(|(ty, sym)| (f(ty), sym)).collect(),
+                tuple: tuple.into_iter().map(|pat| pat.map_ty(f)).collect(),
                 ty: f(ty),
             },
             Variable { name, ty } => Variable { name, ty: f(ty) },
@@ -485,12 +485,15 @@ impl TyEnv {
     ) -> Result<'r, ()> {
         match self.get(&sym) {
             Some(ty) => {
-                if let Some(arg) = arg {
-                    let ty = self.pool.ty(Typing::Fun(arg.ty(), ty));
-                    self.unify(ty, given)
-                } else {
-                    self.unify(ty, given)
+                self.unify(ty, given)?;
+                let arg_ty = self.symbol_table().get_argtype_of_constructor(sym);
+                if let (Some(arg), Some(arg_ty)) = (arg.clone(), arg_ty.cloned()) {
+                    self.infer_expr(&arg)?;
+                    let arg_typing = self.convert(arg_ty);
+                    let arg_ty_id = self.pool.ty(arg_typing);
+                    self.unify(arg.ty(), arg_ty_id)?;
                 }
+                Ok(())
             }
             None => Err(TypeError::FreeVar),
         }
@@ -533,6 +536,7 @@ impl TyEnv {
                     .clone();
                 self.give(*ty, Typing::Datatype(type_name.clone()))?;
                 if let Some(arg) = arg {
+                    self.infer_pat(arg)?;
                     let arg_ty = self
                         .symbol_table()
                         .get_type(&type_name)
@@ -545,13 +549,16 @@ impl TyEnv {
                         .expect("internal error: typing");
                     let arg_typing = self.convert(arg_ty);
                     let arg_ty_id = self.pool.ty(arg_typing);
-                    self.unify(arg.0, arg_ty_id)?;
+                    self.unify(arg.ty(), arg_ty_id)?;
                 }
             }
             Tuple { ty, tuple } => {
-                let tuple_ty = self.pool.ty(Typing::Tuple(
-                    tuple.iter().map(|(node_id, _)| *node_id).collect(),
-                ));
+                for t in tuple {
+                    self.infer_pat(t)?;
+                }
+                let tuple_ty = self
+                    .pool
+                    .ty(Typing::Tuple(tuple.iter().map(|pat| pat.ty()).collect()));
                 self.unify(*ty, tuple_ty)?;
             }
             Wildcard { .. } | Variable { .. } => (),
@@ -567,7 +574,10 @@ impl TyEnv {
         tuple: &Vec<CoreExpr<NodeId>>,
         given: NodeId,
     ) -> Result<'r, ()> {
-        let tys = vec![self.pool.tyvar(); tuple.len()];
+        use std::iter;
+        let tys = iter::repeat_with(|| self.pool.tyvar())
+            .take(tuple.len())
+            .collect::<Vec<_>>();
 
         for (e, t) in tuple.iter().zip(tys.iter()) {
             self.infer_expr(e)?;

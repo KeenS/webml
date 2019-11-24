@@ -277,13 +277,19 @@ impl AST2HIR {
             },
             ast::Pattern::Constructor { ty, arg, name } => Pattern::Constructor {
                 ty: self.conv_ty(ty),
-                arg: arg.map(|(ty, sym)| (self.conv_ty(ty), sym)),
+                arg: arg.map(|pat| match *pat {
+                    ast::Pattern::Variable { name, ty } => (self.conv_ty(ty), name),
+                    _ => panic!("internal error: pattern"),
+                }),
                 descriminant: self.conv_constructor_name(&name),
             },
             ast::Pattern::Tuple { tuple, .. } => {
                 let (tys, tuple) = tuple
                     .into_iter()
-                    .map(|(ty, sym)| (self.conv_ty(ty), sym))
+                    .map(|pat| match pat {
+                        ast::Pattern::Variable { name, ty } => (self.conv_ty(ty), name),
+                        _ => panic!("internal error: pattern"),
+                    })
                     .unzip();
                 Pattern::Tuple { tuple, tys }
             }
@@ -299,19 +305,7 @@ impl AST2HIR {
     }
 
     fn conv_constructor_name(&mut self, name: &Symbol) -> u32 {
-        let typename = self
-            .symbol_table()
-            .get_datatype_of_constructor(name)
-            .expect("internal error: type not found for construcor");
-        let type_info = self
-            .symbol_table()
-            .get_type(typename)
-            .expect("internal error: type not found");
-        type_info
-            .constructors
-            .iter()
-            .position(|(cname, _)| cname == name)
-            .expect("internal error: constructor is not a memberof its ADT") as u32
+        self.symbol_table().constructor_to_id(name)
     }
 }
 
