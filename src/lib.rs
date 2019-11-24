@@ -35,7 +35,6 @@ pub fn compile_str<'a>(input: &'a str, config: &Config) -> Result<Vec<u8>, TypeE
        var_to_constructor: ast::VarToConstructor::new(id.clone()),
        typing: ast::Typer::new(),
        case_simplify: ast::CaseSimplify::new(id.clone()),
-       case_check: ast::CaseCheck::new(),
        ast_to_hir: hir::AST2HIR::new(id.clone()),
        find_builtin: hir::FindBuiltin::new(),
        flattening_expression: hir::FlatExpr::new(id.clone()),
