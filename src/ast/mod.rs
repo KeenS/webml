@@ -202,6 +202,30 @@ impl<Ty> Pattern<Ty> {
             Constructor { arg, .. } => arg.iter().flat_map(|pat| pat.binds()).collect(),
         }
     }
+
+    pub fn is_variable(&self) -> bool {
+        use self::Pattern::*;
+        match self {
+            Variable { .. } => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_constructor(&self) -> bool {
+        use self::Pattern::*;
+        match self {
+            Constructor { .. } => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_tuple(&self) -> bool {
+        use self::Pattern::*;
+        match self {
+            Tuple { .. } => true,
+            _ => false,
+        }
+    }
 }
 
 impl<Ty: Clone> Pattern<Ty> {
@@ -258,6 +282,20 @@ impl SymbolTable {
             .find(|(cname, _)| cname == name)
             .map(|(_, param)| param)?;
         param_ty.as_ref()
+    }
+
+    pub fn constructor_to_id(&self, name: &Symbol) -> u32 {
+        let typename = self
+            .get_datatype_of_constructor(name)
+            .expect("internal error: type not found for construcor");
+        let type_info = self
+            .get_type(typename)
+            .expect("internal error: type not found");
+        type_info
+            .constructors
+            .iter()
+            .position(|(cname, _)| cname == name)
+            .expect("internal error: constructor is not a memberof its ADT") as u32
     }
 }
 

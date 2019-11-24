@@ -305,19 +305,7 @@ impl AST2HIR {
     }
 
     fn conv_constructor_name(&mut self, name: &Symbol) -> u32 {
-        let typename = self
-            .symbol_table()
-            .get_datatype_of_constructor(name)
-            .expect("internal error: type not found for construcor");
-        let type_info = self
-            .symbol_table()
-            .get_type(typename)
-            .expect("internal error: type not found");
-        type_info
-            .constructors
-            .iter()
-            .position(|(cname, _)| cname == name)
-            .expect("internal error: constructor is not a memberof its ADT") as u32
+        self.symbol_table().constructor_to_id(name)
     }
 }
 
