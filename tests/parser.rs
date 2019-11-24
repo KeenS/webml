@@ -276,7 +276,16 @@ fn parse_fun_pattern() {
             name: Symbol::new("f"),
             params: vec![Pattern::Tuple {
                 ty: (),
-                tuple: vec![((), Symbol::new("x")), ((), Symbol::new("y")),]
+                tuple: vec![
+                    Pattern::Variable {
+                        name: Symbol::new("x"),
+                        ty: ()
+                    },
+                    Pattern::Variable {
+                        name: Symbol::new("y"),
+                        ty: ()
+                    },
+                ]
             }],
             expr: Expr::Symbol {
                 ty: (),
@@ -393,7 +402,10 @@ fn parse_case_constructor() {
                         Pattern::Constructor {
                             ty: (),
                             name: Symbol::new("SOME"),
-                            arg: Some(((), Symbol::new("x"))),
+                            arg: Some(Box::new(Pattern::Variable {
+                                name: Symbol::new("x"),
+                                ty: ()
+                            })),
                         },
                         Expr::Constructor {
                             ty: (),
@@ -593,9 +605,18 @@ fn parse_case_tuple() {
                 clauses: vec![(
                     Pattern::Tuple {
                         tuple: vec![
-                            ((), Symbol::new("x")),
-                            ((), Symbol::new("y")),
-                            ((), Symbol::new("z")),
+                            Pattern::Variable {
+                                name: Symbol::new("x"),
+                                ty: ()
+                            },
+                            Pattern::Variable {
+                                name: Symbol::new("y"),
+                                ty: ()
+                            },
+                            Pattern::Variable {
+                                name: Symbol::new("z"),
+                                ty: ()
+                            },
                         ],
                         ty: ()
                     },
