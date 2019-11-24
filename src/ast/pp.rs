@@ -128,8 +128,15 @@ impl<Ty: PP, D: PP> PP for Expr<Ty, D> {
                 }
                 write!(w, ")")?;
             }
-            Symbol { name, .. } | Constructor { name, .. } => {
+            Symbol { name, .. } => {
                 name.pp(w, indent)?;
+            }
+            Constructor { name, arg, .. } => {
+                name.pp(w, indent)?;
+                if let Some(arg) = arg {
+                    write!(w, " ")?;
+                    arg.pp(w, indent)?;
+                }
             }
             Literal { value, .. } => {
                 value.pp(w, indent)?;
