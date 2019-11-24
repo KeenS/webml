@@ -2,12 +2,17 @@ use super::util::Transform;
 use crate::ast::*;
 use crate::config::Config;
 use crate::id::Id;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Debug)]
 pub struct CaseSimplify {
     id: Id,
     symbol_table: Option<SymbolTable>,
+}
+
+#[derive(Debug)]
+pub struct WildcardToVariable {
+    id: Id,
 }
 
 type Stack<T> = Vec<T>;
@@ -29,6 +34,10 @@ impl CaseSimplify {
     fn gensym(&mut self, name: &str) -> Symbol {
         let id = self.id.next();
         Symbol(format!("#{}", name), id)
+    }
+
+    fn wildcard_to_variable(&mut self, ast: TypedCore) -> TypedCore {
+        WildcardToVariable::new(self.id.clone()).transform_ast(ast)
     }
 
     fn match_compile(
@@ -175,19 +184,15 @@ impl CaseSimplify {
             .iter()
             .filter_map(|(head, _)| match head {
                 Pattern::Constructor { name, ty, arg } => {
-                    Some((name.clone(), ty.clone(), arg.clone()))
+                    Some((name.clone(), (ty.clone(), arg.clone())))
                 }
                 _ => None,
             })
-            .collect::<Vec<_>>();
-        let constructor_names = constructors
-            .iter()
-            .map(|(name, _, _)| name)
-            .collect::<Vec<_>>();
+            .collect::<HashMap<_, _>>();
+        let constructor_names = constructors.keys().collect::<HashSet<_>>();
         let mut clauses = constructors
             .iter()
-            .cloned()
-            .map(|(name, ty, arg)| {
+            .map(|(name, (ty, arg))| {
                 let clauses = self.specialized_patterns(
                     (cty.clone(), c.clone()),
                     &name,
@@ -208,7 +213,11 @@ impl CaseSimplify {
                     None => None,
                 };
                 (
-                    Pattern::Constructor { name, arg, ty },
+                    Pattern::Constructor {
+                        name: name.clone(),
+                        arg,
+                        ty: ty.clone(),
+                    },
                     self.match_compile(new_cond, ret_ty.clone(), clauses),
                 )
             })
@@ -372,7 +381,7 @@ impl Transform<Type> for CaseSimplify {
         let condty = cond.ty();
         let clauses = clauses
             .into_iter()
-            .map(|(pat, arm)| (vec![pat], arm))
+            .map(|(pat, arm)| (vec![pat], self.transform_expr(arm)))
             .collect();
         Expr::Binds {
             ty: ty.clone(),
@@ -391,6 +400,26 @@ impl Transform<Type> for CaseSimplify {
     }
 }
 
+impl WildcardToVariable {
+    fn new(id: Id) -> Self {
+        Self { id }
+    }
+
+    fn gensym(&mut self, name: &str) -> Symbol {
+        let id = self.id.next();
+        Symbol(format!("#{}", name), id)
+    }
+}
+
+impl Transform<Type> for WildcardToVariable {
+    fn transform_pat_wildcard(&mut self, ty: Type) -> TypedPattern {
+        Pattern::Variable {
+            ty,
+            name: self.gensym("_"),
+        }
+    }
+}
+
 use crate::pass::Pass;
 impl<'a> Pass<(SymbolTable, TypedCore), TypeError<'a>> for CaseSimplify {
     type Target = (SymbolTable, TypedCore);
@@ -401,6 +430,7 @@ impl<'a> Pass<(SymbolTable, TypedCore), TypeError<'a>> for CaseSimplify {
         _: &Config,
     ) -> Result<'a, Self::Target> {
         self.symbol_table = Some(symbol_table);
+        let ast = self.wildcard_to_variable(ast);
         let ast = self.transform_ast(ast);
         let symbol_table = self.generate_symbol_table();
         Ok((symbol_table, ast))
