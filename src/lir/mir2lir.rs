@@ -62,7 +62,7 @@ impl MIR2LIR {
                 ($var: expr) => {
                     symbol_table
                         .get(&$var)
-                        .expect("variable resolution failed")
+                        .unwrap_or_else(|| panic!("variable resolution failed: {:?}", &$var))
                         .clone()
                 };
             }
