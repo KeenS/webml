@@ -23,22 +23,13 @@ fn take_binds(mut expr: Expr) -> (Expr, Vec<Val>) {
             l = Box::new(l_);
             r = Box::new(r_);
             lbinds.append(&mut rbinds);
-            let expr = BinOp {
-                ty,
-                name,
-                l,
-                r,
-            };
+            let expr = BinOp { ty, name, l, r };
             (expr, lbinds)
         }
         BuiltinCall { mut arg, ty, fun } => {
             let (a, binds) = take_binds(*arg);
             arg = Box::new(a);
-            let expr = BuiltinCall {
-                fun,
-                arg,
-                ty,
-            };
+            let expr = BuiltinCall { fun, arg, ty };
             (expr, binds)
         }
         App {
@@ -51,29 +42,18 @@ fn take_binds(mut expr: Expr) -> (Expr, Vec<Val>) {
             fun = Box::new(f);
             arg = Box::new(a);
             fbinds.append(&mut abinds);
-            let expr = App {
-                fun,
-                arg,
-                ty,
-            };
+            let expr = App { fun, arg, ty };
             (expr, fbinds)
         }
         Case { mut expr, arms, ty } => {
             let (e, ebinds) = take_binds(*expr);
             expr = Box::new(e);
-            let expr = Case {
-                expr,
-                arms,
-                ty,
-            };
+            let expr = Case { expr, arms, ty };
             (expr, ebinds)
         }
         Tuple { tys, tuple } => {
             let (tuple, bindss): (_, Vec<_>) = tuple.into_iter().map(take_binds).unzip();
-            let expr = Tuple {
-                tys,
-                tuple,
-            };
+            let expr = Tuple { tys, tuple };
             (expr, bindss.into_iter().flat_map(Vec::into_iter).collect())
         }
         Proj { ty, tuple, index } => {
@@ -85,11 +65,33 @@ fn take_binds(mut expr: Expr) -> (Expr, Vec<Val>) {
             };
             (proj, binds)
         }
-        x @ Fun { .. }
-        | x @ Closure { .. }
-        | x @ Constructor { .. }
-        | x @ Sym { .. }
-        | x @ Lit { .. } => (x, Vec::new()),
+        Constructor {
+            ty,
+            descriminant,
+            arg,
+        } => {
+            if let Some(arg) = arg {
+                let (arg, binds) = take_binds(*arg);
+                (
+                    Constructor {
+                        ty,
+                        descriminant,
+                        arg: Some(Box::new(arg)),
+                    },
+                    binds,
+                )
+            } else {
+                (
+                    Constructor {
+                        ty,
+                        descriminant,
+                        arg,
+                    },
+                    Vec::new(),
+                )
+            }
+        }
+        x @ Fun { .. } | x @ Closure { .. } | x @ Sym { .. } | x @ Lit { .. } => (x, Vec::new()),
     }
 }
 
@@ -108,11 +110,7 @@ impl Transform for FlatLet {
         ret = Box::new(expr);
         vec.append(&mut binds_);
         binds = vec;
-        Expr::Binds {
-            binds,
-            ret,
-            ty,
-        }
+        Expr::Binds { binds, ret, ty }
     }
 }
 

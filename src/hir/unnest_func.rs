@@ -292,7 +292,12 @@ impl<'a> Scope<'a> {
                 for &(ref pat, ref arm) in arms.iter() {
                     use self::Pattern::*;
                     match *pat {
-                        Constructor { .. } | Constant { .. } => (),
+                        Constructor { ref arg, .. } => {
+                            if let Some((_, arg)) = arg {
+                                scope.add_scope(arg.clone())
+                            }
+                        }
+                        Constant { .. } => (),
                         Tuple { ref tuple, .. } => {
                             for name in tuple {
                                 scope.add_scope(name.clone())
@@ -321,7 +326,12 @@ impl<'a> Scope<'a> {
                     }
                 }
             }
-            &Constructor { .. } | &Lit { .. } => (),
+            &Constructor { ref arg, .. } => {
+                if let Some(arg) = arg {
+                    self.analyze_free_expr(frees, bound, arg)
+                }
+            }
+            &Lit { .. } => (),
         }
     }
 
@@ -382,7 +392,12 @@ impl<'a> Scope<'a> {
                     *name = to.clone()
                 }
             }
-            Closure { .. } | Constructor { .. } | Lit { .. } => (),
+            Constructor { ref mut arg, .. } => {
+                if let Some(arg) = arg {
+                    self.rename(arg, from, to)
+                }
+            }
+            Closure { .. } | Lit { .. } => (),
         }
     }
 }

@@ -125,6 +125,17 @@ impl Pattern {
         }
     }
 
+    pub fn binds(&self) -> Option<Symbol> {
+        use self::Pattern::*;
+        // FIXME do not panic
+        match self {
+            Constant { .. } => None,
+            Tuple { .. } => panic!("bug: non-variant expression does not have keys"),
+            Constructor { arg, .. } => arg.as_ref().map(|(_, name)| name.clone()),
+            Var { name, .. } => Some(name.clone()),
+        }
+    }
+
     pub fn is_irrefutable(&self) -> bool {
         use self::Pattern::*;
         match *self {

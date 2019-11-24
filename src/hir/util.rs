@@ -309,7 +309,7 @@ pub trait Transform {
     ) -> Expr {
         Expr::Constructor {
             ty,
-            arg,
+            arg: arg.map(|arg| Box::new(self.transform_expr(*arg))),
             descriminant,
         }
     }
