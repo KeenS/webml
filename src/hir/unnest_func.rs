@@ -8,6 +8,7 @@ use std::ops::{Deref, DerefMut, Drop};
 
 pub struct UnnestFunc {
     tables: Vec<HashSet<Symbol>>,
+    tops: Vec<Val>,
     pos: usize,
     id: Id,
 }
@@ -60,6 +61,11 @@ impl<'a> Scope<'a> {
         self.tables[pos].insert(symbol);
     }
 
+    fn new_closure(&mut self, val: Val) {
+        self.add_scope(val.name.clone());
+        self.0.tops.push(val);
+    }
+
     fn is_in_scope(&mut self, symbol: &Symbol) -> bool {
         let pos = self.pos;
         for table in self.tables[0..pos].iter_mut().rev() {
@@ -72,37 +78,37 @@ impl<'a> Scope<'a> {
     }
 
     fn conv_hir(&mut self, mut hir: HIR) -> HIR {
-        let mut closures = Vec::new();
         let mut vals = hir
             .0
             .into_iter()
             .map(|val| {
                 if val.rec {
                     self.add_scope(val.name.clone());
-                    self.conv_top_val(&mut closures, val)
+                    self.conv_top_val(val)
                 } else {
-                    let val = self.conv_top_val(&mut closures, val);
+                    let val = self.conv_top_val(val);
                     self.add_scope(val.name.clone());
                     val
                 }
             })
             .collect();
+        let mut closures = self.0.tops.drain(..).collect::<Vec<_>>();
         closures.append(&mut vals);
         hir.0 = closures;
         hir
     }
 
-    fn conv_top_val(&mut self, cls: &mut Vec<Val>, mut val: Val) -> Val {
+    fn conv_top_val(&mut self, mut val: Val) -> Val {
         let bind_name = if val.rec {
             Some(val.name.clone())
         } else {
             None
         };
-        val.expr = self.conv_expr(cls, val.expr, bind_name);
+        val.expr = self.conv_expr(val.expr, bind_name);
         val
     }
 
-    fn conv_expr(&mut self, cls: &mut Vec<Val>, expr: Expr, bind_name: Option<Symbol>) -> Expr {
+    fn conv_expr(&mut self, expr: Expr, bind_name: Option<Symbol>) -> Expr {
         use crate::hir::Expr::*;
         match expr {
             Binds {
@@ -118,12 +124,12 @@ impl<'a> Scope<'a> {
                         } else {
                             None
                         };
-                        bind.expr = self.conv_expr(cls, bind.expr, bind_name);
+                        bind.expr = self.conv_expr(bind.expr, bind_name);
                         bind.rec = false;
                         bind
                     })
                     .collect();
-                ret = Box::new(self.conv_expr(cls, *ret, None));
+                ret = Box::new(self.conv_expr(*ret, None));
                 Binds { ty, binds, ret }
             }
             BinOp {
@@ -132,8 +138,8 @@ impl<'a> Scope<'a> {
                 mut l,
                 mut r,
             } => {
-                l = Box::new(self.conv_expr(cls, *l, None));
-                r = Box::new(self.conv_expr(cls, *r, None));
+                l = Box::new(self.conv_expr(*l, None));
+                r = Box::new(self.conv_expr(*r, None));
                 BinOp { ty, name, l, r }
             }
 
@@ -145,7 +151,7 @@ impl<'a> Scope<'a> {
                 ..
             } => {
                 assert_eq!(captures.len(), 0);
-                body = Box::new(self.conv_expr(cls, *body, None));
+                body = Box::new(self.conv_expr(*body, None));
                 let (param_ty, param) = param;
                 let mut frees = Vec::new();
                 self.analyze_free_expr(&mut frees, &param, &body);
@@ -161,7 +167,7 @@ impl<'a> Scope<'a> {
                     captures,
                 };
                 let fty = anonfun.ty();
-                cls.push(Val {
+                self.new_closure(Val {
                     ty: anonfun.ty(),
                     rec: true,
                     name: fname.clone(),
@@ -182,7 +188,7 @@ impl<'a> Scope<'a> {
                 }
             }
             BuiltinCall { ty, fun, mut arg } => {
-                arg = Box::new(self.conv_expr(cls, *arg, None));
+                arg = Box::new(self.conv_expr(*arg, None));
                 BuiltinCall { ty, fun, arg }
             }
             App {
@@ -190,8 +196,8 @@ impl<'a> Scope<'a> {
                 mut fun,
                 mut arg,
             } => {
-                fun = Box::new(self.conv_expr(cls, *fun, None));
-                arg = Box::new(self.conv_expr(cls, *arg, None));
+                fun = Box::new(self.conv_expr(*fun, None));
+                arg = Box::new(self.conv_expr(*arg, None));
                 App { ty, fun, arg }
             }
             Case {
@@ -199,22 +205,19 @@ impl<'a> Scope<'a> {
                 mut expr,
                 mut arms,
             } => {
-                expr = Box::new(self.conv_expr(cls, *expr, None));
+                expr = Box::new(self.conv_expr(*expr, None));
                 arms = arms
                     .into_iter()
-                    .map(|(pat, arm)| (pat, self.conv_expr(cls, arm, None)))
+                    .map(|(pat, arm)| (pat, self.conv_expr(arm, None)))
                     .collect();
                 Case { ty, expr, arms }
             }
             Tuple { tys, tuple } => {
-                let tuple = tuple
-                    .into_iter()
-                    .map(|t| self.conv_expr(cls, t, None))
-                    .collect();
+                let tuple = tuple.into_iter().map(|t| self.conv_expr(t, None)).collect();
                 Tuple { tys, tuple }
             }
             Proj { ty, index, tuple } => {
-                let tuple = self.conv_expr(cls, *tuple, None);
+                let tuple = self.conv_expr(*tuple, None);
                 Proj {
                     ty,
                     tuple: Box::new(tuple),
@@ -226,7 +229,7 @@ impl<'a> Scope<'a> {
                 arg,
                 ty,
             } => {
-                let arg = arg.map(|a| Box::new(self.conv_expr(cls, *a, None)));
+                let arg = arg.map(|a| Box::new(self.conv_expr(*a, None)));
                 Constructor {
                     descriminant,
                     arg,
@@ -406,6 +409,7 @@ impl UnnestFunc {
     pub fn new(id: Id) -> Self {
         UnnestFunc {
             tables: Vec::new(),
+            tops: Vec::new(),
             pos: 0,
             id,
         }
