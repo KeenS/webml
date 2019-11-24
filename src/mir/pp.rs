@@ -339,7 +339,7 @@ impl PP for Op {
                 default,
                 ..
             } => {
-                write!(w, "{}branch", space)?;
+                write!(w, "{}branch ", space)?;
                 cond.pp(w, indent)?;
                 write!(w, " {{\n")?;
                 {
