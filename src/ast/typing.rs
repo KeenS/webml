@@ -570,7 +570,10 @@ impl TyEnv {
         tuple: &Vec<CoreExpr<NodeId>>,
         given: NodeId,
     ) -> Result<'r, ()> {
-        let tys = vec![self.pool.tyvar(); tuple.len()];
+        use std::iter;
+        let tys = iter::repeat_with(|| self.pool.tyvar())
+            .take(tuple.len())
+            .collect::<Vec<_>>();
 
         for (e, t) in tuple.iter().zip(tys.iter()) {
             self.infer_expr(e)?;
