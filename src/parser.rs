@@ -59,14 +59,27 @@ named!(bind_val <&str, Statement<()>>, do_parse!(
 
 named!(bind_fun <&str, Statement<()>>, do_parse!(
     tag_s!("fun") >> multispace >>
-        name: symbol >> opt!(multispace) >>
-        params: separated_nonempty_list!(multispace, pattern_multi) >>
-        opt!(multispace) >>
-        tag_s!("=") >>
-        opt!(multispace) >>
-        e: expr >>
+        cs: separated_nonempty_list!(do_parse!(opt!(multispace) >> tag!("|") >> opt!(multispace) >> (())),
+                                 do_parse!(
+                                     name: symbol >> opt!(multispace) >>
+                                         params: separated_nonempty_list!(multispace, pattern_multi) >>
+                                         opt!(multispace) >>
+                                         tag_s!("=") >>
+                                         opt!(multispace) >>
+                                         e: expr >>
+                                 (name, params, e))
+        ) >>
         ({
-            Statement::D(DerivedStatement::Fun{ name, clauses: vec![(params, e)] })
+            let mut cs = cs.into_iter();
+            let (name, params, expr) = cs.next().expect("nonempty list empty");
+            let mut clauses = vec![(params, expr)];
+            for (new_name, params, expr) in cs {
+                if name != new_name {
+                    return IResult::Error(Err::Code(ErrorKind::TagStr));
+                }
+                clauses.push((params, expr))
+            }
+            Statement::D(DerivedStatement::Fun{ name, clauses })
         })
 ));
 

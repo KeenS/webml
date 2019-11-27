@@ -302,6 +302,53 @@ fn parse_fun_pattern() {
 }
 
 #[test]
+fn parse_fun_multiclause() {
+    let input = r#"fun f Nil _ = Nil | f _ Nil = Nil"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![Statement::D(DerivedStatement::Fun {
+            name: Symbol::new("f"),
+            clauses: vec![
+                (
+                    vec![
+                        Pattern::Variable {
+                            name: Symbol::new("Nil"),
+                            ty: ()
+                        },
+                        Pattern::Wildcard { ty: () }
+                    ],
+                    Expr::Symbol {
+                        ty: (),
+                        name: Symbol::new("Nil"),
+                    }
+                ),
+                (
+                    vec![
+                        Pattern::Wildcard { ty: () },
+                        Pattern::Variable {
+                            name: Symbol::new("Nil"),
+                            ty: ()
+                        },
+                    ],
+                    Expr::Symbol {
+                        ty: (),
+                        name: Symbol::new("Nil"),
+                    }
+                )
+            ]
+        }),])
+    )
+}
+
+#[test]
+fn parse_fun_multiclause_different_fnname() {
+    let input = r#"fun f Nil _ = Nil | g _ Nil = Nil"#;
+    let ast = parse(input);
+    assert!(ast.is_err())
+}
+
+#[test]
 fn parse_if() {
     let input = r#"val x = if true then false else true"#;
     let ast = parse(input).unwrap();
