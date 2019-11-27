@@ -1,4 +1,4 @@
-use webml::ast::{DerivedExpr, Expr, Pattern, Statement, Type, AST};
+use webml::ast::{DerivedExpr, DerivedStatement, Expr, Pattern, Statement, Type, AST};
 use webml::parse;
 use webml::prim::*;
 
@@ -226,17 +226,19 @@ fn parse_fun_unary() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Statement::Fun {
+        AST(vec![Statement::D(DerivedStatement::Fun {
             name: Symbol::new("f"),
-            params: vec![Pattern::Variable {
-                name: Symbol::new("x"),
-                ty: ()
-            }],
-            expr: Expr::Symbol {
-                ty: (),
-                name: Symbol::new("x"),
-            },
-        },])
+            clauses: vec![(
+                vec![Pattern::Variable {
+                    name: Symbol::new("x"),
+                    ty: ()
+                }],
+                Expr::Symbol {
+                    ty: (),
+                    name: Symbol::new("x"),
+                }
+            )]
+        }),])
     )
 }
 
@@ -246,23 +248,25 @@ fn parse_fun_binary() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Statement::Fun {
+        AST(vec![Statement::D(DerivedStatement::Fun {
             name: Symbol::new("f"),
-            params: vec![
-                Pattern::Variable {
+            clauses: vec![(
+                vec![
+                    Pattern::Variable {
+                        name: Symbol::new("x"),
+                        ty: ()
+                    },
+                    Pattern::Variable {
+                        name: Symbol::new("y"),
+                        ty: ()
+                    }
+                ],
+                Expr::Symbol {
+                    ty: (),
                     name: Symbol::new("x"),
-                    ty: ()
-                },
-                Pattern::Variable {
-                    name: Symbol::new("y"),
-                    ty: ()
                 }
-            ],
-            expr: Expr::Symbol {
-                ty: (),
-                name: Symbol::new("x"),
-            },
-        },])
+            )]
+        }),])
     )
 }
 
@@ -272,26 +276,28 @@ fn parse_fun_pattern() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Statement::Fun {
+        AST(vec![Statement::D(DerivedStatement::Fun {
             name: Symbol::new("f"),
-            params: vec![Pattern::Tuple {
-                ty: (),
-                tuple: vec![
-                    Pattern::Variable {
-                        name: Symbol::new("x"),
-                        ty: ()
-                    },
-                    Pattern::Variable {
-                        name: Symbol::new("y"),
-                        ty: ()
-                    },
-                ]
-            }],
-            expr: Expr::Symbol {
-                ty: (),
-                name: Symbol::new("x"),
-            },
-        },])
+            clauses: vec![(
+                vec![Pattern::Tuple {
+                    ty: (),
+                    tuple: vec![
+                        Pattern::Variable {
+                            name: Symbol::new("x"),
+                            ty: ()
+                        },
+                        Pattern::Variable {
+                            name: Symbol::new("y"),
+                            ty: ()
+                        },
+                    ]
+                }],
+                Expr::Symbol {
+                    ty: (),
+                    name: Symbol::new("x"),
+                }
+            )]
+        }),])
     )
 }
 

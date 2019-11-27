@@ -21,20 +21,20 @@ use std::error::Error;
 use std::fmt;
 
 pub type UntypedAst = AST<()>;
-pub type Core<Ty> = AST<Ty, Nothing>;
+pub type Core<Ty> = AST<Ty, Nothing, Nothing>;
 pub type UntypedCore = Core<()>;
 pub type TypedCore = Core<Type>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct AST<Ty, D = DerivedExpr<Ty>>(pub Vec<Statement<Ty, D>>);
+pub struct AST<Ty, DE = DerivedExpr<Ty>, DS = DerivedStatement<Ty>>(pub Vec<Statement<Ty, DE, DS>>);
 
-pub type UntypedStatement = Statement<()>;
-pub type CoreStatement<Ty> = Statement<Ty, Nothing>;
+pub type UntypedStatement = Statement<(), DerivedExpr<()>, DerivedStatement<()>>;
+pub type CoreStatement<Ty> = Statement<Ty, Nothing, Nothing>;
 pub type UntypedCoreStatement = CoreStatement<()>;
 pub type TypedCoreStatement = CoreStatement<Type>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Statement<Ty, D = DerivedExpr<Ty>> {
+pub enum Statement<Ty, DE = DerivedExpr<Ty>, DS = DerivedStatement<Ty>> {
     Datatype {
         name: Symbol,
         constructors: Vec<(Symbol, Option<Type>)>,
@@ -42,23 +42,16 @@ pub enum Statement<Ty, D = DerivedExpr<Ty>> {
     Val {
         rec: bool,
         pattern: Pattern<Ty>,
-        expr: Expr<Ty, D>,
+        expr: Expr<Ty, DE, DS>,
     },
-    Fun {
-        name: Symbol,
-        // TODO: let it patterns
-        params: Vec<Pattern<Ty>>,
-        expr: Expr<Ty, D>,
-    },
+    D(DS),
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum DerivedExpr<Ty> {
-    If {
-        ty: Ty,
-        cond: Box<Expr<Ty, DerivedExpr<Ty>>>,
-        then: Box<Expr<Ty, DerivedExpr<Ty>>>,
-        else_: Box<Expr<Ty, DerivedExpr<Ty>>>,
+pub enum DerivedStatement<Ty> {
+    Fun {
+        name: Symbol,
+        clauses: Vec<(Vec<Pattern<Ty>>, Expr<Ty>)>,
     },
 }
 
@@ -66,41 +59,41 @@ pub enum DerivedExpr<Ty> {
 pub enum Nothing {}
 
 pub type UntypedExpr = Expr<()>;
-pub type CoreExpr<Ty> = Expr<Ty, Nothing>;
+pub type CoreExpr<Ty> = Expr<Ty, Nothing, Nothing>;
 pub type UntypedCoreExpr = CoreExpr<()>;
 pub type TypedCoreExpr = CoreExpr<Type>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Expr<Ty, D = DerivedExpr<Ty>> {
+pub enum Expr<Ty, DE = DerivedExpr<Ty>, DS = DerivedStatement<Ty>> {
     Binds {
         ty: Ty,
-        binds: Vec<Statement<Ty, D>>,
-        ret: Box<Expr<Ty, D>>,
+        binds: Vec<Statement<Ty, DE, DS>>,
+        ret: Box<Expr<Ty, DE, DS>>,
     },
     BinOp {
         op: Symbol,
         ty: Ty,
-        l: Box<Expr<Ty, D>>,
-        r: Box<Expr<Ty, D>>,
+        l: Box<Expr<Ty, DE, DS>>,
+        r: Box<Expr<Ty, DE, DS>>,
     },
     Fn {
         ty: Ty,
         param: Symbol,
-        body: Box<Expr<Ty, D>>,
+        body: Box<Expr<Ty, DE, DS>>,
     },
     App {
         ty: Ty,
-        fun: Box<Expr<Ty, D>>,
-        arg: Box<Expr<Ty, D>>,
+        fun: Box<Expr<Ty, DE, DS>>,
+        arg: Box<Expr<Ty, DE, DS>>,
     },
     Case {
         ty: Ty,
-        cond: Box<Expr<Ty, D>>,
-        clauses: Vec<(Pattern<Ty>, Expr<Ty, D>)>,
+        cond: Box<Expr<Ty, DE, DS>>,
+        clauses: Vec<(Pattern<Ty>, Expr<Ty, DE, DS>)>,
     },
     Tuple {
         ty: Ty,
-        tuple: Vec<Expr<Ty, D>>,
+        tuple: Vec<Expr<Ty, DE, DS>>,
     },
     Symbol {
         ty: Ty,
@@ -108,14 +101,24 @@ pub enum Expr<Ty, D = DerivedExpr<Ty>> {
     },
     Constructor {
         ty: Ty,
-        arg: Option<Box<Expr<Ty, D>>>,
+        arg: Option<Box<Expr<Ty, DE, DS>>>,
         name: Symbol,
     },
     Literal {
         ty: Ty,
         value: Literal,
     },
-    D(D),
+    D(DE),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum DerivedExpr<Ty> {
+    If {
+        ty: Ty,
+        cond: Box<Expr<Ty>>,
+        then: Box<Expr<Ty>>,
+        else_: Box<Expr<Ty>>,
+    },
 }
 
 pub type UntypedPattern = Pattern<()>;
@@ -168,7 +171,7 @@ pub struct TypeInfo {
     pub constructors: Vec<(Symbol, Option<Type>)>,
 }
 
-impl<Ty, D> Expr<Ty, D> {
+impl<Ty, DE, DS> Expr<Ty, DE, DS> {
     fn boxed(self) -> Box<Self> {
         Box::new(self)
     }

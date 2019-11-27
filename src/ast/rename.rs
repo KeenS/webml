@@ -169,20 +169,6 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
             .register_type(name.clone(), constructor_info);
     }
 
-    fn traverse_fun<'b, 'c>(
-        &'b mut self,
-        name: &mut Symbol,
-        params: &mut Vec<Pattern<Ty>>,
-        expr: &mut CoreExpr<Ty>,
-    ) {
-        self.new_variable(name);
-        let mut scope = self.new_scope();
-        for param in params {
-            scope.traverse_pattern(param);
-        }
-        scope.traverse_expr(expr);
-    }
-
     fn traverse_val<'b, 'c>(
         &'b mut self,
         rec: &mut bool,

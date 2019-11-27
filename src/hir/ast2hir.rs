@@ -76,7 +76,6 @@ impl AST2HIR {
                 // ignore
                 vec![]
             }
-            s @ ast::Statement::Fun { .. } => self.conv_statement(s),
             ast::Statement::Val { rec, pattern, expr } => {
                 match pattern {
                     ast::Pattern::Variable { name, ty } => vec![Val {
@@ -206,6 +205,7 @@ impl AST2HIR {
                     }
                 }
             }
+            ast::Statement::D(d) => match d {},
         }
     }
 

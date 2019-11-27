@@ -96,16 +96,12 @@ impl<Ty> CoreStatement<Ty> {
         match self {
             Datatype { name, constructors } => Datatype { name, constructors },
 
-            Fun { name, params, expr } => Fun {
-                name,
-                params: params.into_iter().map(|param| param.map_ty(f)).collect(),
-                expr: expr.map_ty(f),
-            },
             Val { pattern, expr, rec } => Val {
                 rec,
                 pattern: pattern.map_ty(&mut *f),
                 expr: expr.map_ty(f),
             },
+            D(d) => match d {},
         }
     }
 }
@@ -359,27 +355,7 @@ impl TyEnv {
                 }
                 Ok(())
             }
-            Fun { name, params, expr } => {
-                for param in params {
-                    self.infer_pat(param)?;
-                }
-
-                for param in params {
-                    for (name, ty) in param.binds() {
-                        self.insert(name.clone(), ty.clone());
-                    }
-                }
-
-                let params_ty = params.iter().map(|param| param.ty());
-                let body_ty = expr.ty();
-                let fun_ty = params_ty.rev().fold(body_ty, |body_ty, param_ty| {
-                    self.pool.ty(Typing::Fun(param_ty, body_ty))
-                });
-                self.insert(name.clone(), fun_ty);
-                // self.infer_pat(pattern)?;
-                self.infer_expr(expr)?;
-                Ok(())
-            }
+            D(d) => match *d {},
         }
     }
 

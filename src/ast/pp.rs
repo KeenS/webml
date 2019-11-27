@@ -2,13 +2,13 @@ use crate::ast::*;
 use crate::util::PP;
 use std::io;
 
-impl<Ty: PP, D: PP> PP for (SymbolTable, AST<Ty, D>) {
+impl<Ty: PP, DE: PP, DS: PP> PP for (SymbolTable, AST<Ty, DE, DS>) {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         self.1.pp(w, indent)
     }
 }
 
-impl<Ty: PP, D: PP> PP for AST<Ty, D> {
+impl<Ty: PP, DE: PP, DS: PP> PP for AST<Ty, DE, DS> {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         for bind in &self.0 {
             bind.pp(w, indent)?;
@@ -18,7 +18,7 @@ impl<Ty: PP, D: PP> PP for AST<Ty, D> {
     }
 }
 
-impl<Ty: PP, D: PP> PP for Statement<Ty, D> {
+impl<Ty: PP, DE: PP, DS: PP> PP for Statement<Ty, DE, DS> {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         use Statement::*;
         match self {
@@ -36,23 +36,6 @@ impl<Ty: PP, D: PP> PP for Statement<Ty, D> {
                 });
                 Ok(())
             }
-            Fun {
-                name, expr, params, ..
-            } => {
-                write!(w, "{}", Self::nspaces(indent))?;
-                write!(w, "fun ")?;
-                name.pp(w, indent)?;
-                write!(w, " ")?;
-                for param in params {
-                    param.pp(w, indent)?;
-                    write!(w, " ")?;
-                }
-                // write!(w, ": ")?;
-                // self.ty.pp(w, indent)?;
-                write!(w, " = ")?;
-                expr.pp(w, indent + 4)?;
-                Ok(())
-            }
             Val { pattern, expr, rec } => {
                 write!(w, "{}", Self::nspaces(indent))?;
                 write!(w, "val ")?;
@@ -66,11 +49,40 @@ impl<Ty: PP, D: PP> PP for Statement<Ty, D> {
                 expr.pp(w, indent + 4)?;
                 Ok(())
             }
+            D(d) => d.pp(w, indent),
         }
     }
 }
 
-impl<Ty: PP, D: PP> PP for Expr<Ty, D> {
+impl<Ty: PP> PP for DerivedStatement<Ty> {
+    fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
+        use DerivedStatement::*;
+        match self {
+            Fun { name, clauses, .. } => {
+                write!(w, "{}", Self::nspaces(indent))?;
+                write!(w, "fun ")?;
+                inter_iter!(
+                    clauses,
+                    { write!(w, "\n{}  | ", Self::nspaces(indent))? ; name.pp(w, indent)? },
+                    |(params, expr)| => {
+                    name.pp(w, indent)?;
+                    write!(w, " ")?;
+                    for param in params {
+                        param.pp(w, indent)?;
+                        write!(w, " ")?;
+                    }
+                    // write!(w, ": ")?;
+                    // self.ty.pp(w, indent)?;
+                    write!(w, " = ")?;
+                    expr.pp(w, indent + 4)?;
+                });
+                Ok(())
+            }
+        }
+    }
+}
+
+impl<Ty: PP, DE: PP, DS: PP> PP for Expr<Ty, DE, DS> {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         use crate::ast::Expr::*;
         match self {

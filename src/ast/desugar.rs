@@ -33,7 +33,7 @@ impl Desugar {
         match stmt {
             Datatype { name, constructors } => self.transform_datatype(name, constructors),
             Val { rec, pattern, expr } => self.transform_val(rec, pattern, expr),
-            Fun { name, params, expr } => self.transform_fun(name, params, expr),
+            D(DerivedStatement::Fun { name, clauses }) => self.transform_fun(name, clauses),
         }
     }
 
@@ -61,29 +61,44 @@ impl Desugar {
     fn transform_fun(
         &mut self,
         name: Symbol,
-        params: Vec<UntypedPattern>,
-        expr: UntypedExpr,
+        clauses: Vec<(Vec<UntypedPattern>, UntypedExpr)>,
     ) -> UntypedCoreStatement {
-        let fun = params
+        let arity = clauses[0].0.len();
+
+        let clauses = clauses
             .into_iter()
-            .rev()
-            .fold(self.transform_expr(expr), |body, param| {
-                let param_sym = self.gensym();
-                Expr::Fn {
-                    ty: (),
-                    param: param_sym.clone(),
-                    body: Expr::Case {
+            .map(|(pats, expr)| {
+                (
+                    Pattern::Tuple {
                         ty: (),
-                        cond: Expr::Symbol {
-                            name: param_sym,
-                            ty: (),
-                        }
-                        .boxed(),
-                        clauses: vec![(param, body)],
-                    }
-                    .boxed(),
-                }
-            });
+                        tuple: pats,
+                    },
+                    self.transform_expr(expr),
+                )
+            })
+            .collect();
+
+        let params = (0..arity).map(|_| self.gensym()).collect::<Vec<_>>();
+
+        let body = Expr::Case {
+            ty: (),
+            cond: Expr::Tuple {
+                tuple: params
+                    .iter()
+                    .cloned()
+                    .map(|name| Expr::Symbol { name, ty: () })
+                    .collect(),
+                ty: (),
+            }
+            .boxed(),
+            clauses,
+        };
+
+        let fun = params.into_iter().rev().fold(body, |body, param| Expr::Fn {
+            ty: (),
+            param,
+            body: body.boxed(),
+        });
         Statement::Val {
             rec: true,
             pattern: Pattern::Variable { name: name, ty: () },

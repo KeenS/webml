@@ -66,7 +66,7 @@ named!(bind_fun <&str, Statement<()>>, do_parse!(
         opt!(multispace) >>
         e: expr >>
         ({
-            Statement::Fun{ name, params: params, expr: e}
+            Statement::D(DerivedStatement::Fun{ name, clauses: vec![(params, e)] })
         })
 ));
 

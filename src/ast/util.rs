@@ -12,7 +12,7 @@ pub trait Traverse<Ty> {
         match stmt {
             Datatype { name, constructors } => self.traverse_datatype(name, constructors),
             Val { rec, pattern, expr } => self.traverse_val(rec, pattern, expr),
-            Fun { name, params, expr } => self.traverse_fun(name, params, expr),
+            D(_) => (),
         }
     }
 
@@ -31,18 +31,6 @@ pub trait Traverse<Ty> {
     ) {
         self.traverse_expr(expr);
         self.traverse_pattern(pattern)
-    }
-
-    fn traverse_fun(
-        &mut self,
-        _name: &mut Symbol,
-        params: &mut Vec<Pattern<Ty>>,
-        expr: &mut CoreExpr<Ty>,
-    ) {
-        for param in params {
-            self.traverse_pattern(param);
-        }
-        self.traverse_expr(expr);
     }
 
     fn traverse_expr(&mut self, expr: &mut CoreExpr<Ty>) {
@@ -95,18 +83,6 @@ pub trait Traverse<Ty> {
     ) {
         self.traverse_expr(fun);
         self.traverse_expr(arg);
-    }
-
-    fn traverse_if(
-        &mut self,
-        _ty: &mut Ty,
-        cond: &mut Box<CoreExpr<Ty>>,
-        then: &mut Box<CoreExpr<Ty>>,
-        else_: &mut Box<CoreExpr<Ty>>,
-    ) {
-        self.traverse_expr(cond);
-        self.traverse_expr(then);
-        self.traverse_expr(else_);
     }
 
     fn traverse_case(
@@ -180,7 +156,7 @@ pub trait Transform<Ty> {
         match stmt {
             Datatype { name, constructors } => self.transform_datatype(name, constructors),
             Val { rec, pattern, expr } => self.transform_val(rec, pattern, expr),
-            Fun { name, params, expr } => self.transform_fun(name, params, expr),
+            D(d) => match d {},
         }
     }
 
@@ -201,22 +177,6 @@ pub trait Transform<Ty> {
         Statement::Val {
             rec,
             pattern: self.transform_pattern(pattern),
-            expr: self.transform_expr(expr),
-        }
-    }
-
-    fn transform_fun(
-        &mut self,
-        name: Symbol,
-        params: Vec<Pattern<Ty>>,
-        expr: CoreExpr<Ty>,
-    ) -> CoreStatement<Ty> {
-        Statement::Fun {
-            name,
-            params: params
-                .into_iter()
-                .map(|param| self.transform_pattern(param))
-                .collect(),
             expr: self.transform_expr(expr),
         }
     }
