@@ -12,25 +12,10 @@ fn take_binds(mut expr: Expr) -> (Expr, Vec<Val>) {
             expr = *ret;
             (expr, binds)
         }
-        BinOp {
-            ty,
-            name,
-            mut l,
-            mut r,
-        } => {
-            let (l_, mut lbinds) = take_binds(*l);
-            let (r_, mut rbinds) = take_binds(*r);
-            l = Box::new(l_);
-            r = Box::new(r_);
-            lbinds.append(&mut rbinds);
-            let expr = BinOp { ty, name, l, r };
-            (expr, lbinds)
-        }
-        BuiltinCall { mut arg, ty, fun } => {
-            let (a, binds) = take_binds(*arg);
-            arg = Box::new(a);
-            let expr = BuiltinCall { fun, arg, ty };
-            (expr, binds)
+        BuiltinCall { args, ty, fun } => {
+            let (args, bindss): (_, Vec<_>) = args.into_iter().map(take_binds).unzip();
+            let expr = BuiltinCall { fun, args, ty };
+            (expr, bindss.into_iter().flat_map(Vec::into_iter).collect())
         }
         App {
             mut fun,

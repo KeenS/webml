@@ -132,17 +132,6 @@ impl<'a> Scope<'a> {
                 ret = Box::new(self.conv_expr(*ret, None));
                 Binds { ty, binds, ret }
             }
-            BinOp {
-                ty,
-                name,
-                mut l,
-                mut r,
-            } => {
-                l = Box::new(self.conv_expr(*l, None));
-                r = Box::new(self.conv_expr(*r, None));
-                BinOp { ty, name, l, r }
-            }
-
             Fun {
                 param,
                 body_ty,
@@ -187,9 +176,12 @@ impl<'a> Scope<'a> {
                     }
                 }
             }
-            BuiltinCall { ty, fun, mut arg } => {
-                arg = Box::new(self.conv_expr(*arg, None));
-                BuiltinCall { ty, fun, arg }
+            BuiltinCall { ty, fun, args } => {
+                let args = args
+                    .into_iter()
+                    .map(|arg| self.conv_expr(arg, None))
+                    .collect();
+                BuiltinCall { ty, fun, args }
             }
             App {
                 ty,
@@ -258,9 +250,7 @@ impl<'a> Scope<'a> {
     ) {
         use crate::hir::Expr::*;
         match expr {
-            &Binds {
-                ref binds, ref ret, ..
-            } => {
+            Binds { binds, ret, .. } => {
                 let scope = self;
                 for bind in binds.iter() {
                     if bind.rec {
@@ -273,129 +263,102 @@ impl<'a> Scope<'a> {
                 }
                 scope.analyze_free_expr(frees, bound, ret);
             }
-            &BinOp { ref l, ref r, .. } => {
-                self.analyze_free_expr(frees, bound, l);
-                self.analyze_free_expr(frees, bound, r);
+            Fun { .. } => panic!("internal bug"),
+            BuiltinCall { args, .. } => {
+                for arg in args {
+                    self.analyze_free_expr(frees, bound, arg);
+                }
             }
-            &Fun { .. } => panic!("internal bug"),
-            &BuiltinCall { ref arg, .. } => {
-                self.analyze_free_expr(frees, bound, arg);
-            }
-            &App {
-                ref fun, ref arg, ..
-            } => {
+            App { fun, arg, .. } => {
                 self.analyze_free_expr(frees, bound, fun);
                 self.analyze_free_expr(frees, bound, arg);
             }
-            &Case {
-                ref expr, ref arms, ..
-            } => {
+            Case { expr, arms, .. } => {
                 self.analyze_free_expr(frees, bound, expr);
                 let scope = self;
-                for &(ref pat, ref arm) in arms.iter() {
+                for (pat, arm) in arms.iter() {
                     use self::Pattern::*;
-                    match *pat {
-                        Constructor { ref arg, .. } => {
+                    match pat {
+                        Constructor { arg, .. } => {
                             if let Some((_, arg)) = arg {
                                 scope.add_scope(arg.clone())
                             }
                         }
                         Constant { .. } => (),
-                        Tuple { ref tuple, .. } => {
+                        Tuple { tuple, .. } => {
                             for name in tuple {
                                 scope.add_scope(name.clone())
                             }
                         }
-                        Var { ref name, .. } => scope.add_scope(name.clone()),
+                        Var { name, .. } => scope.add_scope(name.clone()),
                     }
                     scope.analyze_free_expr(frees, bound, arm);
                 }
             }
-            &Tuple { ref tuple, .. } => {
+            Tuple { tuple, .. } => {
                 for t in tuple.iter() {
                     self.analyze_free_expr(frees, bound, t);
                 }
             }
-            &Proj { ref tuple, .. } => self.analyze_free_expr(frees, bound, tuple),
-            &Sym { ref name, ref ty } => {
+            Proj { tuple, .. } => self.analyze_free_expr(frees, bound, tuple),
+            Sym { name, ty } => {
                 if !(self.is_in_scope(name) || bound == name) {
                     frees.push((ty.clone(), name.clone()))
                 }
             }
-            &Closure { ref envs, .. } => {
-                for &(ref ty, ref name) in envs {
+            Closure { envs, .. } => {
+                for (ty, name) in envs {
                     if !(self.is_in_scope(name) || bound == name) {
                         frees.push((ty.clone(), name.clone()))
                     }
                 }
             }
-            &Constructor { ref arg, .. } => {
+            Constructor { arg, .. } => {
                 if let Some(arg) = arg {
                     self.analyze_free_expr(frees, bound, arg)
                 }
             }
-            &Lit { .. } => (),
+            Lit { .. } => (),
         }
     }
 
     fn rename(&mut self, expr: &mut Expr, from: &Option<Symbol>, to: &Symbol) {
         use crate::hir::Expr::*;
-        match *expr {
-            Binds {
-                ref mut binds,
-                ref mut ret,
-                ..
-            } => {
+        match expr {
+            Binds { binds, ret, .. } => {
                 for bind in binds.iter_mut() {
                     self.rename(&mut bind.expr, from, to)
                 }
                 self.rename(ret, from, to);
             }
-            BinOp {
-                ref mut l,
-                ref mut r,
-                ..
-            } => {
-                self.rename(l, from, to);
-                self.rename(r, from, to);
+            Fun { body, .. } => self.rename(body, from, to),
+            BuiltinCall { args, .. } => {
+                for arg in args {
+                    self.rename(arg, from, to);
+                }
             }
-
-            Fun { body: _, .. } => {
-                Box::new(());
-            }
-            BuiltinCall { ref mut arg, .. } => {
-                self.rename(arg, from, to);
-            }
-            App {
-                ref mut fun,
-                ref mut arg,
-                ..
-            } => {
+            App { fun, arg, .. } => {
                 self.rename(fun, from, to);
                 self.rename(arg, from, to);
             }
-            Case {
-                ref mut expr,
-                ref mut arms,
-                ..
-            } => {
+            Case { expr, arms, .. } => {
                 self.rename(expr, from, to);
-                for &mut (_, ref mut arm) in arms.iter_mut() {
+                for (_, arm) in arms.iter_mut() {
                     self.rename(arm, from, to);
                 }
             }
-            Tuple { ref mut tuple, .. } => {
+            Tuple { tuple, .. } => {
                 for t in tuple.iter_mut() {
                     self.rename(t, from, to);
                 }
             }
-            Proj { ref mut tuple, .. } => self.rename(tuple, from, to),
-            Sym { ref mut name, .. } => {
+            Proj { tuple, .. } => self.rename(tuple, from, to),
+            Sym { name, .. } => {
                 if from.is_some() && name == from.as_ref().unwrap() {
                     *name = to.clone()
                 }
             }
-            Constructor { ref mut arg, .. } => {
+            Constructor { arg, .. } => {
                 if let Some(arg) = arg {
                     self.rename(arg, from, to)
                 }

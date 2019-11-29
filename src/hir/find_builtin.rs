@@ -19,7 +19,7 @@ impl Transform for FindBuiltin {
                 BuiltinCall {
                     ty,
                     fun,
-                    arg: Box::new(arg),
+                    args: vec![arg],
                 }
             }
             _ => {

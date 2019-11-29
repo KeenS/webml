@@ -34,16 +34,10 @@ pub enum Expr {
         binds: Vec<Val>,
         ret: Box<Expr>,
     },
-    BinOp {
-        ty: HTy,
-        name: Symbol,
-        l: Box<Expr>,
-        r: Box<Expr>,
-    },
     BuiltinCall {
         ty: HTy,
         fun: BIF,
-        arg: Box<Expr>,
+        args: Vec<Expr>,
     },
     Fun {
         param: (HTy, Symbol),
@@ -179,7 +173,6 @@ impl Expr {
             } => HTy::fun(param_ty.clone(), body_ty.clone()),
             &Tuple { ref tys, .. } => HTy::Tuple(tys.clone()),
             &Proj { ref ty, .. }
-            | &BinOp { ref ty, .. }
             | &Binds { ref ty, .. }
             | &BuiltinCall { ref ty, .. }
             | &App { ref ty, .. }

@@ -44,102 +44,67 @@ impl<'a> Traverse for Trav<'a> {
     fn traverse_expr(&mut self, expr: &mut Expr) {
         use crate::hir::Expr::*;
         let assign;
-        match *expr {
-            Binds {
-                ref mut ty,
-                ref mut binds,
-                ref mut ret,
-            } => {
+        match expr {
+            Binds { ty, binds, ret } => {
                 self.traverse_binds(ty, binds, ret);
                 return;
             }
-            BinOp {
-                ref mut ty,
-                ref mut name,
-                ref mut l,
-                ref mut r,
-            } => {
-                self.traverse_binop(ty, name, l, r);
-                return;
-            }
             Fun {
-                ref mut param,
-                ref mut body_ty,
-                ref mut body,
-                ref mut captures,
+                param,
+                body_ty,
+                body,
+                captures,
             } => {
                 self.traverse_fun(param, body_ty, body, captures);
                 return;
             }
             Closure {
-                ref mut envs,
-                ref mut param_ty,
-                ref mut body_ty,
-                ref mut fname,
+                envs,
+                param_ty,
+                body_ty,
+                fname,
             } => {
                 self.traverse_closure(envs, param_ty, body_ty, fname);
                 return;
             }
-            BuiltinCall {
-                ref mut ty,
-                ref mut fun,
-                ref mut arg,
-            } => {
-                self.traverse_builtin_call(ty, fun, arg);
+            BuiltinCall { ty, fun, args } => {
+                self.traverse_builtin_call(ty, fun, args);
                 return;
             }
-            App {
-                ref mut ty,
-                ref mut fun,
-                ref mut arg,
-            } => {
+            App { ty, fun, arg } => {
                 self.traverse_app(ty, fun, arg);
                 return;
             }
-            Case {
-                ref mut ty,
-                ref mut expr,
-                ref mut arms,
-            } => {
+            Case { ty, expr, arms } => {
                 self.traverse_case(ty, expr, arms);
                 return;
             }
 
-            Tuple {
-                ref mut tys,
-                ref mut tuple,
-            } => {
+            Tuple { tys, tuple } => {
                 self.traverse_tuple(tys, tuple);
                 return;
             }
 
-            Proj {
-                ref mut ty,
-                ref mut index,
-                ref mut tuple,
-            } => {
+            Proj { ty, index, tuple } => {
                 self.traverse_proj(ty, index, tuple);
                 return;
             }
 
             Constructor {
-                ref mut ty,
-                ref mut arg,
-                ref mut descriminant,
+                ty,
+                arg,
+                descriminant,
             } => {
                 self.traverse_constructor(ty, arg, descriminant);
                 return;
             }
 
-            Sym {
-                ref mut ty,
-                ref mut name,
-            } => {
+            Sym { ty, name } => {
                 if !self.bound() || !self.t.functions.contains(name) {
                     return;
                 }
-                match *ty {
-                    HTy::Fun(ref arg, ref ret) => {
+                match ty {
+                    HTy::Fun(arg, ret) => {
                         assign = Closure {
                             envs: vec![],
                             param_ty: *arg.clone(),
@@ -150,28 +115,12 @@ impl<'a> Traverse for Trav<'a> {
                     _ => return,
                 }
             }
-            Lit {
-                ref mut ty,
-                ref mut value,
-            } => {
+            Lit { ty, value } => {
                 self.traverse_lit(ty, value);
                 return;
             }
         }
         *expr = assign;
-    }
-
-    fn traverse_binop(
-        &mut self,
-        _ty: &mut HTy,
-        _name: &mut Symbol,
-        l: &mut Box<Expr>,
-        r: &mut Box<Expr>,
-    ) {
-        self.with_bound(false, |this| {
-            this.traverse_expr(l);
-            this.traverse_expr(r);
-        });
     }
 
     fn traverse_fun(
@@ -229,19 +178,6 @@ impl<'a> Traverse for Reg<'a> {
         }
         self.with_bound_name(None, |this| {
             this.traverse_expr(ret);
-        });
-    }
-
-    fn traverse_binop(
-        &mut self,
-        _ty: &mut HTy,
-        _name: &mut Symbol,
-        l: &mut Box<Expr>,
-        r: &mut Box<Expr>,
-    ) {
-        self.with_bound_name(None, |this| {
-            this.traverse_expr(l);
-            this.traverse_expr(r);
         });
     }
 

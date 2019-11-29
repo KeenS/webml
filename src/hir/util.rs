@@ -13,67 +13,32 @@ pub trait Traverse {
 
     fn traverse_expr(&mut self, expr: &mut Expr) {
         use crate::hir::Expr::*;
-        match *expr {
-            Binds {
-                ref mut ty,
-                ref mut binds,
-                ref mut ret,
-            } => self.traverse_binds(ty, binds, ret),
-            BinOp {
-                ref mut ty,
-                ref mut name,
-                ref mut l,
-                ref mut r,
-            } => self.traverse_binop(ty, name, l, r),
+        match expr {
+            Binds { ty, binds, ret } => self.traverse_binds(ty, binds, ret),
             Fun {
-                ref mut param,
-                ref mut body_ty,
-                ref mut body,
-                ref mut captures,
+                param,
+                body_ty,
+                body,
+                captures,
             } => self.traverse_fun(param, body_ty, body, captures),
             Closure {
-                ref mut envs,
-                ref mut param_ty,
-                ref mut body_ty,
-                ref mut fname,
+                envs,
+                param_ty,
+                body_ty,
+                fname,
             } => self.traverse_closure(envs, param_ty, body_ty, fname),
-            BuiltinCall {
-                ref mut ty,
-                ref mut fun,
-                ref mut arg,
-            } => self.traverse_builtin_call(ty, fun, arg),
-            App {
-                ref mut ty,
-                ref mut fun,
-                ref mut arg,
-            } => self.traverse_app(ty, fun, arg),
-            Case {
-                ref mut ty,
-                ref mut expr,
-                ref mut arms,
-            } => self.traverse_case(ty, expr, arms),
-            Tuple {
-                ref mut tys,
-                ref mut tuple,
-            } => self.traverse_tuple(tys, tuple),
-            Proj {
-                ref mut ty,
-                ref mut index,
-                ref mut tuple,
-            } => self.traverse_proj(ty, index, tuple),
+            BuiltinCall { ty, fun, args } => self.traverse_builtin_call(ty, fun, args),
+            App { ty, fun, arg } => self.traverse_app(ty, fun, arg),
+            Case { ty, expr, arms } => self.traverse_case(ty, expr, arms),
+            Tuple { tys, tuple } => self.traverse_tuple(tys, tuple),
+            Proj { ty, index, tuple } => self.traverse_proj(ty, index, tuple),
             Constructor {
-                ref mut ty,
-                ref mut arg,
-                ref mut descriminant,
+                ty,
+                arg,
+                descriminant,
             } => self.traverse_constructor(ty, arg, descriminant),
-            Sym {
-                ref mut ty,
-                ref mut name,
-            } => self.traverse_sym(ty, name),
-            Lit {
-                ref mut ty,
-                ref mut value,
-            } => self.traverse_lit(ty, value),
+            Sym { ty, name } => self.traverse_sym(ty, name),
+            Lit { ty, value } => self.traverse_lit(ty, value),
         }
     }
     fn traverse_binds(&mut self, _ty: &mut HTy, binds: &mut Vec<Val>, ret: &mut Box<Expr>) {
@@ -81,17 +46,6 @@ pub trait Traverse {
             self.traverse_val(val)
         }
         self.traverse_expr(ret)
-    }
-
-    fn traverse_binop(
-        &mut self,
-        _ty: &mut HTy,
-        _name: &mut Symbol,
-        l: &mut Box<Expr>,
-        r: &mut Box<Expr>,
-    ) {
-        self.traverse_expr(l);
-        self.traverse_expr(r)
     }
 
     fn traverse_fun(
@@ -113,8 +67,10 @@ pub trait Traverse {
     ) {
     }
 
-    fn traverse_builtin_call(&mut self, _ty: &mut HTy, _fun: &mut BIF, arg: &mut Box<Expr>) {
-        self.traverse_expr(arg);
+    fn traverse_builtin_call(&mut self, _ty: &mut HTy, _fun: &mut BIF, args: &mut Vec<Expr>) {
+        for arg in args {
+            self.traverse_expr(arg)
+        }
     }
 
     fn traverse_app(&mut self, _ty: &mut HTy, fun: &mut Box<Expr>, arg: &mut Box<Expr>) {
@@ -179,7 +135,6 @@ pub trait Transform {
         use crate::hir::Expr::*;
         match expr {
             Binds { ty, binds, ret } => self.transform_binds(ty, binds, ret),
-            BinOp { ty, name, l, r } => self.transform_binop(ty, name, l, r),
             Fun {
                 param,
                 body_ty,
@@ -190,7 +145,7 @@ pub trait Transform {
             Case { ty, expr, arms } => self.transform_case(ty, expr, arms),
             Tuple { tys, tuple } => self.transform_tuple(tys, tuple),
             Proj { ty, index, tuple } => self.transform_proj(ty, index, tuple),
-            BuiltinCall { ty, fun, arg } => self.transform_builtin_call(ty, fun, arg),
+            BuiltinCall { ty, fun, args } => self.transform_builtin_call(ty, fun, args),
             Closure {
                 envs,
                 param_ty,
@@ -215,15 +170,6 @@ pub trait Transform {
                 .map(|val| self.transform_val(val))
                 .collect(),
             ret: Box::new(self.transform_expr(*ret)),
-        }
-    }
-
-    fn transform_binop(&mut self, ty: HTy, name: Symbol, l: Box<Expr>, r: Box<Expr>) -> Expr {
-        Expr::BinOp {
-            ty,
-            name,
-            l: Box::new(self.transform_expr(*l)),
-            r: Box::new(self.transform_expr(*r)),
         }
     }
 
@@ -257,11 +203,14 @@ pub trait Transform {
         }
     }
 
-    fn transform_builtin_call(&mut self, ty: HTy, fun: BIF, arg: Box<Expr>) -> Expr {
+    fn transform_builtin_call(&mut self, ty: HTy, fun: BIF, args: Vec<Expr>) -> Expr {
         Expr::BuiltinCall {
             ty,
             fun,
-            arg: Box::new(self.transform_expr(*arg)),
+            args: args
+                .into_iter()
+                .map(|arg| self.transform_expr(arg))
+                .collect(),
         }
     }
 

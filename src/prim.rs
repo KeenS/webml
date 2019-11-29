@@ -41,14 +41,62 @@ impl PP for Literal {
 #[derive(Debug, Clone)]
 pub enum BIF {
     Print,
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Divf,
+    Mod,
+    Eq,
+    Neq,
+    Gt,
+    Ge,
+    Lt,
+    Le,
 }
 
 impl PP for BIF {
     fn pp<W: io::Write>(&self, w: &mut W, _indent: usize) -> io::Result<()> {
         use self::BIF::*;
         match self {
-            &Print => {
+            Print => {
                 write!(w, "_print")?;
+            }
+            Add => {
+                write!(w, "+")?;
+            }
+            Sub => {
+                write!(w, "-")?;
+            }
+            Mul => {
+                write!(w, "*")?;
+            }
+            Div => {
+                write!(w, "div")?;
+            }
+            Divf => {
+                write!(w, "/")?;
+            }
+            Mod => {
+                write!(w, "mod")?;
+            }
+            Eq => {
+                write!(w, "=")?;
+            }
+            Neq => {
+                write!(w, "<>")?;
+            }
+            Gt => {
+                write!(w, ">")?;
+            }
+            Ge => {
+                write!(w, ">=")?;
+            }
+            Lt => {
+                write!(w, "<")?;
+            }
+            Le => {
+                write!(w, "<=")?;
             }
         }
         Ok(())

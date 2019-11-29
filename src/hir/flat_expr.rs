@@ -55,22 +55,6 @@ impl Transform for FlatExpr {
         Binds { binds, ret, ty }
     }
 
-    fn transform_binop(&mut self, ty: HTy, name: Symbol, l: Box<Expr>, r: Box<Expr>) -> Expr {
-        let (l, lval) = self.flat_make_val(*l);
-        let (r, rval) = self.flat_make_val(*r);
-        let (ret, retval) = self.make_val(BinOp {
-            ty: ty.clone(),
-            name,
-            l,
-            r,
-        });
-        Binds {
-            ty,
-            binds: vec![lval, rval, retval],
-            ret,
-        }
-    }
-
     fn transform_fun(
         &mut self,
         param: (HTy, Symbol),
@@ -107,16 +91,24 @@ impl Transform for FlatExpr {
         }
     }
 
-    fn transform_builtin_call(&mut self, ty: HTy, fun: BIF, arg: Box<Expr>) -> Expr {
-        let (arg, argval) = self.flat_make_val(*arg);
+    fn transform_builtin_call(&mut self, ty: HTy, fun: BIF, args: Vec<Expr>) -> Expr {
+        let (args, mut vals): (Vec<_>, Vec<_>) = args
+            .into_iter()
+            .map(|arg| {
+                let (arg, argval) = self.flat_make_val(arg);
+                (*arg, argval)
+            })
+            .unzip();
         let (ret, retval) = self.make_val(BuiltinCall {
             fun,
-            arg,
+            args,
             ty: ty.clone(),
         });
+
+        vals.push(retval);
         Binds {
             ty,
-            binds: vec![argval, retval],
+            binds: vals,
             ret,
         }
     }

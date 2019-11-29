@@ -220,11 +220,24 @@ impl AST2HIR {
                     .collect(),
                 ret: Box::new(self.conv_expr(*ret)),
             },
-            E::BinOp { op, ty, l, r } => Expr::BinOp {
+            E::BinOp { op, ty, l, r } => Expr::BuiltinCall {
                 ty: self.conv_ty(ty),
-                name: op,
-                l: Box::new(self.conv_expr(*l)),
-                r: Box::new(self.conv_expr(*r)),
+                fun: match op.0.as_str() {
+                    "+" => BIF::Add,
+                    "-" => BIF::Sub,
+                    "*" => BIF::Mul,
+                    "div" => BIF::Div,
+                    "/" => BIF::Divf,
+                    "mod" => BIF::Mod,
+                    "=" => BIF::Eq,
+                    "<>" => BIF::Neq,
+                    ">" => BIF::Gt,
+                    ">=" => BIF::Ge,
+                    "<" => BIF::Lt,
+                    "<=" => BIF::Le,
+                    _ => panic!("unknown binop"),
+                },
+                args: vec![self.conv_expr(*l), self.conv_expr(*r)],
             },
             E::Fn { ty, param, body } => {
                 let (param_ty, body_ty) = match ty {

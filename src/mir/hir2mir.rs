@@ -188,10 +188,30 @@ impl HIR2MIR {
                 eb.alias(name, self.trans_ty(ty_), var);
                 eb
             }
-            BuiltinCall { ty, fun, arg } => {
+            BuiltinCall { ty, fun, args } => {
                 assert_eq!(ty, ty_);
-                let arg = force_symbol(*arg);
-                eb.builtin_call(name, self.trans_ty(ty), fun, vec![arg]);
+                use crate::prim::BIF::*;
+                let mut args = args.into_iter().map(|arg| force_symbol(arg)).collect();
+                macro_rules! pop {
+                    () => {
+                        args.remove(0)
+                    };
+                }
+                match fun {
+                    Print => eb.builtin_call(name, self.trans_ty(ty), fun, args),
+                    Add => eb.add(name, self.trans_ty(ty), pop!(), pop!()),
+                    Sub => eb.sub(name, self.trans_ty(ty), pop!(), pop!()),
+                    Mul => eb.mul(name, self.trans_ty(ty), pop!(), pop!()),
+                    Div => eb.div_int(name, self.trans_ty(ty), pop!(), pop!()),
+                    Divf => eb.div_float(name, self.trans_ty(ty), pop!(), pop!()),
+                    Mod => eb.mod_(name, self.trans_ty(ty), pop!(), pop!()),
+                    Eq => eb.eq(name, self.trans_ty(ty), pop!(), pop!()),
+                    Neq => eb.neq(name, self.trans_ty(ty), pop!(), pop!()),
+                    Gt => eb.gt(name, self.trans_ty(ty), pop!(), pop!()),
+                    Ge => eb.ge(name, self.trans_ty(ty), pop!(), pop!()),
+                    Lt => eb.lt(name, self.trans_ty(ty), pop!(), pop!()),
+                    Le => eb.le(name, self.trans_ty(ty), pop!(), pop!()),
+                };
                 eb
             }
             App { ty, fun, arg } => {
@@ -336,32 +356,6 @@ impl HIR2MIR {
                 let ty = self.trans_ty(ty);
                 let tuple = force_symbol(*tuple);
                 eb.proj(name, ty, index, tuple);
-                eb
-            }
-            BinOp {
-                ty,
-                name: name_,
-                l,
-                r,
-            } => {
-                assert_eq!(ty, ty_);
-                let l = force_symbol(*l);
-                let r = force_symbol(*r);
-                match name_.0.as_ref() {
-                    "+" => eb.add(name, self.trans_ty(ty), l, r),
-                    "-" => eb.sub(name, self.trans_ty(ty), l, r),
-                    "*" => eb.mul(name, self.trans_ty(ty), l, r),
-                    "div" => eb.div_int(name, self.trans_ty(ty), l, r),
-                    "/" => eb.div_float(name, self.trans_ty(ty), l, r),
-                    "mod" => eb.mod_(name, self.trans_ty(ty), l, r),
-                    "=" => eb.eq(name, self.trans_ty(ty), l, r),
-                    "<>" => eb.neq(name, self.trans_ty(ty), l, r),
-                    ">" => eb.gt(name, self.trans_ty(ty), l, r),
-                    ">=" => eb.ge(name, self.trans_ty(ty), l, r),
-                    "<" => eb.lt(name, self.trans_ty(ty), l, r),
-                    "<=" => eb.le(name, self.trans_ty(ty), l, r),
-                    op => panic!("internal error, unknow, op '{}'", op),
-                };
                 eb
             }
             Closure {

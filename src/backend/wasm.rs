@@ -681,8 +681,11 @@ impl LIR2WASM {
                                     for arg in args.iter() {
                                         cb = cb.get_local(reg!(arg))
                                     }
+                                    use crate::prim::BIF::*;
                                     match fun {
-                                        &BIF::Print => cb = cb.call(self.print_fun),
+                                        Print => cb = cb.call(self.print_fun),
+                                        Add | Sub | Mul | Div | Divf | Mod | Eq | Neq | Gt | Ge
+                                        | Lt | Le => (),
                                     }
                                 }
                                 Jump(ref label) => {

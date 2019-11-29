@@ -42,13 +42,6 @@ impl PP for Expr {
                 ret.pp(w, indent + 4)?;
                 write!(w, "\n{}end", ind)?;
             }
-            BinOp { name, l, r, .. } => {
-                l.pp(w, indent)?;
-                write!(w, " ")?;
-                name.pp(w, indent)?;
-                write!(w, " ")?;
-                r.pp(w, indent)?;
-            }
             Fun {
                 body,
                 param,
@@ -114,10 +107,11 @@ impl PP for Expr {
                 write!(w, "#{} ", index)?;
                 tuple.pp(w, indent + 4)?;
             }
-            BuiltinCall { fun, arg, .. } => {
+            BuiltinCall { fun, args, .. } => {
                 fun.pp(w, indent)?;
-                write!(w, " ")?;
-                arg.pp(w, indent)?;
+                write!(w, "(")?;
+                inter_iter! {args.iter(), write!(w, ", ")?, |arg| => arg.pp(w, indent)?};
+                write!(w, ")")?;
             }
             Constructor {
                 descriminant, arg, ..
