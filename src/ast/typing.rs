@@ -27,6 +27,7 @@ enum Typing {
     Fun(NodeId, NodeId),
     Tuple(Vec<NodeId>),
     Datatype(Symbol),
+    OverloadedArith,
 }
 
 fn resolve(pool: &UnificationPool<Typing>, id: NodeId) -> Type {
@@ -45,6 +46,7 @@ fn conv_ty(pool: &UnificationPool<Typing>, ty: Typing) -> Type {
         ),
         Tuple(tys) => Type::Tuple(tys.into_iter().map(|ty| resolve(pool, ty)).collect()),
         Datatype(type_id) => Type::Datatype(type_id),
+        OverloadedArith => Type::Int,
     }
 }
 
@@ -56,6 +58,8 @@ fn try_unify<'b, 'r>(
     use Typing::*;
     match (t1, t2) {
         (t1, t2) if t1 == t2 => Ok(t1),
+        (Int, OverloadedArith) | (OverloadedArith, Int) => Ok(Int),
+        (Real, OverloadedArith) | (OverloadedArith, Real) => Ok(Real),
         (Variable(_), ty) | (ty, Variable(_)) => Ok(ty),
         (Fun(p1, b1), Fun(p2, b2)) => {
             let p = pool.try_unify_with(p1, p2, try_unify)?;
@@ -190,6 +194,7 @@ impl TypePool {
     fn init(&mut self) {
         self.node_new(Typing::Int);
         self.node_new(Typing::Real);
+        self.node_new(Typing::OverloadedArith);
     }
 
     fn feed_symbol_table(&mut self, symbol_table: &SymbolTable) {
@@ -221,10 +226,17 @@ impl TypePool {
         *self.cache.get(&Typing::Real).unwrap()
     }
 
+    fn ty_overloaded_arith(&mut self) -> NodeId {
+        *self.cache.get(&Typing::OverloadedArith).unwrap()
+    }
+
     fn node_new(&mut self, t: Typing) -> NodeId {
         let node_id = self.pool.node_new(t.clone());
         match t {
-            t @ Typing::Int | t @ Typing::Real | t @ Typing::Datatype(_) => {
+            t @ Typing::Int
+            | t @ Typing::Real
+            | t @ Typing::Datatype(_)
+            | t @ Typing::OverloadedArith => {
                 self.cache.insert(t, node_id);
             }
             _ => (), // no cache
@@ -364,6 +376,7 @@ impl TyEnv {
         let int = self.pool.ty_int();
         let real = self.pool.ty_real();
         let bool = self.pool.ty_bool();
+        let overloaded_arith = self.pool.ty_overloaded_arith();
         match expr {
             Binds { ty, binds, ret } => {
                 for stmt in binds {
@@ -375,21 +388,17 @@ impl TyEnv {
             }
             BinOp { op, ty, l, r } => {
                 if ["+", "-", "*"].contains(&op.0.as_str()) {
-                    // TODO: support these cases
-                    // fun add x y = x + y + 1.0
                     self.infer_expr(l)?;
                     self.infer_expr(r)?;
                     self.unify(l.ty(), r.ty())?;
-                    self.unify(l.ty(), int)
-                        .or_else(|_| self.unify(l.ty(), real))?;
+                    self.unify(l.ty(), overloaded_arith)?;
                     self.unify(*ty, l.ty())?;
                     Ok(())
                 } else if ["=", "<>", ">", ">=", "<", "<="].contains(&op.0.as_str()) {
                     self.infer_expr(l)?;
                     self.infer_expr(r)?;
                     self.unify(l.ty(), r.ty())?;
-                    self.unify(l.ty(), int)
-                        .or_else(|_| self.unify(l.ty(), real))?;
+                    self.unify(l.ty(), overloaded_arith)?;
                     self.unify(*ty, bool)?;
                     Ok(())
                 } else if ["div", "mod"].contains(&op.0.as_str()) {
