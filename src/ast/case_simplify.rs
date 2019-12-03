@@ -40,6 +40,24 @@ impl CaseSimplify {
         WildcardToVariable::new(self.id.clone()).transform_ast(ast)
     }
 
+    fn rename_pattern(&mut self, pattern: &mut TypedPattern) {
+        use Pattern::*;
+        match pattern {
+            Constructor { arg, .. } => {
+                if let Some(arg) = arg {
+                    self.rename_pattern(arg)
+                }
+            }
+            Tuple { tuple, .. } => {
+                for pat in tuple {
+                    self.rename_pattern(pat)
+                }
+            }
+            Variable { name, .. } => name.1 = self.id.next(),
+            _ => (),
+        }
+    }
+
     fn match_compile(
         &mut self,
         cond: Stack<(Type, Symbol)>,
@@ -466,6 +484,47 @@ impl CaseSimplify {
 }
 
 impl Transform<Type> for CaseSimplify {
+    fn transform_val(
+        &mut self,
+        rec: bool,
+        pattern: TypedPattern,
+        expr: TypedCoreExpr,
+    ) -> TypedCoreStatement {
+        let binds = pattern.binds();
+        let ty = Type::Tuple(binds.iter().map(|&(_, ty)| ty.clone()).collect());
+        let tuple_pat = binds
+            .into_iter()
+            .map(|(name, ty)| Pattern::Variable {
+                name: name.clone(),
+                ty: ty.clone(),
+            })
+            .collect();
+        let tuple_pat = Pattern::Tuple {
+            tuple: tuple_pat,
+            ty: ty.clone(),
+        };
+        let mut pattern = self.transform_pattern(pattern);
+        self.rename_pattern(&mut pattern);
+        let binds = pattern.binds();
+        let tuple = binds
+            .into_iter()
+            .map(|(name, ty)| Expr::Symbol {
+                name: name.clone(),
+                ty: ty.clone(),
+            })
+            .collect();
+        let tuple = Expr::Tuple {
+            ty: ty.clone(),
+            tuple,
+        };
+        let cond = self.transform_expr(expr);
+        Statement::Val {
+            rec,
+            pattern: tuple_pat,
+            expr: self.transform_case(ty, Box::new(cond), vec![(pattern, tuple)]),
+        }
+    }
+
     fn transform_case(
         &mut self,
         ty: Type,

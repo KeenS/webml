@@ -1,4 +1,3 @@
-mod case_check;
 mod case_simplify;
 mod desugar;
 mod pp;
@@ -7,7 +6,6 @@ mod typing;
 mod util;
 mod var2constructor;
 
-pub use self::case_check::CaseCheck;
 pub use self::case_simplify::CaseSimplify;
 pub use self::desugar::Desugar;
 pub use self::rename::Rename;
@@ -136,7 +134,6 @@ pub enum Pattern<Ty> {
         arg: Option<Box<Pattern<Ty>>>,
         ty: Ty,
     },
-    // having redundant types for now
     Tuple {
         tuple: Vec<Pattern<Ty>>,
         ty: Ty,
