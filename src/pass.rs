@@ -1,5 +1,6 @@
 use crate::config::Config;
 use crate::util::PP;
+use log::info;
 use std::fmt::Debug;
 use std::marker::PhantomData;
 
@@ -62,6 +63,7 @@ where
 
     fn trans(&mut self, i: In, config: &Config) -> Result<Self::Target, Err> {
         let o = self.0.trans(i, config)?;
+        info!("pass: {}", self.1);
         if config.pretty_print_ir.contains(self.1) {
             o.pp(&mut ::std::io::stdout(), 0).unwrap();
         }
