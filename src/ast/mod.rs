@@ -169,7 +169,7 @@ pub struct TypeInfo {
 }
 
 impl<Ty, DE, DS> Expr<Ty, DE, DS> {
-    fn boxed(self) -> Box<Self> {
+    pub fn boxed(self) -> Box<Self> {
         Box::new(self)
     }
 }

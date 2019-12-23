@@ -105,7 +105,7 @@ impl CaseSimplify {
                     pattern,
                 }],
                 ty: ty.clone(),
-                ret: Box::new(acc),
+                ret: acc.boxed(),
             })
     }
 
@@ -143,7 +143,7 @@ impl CaseSimplify {
                                 },
                             }],
                             ty: arm.ty(),
-                            ret: Box::new(arm),
+                            ret: arm.boxed(),
                         };
                         pattern
                     }
@@ -231,7 +231,7 @@ impl CaseSimplify {
             default,
         ));
         Expr::Case {
-            cond: Box::new(Expr::Symbol { name: c, ty: cty }),
+            cond: Expr::Symbol { name: c, ty: cty }.boxed(),
             clauses: clauses,
             ty: ret_ty,
         }
@@ -302,10 +302,10 @@ impl CaseSimplify {
 
         if self.is_exhausitive(&type_id, constructor_names) {
             Expr::Case {
-                cond: Box::new(Expr::Symbol {
+                cond: Expr::Symbol {
                     name: c.clone(),
                     ty: cty,
-                }),
+                }.boxed(),
                 clauses,
                 ty: ret_ty,
             }
@@ -320,7 +320,7 @@ impl CaseSimplify {
                 default,
             ));
             Expr::Case {
-                cond: Box::new(Expr::Symbol { name: c, ty: cty }),
+                cond: Expr::Symbol { name: c, ty: cty }.boxed(),
                 clauses: clauses,
                 ty: ret_ty,
             }
@@ -378,7 +378,7 @@ impl CaseSimplify {
                             },
                         }],
                         ty: arm.ty(),
-                        ret: Box::new(arm),
+                        ret: arm.boxed(),
                     };
                     Some((pattern, (pat, arm)))
                 }
@@ -414,7 +414,7 @@ impl CaseSimplify {
                             },
                         }],
                         ty: arm.ty(),
-                        ret: Box::new(arm),
+                        ret: arm.boxed(),
                     };
                     Some((pat, arm))
                 }
@@ -446,7 +446,7 @@ impl CaseSimplify {
                             pattern: var,
                         }],
                         ty: arm.ty(),
-                        ret: Box::new(arm),
+                        ret: arm.boxed(),
                     };
                     Some((pat, arm))
                 }
@@ -521,7 +521,7 @@ impl Transform<Type> for CaseSimplify {
         Statement::Val {
             rec,
             pattern: tuple_pat,
-            expr: self.transform_case(ty, Box::new(cond), vec![(pattern, tuple)]),
+            expr: self.transform_case(ty, cond.boxed(), vec![(pattern, tuple)]),
         }
     }
 

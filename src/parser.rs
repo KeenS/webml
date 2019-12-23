@@ -146,7 +146,7 @@ named!(expr_bind <&str, Expr<()>>, do_parse!(
         binds: separated_list!(multispace, bind) >> multispace >>
         tag_s!("in") >> multispace >>
         ret: expr >> multispace >> tag_s!("end") >>
-        (Expr::Binds {ty: (), binds: binds, ret: Box::new(ret)})
+        (Expr::Binds {ty: (), binds: binds, ret: ret.boxed()})
 ));
 
 named!(expr_fun <&str, Expr<()>>, do_parse!(
@@ -160,7 +160,7 @@ named!(expr_fun <&str, Expr<()>>, do_parse!(
         (Expr::Fn {
             ty: (),
             param: param,
-            body: Box::new(body)
+            body: body.boxed()
         })
 ));
 
@@ -170,9 +170,9 @@ named!(expr_if <&str, Expr<()>>, do_parse!(
         tag_s!("else") >> multispace >> else_: expr >>
         (Expr::D(DerivedExpr::If {
             ty: (),
-            cond: Box::new(cond),
-            then: Box::new(then),
-            else_: Box::new(else_)
+            cond: cond.boxed(),
+            then: then.boxed(),
+            else_: else_.boxed()
         }))
 ));
 
@@ -188,7 +188,7 @@ named!(expr_case <&str, Expr<()>>, do_parse!(
                     (pat, expr))) >>
         (Expr::Case {
             ty: (),
-            cond: Box::new(cond),
+            cond: cond.boxed(),
             clauses: clauses,
         })
 ));
@@ -203,8 +203,8 @@ named!(infix7_op <&str, Expr<()>>, do_parse!(
         (Expr::BinOp {
             op: Symbol::new(op),
             ty: (),
-            l: Box::new(e1),
-            r: Box::new(e2)
+            l: e1.boxed(),
+            r: e2.boxed()
         })
 ));
 
@@ -218,8 +218,8 @@ named!(infix6_op <&str, Expr<()>>, do_parse!(
         (Expr::BinOp {
             op: Symbol::new(op),
             ty: (),
-            l: Box::new(e1),
-            r: Box::new(e2)
+            l: e1.boxed(),
+            r: e2.boxed()
         })
 ));
 
@@ -233,8 +233,8 @@ named!(infix5_op <&str, Expr<()>>, do_parse!(
         (Expr::BinOp {
             op: Symbol::new(op),
             ty: (),
-            l: Box::new(e1),
-            r: Box::new(e2)
+            l: e1.boxed(),
+            r: e2.boxed()
         })
 ));
 
@@ -248,8 +248,8 @@ named!(infix4_op <&str, Expr<()>>, do_parse!(
         (Expr::BinOp {
             op: Symbol::new(op),
             ty: (),
-            l: Box::new(e1),
-            r: Box::new(e2)
+            l: e1.boxed(),
+            r: e2.boxed()
         })
 ));
 
@@ -274,12 +274,12 @@ named!(expr0_app <&str, Expr<()>>, do_parse!(
         ({
             let mut rest = args.into_iter();
             let arg = rest.next().unwrap();
-            let init = Expr::App {ty: (), fun: Box::new(fun), arg: Box::new(arg)};
+            let init = Expr::App {ty: (), fun: fun.boxed(), arg: arg.boxed()};
             rest
                 .fold(init, |acc, elm| Expr::App {
                     ty: (),
-                    fun: Box::new(acc),
-                    arg: Box::new(elm)
+                    fun: acc.boxed(),
+                    arg: elm.boxed()
                 })
           })
 ));

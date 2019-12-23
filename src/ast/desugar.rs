@@ -187,7 +187,7 @@ impl Desugar {
     ) -> UntypedCoreExpr {
         Expr::Case {
             ty,
-            cond: Box::new(self.transform_expr(*cond)),
+            cond: self.transform_expr(*cond).boxed(),
             clauses: vec![
                 (
                     Pattern::Constructor {
