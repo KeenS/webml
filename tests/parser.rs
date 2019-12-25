@@ -85,6 +85,76 @@ fn parse_bool_false() {
 }
 
 #[test]
+fn parse_binop() {
+    let input = r#"val x = 1 + 2"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![Statement::Val {
+            rec: false,
+            pattern: Pattern::Variable {
+                name: Symbol::new("x"),
+                ty: (),
+            },
+            expr: Expr::BinOp {
+                l: Expr::Literal {
+                    ty: (),
+                    value: Literal::Int(1),
+                }
+                .boxed(),
+                op: Symbol::new("+"),
+                ty: (),
+                r: Expr::Literal {
+                    ty: (),
+                    value: Literal::Int(2),
+                }
+                .boxed()
+            }
+        },])
+    )
+}
+
+#[test]
+fn parse_binop_pref() {
+    let input = r#"val x = 1 + 2 * 3"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![Statement::Val {
+            rec: false,
+            pattern: Pattern::Variable {
+                name: Symbol::new("x"),
+                ty: (),
+            },
+            expr: Expr::BinOp {
+                l: Expr::Literal {
+                    ty: (),
+                    value: Literal::Int(1),
+                }
+                .boxed(),
+                op: Symbol::new("+"),
+                ty: (),
+                r: Expr::BinOp {
+                    l: Expr::Literal {
+                        ty: (),
+                        value: Literal::Int(2),
+                    }
+                    .boxed(),
+                    op: Symbol::new("*"),
+                    ty: (),
+                    r: Expr::Literal {
+                        ty: (),
+                        value: Literal::Int(3),
+                    }
+                    .boxed()
+                }
+                .boxed()
+            }
+        },])
+    )
+}
+
+#[test]
 fn parse_fn_unary() {
     let input = r#"val f = fn x => x"#;
     let ast = parse(input).unwrap();
