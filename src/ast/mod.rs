@@ -313,7 +313,7 @@ pub enum TypeError<'a> {
     CannotInfer,
     FreeVar,
     NotFunction(ast::Expr<Type>),
-    ParseError(nom::Err<&'a str>),
+    ParseError(nom::Err<(&'a str, nom::error::ErrorKind)>),
 }
 
 impl<'a> fmt::Display for TypeError<'a> {
@@ -335,8 +335,8 @@ impl<'a> Error for TypeError<'a> {
     }
 }
 
-impl<'a> From<nom::Err<&'a str>> for TypeError<'a> {
-    fn from(e: nom::Err<&'a str>) -> Self {
+impl<'a> From<nom::Err<(&'a str, nom::error::ErrorKind)>> for TypeError<'a> {
+    fn from(e: nom::Err<(&'a str, nom::error::ErrorKind)>) -> Self {
         // fn conv<'b>(e: nom::Err<&'b [u8]>) -> nom::Err<&'b str> {
         //     use std::str::from_utf8;
         //     use nom::Err::*;

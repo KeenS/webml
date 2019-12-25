@@ -5,7 +5,7 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-nom = { version = "2.0.1", features = ["verbose-errors"]}
+nom = "5"
 petgraph = "0.4.1"
 clap = "2.32.0"
 log = "0.4.8"
