@@ -10,7 +10,7 @@ use nom::sequence::{preceded, tuple};
 use nom::IResult;
 
 static KEYWORDS: &[&str] = &[
-    "val", "fun", "fn", "let", "in", "end", "if", "then", "else", "case", "of", "_",
+    "val", "fun", "fn", "let", "in", "end", "if", "then", "else", "case", "of", "_", "datatype",
 ];
 static INFIX7: &[&str] = &["*", "/", "div", "mod"];
 static INFIX6: &[&str] = &["+", "-"];

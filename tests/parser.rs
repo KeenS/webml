@@ -769,3 +769,33 @@ fn parse_case_val_pattern_wildcard() {
         },])
     )
 }
+
+#[test]
+fn parse_multistatement_val_datatype() {
+    let input = r#"val version = 1 datatype order = GREATER | EQUAL | LESS"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![
+            Statement::Val {
+                rec: false,
+                pattern: Pattern::Variable {
+                    ty: (),
+                    name: Symbol::new("version")
+                },
+                expr: Expr::Literal {
+                    ty: (),
+                    value: Literal::Int(1)
+                }
+            },
+            Statement::Datatype {
+                name: Symbol::new("order"),
+                constructors: vec![
+                    (Symbol::new("GREATER"), None),
+                    (Symbol::new("EQUAL"), None),
+                    (Symbol::new("LESS"), None),
+                ]
+            }
+        ])
+    )
+}
