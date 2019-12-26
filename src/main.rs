@@ -1,7 +1,15 @@
 use clap::{app_from_crate, crate_authors, crate_description, crate_name, crate_version, Arg};
 use std::collections::HashSet;
 use std::fs;
+use std::io::{self, prelude::*};
+use std::path::Path;
 use webml::{compile_str, Config};
+
+fn read_and_append_to_string(path: impl AsRef<Path>, buf: &mut String) -> io::Result<usize> {
+    let file = fs::File::open(path)?;
+    let mut input = io::BufReader::new(file);
+    input.read_to_string(buf)
+}
 
 fn main() {
     env_logger::init();
@@ -36,7 +44,9 @@ fn main() {
         ..Default::default()
     };
 
-    let input = fs::read_to_string(filename).expect("failed to load file");
+    let prelude = include_str!("../ml_src/prelude.sml").to_string();
+    let mut input = prelude;
+    read_and_append_to_string(filename, &mut input).expect("failed to load file");
     let code = compile_str(&input, &config).unwrap();
     fs::write("out.wasm", &code).unwrap()
 }

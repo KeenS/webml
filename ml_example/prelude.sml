@@ -1,0 +1,1 @@
+val out = print version
