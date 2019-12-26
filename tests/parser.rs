@@ -85,6 +85,26 @@ fn parse_bool_false() {
 }
 
 #[test]
+fn parse_unit() {
+    let input = r#"val x = ()"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![Statement::Val {
+            rec: false,
+            pattern: Pattern::Variable {
+                name: Symbol::new("x"),
+                ty: (),
+            },
+            expr: Expr::Tuple {
+                ty: (),
+                tuple: vec![]
+            }
+        }])
+    )
+}
+
+#[test]
 fn parse_binop() {
     let input = r#"val x = 1 + 2"#;
     let ast = parse(input).unwrap();
@@ -820,6 +840,26 @@ fn parse_case_tuple() {
                 ),],
             },
         },])
+    )
+}
+
+#[test]
+fn parse_pattern_unit() {
+    let input = r#"val () = ()"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![Statement::Val {
+            rec: false,
+            pattern: Pattern::Tuple {
+                tuple: vec![],
+                ty: (),
+            },
+            expr: Expr::Tuple {
+                ty: (),
+                tuple: vec![]
+            }
+        }])
     )
 }
 

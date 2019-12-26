@@ -117,6 +117,7 @@ fn expr(i: &str) -> IResult<&str, Expr<()>> {
 fn expr1(i: &str) -> IResult<&str, Expr<()>> {
     alt((
         expr1_tuple,
+        expr1_unit,
         expr1_paren,
         expr1_float,
         expr1_int,
@@ -461,6 +462,16 @@ fn expr1_tuple(i: &str) -> IResult<&str, Expr<()>> {
     Ok((i, Expr::Tuple { ty: (), tuple: es }))
 }
 
+fn expr1_unit(i: &str) -> IResult<&str, Expr<()>> {
+    value(
+        Expr::Tuple {
+            ty: (),
+            tuple: vec![],
+        },
+        tuple((tag("("), multispace0, tag(")"))),
+    )(i)
+}
+
 fn expr1_builtincall(i: &str) -> IResult<&str, Expr<()>> {
     let (i, _) = tag("_builtincall")(i)?;
     let (i, _) = multispace0(i)?;
@@ -580,6 +591,7 @@ fn pattern_atmic(i: &str) -> IResult<&str, Pattern<()>> {
         pattern_tuple,
         pattern_var,
         pattern_wildcard,
+        pattern_unit,
         pattern_paren,
     ))(i)
 }
@@ -618,6 +630,16 @@ fn pattern_tuple(i: &str) -> IResult<&str, Pattern<()>> {
     let mut es = es;
     es.push(e);
     Ok((i, Pattern::Tuple { tuple: es, ty: () }))
+}
+
+fn pattern_unit(i: &str) -> IResult<&str, Pattern<()>> {
+    value(
+        Pattern::Tuple {
+            tuple: vec![],
+            ty: (),
+        },
+        tuple((tag("("), multispace0, tag(")"))),
+    )(i)
 }
 
 // require constructor to have arg for now.
