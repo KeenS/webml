@@ -115,6 +115,46 @@ fn parse_binop() {
 }
 
 #[test]
+fn parse_binop_assoc() {
+    let input = r#"val x = 1 + 2 + 3"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![Statement::Val {
+            rec: false,
+            pattern: Pattern::Variable {
+                name: Symbol::new("x"),
+                ty: (),
+            },
+            expr: Expr::BinOp {
+                l: Expr::BinOp {
+                    l: Expr::Literal {
+                        ty: (),
+                        value: Literal::Int(1),
+                    }
+                    .boxed(),
+                    op: Symbol::new("+"),
+                    ty: (),
+                    r: Expr::Literal {
+                        ty: (),
+                        value: Literal::Int(2),
+                    }
+                    .boxed()
+                }
+                .boxed(),
+                op: Symbol::new("+"),
+                ty: (),
+                r: Expr::Literal {
+                    ty: (),
+                    value: Literal::Int(3),
+                }
+                .boxed()
+            }
+        },])
+    )
+}
+
+#[test]
 fn parse_uiltincall() {
     let input = r#"val ret = _builtincall "add" (x, y)"#;
     let ast = parse(input).unwrap();

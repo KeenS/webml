@@ -20,13 +20,17 @@ static INFIX3: &[&str] = &[];
 static INFIX2: &[&str] = &[];
 static INFIX1: &[&str] = &[];
 
-fn one_of<'a, 'b>(input: &'a str, tags: &'b [&str]) -> IResult<&'a str, &'a str> {
-    for tag in tags {
-        if input.starts_with(tag) {
-            return Ok((&input[(tag.len())..], &input[0..(tag.len())]));
+fn one_of<'b>(
+    tags: &'b [&str],
+) -> impl for<'a> Fn(&'a str) -> IResult<&'a str, &'a str> + Clone + 'b {
+    move |i: &str| -> IResult<&str, &str> {
+        for tag in tags {
+            if i.starts_with(tag) {
+                return Ok((&i[(tag.len())..], &i[0..(tag.len())]));
+            }
         }
+        Err(nom::Err::Error((i, nom::error::ErrorKind::IsNot)))
     }
-    Err(nom::Err::Error((input, nom::error::ErrorKind::IsNot)))
 }
 
 fn top(i: &str) -> IResult<&str, UntypedAst> {
@@ -234,76 +238,59 @@ fn expr_case(i: &str) -> IResult<&str, Expr<()>> {
     ))
 }
 
-// FIXME make left associative
+// left recursion eliminated
+fn infixl(
+    subexpr: impl Fn(&str) -> IResult<&str, Expr<()>> + Clone,
+    op_parser: impl Fn(&str) -> IResult<&str, &str> + Clone,
+) -> impl Fn(&str) -> IResult<&str, Expr<()>> {
+    move |i: &str| -> IResult<&str, Expr<()>> {
+        let (i, l) = subexpr(i)?;
+        let (i, _) = multispace0(i)?;
+        let (i, op) = op_parser(i)?;
+        let (i, _) = multispace0(i)?;
+        let (i, r) = subexpr(i)?;
+        let mut e = Expr::BinOp {
+            op: Symbol::new(op),
+            ty: (),
+            l: l.boxed(),
+            r: r.boxed(),
+        };
+        let mut pin = i;
+        loop {
+            match map(
+                tuple((multispace0, op_parser.clone(), multispace0, subexpr.clone())),
+                |(_, op, _, r)| (op, r),
+            )(pin)
+            {
+                Ok((i, (op, r))) => {
+                    pin = i;
+                    e = Expr::BinOp {
+                        op: Symbol::new(op),
+                        ty: (),
+                        l: e.boxed(),
+                        r: r.boxed(),
+                    }
+                }
+                Err(_) => return Ok((pin, e)),
+            }
+        }
+    }
+}
+
 fn infix7_op(i: &str) -> IResult<&str, Expr<()>> {
-    let (i, e1) = expr0(i)?;
-    let (i, _) = multispace0(i)?;
-    let (i, op) = one_of(i, INFIX7)?;
-    let (i, _) = multispace0(i)?;
-    let (i, e2) = infix7(i)?;
-    Ok((
-        i,
-        Expr::BinOp {
-            op: Symbol::new(op),
-            ty: (),
-            l: e1.boxed(),
-            r: e2.boxed(),
-        },
-    ))
+    infixl(expr0, one_of(INFIX7))(i)
 }
 
-// FIXME make left associative
 fn infix6_op(i: &str) -> IResult<&str, Expr<()>> {
-    let (i, e1) = infix7(i)?;
-    let (i, _) = multispace0(i)?;
-    let (i, op) = one_of(i, INFIX6)?;
-    let (i, _) = multispace0(i)?;
-    let (i, e2) = infix6(i)?;
-    Ok((
-        i,
-        Expr::BinOp {
-            op: Symbol::new(op),
-            ty: (),
-            l: e1.boxed(),
-            r: e2.boxed(),
-        },
-    ))
+    infixl(infix7, one_of(INFIX6))(i)
 }
 
-// FIXME make left associative
 fn infix5_op(i: &str) -> IResult<&str, Expr<()>> {
-    let (i, e1) = infix6(i)?;
-    let (i, _) = multispace0(i)?;
-    let (i, op) = one_of(i, INFIX5)?;
-    let (i, _) = multispace0(i)?;
-    let (i, e2) = infix5(i)?;
-    Ok((
-        i,
-        Expr::BinOp {
-            op: Symbol::new(op),
-            ty: (),
-            l: e1.boxed(),
-            r: e2.boxed(),
-        },
-    ))
+    infixl(infix6, one_of(INFIX5))(i)
 }
 
-// FIXME make left associative
 fn infix4_op(i: &str) -> IResult<&str, Expr<()>> {
-    let (i, e1) = infix5(i)?;
-    let (i, _) = multispace0(i)?;
-    let (i, op) = one_of(i, INFIX4)?;
-    let (i, _) = multispace0(i)?;
-    let (i, e2) = infix4(i)?;
-    Ok((
-        i,
-        Expr::BinOp {
-            op: Symbol::new(op),
-            ty: (),
-            l: e1.boxed(),
-            r: e2.boxed(),
-        },
-    ))
+    infixl(infix5, one_of(INFIX4))(i)
 }
 
 fn expr0_app(i: &str) -> IResult<&str, Expr<()>> {
