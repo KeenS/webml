@@ -548,12 +548,12 @@ fn typename2_datatype(i: &str) -> IResult<&str, Type> {
     map(symbol, |name| Type::Datatype(name))(i)
 }
 
-// TODO: use verify
 fn symbol(i: &str) -> IResult<&str, Symbol> {
     alt((symbol_alphanumeric, symbol_symbolic))(i)
 }
 
 fn symbol_alphanumeric(i: &str) -> IResult<&str, Symbol> {
+    // FIXME: collect syntax is [a-zA-Z'_][a-zA-Z'_0-9]*
     let (i, sym) = verify(alphanumeric1, |s: &str| !KEYWORDS.contains(&s))(i)?;
     Ok((i, Symbol::new(sym.to_string())))
 }
