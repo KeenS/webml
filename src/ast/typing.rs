@@ -194,7 +194,6 @@ impl TypePool {
     fn init(&mut self) {
         self.node_new(Typing::Int);
         self.node_new(Typing::Real);
-        self.node_new(Typing::OverloadedArith);
     }
 
     fn feed_symbol_table(&mut self, symbol_table: &SymbolTable) {
@@ -227,16 +226,13 @@ impl TypePool {
     }
 
     fn ty_overloaded_arith(&mut self) -> NodeId {
-        *self.cache.get(&Typing::OverloadedArith).unwrap()
+        self.node_new(Typing::OverloadedArith)
     }
 
     fn node_new(&mut self, t: Typing) -> NodeId {
         let node_id = self.pool.node_new(t.clone());
         match t {
-            t @ Typing::Int
-            | t @ Typing::Real
-            | t @ Typing::Datatype(_)
-            | t @ Typing::OverloadedArith => {
+            t @ Typing::Int | t @ Typing::Real | t @ Typing::Datatype(_) => {
                 self.cache.insert(t, node_id);
             }
             _ => (), // no cache
