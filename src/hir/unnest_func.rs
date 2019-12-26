@@ -104,11 +104,11 @@ impl<'a> Scope<'a> {
         } else {
             None
         };
-        val.expr = self.conv_expr(val.expr, bind_name);
+        val.expr = self.conv_expr(val.expr, bind_name, true);
         val
     }
 
-    fn conv_expr(&mut self, expr: Expr, bind_name: Option<Symbol>) -> Expr {
+    fn conv_expr(&mut self, expr: Expr, bind_name: Option<Symbol>, is_top: bool) -> Expr {
         use crate::hir::Expr::*;
         match expr {
             Binds {
@@ -124,12 +124,12 @@ impl<'a> Scope<'a> {
                         } else {
                             None
                         };
-                        bind.expr = self.conv_expr(bind.expr, bind_name);
+                        bind.expr = self.conv_expr(bind.expr, bind_name, false);
                         bind.rec = false;
                         bind
                     })
                     .collect();
-                ret = Box::new(self.conv_expr(*ret, None));
+                ret = Box::new(self.conv_expr(*ret, None, false));
                 Binds { ty, binds, ret }
             }
             Fun {
@@ -140,14 +140,14 @@ impl<'a> Scope<'a> {
                 ..
             } => {
                 assert_eq!(captures.len(), 0);
-                body = Box::new(self.conv_expr(*body, None));
+                body = Box::new(self.conv_expr(*body, None, false));
                 let (param_ty, param) = param;
                 let mut frees = Vec::new();
                 self.analyze_free_expr(&mut frees, &param, &body);
                 frees.dedup();
                 captures.extend(frees.clone());
                 let is_closure = !captures.is_empty();
-                if !is_closure && bind_name.is_some() {
+                if !is_closure && is_top {
                     // toplevel function
                     return Fun {
                         param: (param_ty.clone(), param),
@@ -189,7 +189,7 @@ impl<'a> Scope<'a> {
             BuiltinCall { ty, fun, args } => {
                 let args = args
                     .into_iter()
-                    .map(|arg| self.conv_expr(arg, None))
+                    .map(|arg| self.conv_expr(arg, None, false))
                     .collect();
                 BuiltinCall { ty, fun, args }
             }
@@ -198,8 +198,8 @@ impl<'a> Scope<'a> {
                 mut fun,
                 mut arg,
             } => {
-                fun = Box::new(self.conv_expr(*fun, None));
-                arg = Box::new(self.conv_expr(*arg, None));
+                fun = Box::new(self.conv_expr(*fun, None, false));
+                arg = Box::new(self.conv_expr(*arg, None, false));
                 App { ty, fun, arg }
             }
             Case {
@@ -207,19 +207,22 @@ impl<'a> Scope<'a> {
                 mut expr,
                 mut arms,
             } => {
-                expr = Box::new(self.conv_expr(*expr, None));
+                expr = Box::new(self.conv_expr(*expr, None, false));
                 arms = arms
                     .into_iter()
-                    .map(|(pat, arm)| (pat, self.conv_expr(arm, None)))
+                    .map(|(pat, arm)| (pat, self.conv_expr(arm, None, false)))
                     .collect();
                 Case { ty, expr, arms }
             }
             Tuple { tys, tuple } => {
-                let tuple = tuple.into_iter().map(|t| self.conv_expr(t, None)).collect();
+                let tuple = tuple
+                    .into_iter()
+                    .map(|t| self.conv_expr(t, None, false))
+                    .collect();
                 Tuple { tys, tuple }
             }
             Proj { ty, index, tuple } => {
-                let tuple = self.conv_expr(*tuple, None);
+                let tuple = self.conv_expr(*tuple, None, false);
                 Proj {
                     ty,
                     tuple: Box::new(tuple),
@@ -231,7 +234,7 @@ impl<'a> Scope<'a> {
                 arg,
                 ty,
             } => {
-                let arg = arg.map(|a| Box::new(self.conv_expr(*a, None)));
+                let arg = arg.map(|a| Box::new(self.conv_expr(*a, None, false)));
                 Constructor {
                     descriminant,
                     arg,
