@@ -145,6 +145,7 @@ fn expr1(i: &str) -> IResult<&str, Expr<()>> {
         expr1_int,
         expr1_bool,
         expr1_sym,
+        expr1_builtincall,
     ))(i)
 }
 
@@ -402,6 +403,26 @@ fn expr1_tuple(i: &str) -> IResult<&str, Expr<()>> {
     let mut es = es;
     es.push(e);
     Ok((i, Expr::Tuple { ty: (), tuple: es }))
+}
+
+fn expr1_builtincall(i: &str) -> IResult<&str, Expr<()>> {
+    let (i, _) = tag("_builtincall")(i)?;
+    let (i, _) = multispace0(i)?;
+    let (i, _) = tag("\"")(i)?;
+    let (i, name) = alphanumeric1(i)?;
+    let (i, _) = tag("\"")(i)?;
+    let (i, _) = multispace0(i)?;
+    let (i, _) = tag("(")(i)?;
+    let (i, args) = separated_nonempty_list(tuple((multispace0, tag(","), multispace0)), expr)(i)?;
+    let (i, _) = tag(")")(i)?;
+    Ok((
+        i,
+        Expr::BuiltinCall {
+            ty: (),
+            name: name.to_string(),
+            args,
+        },
+    ))
 }
 
 fn typename(i: &str) -> IResult<&str, Type> {

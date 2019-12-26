@@ -111,6 +111,7 @@ impl Desugar {
         match expr {
             Binds { ty, binds, ret } => self.transform_binds(ty, binds, ret),
             BinOp { ty, op, l, r } => self.transform_binop(ty, op, l, r),
+            BuiltinCall { ty, name, args } => self.transform_builtincall(ty, name, args),
             Fn { ty, param, body } => self.transform_fn(ty, param, body),
             App { ty, fun, arg } => self.transform_app(ty, fun, arg),
             Case { ty, cond, clauses } => self.transform_case(ty, cond, clauses),
@@ -154,6 +155,22 @@ impl Desugar {
             op,
             l: self.transform_expr(*l).boxed(),
             r: self.transform_expr(*r).boxed(),
+        }
+    }
+
+    fn transform_builtincall(
+        &mut self,
+        ty: (),
+        name: String,
+        args: Vec<UntypedExpr>,
+    ) -> UntypedCoreExpr {
+        Expr::BuiltinCall {
+            ty,
+            name,
+            args: args
+                .into_iter()
+                .map(|arg| self.transform_expr(arg))
+                .collect(),
         }
     }
 

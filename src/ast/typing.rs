@@ -125,6 +125,11 @@ impl<Ty> CoreExpr<Ty> {
                 l: l.map_ty(f).boxed(),
                 r: r.map_ty(f).boxed(),
             },
+            BuiltinCall { ty, name, args } => BuiltinCall {
+                ty: f(ty),
+                name,
+                args: args.into_iter().map(|arg| arg.map_ty(f)).collect(),
+            },
             Fn { param, ty, body } => Fn {
                 param,
                 ty: f(ty),
@@ -413,6 +418,46 @@ impl TyEnv {
                     Ok(())
                 } else {
                     unimplemented!()
+                }
+            }
+            BuiltinCall { ty, name, args } => {
+                if args.len() == 2 {
+                    let l = &args[0];
+                    let r = &args[1];
+                    let op = name;
+                    if ["+", "-", "*"].contains(&op.as_str()) {
+                        self.infer_expr(l)?;
+                        self.infer_expr(r)?;
+                        self.unify(l.ty(), r.ty())?;
+                        self.unify(l.ty(), overloaded_arith)?;
+                        self.unify(*ty, l.ty())?;
+                        Ok(())
+                    } else if ["=", "<>", ">", ">=", "<", "<="].contains(&op.as_str()) {
+                        self.infer_expr(l)?;
+                        self.infer_expr(r)?;
+                        self.unify(l.ty(), r.ty())?;
+                        self.unify(l.ty(), overloaded_arith)?;
+                        self.unify(*ty, bool)?;
+                        Ok(())
+                    } else if ["div", "mod"].contains(&op.as_str()) {
+                        self.unify(l.ty(), int)?;
+                        self.unify(r.ty(), int)?;
+                        self.unify(*ty, int)?;
+                        self.infer_expr(l)?;
+                        self.infer_expr(r)?;
+                        Ok(())
+                    } else if ["/"].contains(&op.as_str()) {
+                        self.unify(l.ty(), real)?;
+                        self.unify(r.ty(), real)?;
+                        self.unify(*ty, real)?;
+                        self.infer_expr(l)?;
+                        self.infer_expr(r)?;
+                        Ok(())
+                    } else {
+                        unimplemented!()
+                    }
+                } else {
+                    unreachable!("arity of builtin call mismatch")
                 }
             }
             Fn { ty, param, body } => {
