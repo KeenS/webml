@@ -424,8 +424,7 @@ impl TyEnv {
                         let arg = &args[0];
                         self.infer_expr(arg)?;
                         self.unify(arg.ty(), int)?;
-                        let unit = self.pool.ty(Typing::Tuple(vec![]));
-                        self.give(*ty, Typing::Fun(int, unit))?;
+                        self.give(*ty, Typing::Tuple(vec![]))?;
                         Ok(())
                     }
                     Add | Sub | Mul => {
