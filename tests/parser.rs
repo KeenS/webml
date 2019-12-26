@@ -841,6 +841,112 @@ fn parse_case_val_pattern_wildcard() {
 }
 
 #[test]
+fn parse_funarg_pattern() {
+    let input = r#"fun xor (SOME _) (SOME _) = NONE | xor NONE (SOME x) = SOME x | xor (SOME x) NONE = SOME x | xor NONE NONE = NONE"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![Statement::D(DerivedStatement::Fun {
+            name: Symbol::new("xor"),
+            clauses: vec![
+                (
+                    vec![
+                        Pattern::Constructor {
+                            ty: (),
+                            name: Symbol::new("SOME"),
+                            arg: Some(Box::new(Pattern::Wildcard { ty: () }))
+                        },
+                        Pattern::Constructor {
+                            ty: (),
+                            name: Symbol::new("SOME"),
+                            arg: Some(Box::new(Pattern::Wildcard { ty: () }))
+                        }
+                    ],
+                    Expr::Symbol {
+                        ty: (),
+                        name: Symbol::new("NONE"),
+                    }
+                ),
+                (
+                    vec![
+                        Pattern::Variable {
+                            ty: (),
+                            name: Symbol::new("NONE"),
+                        },
+                        Pattern::Constructor {
+                            ty: (),
+                            name: Symbol::new("SOME"),
+                            arg: Some(Box::new(Pattern::Variable {
+                                ty: (),
+                                name: Symbol::new("x")
+                            }))
+                        }
+                    ],
+                    Expr::App {
+                        ty: (),
+                        fun: Expr::Symbol {
+                            ty: (),
+                            name: Symbol::new("SOME")
+                        }
+                        .boxed(),
+                        arg: Expr::Symbol {
+                            ty: (),
+                            name: Symbol::new("x")
+                        }
+                        .boxed(),
+                    }
+                ),
+                (
+                    vec![
+                        Pattern::Constructor {
+                            ty: (),
+                            name: Symbol::new("SOME"),
+                            arg: Some(Box::new(Pattern::Variable {
+                                ty: (),
+                                name: Symbol::new("x")
+                            }))
+                        },
+                        Pattern::Variable {
+                            ty: (),
+                            name: Symbol::new("NONE"),
+                        },
+                    ],
+                    Expr::App {
+                        ty: (),
+                        fun: Expr::Symbol {
+                            ty: (),
+                            name: Symbol::new("SOME")
+                        }
+                        .boxed(),
+                        arg: Expr::Symbol {
+                            ty: (),
+                            name: Symbol::new("x")
+                        }
+                        .boxed(),
+                    }
+                ),
+                (
+                    vec![
+                        Pattern::Variable {
+                            ty: (),
+                            name: Symbol::new("NONE"),
+                        },
+                        Pattern::Variable {
+                            ty: (),
+                            name: Symbol::new("NONE"),
+                        },
+                    ],
+                    Expr::Symbol {
+                        ty: (),
+                        name: Symbol::new("NONE"),
+                    }
+                )
+            ]
+        })])
+    )
+}
+
+#[test]
 fn parse_multistatement_val_datatype() {
     let input = r#"val version = 1 datatype order = GREATER | EQUAL | LESS"#;
     let ast = parse(input).unwrap();

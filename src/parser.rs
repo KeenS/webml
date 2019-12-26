@@ -56,7 +56,7 @@ fn bind_datatype(i: &str) -> IResult<&str, Statement<()>> {
 fn bind_val(i: &str) -> IResult<&str, Statement<()>> {
     let (i, _) = tag("val")(i)?;
     let (i, _) = multispace1(i)?;
-    let (i, pattern) = pattern_single(i)?;
+    let (i, pattern) = pattern(i)?;
     let (i, _) = multispace0(i)?;
     let (i, _) = tag("=")(i)?;
     let (i, _) = multispace0(i)?;
@@ -80,7 +80,7 @@ fn bind_fun(i: &str) -> IResult<&str, Statement<()>> {
             tuple((
                 symbol,
                 multispace0,
-                separated_nonempty_list(multispace1, pattern_multi),
+                separated_nonempty_list(multispace1, pattern_atmic),
                 multispace0,
                 tag("="),
                 multispace0,
@@ -197,7 +197,7 @@ fn expr_case(i: &str) -> IResult<&str, Expr<()>> {
     let (i, clauses) = separated_nonempty_list(
         tuple((multispace0, tag("|"), multispace0)),
         map(
-            tuple((pattern_single, multispace0, tag("=>"), multispace0, expr)),
+            tuple((pattern, multispace0, tag("=>"), multispace0, expr)),
             |(pat, _, _, _, expr)| (pat, expr),
         ),
     )(i)?;
@@ -569,24 +569,18 @@ fn symbol_symbolic(i: &str) -> IResult<&str, Symbol> {
     Ok((i, Symbol::new(sym.to_string())))
 }
 
-fn pattern_single(i: &str) -> IResult<&str, Pattern<()>> {
-    alt((
-        pattern_bool,
-        pattern_int,
-        pattern_tuple,
-        pattern_constructor,
-        pattern_var,
-        pattern_wildcard,
-    ))(i)
+fn pattern(i: &str) -> IResult<&str, Pattern<()>> {
+    alt((pattern_constructor, pattern_atmic))(i)
 }
 
-fn pattern_multi(i: &str) -> IResult<&str, Pattern<()>> {
+fn pattern_atmic(i: &str) -> IResult<&str, Pattern<()>> {
     alt((
         pattern_bool,
         pattern_int,
         pattern_tuple,
         pattern_var,
         pattern_wildcard,
+        pattern_paren,
     ))(i)
 }
 
@@ -616,8 +610,8 @@ fn pattern_tuple(i: &str) -> IResult<&str, Pattern<()>> {
     let (i, _) = tag("(")(i)?;
     let (i, _) = multispace0(i)?;
     let sep = tuple((multispace0, tag(","), multispace0));
-    let (i, es) = many1(map(tuple((pattern_single, sep)), |(e, _)| e))(i)?;
-    let (i, e) = pattern_single(i)?;
+    let (i, es) = many1(map(tuple((pattern, sep)), |(e, _)| e))(i)?;
+    let (i, e) = pattern(i)?;
     let (i, _) = multispace0(i)?;
     let (i, _) = tag(")")(i)?;
 
@@ -631,7 +625,7 @@ fn pattern_tuple(i: &str) -> IResult<&str, Pattern<()>> {
 fn pattern_constructor(i: &str) -> IResult<&str, Pattern<()>> {
     let (i, name) = symbol(i)?;
     let (i, _) = multispace1(i)?;
-    let (i, arg) = pattern_multi(i)?;
+    let (i, arg) = pattern_atmic(i)?;
     Ok((
         i,
         Pattern::Constructor {
@@ -648,6 +642,16 @@ fn pattern_var(i: &str) -> IResult<&str, Pattern<()>> {
 
 fn pattern_wildcard(i: &str) -> IResult<&str, Pattern<()>> {
     value(Pattern::Wildcard { ty: () }, tag("_"))(i)
+}
+
+fn pattern_paren(i: &str) -> IResult<&str, Pattern<()>> {
+    let (i, _) = tag("(")(i)?;
+    let (i, _) = multispace0(i)?;
+    let (i, e) = pattern(i)?;
+    let (i, _) = multispace0(i)?;
+    let (i, _) = tag(")")(i)?;
+
+    Ok((i, e))
 }
 
 pub fn parse(
