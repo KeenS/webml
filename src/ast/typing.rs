@@ -119,12 +119,6 @@ impl<Ty> CoreExpr<Ty> {
                 binds: binds.into_iter().map(|val| val.map_ty(f)).collect(),
                 ret: ret.map_ty(f).boxed(),
             },
-            BinOp { op, ty, l, r } => BinOp {
-                op,
-                ty: f(ty),
-                l: l.map_ty(f).boxed(),
-                r: r.map_ty(f).boxed(),
-            },
             BuiltinCall { ty, fun, args } => BuiltinCall {
                 ty: f(ty),
                 fun,
@@ -382,39 +376,6 @@ impl TyEnv {
                 self.unify(ret.ty(), *ty)?;
                 self.infer_expr(ret)?;
                 Ok(())
-            }
-            BinOp { op, ty, l, r } => {
-                if ["+", "-", "*"].contains(&op.0.as_str()) {
-                    self.infer_expr(l)?;
-                    self.infer_expr(r)?;
-                    self.unify(l.ty(), r.ty())?;
-                    self.unify(l.ty(), overloaded_arith)?;
-                    self.unify(*ty, l.ty())?;
-                    Ok(())
-                } else if ["=", "<>", ">", ">=", "<", "<="].contains(&op.0.as_str()) {
-                    self.infer_expr(l)?;
-                    self.infer_expr(r)?;
-                    self.unify(l.ty(), r.ty())?;
-                    self.unify(l.ty(), overloaded_arith)?;
-                    self.unify(*ty, bool)?;
-                    Ok(())
-                } else if ["div", "mod"].contains(&op.0.as_str()) {
-                    self.unify(l.ty(), int)?;
-                    self.unify(r.ty(), int)?;
-                    self.unify(*ty, int)?;
-                    self.infer_expr(l)?;
-                    self.infer_expr(r)?;
-                    Ok(())
-                } else if ["/"].contains(&op.0.as_str()) {
-                    self.unify(l.ty(), real)?;
-                    self.unify(r.ty(), real)?;
-                    self.unify(*ty, real)?;
-                    self.infer_expr(l)?;
-                    self.infer_expr(r)?;
-                    Ok(())
-                } else {
-                    unimplemented!()
-                }
             }
             BuiltinCall { ty, fun, args } => {
                 use BIF::*;

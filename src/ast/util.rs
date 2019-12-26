@@ -37,7 +37,6 @@ pub trait Traverse<Ty> {
         use crate::ast::Expr::*;
         match expr {
             Binds { ty, binds, ret } => self.traverse_binds(ty, binds, ret),
-            BinOp { ty, op, l, r } => self.traverse_binop(ty, op, l, r),
             BuiltinCall { ty, fun, args } => self.traverse_builtincall(ty, fun, args),
             Fn { ty, param, body } => self.traverse_fn(ty, param, body),
             App { ty, fun, arg } => self.traverse_app(ty, fun, arg),
@@ -59,17 +58,6 @@ pub trait Traverse<Ty> {
             self.traverse_statement(stmt)
         }
         self.traverse_expr(ret)
-    }
-
-    fn traverse_binop(
-        &mut self,
-        _ty: &mut Ty,
-        _op: &mut Symbol,
-        l: &mut Box<CoreExpr<Ty>>,
-        r: &mut Box<CoreExpr<Ty>>,
-    ) {
-        self.traverse_expr(l);
-        self.traverse_expr(r)
     }
 
     fn traverse_builtincall(&mut self, _ty: &mut Ty, _: &mut BIF, args: &mut Vec<CoreExpr<Ty>>) {
@@ -192,7 +180,6 @@ pub trait Transform<Ty> {
         use crate::ast::Expr::*;
         match expr {
             Binds { ty, binds, ret } => self.transform_binds(ty, binds, ret),
-            BinOp { ty, op, l, r } => self.transform_binop(ty, op, l, r),
             BuiltinCall { ty, fun, args } => self.transform_builtincall(ty, fun, args),
             Fn { ty, param, body } => self.transform_fn(ty, param, body),
             App { ty, fun, arg } => self.transform_app(ty, fun, arg),
@@ -217,21 +204,6 @@ pub trait Transform<Ty> {
                 .map(|stmt| self.transform_statement(stmt))
                 .collect(),
             ret: self.transform_expr(*ret).boxed(),
-        }
-    }
-
-    fn transform_binop(
-        &mut self,
-        ty: Ty,
-        op: Symbol,
-        l: Box<CoreExpr<Ty>>,
-        r: Box<CoreExpr<Ty>>,
-    ) -> CoreExpr<Ty> {
-        Expr::BinOp {
-            ty,
-            op,
-            l: self.transform_expr(*l).boxed(),
-            r: self.transform_expr(*r).boxed(),
         }
     }
 

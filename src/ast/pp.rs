@@ -98,13 +98,6 @@ impl<Ty: PP, DE: PP, DS: PP> PP for Expr<Ty, DE, DS> {
                 ret.pp(w, indent + 4)?;
                 write!(w, "\n{}end", ind)?;
             }
-            BinOp { op, l, r, .. } => {
-                l.pp(w, indent)?;
-                write!(w, " ")?;
-                op.pp(w, indent)?;
-                write!(w, " ")?;
-                r.pp(w, indent)?;
-            }
             BuiltinCall { fun, args, .. } => {
                 write!(w, "_builtincall \"")?;
                 fun.pp(w, indent)?;

@@ -110,7 +110,6 @@ impl Desugar {
         use crate::ast::Expr::*;
         match expr {
             Binds { ty, binds, ret } => self.transform_binds(ty, binds, ret),
-            BinOp { ty, op, l, r } => self.transform_binop(ty, op, l, r),
             BuiltinCall { ty, fun, args } => self.transform_builtincall(ty, fun, args),
             Fn { ty, param, body } => self.transform_fn(ty, param, body),
             App { ty, fun, arg } => self.transform_app(ty, fun, arg),
@@ -140,21 +139,6 @@ impl Desugar {
                 .map(|stmt| self.transform_statement(stmt))
                 .collect(),
             ret: self.transform_expr(*ret).boxed(),
-        }
-    }
-
-    fn transform_binop(
-        &mut self,
-        ty: (),
-        op: Symbol,
-        l: Box<UntypedExpr>,
-        r: Box<UntypedExpr>,
-    ) -> UntypedCoreExpr {
-        Expr::BinOp {
-            ty,
-            op,
-            l: self.transform_expr(*l).boxed(),
-            r: self.transform_expr(*r).boxed(),
         }
     }
 

@@ -77,16 +77,8 @@ fn bind_fun(i: &str) -> IResult<&str, Statement<()>> {
     let (i, cs) = separated_nonempty_list(
         tuple((multispace0, tag("|"), multispace0)),
         map(
-            tuple((
-                symbol,
-                multispace0,
-                separated_nonempty_list(multispace1, pattern_atmic),
-                multispace0,
-                tag("="),
-                multispace0,
-                expr,
-            )),
-            |(name, _, params, _, _, _, e)| (name, params, e),
+            tuple((bind_funbind, multispace0, tag("="), multispace0, expr)),
+            |((name, params), _, _, _, e)| (name, params, e),
         ),
     )(i)?;
     let mut cs = cs.into_iter();
@@ -99,6 +91,17 @@ fn bind_fun(i: &str) -> IResult<&str, Statement<()>> {
         clauses.push((params, expr))
     }
     Ok((i, Statement::D(DerivedStatement::Fun { name, clauses })))
+}
+
+fn bind_funbind(i: &str) -> IResult<&str, (Symbol, Vec<Pattern<()>>)> {
+    map(
+        tuple((
+            op_symbol_eq,
+            multispace0,
+            separated_nonempty_list(multispace1, pattern_atmic),
+        )),
+        |(name, _, pats)| (name, pats),
+    )(i)
 }
 
 fn constructor_def(i: &str) -> IResult<&str, (Symbol, Option<Type>)> {
@@ -331,11 +334,14 @@ fn expr_infix_and_app(i: &str) -> IResult<&str, Expr<()>> {
         use Mixed::*;
         map_window3(mixed, |m1, m2, m3| match (m1, m2, m3) {
             (E(l), Fix(fixty, op), E(r)) if fixty == n => (
-                E(Expr::BinOp {
+                E(Expr::App {
                     ty: (),
-                    op,
-                    l: l.boxed(),
-                    r: r.boxed(),
+                    fun: Expr::Symbol { ty: (), name: op }.boxed(),
+                    arg: Expr::Tuple {
+                        ty: (),
+                        tuple: vec![l, r],
+                    }
+                    .boxed(),
                 }),
                 None,
             ),
@@ -569,6 +575,20 @@ fn typename2_datatype(i: &str) -> IResult<&str, Type> {
 
 fn symbol(i: &str) -> IResult<&str, Symbol> {
     alt((symbol_alphanumeric, symbol_symbolic))(i)
+}
+
+fn op_symbol_eq(i: &str) -> IResult<&str, Symbol> {
+    alt((op_symbol_alphanumeric, op_symbol_symbolic_eq))(i)
+}
+
+fn op_symbol_alphanumeric(i: &str) -> IResult<&str, Symbol> {
+    let (i, _) = opt(tuple((tag("op"), multispace1)))(i)?;
+    symbol_alphanumeric(i)
+}
+
+fn op_symbol_symbolic_eq(i: &str) -> IResult<&str, Symbol> {
+    let (i, _) = opt(tuple((tag("op"), multispace0)))(i)?;
+    alt((symbol_symbolic, value(Symbol::new("="), tag("="))))(i)
 }
 
 fn symbol_alphanumeric(i: &str) -> IResult<&str, Symbol> {

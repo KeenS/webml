@@ -113,20 +113,29 @@ fn parse_binop() {
         AST(vec![Statement::Val {
             rec: false,
             pattern: Pattern::Variable {
-                name: Symbol::new("x"),
                 ty: (),
+                name: Symbol::new("x"),
             },
-            expr: Expr::BinOp {
-                l: Expr::Literal {
+            expr: Expr::App {
+                ty: (),
+
+                fun: Expr::Symbol {
                     ty: (),
-                    value: Literal::Int(1),
+                    name: Symbol::new("+")
                 }
                 .boxed(),
-                op: Symbol::new("+"),
-                ty: (),
-                r: Expr::Literal {
+                arg: Expr::Tuple {
                     ty: (),
-                    value: Literal::Int(2),
+                    tuple: vec![
+                        Expr::Literal {
+                            ty: (),
+                            value: Literal::Int(1),
+                        },
+                        Expr::Literal {
+                            ty: (),
+                            value: Literal::Int(2),
+                        }
+                    ]
                 }
                 .boxed()
             }
@@ -146,27 +155,43 @@ fn parse_binop_assoc() {
                 name: Symbol::new("x"),
                 ty: (),
             },
-            expr: Expr::BinOp {
-                l: Expr::BinOp {
-                    l: Expr::Literal {
-                        ty: (),
-                        value: Literal::Int(1),
-                    }
-                    .boxed(),
-                    op: Symbol::new("+"),
+            expr: Expr::App {
+                ty: (),
+                fun: Expr::Symbol {
                     ty: (),
-                    r: Expr::Literal {
-                        ty: (),
-                        value: Literal::Int(2),
-                    }
-                    .boxed()
+                    name: Symbol::new("+"),
                 }
                 .boxed(),
-                op: Symbol::new("+"),
-                ty: (),
-                r: Expr::Literal {
+                arg: Expr::Tuple {
                     ty: (),
-                    value: Literal::Int(3),
+                    tuple: vec![
+                        Expr::App {
+                            ty: (),
+                            fun: Expr::Symbol {
+                                ty: (),
+                                name: Symbol::new("+"),
+                            }
+                            .boxed(),
+                            arg: Expr::Tuple {
+                                ty: (),
+                                tuple: vec![
+                                    Expr::Literal {
+                                        ty: (),
+                                        value: Literal::Int(1),
+                                    },
+                                    Expr::Literal {
+                                        ty: (),
+                                        value: Literal::Int(2),
+                                    }
+                                ]
+                            }
+                            .boxed()
+                        },
+                        Expr::Literal {
+                            ty: (),
+                            value: Literal::Int(3),
+                        }
+                    ]
                 }
                 .boxed()
             }
@@ -216,27 +241,43 @@ fn parse_binop_pref() {
                 name: Symbol::new("x"),
                 ty: (),
             },
-            expr: Expr::BinOp {
-                l: Expr::Literal {
+            expr: Expr::App {
+                ty: (),
+                fun: Expr::Symbol {
                     ty: (),
-                    value: Literal::Int(1),
+                    name: Symbol::new("+")
                 }
                 .boxed(),
-                op: Symbol::new("+"),
-                ty: (),
-                r: Expr::BinOp {
-                    l: Expr::Literal {
-                        ty: (),
-                        value: Literal::Int(2),
-                    }
-                    .boxed(),
-                    op: Symbol::new("*"),
+                arg: Expr::Tuple {
                     ty: (),
-                    r: Expr::Literal {
-                        ty: (),
-                        value: Literal::Int(3),
-                    }
-                    .boxed()
+                    tuple: vec![
+                        Expr::Literal {
+                            ty: (),
+                            value: Literal::Int(1),
+                        },
+                        Expr::App {
+                            ty: (),
+                            fun: Expr::Symbol {
+                                ty: (),
+                                name: Symbol::new("*"),
+                            }
+                            .boxed(),
+                            arg: Expr::Tuple {
+                                ty: (),
+                                tuple: vec![
+                                    Expr::Literal {
+                                        ty: (),
+                                        value: Literal::Int(2),
+                                    },
+                                    Expr::Literal {
+                                        ty: (),
+                                        value: Literal::Int(3),
+                                    }
+                                ]
+                            }
+                            .boxed()
+                        }
+                    ],
                 }
                 .boxed()
             }
@@ -438,6 +479,37 @@ fn parse_fun_pattern() {
         ast,
         AST(vec![Statement::D(DerivedStatement::Fun {
             name: Symbol::new("f"),
+            clauses: vec![(
+                vec![Pattern::Tuple {
+                    ty: (),
+                    tuple: vec![
+                        Pattern::Variable {
+                            name: Symbol::new("x"),
+                            ty: ()
+                        },
+                        Pattern::Variable {
+                            name: Symbol::new("y"),
+                            ty: ()
+                        },
+                    ]
+                }],
+                Expr::Symbol {
+                    ty: (),
+                    name: Symbol::new("x"),
+                }
+            )]
+        }),])
+    )
+}
+
+#[test]
+fn parse_fun_op() {
+    let input = r#"fun op+(x, y) = x"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![Statement::D(DerivedStatement::Fun {
+            name: Symbol::new("+"),
             clauses: vec![(
                 vec![Pattern::Tuple {
                     ty: (),
