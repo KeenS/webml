@@ -144,11 +144,21 @@ impl<'a> Scope<'a> {
                 let (param_ty, param) = param;
                 let mut frees = Vec::new();
                 self.analyze_free_expr(&mut frees, &param, &body);
-                let fname = self.new_fname(bind_name.clone());
-                self.rename(&mut body, &bind_name, &fname);
                 frees.dedup();
                 captures.extend(frees.clone());
                 let is_closure = !captures.is_empty();
+                if !is_closure && bind_name.is_some() {
+                    // toplevel function
+                    return Fun {
+                        param: (param_ty.clone(), param),
+                        body_ty: body_ty.clone(),
+                        body,
+                        captures,
+                    };
+                }
+
+                let fname = self.new_fname(bind_name.clone());
+                self.rename(&mut body, &bind_name, &fname);
                 let anonfun = Fun {
                     param: (param_ty.clone(), param),
                     body_ty: body_ty.clone(),
