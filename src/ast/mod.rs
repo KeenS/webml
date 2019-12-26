@@ -76,7 +76,7 @@ pub enum Expr<Ty, DE = DerivedExpr<Ty>, DS = DerivedStatement<Ty>> {
     },
     BuiltinCall {
         ty: Ty,
-        name: String,
+        fun: BIF,
         args: Vec<Expr<Ty, DE, DS>>,
     },
     Fn {

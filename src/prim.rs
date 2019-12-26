@@ -38,7 +38,7 @@ impl PP for Literal {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum BIF {
     Print,
     Add,

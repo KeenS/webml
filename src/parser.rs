@@ -3,7 +3,7 @@ use crate::prim::*;
 use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::character::complete::{alphanumeric1, digit1, multispace0, multispace1};
-use nom::combinator::{all_consuming, complete, map, opt, recognize, value, verify};
+use nom::combinator::{all_consuming, complete, map, map_res, opt, recognize, value, verify};
 use nom::multi::{many1, separated_list, separated_nonempty_list};
 use nom::number::complete::recognize_float;
 use nom::sequence::tuple;
@@ -476,20 +476,28 @@ fn expr1_builtincall(i: &str) -> IResult<&str, Expr<()>> {
     let (i, _) = tag("_builtincall")(i)?;
     let (i, _) = multispace0(i)?;
     let (i, _) = tag("\"")(i)?;
-    let (i, name) = alphanumeric1(i)?;
+    let (i, fun) = map_res(alphanumeric1, |name| match name {
+        "print" => Ok(BIF::Print),
+        "add" => Ok(BIF::Add),
+        "sub" => Ok(BIF::Sub),
+        "mul" => Ok(BIF::Mul),
+        "div" => Ok(BIF::Div),
+        "divf" => Ok(BIF::Divf),
+        "mod" => Ok(BIF::Mod),
+        "eq" => Ok(BIF::Eq),
+        "neq" => Ok(BIF::Neq),
+        "gt" => Ok(BIF::Gt),
+        "ge" => Ok(BIF::Ge),
+        "lt" => Ok(BIF::Lt),
+        "le" => Ok(BIF::Le),
+        _ => Err(nom::Err::Error(nom::error::ErrorKind::Tag)),
+    })(i)?;
     let (i, _) = tag("\"")(i)?;
     let (i, _) = multispace0(i)?;
     let (i, _) = tag("(")(i)?;
     let (i, args) = separated_nonempty_list(tuple((multispace0, tag(","), multispace0)), expr)(i)?;
     let (i, _) = tag(")")(i)?;
-    Ok((
-        i,
-        Expr::BuiltinCall {
-            ty: (),
-            name: name.to_string(),
-            args,
-        },
-    ))
+    Ok((i, Expr::BuiltinCall { ty: (), fun, args }))
 }
 
 fn typename(i: &str) -> IResult<&str, Type> {

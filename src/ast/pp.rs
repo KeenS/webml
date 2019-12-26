@@ -105,8 +105,10 @@ impl<Ty: PP, DE: PP, DS: PP> PP for Expr<Ty, DE, DS> {
                 write!(w, " ")?;
                 r.pp(w, indent)?;
             }
-            BuiltinCall { name, args, .. } => {
-                write!(w, "_builtincall \"{}\"(", name)?;
+            BuiltinCall { fun, args, .. } => {
+                write!(w, "_builtincall \"")?;
+                fun.pp(w, indent)?;
+                write!(w, "\"(")?;
                 inter_iter! {
                     &args,
                     write!(w, ", ")?,

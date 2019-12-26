@@ -125,9 +125,9 @@ impl<Ty> CoreExpr<Ty> {
                 l: l.map_ty(f).boxed(),
                 r: r.map_ty(f).boxed(),
             },
-            BuiltinCall { ty, name, args } => BuiltinCall {
+            BuiltinCall { ty, fun, args } => BuiltinCall {
                 ty: f(ty),
-                name,
+                fun,
                 args: args.into_iter().map(|arg| arg.map_ty(f)).collect(),
             },
             Fn { param, ty, body } => Fn {
@@ -269,15 +269,11 @@ impl TypePool {
 
 impl TyEnv {
     pub fn new() -> Self {
-        let mut ret = TyEnv {
+        TyEnv {
             env: HashMap::new(),
             symbol_table: None,
             pool: TypePool::new(),
-        };
-        let fun_ty = Typing::Fun(ret.pool.ty_int(), ret.pool.ty(Typing::Tuple(vec![])));
-        let node_id = ret.pool.ty(fun_ty);
-        ret.insert(Symbol::new("print"), node_id);
-        ret
+        }
     }
 
     pub fn init(&mut self, symbol_table: SymbolTable) {
@@ -420,44 +416,66 @@ impl TyEnv {
                     unimplemented!()
                 }
             }
-            BuiltinCall { ty, name, args } => {
-                if args.len() == 2 {
-                    let l = &args[0];
-                    let r = &args[1];
-                    let op = name;
-                    if ["+", "-", "*"].contains(&op.as_str()) {
+            BuiltinCall { ty, fun, args } => {
+                use BIF::*;
+                match fun {
+                    Print => {
+                        assert!(args.len() == 1);
+                        let arg = &args[0];
+                        self.infer_expr(arg)?;
+                        self.unify(arg.ty(), int)?;
+                        let unit = self.pool.ty(Typing::Tuple(vec![]));
+                        self.give(*ty, Typing::Fun(int, unit))?;
+                        Ok(())
+                    }
+                    Add | Sub | Mul => {
+                        assert!(args.len() == 2);
+                        let l = &args[0];
+                        let r = &args[1];
+
                         self.infer_expr(l)?;
                         self.infer_expr(r)?;
                         self.unify(l.ty(), r.ty())?;
                         self.unify(l.ty(), overloaded_arith)?;
                         self.unify(*ty, l.ty())?;
                         Ok(())
-                    } else if ["=", "<>", ">", ">=", "<", "<="].contains(&op.as_str()) {
+                    }
+                    Eq | Neq | Gt | Ge | Lt | Le => {
+                        assert!(args.len() == 2);
+                        let l = &args[0];
+                        let r = &args[1];
+
                         self.infer_expr(l)?;
                         self.infer_expr(r)?;
                         self.unify(l.ty(), r.ty())?;
                         self.unify(l.ty(), overloaded_arith)?;
                         self.unify(*ty, bool)?;
                         Ok(())
-                    } else if ["div", "mod"].contains(&op.as_str()) {
+                    }
+                    Div | Mod => {
+                        assert!(args.len() == 2);
+                        let l = &args[0];
+                        let r = &args[1];
+
                         self.unify(l.ty(), int)?;
                         self.unify(r.ty(), int)?;
                         self.unify(*ty, int)?;
                         self.infer_expr(l)?;
                         self.infer_expr(r)?;
                         Ok(())
-                    } else if ["/"].contains(&op.as_str()) {
+                    }
+                    Divf => {
+                        assert!(args.len() == 2);
+                        let l = &args[0];
+                        let r = &args[1];
+
                         self.unify(l.ty(), real)?;
                         self.unify(r.ty(), real)?;
                         self.unify(*ty, real)?;
                         self.infer_expr(l)?;
                         self.infer_expr(r)?;
                         Ok(())
-                    } else {
-                        unimplemented!()
                     }
-                } else {
-                    unreachable!("arity of builtin call mismatch")
                 }
             }
             Fn { ty, param, body } => {

@@ -188,7 +188,7 @@ fn parse_uiltincall() {
             },
             expr: Expr::BuiltinCall {
                 ty: (),
-                name: "add".into(),
+                fun: BIF::Add,
                 args: vec![
                     Expr::Symbol {
                         ty: (),

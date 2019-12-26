@@ -38,7 +38,7 @@ pub trait Traverse<Ty> {
         match expr {
             Binds { ty, binds, ret } => self.traverse_binds(ty, binds, ret),
             BinOp { ty, op, l, r } => self.traverse_binop(ty, op, l, r),
-            BuiltinCall { ty, name, args } => self.traverse_builtincall(ty, name, args),
+            BuiltinCall { ty, fun, args } => self.traverse_builtincall(ty, fun, args),
             Fn { ty, param, body } => self.traverse_fn(ty, param, body),
             App { ty, fun, arg } => self.traverse_app(ty, fun, arg),
             Case { ty, cond, clauses } => self.traverse_case(ty, cond, clauses),
@@ -72,7 +72,7 @@ pub trait Traverse<Ty> {
         self.traverse_expr(r)
     }
 
-    fn traverse_builtincall(&mut self, _ty: &mut Ty, _: &mut String, args: &mut Vec<CoreExpr<Ty>>) {
+    fn traverse_builtincall(&mut self, _ty: &mut Ty, _: &mut BIF, args: &mut Vec<CoreExpr<Ty>>) {
         for arg in args {
             self.traverse_expr(arg)
         }
@@ -193,7 +193,7 @@ pub trait Transform<Ty> {
         match expr {
             Binds { ty, binds, ret } => self.transform_binds(ty, binds, ret),
             BinOp { ty, op, l, r } => self.transform_binop(ty, op, l, r),
-            BuiltinCall { ty, name, args } => self.transform_builtincall(ty, name, args),
+            BuiltinCall { ty, fun, args } => self.transform_builtincall(ty, fun, args),
             Fn { ty, param, body } => self.transform_fn(ty, param, body),
             App { ty, fun, arg } => self.transform_app(ty, fun, arg),
             Case { ty, cond, clauses } => self.transform_case(ty, cond, clauses),
@@ -235,15 +235,10 @@ pub trait Transform<Ty> {
         }
     }
 
-    fn transform_builtincall(
-        &mut self,
-        ty: Ty,
-        name: String,
-        args: Vec<CoreExpr<Ty>>,
-    ) -> CoreExpr<Ty> {
+    fn transform_builtincall(&mut self, ty: Ty, fun: BIF, args: Vec<CoreExpr<Ty>>) -> CoreExpr<Ty> {
         Expr::BuiltinCall {
             ty,
-            name,
+            fun,
             args: args
                 .into_iter()
                 .map(|arg| self.transform_expr(arg))

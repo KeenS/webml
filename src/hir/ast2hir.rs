@@ -239,23 +239,9 @@ impl AST2HIR {
                 },
                 args: vec![self.conv_expr(*l), self.conv_expr(*r)],
             },
-            E::BuiltinCall { ty, name, args } => Expr::BuiltinCall {
+            E::BuiltinCall { ty, fun, args } => Expr::BuiltinCall {
                 ty: self.conv_ty(ty),
-                fun: match name.as_str() {
-                    "+" => BIF::Add,
-                    "-" => BIF::Sub,
-                    "*" => BIF::Mul,
-                    "div" => BIF::Div,
-                    "/" => BIF::Divf,
-                    "mod" => BIF::Mod,
-                    "=" => BIF::Eq,
-                    "<>" => BIF::Neq,
-                    ">" => BIF::Gt,
-                    ">=" => BIF::Ge,
-                    "<" => BIF::Lt,
-                    "<=" => BIF::Le,
-                    _ => panic!("unknown binop"),
-                },
+                fun,
                 args: args.into_iter().map(|arg| self.conv_expr(arg)).collect(),
             },
             E::Fn { ty, param, body } => {
