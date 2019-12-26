@@ -3,15 +3,21 @@ use crate::prim::*;
 use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::character::complete::{alphanumeric1, digit1, multispace0, multispace1};
-use nom::combinator::{all_consuming, complete, map, map_res, opt, peek, recognize, value, verify};
+use nom::combinator::{all_consuming, complete, map, opt, recognize, value, verify};
 use nom::multi::{many1, separated_list, separated_nonempty_list};
 use nom::number::complete::recognize_float;
-use nom::sequence::{preceded, tuple};
+use nom::sequence::tuple;
 use nom::IResult;
 
 static KEYWORDS: &[&str] = &[
     "val", "fun", "fn", "let", "in", "end", "if", "then", "else", "case", "of", "_", "datatype",
+    "op", "=>",
 ];
+
+static RESERVED: &[&str] = &["|", "=", "#"];
+
+static INFIX9: &[&str] = &[];
+static INFIX8: &[&str] = &[];
 static INFIX7: &[&str] = &["*", "/", "div", "mod"];
 static INFIX6: &[&str] = &["+", "-"];
 static INFIX5: &[&str] = &[];
@@ -20,18 +26,9 @@ static INFIX3: &[&str] = &[];
 static INFIX2: &[&str] = &[];
 static INFIX1: &[&str] = &[];
 
-fn one_of<'b>(
-    tags: &'b [&str],
-) -> impl for<'a> Fn(&'a str) -> IResult<&'a str, &'a str> + Clone + 'b {
-    move |i: &str| -> IResult<&str, &str> {
-        for tag in tags {
-            if i.starts_with(tag) {
-                return Ok((&i[(tag.len())..], &i[0..(tag.len())]));
-            }
-        }
-        Err(nom::Err::Error((i, nom::error::ErrorKind::IsNot)))
-    }
-}
+static FIXTY_TABLE: [&[&str]; 9] = [
+    INFIX1, INFIX2, INFIX3, INFIX4, INFIX5, INFIX6, INFIX7, INFIX8, INFIX9,
+];
 
 fn top(i: &str) -> IResult<&str, UntypedAst> {
     let (i, _) = multispace0(i)?;
@@ -114,31 +111,7 @@ fn constructor_def(i: &str) -> IResult<&str, (Symbol, Option<Type>)> {
     Ok((i, (name, param)))
 }
 fn expr(i: &str) -> IResult<&str, Expr<()>> {
-    alt((expr_bind, expr_fun, expr_if, expr_case, infix4))(i)
-}
-
-// infix 4
-fn infix4(i: &str) -> IResult<&str, Expr<()>> {
-    alt((infix4_op, infix5))(i)
-}
-
-// infix 5
-fn infix5(i: &str) -> IResult<&str, Expr<()>> {
-    alt((infix5_op, infix6))(i)
-}
-
-// infix 6
-fn infix6(i: &str) -> IResult<&str, Expr<()>> {
-    alt((infix6_op, infix7))(i)
-}
-
-// infix 7
-fn infix7(i: &str) -> IResult<&str, Expr<()>> {
-    alt((infix7_op, expr0))(i)
-}
-
-fn expr0(i: &str) -> IResult<&str, Expr<()>> {
-    alt((expr0_app, expr1))(i)
+    alt((expr_bind, expr_fun, expr_if, expr_case, expr_infix_and_app))(i)
 }
 
 fn expr1(i: &str) -> IResult<&str, Expr<()>> {
@@ -238,98 +211,194 @@ fn expr_case(i: &str) -> IResult<&str, Expr<()>> {
     ))
 }
 
-// left recursion eliminated
-fn infixl(
-    subexpr: impl Fn(&str) -> IResult<&str, Expr<()>> + Clone,
-    op_parser: impl Fn(&str) -> IResult<&str, &str> + Clone,
-) -> impl Fn(&str) -> IResult<&str, Expr<()>> {
-    move |i: &str| -> IResult<&str, Expr<()>> {
-        let (i, l) = subexpr(i)?;
-        let (i, _) = multispace0(i)?;
-        let (i, op) = op_parser(i)?;
-        let (i, _) = multispace0(i)?;
-        let (i, r) = subexpr(i)?;
-        let mut e = Expr::BinOp {
-            op: Symbol::new(op),
-            ty: (),
-            l: l.boxed(),
-            r: r.boxed(),
-        };
-        let mut pin = i;
-        loop {
-            match map(
-                tuple((multispace0, op_parser.clone(), multispace0, subexpr.clone())),
-                |(_, op, _, r)| (op, r),
-            )(pin)
-            {
-                Ok((i, (op, r))) => {
-                    pin = i;
-                    e = Expr::BinOp {
-                        op: Symbol::new(op),
-                        ty: (),
-                        l: e.boxed(),
-                        r: r.boxed(),
+fn map_window2<I>(
+    iter: I,
+    mut f: impl FnMut(I::Item, I::Item) -> (I::Item, Option<I::Item>),
+) -> Vec<I::Item>
+where
+    I: IntoIterator,
+{
+    let mut ret = vec![];
+    let mut iter = iter.into_iter();
+    let mut e = match iter.next() {
+        Some(e) => e,
+        None => return ret,
+    };
+
+    while let Some(e2) = iter.next() {
+        let (e1, e2) = f(e, e2);
+        match e2 {
+            Some(e2) => {
+                ret.push(e1);
+                e = e2;
+            }
+            None => e = e1,
+        }
+    }
+    ret.push(e);
+    ret
+}
+
+fn map_window3<I>(
+    iter: I,
+    mut f: impl FnMut(I::Item, I::Item, I::Item) -> (I::Item, Option<(I::Item, I::Item)>),
+) -> Vec<I::Item>
+where
+    I: IntoIterator,
+{
+    let mut ret = vec![];
+    let mut iter = iter.into_iter();
+
+    let mut e1 = match iter.next() {
+        Some(e) => e,
+        None => return ret,
+    };
+
+    let mut e2 = match iter.next() {
+        Some(e) => e,
+        None => {
+            ret.push(e1);
+            return ret;
+        }
+    };
+
+    while let Some(e3) = iter.next() {
+        let (r1, r2) = f(e1, e2, e3);
+        match r2 {
+            Some((r2, r3)) => {
+                ret.push(r1);
+                e1 = r2;
+                e2 = r3;
+            }
+            None => {
+                e1 = r1;
+                e2 = match iter.next() {
+                    Some(e) => e,
+                    None => {
+                        ret.push(e1);
+                        return ret;
                     }
-                }
-                Err(_) => return Ok((pin, e)),
+                };
             }
         }
     }
+    ret.push(e1);
+    ret.push(e2);
+    ret
 }
 
-fn infix7_op(i: &str) -> IResult<&str, Expr<()>> {
-    infixl(expr0, one_of(INFIX7))(i)
-}
-
-fn infix6_op(i: &str) -> IResult<&str, Expr<()>> {
-    infixl(infix7, one_of(INFIX6))(i)
-}
-
-fn infix5_op(i: &str) -> IResult<&str, Expr<()>> {
-    infixl(infix6, one_of(INFIX5))(i)
-}
-
-fn infix4_op(i: &str) -> IResult<&str, Expr<()>> {
-    infixl(infix5, one_of(INFIX4))(i)
-}
-
-fn expr0_app(i: &str) -> IResult<&str, Expr<()>> {
-    // left-recursion is eliminated
-    let (i, fun) = expr1(i)?;
-    let (i, _) = multispace1(i)?;
-
-    let non_op = map_res(peek(recognize(expr1)), |s| {
-        if [INFIX1, INFIX2, INFIX3, INFIX4, INFIX5, INFIX6, INFIX7]
-            .iter()
-            .any(|tags| tags.contains(&s))
-        {
-            Err(nom::error::ErrorKind::IsNot)
-        } else {
-            Ok(s)
-        }
+// treat all of the infix operators and applications, i.e. sequeces of expressions
+fn expr_infix_and_app(i: &str) -> IResult<&str, Expr<()>> {
+    // TODO: support 1+1
+    let (i, mixed) = separated_nonempty_list(multispace1, expr1)(i)?;
+    #[derive(Debug)]
+    enum Mixed {
+        E(Expr<()>),
+        Fix(u8, Symbol),
+    }
+    use Mixed::*;
+    // find infixes
+    let mixed = mixed
+        .into_iter()
+        .map(|e| match e {
+            Expr::Symbol { ty, name } => {
+                for (f, table) in FIXTY_TABLE.iter().enumerate() {
+                    if table.contains(&name.0.as_str()) {
+                        return Fix(f as u8 + 1, name);
+                    }
+                }
+                E(Expr::Symbol { ty, name })
+            }
+            e => E(e),
+        })
+        .collect::<Vec<_>>();
+    // reduce applys
+    let rest = map_window2(mixed, |m1, m2| match (m1, m2) {
+        (E(e1), E(e2)) => (
+            E(Expr::App {
+                ty: (),
+                fun: e1.boxed(),
+                arg: e2.boxed(),
+            }),
+            None,
+        ),
+        (m1, m2) => (m1, Some(m2)),
     });
 
-    let (i, args) = separated_nonempty_list(multispace1, preceded(non_op, expr1))(i)?;
-
-    let mut rest = args.into_iter();
-    let arg = rest.next().unwrap();
-    let init = Expr::App {
-        ty: (),
-        fun: fun.boxed(),
-        arg: arg.boxed(),
+    // reduce infixes
+    fn reduce_infixl_n(n: u8, mixed: Vec<Mixed>) -> Vec<Mixed> {
+        use Mixed::*;
+        map_window3(mixed, |m1, m2, m3| match (m1, m2, m3) {
+            (E(l), Fix(fixty, op), E(r)) if fixty == n => (
+                E(Expr::BinOp {
+                    ty: (),
+                    op,
+                    l: l.boxed(),
+                    r: r.boxed(),
+                }),
+                None,
+            ),
+            (m1, m2, m3) => (m1, Some((m2, m3))),
+        })
+    }
+    let mut rest = (1u8..=9)
+        .rev()
+        .fold(rest, |rest, n| reduce_infixl_n(n, rest));
+    assert_eq!(rest.len(), 1);
+    let e = match rest.remove(0) {
+        E(e) => e,
+        Fix(..) => unreachable!("infix alone"),
     };
-    Ok((
-        i,
-        rest.fold(init, |acc, elm| Expr::App {
-            ty: (),
-            fun: acc.boxed(),
-            arg: elm.boxed(),
-        }),
-    ))
+    Ok((i, e))
+}
+
+#[test]
+fn test_expr_infix_and_app() {
+    let input = "true";
+    let ret = expr_infix_and_app(input).unwrap();
+    assert_eq!(
+        ret,
+        (
+            "",
+            Expr::Constructor {
+                ty: (),
+                arg: None,
+                name: Symbol::new("true")
+            }
+        )
+    )
+}
+
+#[test]
+fn test_expr_infix_and_app2() {
+    let input = "f arg";
+    let ret = expr_infix_and_app(input).unwrap();
+    assert_eq!(
+        ret,
+        (
+            "",
+            Expr::App {
+                ty: (),
+                fun: Expr::Symbol {
+                    ty: (),
+                    name: Symbol::new("f"),
+                }
+                .boxed(),
+                arg: Expr::Symbol {
+                    ty: (),
+                    name: Symbol::new("arg"),
+                }
+                .boxed()
+            }
+        )
+    )
 }
 
 fn expr1_sym(i: &str) -> IResult<&str, Expr<()>> {
-    map(symbol, |s| Expr::Symbol { ty: (), name: s })(i)
+    // = is allowed to be used in expression exceptionally
+    map(alt((symbol, map(tag("="), Symbol::new))), |s| {
+        Expr::Symbol { ty: (), name: s }
+    })(i)
 }
 
 fn expr1_int(i: &str) -> IResult<&str, Expr<()>> {
@@ -481,14 +550,22 @@ fn typename2_datatype(i: &str) -> IResult<&str, Type> {
 
 // TODO: use verify
 fn symbol(i: &str) -> IResult<&str, Symbol> {
-    let (i, _) = map_res(peek(alphanumeric1), |s| {
-        if KEYWORDS.contains(&s) {
-            Err(nom::error::ErrorKind::IsNot)
-        } else {
-            Ok(s)
-        }
+    alt((symbol_alphanumeric, symbol_symbolic))(i)
+}
+
+fn symbol_alphanumeric(i: &str) -> IResult<&str, Symbol> {
+    let (i, sym) = verify(alphanumeric1, |s: &str| !KEYWORDS.contains(&s))(i)?;
+    Ok((i, Symbol::new(sym.to_string())))
+}
+
+fn symbol_symbolic(i: &str) -> IResult<&str, Symbol> {
+    let symbolic1 = recognize(many1(nom::character::complete::one_of(
+        "!%&$#+-/:<=>?@\\~'^|*",
+    )));
+
+    let (i, sym) = verify(symbolic1, |s: &str| {
+        !KEYWORDS.contains(&s) && !RESERVED.contains(&s)
     })(i)?;
-    let (i, sym) = alphanumeric1(i)?;
     Ok((i, Symbol::new(sym.to_string())))
 }
 
@@ -570,7 +647,7 @@ fn pattern_var(i: &str) -> IResult<&str, Pattern<()>> {
 }
 
 fn pattern_wildcard(i: &str) -> IResult<&str, Pattern<()>> {
-    map(tag("_"), |_| Pattern::Wildcard { ty: () })(i)
+    value(Pattern::Wildcard { ty: () }, tag("_"))(i)
 }
 
 pub fn parse(
