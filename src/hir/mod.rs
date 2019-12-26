@@ -1,5 +1,4 @@
 pub mod ast2hir;
-pub mod find_builtin;
 pub mod flat_expr;
 pub mod flat_let;
 pub mod force_closure;
@@ -8,7 +7,6 @@ pub mod unnest_func;
 pub mod util;
 
 pub use self::ast2hir::AST2HIR;
-pub use self::find_builtin::FindBuiltin;
 pub use self::flat_expr::FlatExpr;
 pub use self::flat_let::FlatLet;
 pub use self::force_closure::ForceClosure;
