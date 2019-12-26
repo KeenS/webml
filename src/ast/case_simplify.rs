@@ -305,7 +305,8 @@ impl CaseSimplify {
                 cond: Expr::Symbol {
                     name: c.clone(),
                     ty: cty,
-                }.boxed(),
+                }
+                .boxed(),
                 clauses,
                 ty: ret_ty,
             }
@@ -490,38 +491,48 @@ impl Transform<Type> for CaseSimplify {
         pattern: TypedPattern,
         expr: TypedCoreExpr,
     ) -> TypedCoreStatement {
-        let binds = pattern.binds();
-        let ty = Type::Tuple(binds.iter().map(|&(_, ty)| ty.clone()).collect());
-        let tuple_pat = binds
-            .into_iter()
-            .map(|(name, ty)| Pattern::Variable {
-                name: name.clone(),
-                ty: ty.clone(),
-            })
-            .collect();
-        let tuple_pat = Pattern::Tuple {
-            tuple: tuple_pat,
-            ty: ty.clone(),
-        };
-        let mut pattern = self.transform_pattern(pattern);
-        self.rename_pattern(&mut pattern);
-        let binds = pattern.binds();
-        let tuple = binds
-            .into_iter()
-            .map(|(name, ty)| Expr::Symbol {
-                name: name.clone(),
-                ty: ty.clone(),
-            })
-            .collect();
-        let tuple = Expr::Tuple {
-            ty: ty.clone(),
-            tuple,
-        };
-        let cond = self.transform_expr(expr);
-        Statement::Val {
-            rec,
-            pattern: tuple_pat,
-            expr: self.transform_case(ty, cond.boxed(), vec![(pattern, tuple)]),
+        match pattern {
+            // dirty heuristic for simple patterns
+            TypedPattern::Variable { .. } | TypedPattern::Wildcard { .. } => Statement::Val {
+                rec,
+                pattern,
+                expr: self.transform_expr(expr),
+            },
+            pattern => {
+                let binds = pattern.binds();
+                let ty = Type::Tuple(binds.iter().map(|&(_, ty)| ty.clone()).collect());
+                let tuple_pat = binds
+                    .into_iter()
+                    .map(|(name, ty)| Pattern::Variable {
+                        name: name.clone(),
+                        ty: ty.clone(),
+                    })
+                    .collect();
+                let tuple_pat = Pattern::Tuple {
+                    tuple: tuple_pat,
+                    ty: ty.clone(),
+                };
+                let mut pattern = self.transform_pattern(pattern);
+                self.rename_pattern(&mut pattern);
+                let binds = pattern.binds();
+                let tuple = binds
+                    .into_iter()
+                    .map(|(name, ty)| Expr::Symbol {
+                        name: name.clone(),
+                        ty: ty.clone(),
+                    })
+                    .collect();
+                let tuple = Expr::Tuple {
+                    ty: ty.clone(),
+                    tuple,
+                };
+                let cond = self.transform_expr(expr);
+                Statement::Val {
+                    rec,
+                    pattern: tuple_pat,
+                    expr: self.transform_case(ty, cond.boxed(), vec![(pattern, tuple)]),
+                }
+            }
         }
     }
 
