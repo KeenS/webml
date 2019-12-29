@@ -1,2 +1,14 @@
-val version = 0 * 1000 * 1000 + 1 * 1000 + 0
-fun print x = _builtincall "print" (x)
+fun print x   = _builtincall "print" (x)
+fun op+(x, y) = _builtincall "add" (x, y)
+fun op-(x, y) = _builtincall "sub" (x, y)
+fun op*(x, y) = _builtincall "mul" (x, y)
+fun op div(x, y) = _builtincall "div" (x, y)
+fun op mod(x, y) = _builtincall "mod" (x, y)
+fun op/(x, y) = _builtincall "divf" (x, y)
+fun op=(x, y) = _builtincall "eq" (x, y)
+fun op<>(x, y) = _builtincall "neq" (x, y)
+fun op>(x, y) = _builtincall "gt" (x, y)
+fun op>=(x, y) = _builtincall "ge" (x, y)
+fun op<(x, y) = _builtincall "lt" (x, y)
+fun op<=(x, y) = _builtincall "le" (x, y)
+val version = 100000

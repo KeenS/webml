@@ -60,43 +60,43 @@ impl PP for BIF {
         use self::BIF::*;
         match self {
             Print => {
-                write!(w, "_print")?;
+                write!(w, "print")?;
             }
             Add => {
-                write!(w, "+")?;
+                write!(w, "add")?;
             }
             Sub => {
-                write!(w, "-")?;
+                write!(w, "sub")?;
             }
             Mul => {
-                write!(w, "*")?;
+                write!(w, "mul")?;
             }
             Div => {
                 write!(w, "div")?;
             }
             Divf => {
-                write!(w, "/")?;
+                write!(w, "divf")?;
             }
             Mod => {
                 write!(w, "mod")?;
             }
             Eq => {
-                write!(w, "=")?;
+                write!(w, "eq")?;
             }
             Neq => {
-                write!(w, "<>")?;
+                write!(w, "neq")?;
             }
             Gt => {
-                write!(w, ">")?;
+                write!(w, "gt")?;
             }
             Ge => {
-                write!(w, ">=")?;
+                write!(w, "ge")?;
             }
             Lt => {
-                write!(w, "<")?;
+                write!(w, "lt")?;
             }
             Le => {
-                write!(w, "<=")?;
+                write!(w, "le")?;
             }
         }
         Ok(())

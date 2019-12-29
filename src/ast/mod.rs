@@ -68,12 +68,6 @@ pub enum Expr<Ty, DE = DerivedExpr<Ty>, DS = DerivedStatement<Ty>> {
         binds: Vec<Statement<Ty, DE, DS>>,
         ret: Box<Expr<Ty, DE, DS>>,
     },
-    BinOp {
-        op: Symbol,
-        ty: Ty,
-        l: Box<Expr<Ty, DE, DS>>,
-        r: Box<Expr<Ty, DE, DS>>,
-    },
     BuiltinCall {
         ty: Ty,
         fun: BIF,
@@ -184,7 +178,6 @@ impl<Ty: Clone> CoreExpr<Ty> {
         use self::Expr::*;
         match *self {
             Binds { ref ty, .. }
-            | BinOp { ref ty, .. }
             | BuiltinCall { ref ty, .. }
             | App { ref ty, .. }
             | Case { ref ty, .. }

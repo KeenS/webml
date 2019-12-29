@@ -198,18 +198,6 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
         scope.traverse_expr(ret);
     }
 
-    fn traverse_binop(
-        &mut self,
-        _ty: &mut Ty,
-        op: &mut Symbol,
-        l: &mut Box<CoreExpr<Ty>>,
-        r: &mut Box<CoreExpr<Ty>>,
-    ) {
-        self.rename(op);
-        self.traverse_expr(l);
-        self.traverse_expr(r);
-    }
-
     fn traverse_fn(&mut self, _ty: &mut Ty, param: &mut Symbol, body: &mut Box<CoreExpr<Ty>>) {
         let mut scope = self.new_scope();
         scope.new_variable(param);
