@@ -24,15 +24,17 @@ pub type UntypedCore = Core<()>;
 pub type TypedCore = Core<Type>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct AST<Ty, DE = DerivedExpr<Ty>, DS = DerivedStatement<Ty>>(pub Vec<Statement<Ty, DE, DS>>);
+pub struct AST<Ty, DE = DerivedExprKind<Ty>, DS = DerivedStatement<Ty>>(
+    pub Vec<Statement<Ty, DE, DS>>,
+);
 
-pub type UntypedStatement = Statement<(), DerivedExpr<()>, DerivedStatement<()>>;
+pub type UntypedStatement = Statement<(), DerivedExprKind<()>, DerivedStatement<()>>;
 pub type CoreStatement<Ty> = Statement<Ty, Nothing, Nothing>;
 pub type UntypedCoreStatement = CoreStatement<()>;
 pub type TypedCoreStatement = CoreStatement<Type>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Statement<Ty, DE = DerivedExpr<Ty>, DS = DerivedStatement<Ty>> {
+pub enum Statement<Ty, DE = DerivedExprKind<Ty>, DS = DerivedStatement<Ty>> {
     Datatype {
         name: Symbol,
         constructors: Vec<(Symbol, Option<Type>)>,
@@ -58,60 +60,59 @@ pub enum Nothing {}
 
 pub type UntypedExpr = Expr<()>;
 pub type CoreExpr<Ty> = Expr<Ty, Nothing, Nothing>;
+pub type CoreExprKind<Ty> = ExprKind<Ty, Nothing, Nothing>;
 pub type UntypedCoreExpr = CoreExpr<()>;
+pub type UntypedCoreExprKind = CoreExprKind<()>;
 pub type TypedCoreExpr = CoreExpr<Type>;
+pub type TypedCoreExprKind = CoreExprKind<Type>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Expr<Ty, DE = DerivedExpr<Ty>, DS = DerivedStatement<Ty>> {
+pub struct Expr<Ty, DE = DerivedExprKind<Ty>, DS = DerivedStatement<Ty>> {
+    pub ty: Ty,
+    pub inner: ExprKind<Ty, DE, DS>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum ExprKind<Ty, DE = DerivedExprKind<Ty>, DS = DerivedStatement<Ty>> {
     Binds {
-        ty: Ty,
         binds: Vec<Statement<Ty, DE, DS>>,
         ret: Box<Expr<Ty, DE, DS>>,
     },
     BuiltinCall {
-        ty: Ty,
         fun: BIF,
         args: Vec<Expr<Ty, DE, DS>>,
     },
     Fn {
-        ty: Ty,
         param: Symbol,
         body: Box<Expr<Ty, DE, DS>>,
     },
     App {
-        ty: Ty,
         fun: Box<Expr<Ty, DE, DS>>,
         arg: Box<Expr<Ty, DE, DS>>,
     },
     Case {
-        ty: Ty,
         cond: Box<Expr<Ty, DE, DS>>,
         clauses: Vec<(Pattern<Ty>, Expr<Ty, DE, DS>)>,
     },
     Tuple {
-        ty: Ty,
         tuple: Vec<Expr<Ty, DE, DS>>,
     },
     Symbol {
-        ty: Ty,
         name: Symbol,
     },
     Constructor {
-        ty: Ty,
         arg: Option<Box<Expr<Ty, DE, DS>>>,
         name: Symbol,
     },
     Literal {
-        ty: Ty,
         value: Literal,
     },
     D(DE),
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum DerivedExpr<Ty> {
+pub enum DerivedExprKind<Ty> {
     If {
-        ty: Ty,
         cond: Box<Expr<Ty>>,
         then: Box<Expr<Ty>>,
         else_: Box<Expr<Ty>>,
@@ -175,19 +176,7 @@ impl<Ty, DE, DS> Expr<Ty, DE, DS> {
 
 impl<Ty: Clone> CoreExpr<Ty> {
     fn ty(&self) -> Ty {
-        use self::Expr::*;
-        match *self {
-            Binds { ref ty, .. }
-            | BuiltinCall { ref ty, .. }
-            | App { ref ty, .. }
-            | Case { ref ty, .. }
-            | Tuple { ref ty, .. }
-            | Symbol { ref ty, .. }
-            | Constructor { ref ty, .. }
-            | Literal { ref ty, .. }
-            | Fn { ref ty, .. } => ty.clone(),
-            D(ref d) => match *d {},
-        }
+        self.ty.clone()
     }
 }
 

@@ -112,50 +112,45 @@ impl<Ty> CoreStatement<Ty> {
 
 impl<Ty> CoreExpr<Ty> {
     fn map_ty<Ty2>(self, f: &mut dyn FnMut(Ty) -> Ty2) -> CoreExpr<Ty2> {
-        use crate::ast::Expr::*;
-        match self {
-            Binds { ty, binds, ret } => Binds {
-                ty: f(ty),
+        use crate::ast::ExprKind::*;
+        let ty = f(self.ty);
+        let inner = match self.inner {
+            Binds { binds, ret } => Binds {
                 binds: binds.into_iter().map(|val| val.map_ty(f)).collect(),
                 ret: ret.map_ty(f).boxed(),
             },
-            BuiltinCall { ty, fun, args } => BuiltinCall {
-                ty: f(ty),
+            BuiltinCall { fun, args } => BuiltinCall {
                 fun,
                 args: args.into_iter().map(|arg| arg.map_ty(f)).collect(),
             },
-            Fn { param, ty, body } => Fn {
+            Fn { param, body } => Fn {
                 param,
-                ty: f(ty),
                 body: body.map_ty(f).boxed(),
             },
-            App { ty, fun, arg } => App {
-                ty: f(ty),
+            App { fun, arg } => App {
                 fun: fun.map_ty(f).boxed(),
                 arg: arg.map_ty(f).boxed(),
             },
-            Case { ty, cond, clauses } => Case {
-                ty: f(ty),
+            Case { cond, clauses } => Case {
                 cond: cond.map_ty(&mut *f).boxed(),
                 clauses: clauses
                     .into_iter()
                     .map(move |(pat, expr)| (pat.map_ty(&mut *f), expr.map_ty(f)))
                     .collect(),
             },
-            Tuple { ty, tuple } => Tuple {
-                ty: f(ty),
+            Tuple { tuple } => Tuple {
                 tuple: tuple.into_iter().map(|t| t.map_ty(f)).collect(),
             },
 
-            Symbol { ty, name } => Symbol { ty: f(ty), name },
-            Constructor { ty, arg, name } => Constructor {
-                ty: f(ty),
+            Symbol { name } => Symbol { name },
+            Constructor { arg, name } => Constructor {
                 arg: arg.map(|a| a.map_ty(f).boxed()),
                 name,
             },
-            Literal { ty, value } => Literal { ty: f(ty), value },
+            Literal { value } => Literal { value },
             D(d) => match d {},
-        }
+        };
+        Expr { ty, inner }
     }
 }
 
@@ -363,13 +358,14 @@ impl TyEnv {
     }
 
     fn infer_expr<'b, 'r>(&'b mut self, expr: &CoreExpr<NodeId>) -> Result<'r, ()> {
-        use crate::ast::Expr::*;
+        use crate::ast::ExprKind::*;
         let int = self.pool.ty_int();
         let real = self.pool.ty_real();
         let bool = self.pool.ty_bool();
         let overloaded_arith = self.pool.ty_overloaded_arith();
-        match expr {
-            Binds { ty, binds, ret } => {
+        let ty = &expr.ty;
+        match &expr.inner {
+            Binds { binds, ret } => {
                 for stmt in binds {
                     self.infer_statement(stmt)?;
                 }
@@ -377,7 +373,7 @@ impl TyEnv {
                 self.infer_expr(ret)?;
                 Ok(())
             }
-            BuiltinCall { ty, fun, args } => {
+            BuiltinCall { fun, args } => {
                 use BIF::*;
                 match fun {
                     Print => {
@@ -438,20 +434,20 @@ impl TyEnv {
                     }
                 }
             }
-            Fn { ty, param, body } => {
+            Fn { param, body } => {
                 let param_ty = self.pool.tyvar();
                 self.insert(param.clone(), param_ty);
                 self.infer_expr(body)?;
                 self.give(*ty, Typing::Fun(param_ty, body.ty()))?;
                 Ok(())
             }
-            App { ty, fun, arg } => {
+            App { fun, arg } => {
                 self.infer_expr(fun)?;
                 self.infer_expr(arg)?;
                 self.give(fun.ty(), Typing::Fun(arg.ty(), *ty))?;
                 Ok(())
             }
-            Case { cond, ty, clauses } => {
+            Case { cond, clauses } => {
                 self.infer_expr(cond)?;
                 for (pat, branch) in clauses {
                     self.infer_pat(pat)?;
@@ -461,19 +457,19 @@ impl TyEnv {
                 }
                 Ok(())
             }
-            Tuple { ty, tuple } => {
+            Tuple { tuple } => {
                 self.infer_tuple(tuple, *ty)?;
                 Ok(())
             }
-            Constructor { ty, arg, name } => {
+            Constructor { arg, name } => {
                 self.infer_constructor(name, arg, *ty)?;
                 Ok(())
             }
-            Symbol { ty, name } => {
+            Symbol { name } => {
                 self.infer_symbol(name, *ty)?;
                 Ok(())
             }
-            Literal { ty, value } => {
+            Literal { value } => {
                 self.infer_literal(value, *ty)?;
                 Ok(())
             }

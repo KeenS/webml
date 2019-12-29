@@ -1,4 +1,6 @@
-use webml::ast::{DerivedExpr, DerivedStatement, Expr, Pattern, Statement, Type, AST};
+use webml::ast::{
+    DerivedExprKind, DerivedStatement, Expr, ExprKind, Pattern, Statement, Type, AST,
+};
 use webml::parse;
 use webml::prim::*;
 
@@ -14,9 +16,11 @@ fn parse_int() {
                 name: Symbol::new("x"),
                 ty: (),
             },
-            expr: Expr::Literal {
+            expr: Expr {
                 ty: (),
-                value: Literal::Int(1),
+                inner: ExprKind::Literal {
+                    value: Literal::Int(1),
+                }
             },
         },])
     )
@@ -34,9 +38,11 @@ fn parse_float() {
                 name: Symbol::new("x"),
                 ty: (),
             },
-            expr: Expr::Literal {
+            expr: Expr {
                 ty: (),
-                value: Literal::Real(1.0),
+                inner: ExprKind::Literal {
+                    value: Literal::Real(1.0),
+                }
             },
         },])
     )
@@ -54,10 +60,12 @@ fn parse_bool_true() {
                 name: Symbol::new("x"),
                 ty: (),
             },
-            expr: Expr::Constructor {
+            expr: Expr {
                 ty: (),
-                arg: None,
-                name: Symbol::new("true")
+                inner: ExprKind::Constructor {
+                    arg: None,
+                    name: Symbol::new("true")
+                }
             },
         },])
     )
@@ -75,10 +83,12 @@ fn parse_bool_false() {
                 name: Symbol::new("x"),
                 ty: (),
             },
-            expr: Expr::Constructor {
+            expr: Expr {
                 ty: (),
-                arg: None,
-                name: Symbol::new("false")
+                inner: ExprKind::Constructor {
+                    arg: None,
+                    name: Symbol::new("false")
+                }
             },
         },])
     )
@@ -96,9 +106,9 @@ fn parse_unit() {
                 name: Symbol::new("x"),
                 ty: (),
             },
-            expr: Expr::Tuple {
+            expr: Expr {
                 ty: (),
-                tuple: vec![]
+                inner: ExprKind::Tuple { tuple: vec![] }
             }
         }])
     )
@@ -116,28 +126,37 @@ fn parse_binop() {
                 ty: (),
                 name: Symbol::new("x"),
             },
-            expr: Expr::App {
+            expr: Expr {
                 ty: (),
-
-                fun: Expr::Symbol {
-                    ty: (),
-                    name: Symbol::new("+")
-                }
-                .boxed(),
-                arg: Expr::Tuple {
-                    ty: (),
-                    tuple: vec![
-                        Expr::Literal {
-                            ty: (),
-                            value: Literal::Int(1),
-                        },
-                        Expr::Literal {
-                            ty: (),
-                            value: Literal::Int(2),
+                inner: ExprKind::App {
+                    fun: Expr {
+                        ty: (),
+                        inner: ExprKind::Symbol {
+                            name: Symbol::new("+")
                         }
-                    ]
+                    }
+                    .boxed(),
+                    arg: Expr {
+                        ty: (),
+                        inner: ExprKind::Tuple {
+                            tuple: vec![
+                                Expr {
+                                    ty: (),
+                                    inner: ExprKind::Literal {
+                                        value: Literal::Int(1),
+                                    }
+                                },
+                                Expr {
+                                    ty: (),
+                                    inner: ExprKind::Literal {
+                                        value: Literal::Int(2),
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                    .boxed()
                 }
-                .boxed()
             }
         },])
     )
@@ -155,45 +174,63 @@ fn parse_binop_assoc() {
                 name: Symbol::new("x"),
                 ty: (),
             },
-            expr: Expr::App {
+            expr: Expr {
                 ty: (),
-                fun: Expr::Symbol {
-                    ty: (),
-                    name: Symbol::new("+"),
-                }
-                .boxed(),
-                arg: Expr::Tuple {
-                    ty: (),
-                    tuple: vec![
-                        Expr::App {
-                            ty: (),
-                            fun: Expr::Symbol {
-                                ty: (),
-                                name: Symbol::new("+"),
-                            }
-                            .boxed(),
-                            arg: Expr::Tuple {
-                                ty: (),
-                                tuple: vec![
-                                    Expr::Literal {
-                                        ty: (),
-                                        value: Literal::Int(1),
-                                    },
-                                    Expr::Literal {
-                                        ty: (),
-                                        value: Literal::Int(2),
-                                    }
-                                ]
-                            }
-                            .boxed()
-                        },
-                        Expr::Literal {
-                            ty: (),
-                            value: Literal::Int(3),
+                inner: ExprKind::App {
+                    fun: Expr {
+                        ty: (),
+                        inner: ExprKind::Symbol {
+                            name: Symbol::new("+"),
                         }
-                    ]
+                    }
+                    .boxed(),
+                    arg: Expr {
+                        ty: (),
+                        inner: ExprKind::Tuple {
+                            tuple: vec![
+                                Expr {
+                                    ty: (),
+                                    inner: ExprKind::App {
+                                        fun: Expr {
+                                            ty: (),
+                                            inner: ExprKind::Symbol {
+                                                name: Symbol::new("+"),
+                                            }
+                                        }
+                                        .boxed(),
+                                        arg: Expr {
+                                            ty: (),
+                                            inner: ExprKind::Tuple {
+                                                tuple: vec![
+                                                    Expr {
+                                                        ty: (),
+                                                        inner: ExprKind::Literal {
+                                                            value: Literal::Int(1),
+                                                        }
+                                                    },
+                                                    Expr {
+                                                        ty: (),
+                                                        inner: ExprKind::Literal {
+                                                            value: Literal::Int(2),
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                        .boxed()
+                                    }
+                                },
+                                Expr {
+                                    ty: (),
+                                    inner: ExprKind::Literal {
+                                        value: Literal::Int(3),
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                    .boxed()
                 }
-                .boxed()
             }
         },])
     )
@@ -211,19 +248,25 @@ fn parse_uiltincall() {
                 name: Symbol::new("ret"),
                 ty: (),
             },
-            expr: Expr::BuiltinCall {
+            expr: Expr {
                 ty: (),
-                fun: BIF::Add,
-                args: vec![
-                    Expr::Symbol {
-                        ty: (),
-                        name: Symbol::new("x")
-                    },
-                    Expr::Symbol {
-                        ty: (),
-                        name: Symbol::new("y")
-                    }
-                ]
+                inner: ExprKind::BuiltinCall {
+                    fun: BIF::Add,
+                    args: vec![
+                        Expr {
+                            ty: (),
+                            inner: ExprKind::Symbol {
+                                name: Symbol::new("x")
+                            }
+                        },
+                        Expr {
+                            ty: (),
+                            inner: ExprKind::Symbol {
+                                name: Symbol::new("y")
+                            }
+                        }
+                    ]
+                }
             }
         }])
     )
@@ -241,45 +284,63 @@ fn parse_binop_pref() {
                 name: Symbol::new("x"),
                 ty: (),
             },
-            expr: Expr::App {
+            expr: Expr {
                 ty: (),
-                fun: Expr::Symbol {
-                    ty: (),
-                    name: Symbol::new("+")
-                }
-                .boxed(),
-                arg: Expr::Tuple {
-                    ty: (),
-                    tuple: vec![
-                        Expr::Literal {
-                            ty: (),
-                            value: Literal::Int(1),
-                        },
-                        Expr::App {
-                            ty: (),
-                            fun: Expr::Symbol {
-                                ty: (),
-                                name: Symbol::new("*"),
-                            }
-                            .boxed(),
-                            arg: Expr::Tuple {
-                                ty: (),
-                                tuple: vec![
-                                    Expr::Literal {
-                                        ty: (),
-                                        value: Literal::Int(2),
-                                    },
-                                    Expr::Literal {
-                                        ty: (),
-                                        value: Literal::Int(3),
-                                    }
-                                ]
-                            }
-                            .boxed()
+                inner: ExprKind::App {
+                    fun: Expr {
+                        ty: (),
+                        inner: ExprKind::Symbol {
+                            name: Symbol::new("+")
                         }
-                    ],
+                    }
+                    .boxed(),
+                    arg: Expr {
+                        ty: (),
+                        inner: ExprKind::Tuple {
+                            tuple: vec![
+                                Expr {
+                                    ty: (),
+                                    inner: ExprKind::Literal {
+                                        value: Literal::Int(1),
+                                    }
+                                },
+                                Expr {
+                                    ty: (),
+                                    inner: ExprKind::App {
+                                        fun: Expr {
+                                            ty: (),
+                                            inner: ExprKind::Symbol {
+                                                name: Symbol::new("*"),
+                                            }
+                                        }
+                                        .boxed(),
+                                        arg: Expr {
+                                            ty: (),
+                                            inner: ExprKind::Tuple {
+                                                tuple: vec![
+                                                    Expr {
+                                                        ty: (),
+                                                        inner: ExprKind::Literal {
+                                                            value: Literal::Int(2),
+                                                        }
+                                                    },
+                                                    Expr {
+                                                        ty: (),
+                                                        inner: ExprKind::Literal {
+                                                            value: Literal::Int(3),
+                                                        }
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                        .boxed()
+                                    }
+                                }
+                            ],
+                        }
+                    }
+                    .boxed()
                 }
-                .boxed()
             }
         },])
     )
@@ -297,13 +358,18 @@ fn parse_fn_unary() {
                 name: Symbol::new("f"),
                 ty: (),
             },
-            expr: Expr::Fn {
+            expr: Expr {
                 ty: (),
-                param: Symbol::new("x"),
-                body: Box::new(Expr::Symbol {
-                    ty: (),
-                    name: Symbol::new("x"),
-                }),
+                inner: ExprKind::Fn {
+                    param: Symbol::new("x"),
+                    body: Expr {
+                        ty: (),
+                        inner: ExprKind::Symbol {
+                            name: Symbol::new("x"),
+                        }
+                    }
+                    .boxed(),
+                }
             },
         },])
     )
@@ -434,9 +500,11 @@ fn parse_fun_unary() {
                     name: Symbol::new("x"),
                     ty: ()
                 }],
-                Expr::Symbol {
+                Expr {
                     ty: (),
-                    name: Symbol::new("x"),
+                    inner: ExprKind::Symbol {
+                        name: Symbol::new("x"),
+                    }
                 }
             )]
         }),])
@@ -462,9 +530,11 @@ fn parse_fun_binary() {
                         ty: ()
                     }
                 ],
-                Expr::Symbol {
+                Expr {
                     ty: (),
-                    name: Symbol::new("x"),
+                    inner: ExprKind::Symbol {
+                        name: Symbol::new("x"),
+                    }
                 }
             )]
         }),])
@@ -493,9 +563,11 @@ fn parse_fun_pattern() {
                         },
                     ]
                 }],
-                Expr::Symbol {
+                Expr {
                     ty: (),
-                    name: Symbol::new("x"),
+                    inner: ExprKind::Symbol {
+                        name: Symbol::new("x"),
+                    }
                 }
             )]
         }),])
@@ -524,9 +596,11 @@ fn parse_fun_op() {
                         },
                     ]
                 }],
-                Expr::Symbol {
+                Expr {
                     ty: (),
-                    name: Symbol::new("x"),
+                    inner: ExprKind::Symbol {
+                        name: Symbol::new("x"),
+                    }
                 }
             )]
         }),])
@@ -550,9 +624,11 @@ fn parse_fun_multiclause() {
                         },
                         Pattern::Wildcard { ty: () }
                     ],
-                    Expr::Symbol {
+                    Expr {
                         ty: (),
-                        name: Symbol::new("Nil"),
+                        inner: ExprKind::Symbol {
+                            name: Symbol::new("Nil"),
+                        }
                     }
                 ),
                 (
@@ -563,9 +639,11 @@ fn parse_fun_multiclause() {
                             ty: ()
                         },
                     ],
-                    Expr::Symbol {
+                    Expr {
                         ty: (),
-                        name: Symbol::new("Nil"),
+                        inner: ExprKind::Symbol {
+                            name: Symbol::new("Nil"),
+                        }
                     }
                 )
             ]
@@ -592,24 +670,35 @@ fn parse_if() {
                 name: Symbol::new("x"),
                 ty: (),
             },
-            expr: Expr::D(DerivedExpr::If {
+            expr: Expr {
                 ty: (),
-                cond: Box::new(Expr::Constructor {
-                    ty: (),
-                    arg: None,
-                    name: Symbol::new("true")
-                }),
-                then: Box::new(Expr::Constructor {
-                    ty: (),
-                    arg: None,
-                    name: Symbol::new("false")
-                }),
-                else_: Box::new(Expr::Constructor {
-                    ty: (),
-                    arg: None,
-                    name: Symbol::new("true")
-                }),
-            }),
+                inner: ExprKind::D(DerivedExprKind::If {
+                    cond: Expr {
+                        ty: (),
+                        inner: ExprKind::Constructor {
+                            arg: None,
+                            name: Symbol::new("true")
+                        }
+                    }
+                    .boxed(),
+                    then: Expr {
+                        ty: (),
+                        inner: ExprKind::Constructor {
+                            arg: None,
+                            name: Symbol::new("false")
+                        }
+                    }
+                    .boxed(),
+                    else_: Expr {
+                        ty: (),
+                        inner: ExprKind::Constructor {
+                            arg: None,
+                            name: Symbol::new("true")
+                        }
+                    }
+                    .boxed(),
+                })
+            },
         },])
     )
 }
@@ -626,39 +715,48 @@ fn parse_case_bool() {
                 name: Symbol::new("x"),
                 ty: (),
             },
-            expr: Expr::Case {
+            expr: Expr {
                 ty: (),
-                cond: Box::new(Expr::Constructor {
-                    ty: (),
-                    arg: None,
-                    name: Symbol::new("true")
-                }),
-                clauses: vec![
-                    (
-                        Pattern::Constructor {
-                            ty: (),
+                inner: ExprKind::Case {
+                    cond: Expr {
+                        ty: (),
+                        inner: ExprKind::Constructor {
                             arg: None,
                             name: Symbol::new("true")
-                        },
-                        Expr::Constructor {
-                            ty: (),
-                            arg: None,
-                            name: Symbol::new("false")
-                        },
-                    ),
-                    (
-                        Pattern::Constructor {
-                            ty: (),
-                            arg: None,
-                            name: Symbol::new("false"),
-                        },
-                        Expr::Constructor {
-                            ty: (),
-                            name: Symbol::new("true"),
-                            arg: None,
-                        },
-                    ),
-                ],
+                        }
+                    }
+                    .boxed(),
+                    clauses: vec![
+                        (
+                            Pattern::Constructor {
+                                ty: (),
+                                arg: None,
+                                name: Symbol::new("true")
+                            },
+                            Expr {
+                                ty: (),
+                                inner: ExprKind::Constructor {
+                                    arg: None,
+                                    name: Symbol::new("false")
+                                }
+                            },
+                        ),
+                        (
+                            Pattern::Constructor {
+                                ty: (),
+                                arg: None,
+                                name: Symbol::new("false"),
+                            },
+                            Expr {
+                                ty: (),
+                                inner: ExprKind::Constructor {
+                                    name: Symbol::new("true"),
+                                    arg: None,
+                                }
+                            },
+                        ),
+                    ],
+                }
             },
         },])
     )
@@ -676,40 +774,49 @@ fn parse_case_constructor() {
                 name: Symbol::new("x"),
                 ty: (),
             },
-            expr: Expr::Case {
+            expr: Expr {
                 ty: (),
-                cond: Box::new(Expr::Symbol {
-                    ty: (),
-                    name: Symbol::new("NONE")
-                }),
-                clauses: vec![
-                    (
-                        Pattern::Constructor {
-                            ty: (),
-                            name: Symbol::new("SOME"),
-                            arg: Some(Box::new(Pattern::Variable {
-                                name: Symbol::new("x"),
-                                ty: ()
-                            })),
-                        },
-                        Expr::Constructor {
-                            ty: (),
-                            arg: None,
-                            name: Symbol::new("false")
-                        },
-                    ),
-                    (
-                        Pattern::Variable {
-                            ty: (),
-                            name: Symbol::new("NONE"),
-                        },
-                        Expr::Constructor {
-                            ty: (),
-                            name: Symbol::new("true"),
-                            arg: None,
-                        },
-                    ),
-                ],
+                inner: ExprKind::Case {
+                    cond: Expr {
+                        ty: (),
+                        inner: ExprKind::Symbol {
+                            name: Symbol::new("NONE")
+                        }
+                    }
+                    .boxed(),
+                    clauses: vec![
+                        (
+                            Pattern::Constructor {
+                                ty: (),
+                                name: Symbol::new("SOME"),
+                                arg: Some(Box::new(Pattern::Variable {
+                                    name: Symbol::new("x"),
+                                    ty: ()
+                                })),
+                            },
+                            Expr {
+                                ty: (),
+                                inner: ExprKind::Constructor {
+                                    arg: None,
+                                    name: Symbol::new("false")
+                                }
+                            },
+                        ),
+                        (
+                            Pattern::Variable {
+                                ty: (),
+                                name: Symbol::new("NONE"),
+                            },
+                            Expr {
+                                ty: (),
+                                inner: ExprKind::Constructor {
+                                    name: Symbol::new("true"),
+                                    arg: None,
+                                }
+                            },
+                        ),
+                    ],
+                }
             },
         },])
     )
@@ -727,38 +834,47 @@ fn parse_case_var() {
                 name: Symbol::new("x"),
                 ty: (),
             },
-            expr: Expr::Case {
+            expr: Expr {
                 ty: (),
-                cond: Box::new(Expr::Constructor {
-                    ty: (),
-                    arg: None,
-                    name: Symbol::new("true")
-                }),
-                clauses: vec![
-                    (
-                        Pattern::Constructor {
-                            ty: (),
+                inner: ExprKind::Case {
+                    cond: Expr {
+                        ty: (),
+                        inner: ExprKind::Constructor {
                             arg: None,
                             name: Symbol::new("true")
-                        },
-                        Expr::Constructor {
-                            ty: (),
-                            arg: None,
-                            name: Symbol::new("false")
-                        },
-                    ),
-                    (
-                        Pattern::Variable {
-                            ty: (),
-                            name: Symbol::new("x"),
-                        },
-                        Expr::Constructor {
-                            ty: (),
-                            arg: None,
-                            name: Symbol::new("true")
-                        },
-                    ),
-                ],
+                        }
+                    }
+                    .boxed(),
+                    clauses: vec![
+                        (
+                            Pattern::Constructor {
+                                ty: (),
+                                arg: None,
+                                name: Symbol::new("true")
+                            },
+                            Expr {
+                                ty: (),
+                                inner: ExprKind::Constructor {
+                                    arg: None,
+                                    name: Symbol::new("false")
+                                }
+                            },
+                        ),
+                        (
+                            Pattern::Variable {
+                                ty: (),
+                                name: Symbol::new("x"),
+                            },
+                            Expr {
+                                ty: (),
+                                inner: ExprKind::Constructor {
+                                    arg: None,
+                                    name: Symbol::new("true")
+                                }
+                            },
+                        ),
+                    ],
+                }
             },
         },])
     )
@@ -776,35 +892,44 @@ fn parse_case_wildcard() {
                 name: Symbol::new("x"),
                 ty: (),
             },
-            expr: Expr::Case {
+            expr: Expr {
                 ty: (),
-                cond: Box::new(Expr::Constructor {
-                    ty: (),
-                    arg: None,
-                    name: Symbol::new("true")
-                }),
-                clauses: vec![
-                    (
-                        Pattern::Constructor {
-                            ty: (),
+                inner: ExprKind::Case {
+                    cond: Expr {
+                        ty: (),
+                        inner: ExprKind::Constructor {
                             arg: None,
                             name: Symbol::new("true")
-                        },
-                        Expr::Constructor {
-                            ty: (),
-                            arg: None,
-                            name: Symbol::new("false")
-                        },
-                    ),
-                    (
-                        Pattern::Wildcard { ty: () },
-                        Expr::Constructor {
-                            ty: (),
-                            arg: None,
-                            name: Symbol::new("true")
-                        },
-                    ),
-                ],
+                        }
+                    }
+                    .boxed(),
+                    clauses: vec![
+                        (
+                            Pattern::Constructor {
+                                ty: (),
+                                arg: None,
+                                name: Symbol::new("true")
+                            },
+                            Expr {
+                                ty: (),
+                                inner: ExprKind::Constructor {
+                                    arg: None,
+                                    name: Symbol::new("false")
+                                }
+                            },
+                        ),
+                        (
+                            Pattern::Wildcard { ty: () },
+                            Expr {
+                                ty: (),
+                                inner: ExprKind::Constructor {
+                                    arg: None,
+                                    name: Symbol::new("true")
+                                }
+                            },
+                        ),
+                    ],
+                }
             },
         },])
     )
@@ -822,35 +947,46 @@ fn parse_case_int() {
                 name: Symbol::new("x"),
                 ty: (),
             },
-            expr: Expr::Case {
+            expr: Expr {
                 ty: (),
-                cond: Box::new(Expr::Literal {
-                    ty: (),
-                    value: Literal::Int(3),
-                }),
-                clauses: vec![
-                    (
-                        Pattern::Constant { value: 1, ty: () },
-                        Expr::Literal {
-                            ty: (),
-                            value: Literal::Int(1),
-                        },
-                    ),
-                    (
-                        Pattern::Constant { value: 2, ty: () },
-                        Expr::Literal {
-                            ty: (),
-                            value: Literal::Int(2),
-                        },
-                    ),
-                    (
-                        Pattern::Wildcard { ty: () },
-                        Expr::Literal {
-                            ty: (),
-                            value: Literal::Int(10),
-                        },
-                    ),
-                ],
+                inner: ExprKind::Case {
+                    cond: Expr {
+                        ty: (),
+                        inner: ExprKind::Literal {
+                            value: Literal::Int(3),
+                        }
+                    }
+                    .boxed(),
+                    clauses: vec![
+                        (
+                            Pattern::Constant { value: 1, ty: () },
+                            Expr {
+                                ty: (),
+                                inner: ExprKind::Literal {
+                                    value: Literal::Int(1),
+                                }
+                            },
+                        ),
+                        (
+                            Pattern::Constant { value: 2, ty: () },
+                            Expr {
+                                ty: (),
+                                inner: ExprKind::Literal {
+                                    value: Literal::Int(2),
+                                }
+                            },
+                        ),
+                        (
+                            Pattern::Wildcard { ty: () },
+                            Expr {
+                                ty: (),
+                                inner: ExprKind::Literal {
+                                    value: Literal::Int(10),
+                                }
+                            },
+                        ),
+                    ],
+                }
             },
         },])
     )
@@ -868,48 +1004,61 @@ fn parse_case_tuple() {
                 name: Symbol::new("x"),
                 ty: (),
             },
-            expr: Expr::Case {
+            expr: Expr {
                 ty: (),
-                cond: Box::new(Expr::Tuple {
-                    ty: (),
-                    tuple: vec![
-                        Expr::Literal {
-                            ty: (),
-                            value: Literal::Int(1),
-                        },
-                        Expr::Literal {
-                            ty: (),
-                            value: Literal::Int(2),
-                        },
-                        Expr::Literal {
-                            ty: (),
-                            value: Literal::Int(3),
-                        },
-                    ],
-                }),
-                clauses: vec![(
-                    Pattern::Tuple {
-                        tuple: vec![
-                            Pattern::Variable {
-                                name: Symbol::new("x"),
-                                ty: ()
-                            },
-                            Pattern::Variable {
-                                name: Symbol::new("y"),
-                                ty: ()
-                            },
-                            Pattern::Variable {
-                                name: Symbol::new("z"),
-                                ty: ()
-                            },
-                        ],
-                        ty: ()
-                    },
-                    Expr::Symbol {
+                inner: ExprKind::Case {
+                    cond: Expr {
                         ty: (),
-                        name: Symbol::new("z"),
-                    },
-                ),],
+                        inner: ExprKind::Tuple {
+                            tuple: vec![
+                                Expr {
+                                    ty: (),
+                                    inner: ExprKind::Literal {
+                                        value: Literal::Int(1),
+                                    }
+                                },
+                                Expr {
+                                    ty: (),
+                                    inner: ExprKind::Literal {
+                                        value: Literal::Int(2),
+                                    }
+                                },
+                                Expr {
+                                    ty: (),
+                                    inner: ExprKind::Literal {
+                                        value: Literal::Int(3),
+                                    }
+                                },
+                            ],
+                        }
+                    }
+                    .boxed(),
+                    clauses: vec![(
+                        Pattern::Tuple {
+                            tuple: vec![
+                                Pattern::Variable {
+                                    name: Symbol::new("x"),
+                                    ty: ()
+                                },
+                                Pattern::Variable {
+                                    name: Symbol::new("y"),
+                                    ty: ()
+                                },
+                                Pattern::Variable {
+                                    name: Symbol::new("z"),
+                                    ty: ()
+                                },
+                            ],
+                            ty: ()
+                        },
+                        Expr {
+                            ty: (),
+                            inner: ExprKind::Symbol {
+                                name: Symbol::new("z"),
+                            }
+                        },
+                    ),],
+                }
             },
         },])
     )
@@ -927,9 +1076,9 @@ fn parse_pattern_unit() {
                 tuple: vec![],
                 ty: (),
             },
-            expr: Expr::Tuple {
+            expr: Expr {
                 ty: (),
-                tuple: vec![]
+                inner: ExprKind::Tuple { tuple: vec![] }
             }
         }])
     )
@@ -944,9 +1093,11 @@ fn parse_case_val_pattern_wildcard() {
         AST(vec![Statement::Val {
             rec: false,
             pattern: Pattern::Wildcard { ty: () },
-            expr: Expr::Literal {
+            expr: Expr {
                 ty: (),
-                value: Literal::Int(1),
+                inner: ExprKind::Literal {
+                    value: Literal::Int(1),
+                }
             },
         },])
     )
@@ -974,9 +1125,11 @@ fn parse_funarg_pattern() {
                             arg: Some(Box::new(Pattern::Wildcard { ty: () }))
                         }
                     ],
-                    Expr::Symbol {
+                    Expr {
                         ty: (),
-                        name: Symbol::new("NONE"),
+                        inner: ExprKind::Symbol {
+                            name: Symbol::new("NONE"),
+                        }
                     }
                 ),
                 (
@@ -994,18 +1147,24 @@ fn parse_funarg_pattern() {
                             }))
                         }
                     ],
-                    Expr::App {
+                    Expr {
                         ty: (),
-                        fun: Expr::Symbol {
-                            ty: (),
-                            name: Symbol::new("SOME")
+                        inner: ExprKind::App {
+                            fun: Expr {
+                                ty: (),
+                                inner: ExprKind::Symbol {
+                                    name: Symbol::new("SOME")
+                                }
+                            }
+                            .boxed(),
+                            arg: Expr {
+                                ty: (),
+                                inner: ExprKind::Symbol {
+                                    name: Symbol::new("x")
+                                }
+                            }
+                            .boxed(),
                         }
-                        .boxed(),
-                        arg: Expr::Symbol {
-                            ty: (),
-                            name: Symbol::new("x")
-                        }
-                        .boxed(),
                     }
                 ),
                 (
@@ -1023,18 +1182,24 @@ fn parse_funarg_pattern() {
                             name: Symbol::new("NONE"),
                         },
                     ],
-                    Expr::App {
+                    Expr {
                         ty: (),
-                        fun: Expr::Symbol {
-                            ty: (),
-                            name: Symbol::new("SOME")
+                        inner: ExprKind::App {
+                            fun: Expr {
+                                ty: (),
+                                inner: ExprKind::Symbol {
+                                    name: Symbol::new("SOME")
+                                }
+                            }
+                            .boxed(),
+                            arg: Expr {
+                                ty: (),
+                                inner: ExprKind::Symbol {
+                                    name: Symbol::new("x")
+                                }
+                            }
+                            .boxed(),
                         }
-                        .boxed(),
-                        arg: Expr::Symbol {
-                            ty: (),
-                            name: Symbol::new("x")
-                        }
-                        .boxed(),
                     }
                 ),
                 (
@@ -1048,9 +1213,11 @@ fn parse_funarg_pattern() {
                             name: Symbol::new("NONE"),
                         },
                     ],
-                    Expr::Symbol {
+                    Expr {
                         ty: (),
-                        name: Symbol::new("NONE"),
+                        inner: ExprKind::Symbol {
+                            name: Symbol::new("NONE"),
+                        }
                     }
                 )
             ]
@@ -1071,9 +1238,11 @@ fn parse_multistatement_val_datatype() {
                     ty: (),
                     name: Symbol::new("version")
                 },
-                expr: Expr::Literal {
+                expr: Expr {
                     ty: (),
-                    value: Literal::Int(1)
+                    inner: ExprKind::Literal {
+                        value: Literal::Int(1)
+                    }
                 }
             },
             Statement::Datatype {

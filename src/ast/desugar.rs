@@ -80,60 +80,63 @@ impl Desugar {
 
         let params = (0..arity).map(|_| self.gensym()).collect::<Vec<_>>();
 
-        let body = Expr::Case {
+        let body = Expr {
             ty: (),
-            cond: Expr::Tuple {
-                tuple: params
-                    .iter()
-                    .cloned()
-                    .map(|name| Expr::Symbol { name, ty: () })
-                    .collect(),
-                ty: (),
-            }
-            .boxed(),
-            clauses,
+            inner: ExprKind::Case {
+                cond: Expr {
+                    ty: (),
+                    inner: ExprKind::Tuple {
+                        tuple: params
+                            .iter()
+                            .cloned()
+                            .map(|name| Expr {
+                                ty: (),
+                                inner: ExprKind::Symbol { name },
+                            })
+                            .collect(),
+                    },
+                }
+                .boxed(),
+                clauses,
+            },
         };
 
-        let fun = params.into_iter().rev().fold(body, |body, param| Expr::Fn {
+        let fun = params.into_iter().rev().fold(body, |body, param| Expr {
             ty: (),
-            param,
-            body: body.boxed(),
+            inner: ExprKind::Fn {
+                param,
+                body: body.boxed(),
+            },
         });
         Statement::Val {
             rec: true,
-            pattern: Pattern::Variable { name: name, ty: () },
+            pattern: Pattern::Variable { ty: (), name: name },
             expr: fun,
         }
     }
 
     fn transform_expr(&mut self, expr: UntypedExpr) -> UntypedCoreExpr {
-        use crate::ast::Expr::*;
-        match expr {
-            Binds { ty, binds, ret } => self.transform_binds(ty, binds, ret),
-            BuiltinCall { ty, fun, args } => self.transform_builtincall(ty, fun, args),
-            Fn { ty, param, body } => self.transform_fn(ty, param, body),
-            App { ty, fun, arg } => self.transform_app(ty, fun, arg),
-            Case { ty, cond, clauses } => self.transform_case(ty, cond, clauses),
-            Tuple { ty, tuple } => self.transform_tuple(ty, tuple),
-            Constructor { ty, arg, name } => self.transform_constructor(ty, arg, name),
-            Symbol { ty, name } => self.transform_symbol(ty, name),
-            Literal { ty, value } => self.transform_literal(ty, value),
-            D(DerivedExpr::If {
-                ty,
-                cond,
-                then,
-                else_,
-            }) => self.transform_if(ty, cond, then, else_),
-        }
+        use crate::ast::ExprKind::*;
+        let inner = match expr.inner {
+            Binds { binds, ret } => self.transform_binds(binds, ret),
+            BuiltinCall { fun, args } => self.transform_builtincall(fun, args),
+            Fn { param, body } => self.transform_fn(param, body),
+            App { fun, arg } => self.transform_app(fun, arg),
+            Case { cond, clauses } => self.transform_case(cond, clauses),
+            Tuple { tuple } => self.transform_tuple(tuple),
+            Constructor { arg, name } => self.transform_constructor(arg, name),
+            Symbol { name } => self.transform_symbol(name),
+            Literal { value } => self.transform_literal(value),
+            D(DerivedExprKind::If { cond, then, else_ }) => self.transform_if(cond, then, else_),
+        };
+        UntypedCoreExpr { ty: expr.ty, inner }
     }
     fn transform_binds(
         &mut self,
-        ty: (),
         binds: Vec<UntypedStatement>,
         ret: Box<UntypedExpr>,
-    ) -> UntypedCoreExpr {
-        Expr::Binds {
-            ty,
+    ) -> UntypedCoreExprKind {
+        ExprKind::Binds {
             binds: binds
                 .into_iter()
                 .map(|stmt| self.transform_statement(stmt))
@@ -142,14 +145,8 @@ impl Desugar {
         }
     }
 
-    fn transform_builtincall(
-        &mut self,
-        ty: (),
-        fun: BIF,
-        args: Vec<UntypedExpr>,
-    ) -> UntypedCoreExpr {
-        Expr::BuiltinCall {
-            ty,
+    fn transform_builtincall(&mut self, fun: BIF, args: Vec<UntypedExpr>) -> UntypedCoreExprKind {
+        ExprKind::BuiltinCall {
             fun,
             args: args
                 .into_iter()
@@ -158,9 +155,8 @@ impl Desugar {
         }
     }
 
-    fn transform_fn(&mut self, ty: (), param: Symbol, body: Box<UntypedExpr>) -> UntypedCoreExpr {
-        Expr::Fn {
-            ty,
+    fn transform_fn(&mut self, param: Symbol, body: Box<UntypedExpr>) -> UntypedCoreExprKind {
+        ExprKind::Fn {
             param,
             body: self.transform_expr(*body).boxed(),
         }
@@ -168,12 +164,10 @@ impl Desugar {
 
     fn transform_app(
         &mut self,
-        ty: (),
         fun: Box<UntypedExpr>,
         arg: Box<UntypedExpr>,
-    ) -> UntypedCoreExpr {
-        Expr::App {
-            ty,
+    ) -> UntypedCoreExprKind {
+        ExprKind::App {
             fun: self.transform_expr(*fun).boxed(),
             arg: self.transform_expr(*arg).boxed(),
         }
@@ -181,13 +175,11 @@ impl Desugar {
 
     fn transform_if(
         &mut self,
-        ty: (),
         cond: Box<UntypedExpr>,
         then: Box<UntypedExpr>,
         else_: Box<UntypedExpr>,
-    ) -> UntypedCoreExpr {
-        Expr::Case {
-            ty,
+    ) -> UntypedCoreExprKind {
+        ExprKind::Case {
             cond: self.transform_expr(*cond).boxed(),
             clauses: vec![
                 (
@@ -212,12 +204,10 @@ impl Desugar {
 
     fn transform_case(
         &mut self,
-        ty: (),
         cond: Box<UntypedExpr>,
         clauses: Vec<(UntypedPattern, UntypedExpr)>,
-    ) -> UntypedCoreExpr {
-        Expr::Case {
-            ty,
+    ) -> UntypedCoreExprKind {
+        ExprKind::Case {
             cond: self.transform_expr(*cond).boxed(),
             clauses: clauses
                 .into_iter()
@@ -226,31 +216,28 @@ impl Desugar {
         }
     }
 
-    fn transform_tuple(&mut self, ty: (), tuple: Vec<UntypedExpr>) -> UntypedCoreExpr {
-        Expr::Tuple {
-            ty,
+    fn transform_tuple(&mut self, tuple: Vec<UntypedExpr>) -> UntypedCoreExprKind {
+        ExprKind::Tuple {
             tuple: tuple.into_iter().map(|t| self.transform_expr(t)).collect(),
         }
     }
 
     fn transform_constructor(
         &mut self,
-        ty: (),
         arg: Option<Box<UntypedExpr>>,
         name: Symbol,
-    ) -> UntypedCoreExpr {
-        Expr::Constructor {
-            ty,
+    ) -> UntypedCoreExprKind {
+        ExprKind::Constructor {
             arg: arg.map(|e| self.transform_expr(*e).boxed()),
             name,
         }
     }
-    fn transform_symbol(&mut self, ty: (), name: Symbol) -> UntypedCoreExpr {
-        Expr::Symbol { ty, name }
+    fn transform_symbol(&mut self, name: Symbol) -> UntypedCoreExprKind {
+        ExprKind::Symbol { name }
     }
 
-    fn transform_literal(&mut self, ty: (), value: Literal) -> UntypedCoreExpr {
-        Expr::Literal { ty, value }
+    fn transform_literal(&mut self, value: Literal) -> UntypedCoreExprKind {
+        ExprKind::Literal { value }
     }
 
     fn transform_pattern(&mut self, pattern: UntypedPattern) -> UntypedPattern {

@@ -185,12 +185,7 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
         }
     }
 
-    fn traverse_binds(
-        &mut self,
-        _ty: &mut Ty,
-        binds: &mut Vec<CoreStatement<Ty>>,
-        ret: &mut Box<CoreExpr<Ty>>,
-    ) {
+    fn traverse_binds(&mut self, binds: &mut Vec<CoreStatement<Ty>>, ret: &mut Box<CoreExpr<Ty>>) {
         let mut scope = self.new_scope();
         for bind in binds.iter_mut() {
             scope.traverse_statement(bind);
@@ -198,7 +193,7 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
         scope.traverse_expr(ret);
     }
 
-    fn traverse_fn(&mut self, _ty: &mut Ty, param: &mut Symbol, body: &mut Box<CoreExpr<Ty>>) {
+    fn traverse_fn(&mut self, param: &mut Symbol, body: &mut Box<CoreExpr<Ty>>) {
         let mut scope = self.new_scope();
         scope.new_variable(param);
         scope.traverse_expr(body);
@@ -206,7 +201,6 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
 
     fn traverse_case(
         &mut self,
-        _ty: &mut Ty,
         expr: &mut Box<CoreExpr<Ty>>,
         arms: &mut Vec<(Pattern<Ty>, CoreExpr<Ty>)>,
     ) {
@@ -218,7 +212,7 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
         }
     }
 
-    fn traverse_sym(&mut self, _ty: &mut Ty, name: &mut Symbol) {
+    fn traverse_sym(&mut self, name: &mut Symbol) {
         if self.is_constructor(name) {
             self.rename_constructor(name);
         } else {

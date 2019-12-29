@@ -84,9 +84,9 @@ impl<Ty: PP> PP for DerivedStatement<Ty> {
 
 impl<Ty: PP, DE: PP, DS: PP> PP for Expr<Ty, DE, DS> {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
-        use crate::ast::Expr::*;
-        match self {
-            Binds { binds, ret, .. } => {
+        use crate::ast::ExprKind::*;
+        match &self.inner {
+            Binds { binds, ret } => {
                 let ind = Self::nspaces(indent);
                 let nextind = Self::nspaces(indent + 4);
                 write!(w, "let\n")?;
@@ -98,7 +98,7 @@ impl<Ty: PP, DE: PP, DS: PP> PP for Expr<Ty, DE, DS> {
                 ret.pp(w, indent + 4)?;
                 write!(w, "\n{}end", ind)?;
             }
-            BuiltinCall { fun, args, .. } => {
+            BuiltinCall { fun, args } => {
                 write!(w, "_builtincall \"")?;
                 fun.pp(w, indent)?;
                 write!(w, "\"(")?;
@@ -112,19 +112,19 @@ impl<Ty: PP, DE: PP, DS: PP> PP for Expr<Ty, DE, DS> {
                 write!(w, ")")?;
             }
 
-            Fn { body, param, .. } => {
+            Fn { body, param } => {
                 write!(w, "fn ")?;
                 param.pp(w, indent)?;
                 write!(w, " => ")?;
                 body.pp(w, indent + 4)?;
             }
-            App { fun, arg, .. } => {
+            App { fun, arg } => {
                 write!(w, "(")?;
                 fun.pp(w, indent)?;
                 write!(w, ") ")?;
                 arg.pp(w, indent + 4)?;
             }
-            Case { cond, clauses, .. } => {
+            Case { cond, clauses } => {
                 let ind = Self::nspaces(indent);
                 write!(w, "case ")?;
                 cond.pp(w, indent + 4)?;
@@ -136,7 +136,7 @@ impl<Ty: PP, DE: PP, DS: PP> PP for Expr<Ty, DE, DS> {
                     arm.pp(w, indent + 4)?;
                 }
             }
-            Tuple { tuple, .. } => {
+            Tuple { tuple } => {
                 write!(w, "(")?;
                 inter_iter! {
                     tuple.iter(),
@@ -147,17 +147,17 @@ impl<Ty: PP, DE: PP, DS: PP> PP for Expr<Ty, DE, DS> {
                 }
                 write!(w, ")")?;
             }
-            Symbol { name, .. } => {
+            Symbol { name } => {
                 name.pp(w, indent)?;
             }
-            Constructor { name, arg, .. } => {
+            Constructor { name, arg } => {
                 name.pp(w, indent)?;
                 if let Some(arg) = arg {
                     write!(w, " ")?;
                     arg.pp(w, indent)?;
                 }
             }
-            Literal { value, .. } => {
+            Literal { value } => {
                 value.pp(w, indent)?;
             }
             D(d) => {
@@ -168,9 +168,9 @@ impl<Ty: PP, DE: PP, DS: PP> PP for Expr<Ty, DE, DS> {
     }
 }
 
-impl<Ty: PP> PP for DerivedExpr<Ty> {
+impl<Ty: PP> PP for DerivedExprKind<Ty> {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
-        use DerivedExpr::*;
+        use DerivedExprKind::*;
         match self {
             If {
                 cond, then, else_, ..

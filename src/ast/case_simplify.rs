@@ -97,15 +97,20 @@ impl CaseSimplify {
         patterns
             .into_iter()
             .zip(cond.iter().cloned())
-            .fold(expr, |acc, (pattern, (cty, name))| Expr::Binds {
-                binds: vec![Statement::Val {
-                    rec: false,
-                    expr: Expr::Symbol { name, ty: cty },
-                    // believing pattern is variable
-                    pattern,
-                }],
+            .fold(expr, |acc, (pattern, (cty, name))| Expr {
                 ty: ty.clone(),
-                ret: acc.boxed(),
+                inner: ExprKind::Binds {
+                    binds: vec![Statement::Val {
+                        rec: false,
+                        expr: Expr {
+                            ty: cty,
+                            inner: ExprKind::Symbol { name },
+                        },
+                        // believing pattern is variable
+                        pattern,
+                    }],
+                    ret: acc.boxed(),
+                },
             })
     }
 
@@ -133,17 +138,19 @@ impl CaseSimplify {
                             .map(|(name, ty)| Pattern::Variable { name, ty })
                             .take(param_tys.len())
                             .collect();
-                        arm = Expr::Binds {
-                            binds: vec![Statement::Val {
-                                rec: false,
-                                pattern: var,
-                                expr: Expr::Symbol {
-                                    name: c.clone(),
-                                    ty: cty.clone(),
-                                },
-                            }],
+                        arm = Expr {
                             ty: arm.ty(),
-                            ret: arm.boxed(),
+                            inner: ExprKind::Binds {
+                                binds: vec![Statement::Val {
+                                    rec: false,
+                                    pattern: var,
+                                    expr: Expr {
+                                        ty: cty.clone(),
+                                        inner: ExprKind::Symbol { name: c.clone() },
+                                    },
+                                }],
+                                ret: arm.boxed(),
+                            },
                         };
                         pattern
                     }
@@ -158,24 +165,26 @@ impl CaseSimplify {
             .take(param_tys.len())
             .collect::<Vec<_>>();
         cond.extend(param_tys.clone().into_iter().zip(tmp_vars.clone()).rev());
-        Expr::Case {
-            cond: Expr::Symbol {
-                name: c,
-                ty: cty.clone(),
-            }
-            .boxed(),
+        Expr {
             ty: ty.clone(),
-            clauses: vec![(
-                Pattern::Tuple {
-                    ty: cty,
-                    tuple: tmp_vars
-                        .into_iter()
-                        .zip(param_tys)
-                        .map(|(name, ty)| Pattern::Variable { name, ty })
-                        .collect(),
-                },
-                self.match_compile(cond, ty, clauses),
-            )],
+            inner: ExprKind::Case {
+                cond: Expr {
+                    ty: cty.clone(),
+                    inner: ExprKind::Symbol { name: c },
+                }
+                .boxed(),
+                clauses: vec![(
+                    Pattern::Tuple {
+                        ty: cty,
+                        tuple: tmp_vars
+                            .into_iter()
+                            .zip(param_tys)
+                            .map(|(name, ty)| Pattern::Variable { name, ty })
+                            .collect(),
+                    },
+                    self.match_compile(cond, ty, clauses),
+                )],
+            },
         }
     }
 
@@ -230,10 +239,16 @@ impl CaseSimplify {
             },
             default,
         ));
-        Expr::Case {
-            cond: Expr::Symbol { name: c, ty: cty }.boxed(),
-            clauses: clauses,
+        Expr {
             ty: ret_ty,
+            inner: ExprKind::Case {
+                cond: Expr {
+                    ty: cty,
+                    inner: ExprKind::Symbol { name: c },
+                }
+                .boxed(),
+                clauses: clauses,
+            },
         }
     }
     fn match_compile_mixture(
@@ -301,14 +316,16 @@ impl CaseSimplify {
             .collect();
 
         if self.is_exhausitive(&type_id, constructor_names) {
-            Expr::Case {
-                cond: Expr::Symbol {
-                    name: c.clone(),
-                    ty: cty,
-                }
-                .boxed(),
-                clauses,
+            Expr {
                 ty: ret_ty,
+                inner: ExprKind::Case {
+                    cond: Expr {
+                        ty: cty,
+                        inner: ExprKind::Symbol { name: c.clone() },
+                    }
+                    .boxed(),
+                    clauses,
+                },
             }
         } else {
             let default =
@@ -320,10 +337,16 @@ impl CaseSimplify {
                 },
                 default,
             ));
-            Expr::Case {
-                cond: Expr::Symbol { name: c, ty: cty }.boxed(),
-                clauses: clauses,
+            Expr {
                 ty: ret_ty,
+                inner: ExprKind::Case {
+                    cond: Expr {
+                        ty: cty,
+                        inner: ExprKind::Symbol { name: c },
+                    }
+                    .boxed(),
+                    clauses: clauses,
+                },
             }
         }
     }
@@ -369,17 +392,19 @@ impl CaseSimplify {
                         None => None,
                     };
                     let (pat, arm) = clause.clone();
-                    let arm = Expr::Binds {
-                        binds: vec![Statement::Val {
-                            rec: false,
-                            pattern: v.clone(),
-                            expr: Expr::Symbol {
-                                name: cond.clone(),
-                                ty: cty.clone(),
-                            },
-                        }],
+                    let arm = Expr {
                         ty: arm.ty(),
-                        ret: arm.boxed(),
+                        inner: ExprKind::Binds {
+                            binds: vec![Statement::Val {
+                                rec: false,
+                                pattern: v.clone(),
+                                expr: Expr {
+                                    ty: cty.clone(),
+                                    inner: ExprKind::Symbol { name: cond.clone() },
+                                },
+                            }],
+                            ret: arm.boxed(),
+                        },
                     };
                     Some((pattern, (pat, arm)))
                 }
@@ -405,17 +430,19 @@ impl CaseSimplify {
                 Pattern::Constant { value: value1, .. } if value == *value1 => Some(clause.clone()),
                 v @ Pattern::Variable { .. } => {
                     let (pat, arm) = clause.clone();
-                    let arm = Expr::Binds {
-                        binds: vec![Statement::Val {
-                            rec: false,
-                            pattern: v.clone(),
-                            expr: Expr::Symbol {
-                                name: cond.clone(),
-                                ty: cty.clone(),
-                            },
-                        }],
+                    let arm = Expr {
                         ty: arm.ty(),
-                        ret: arm.boxed(),
+                        inner: ExprKind::Binds {
+                            binds: vec![Statement::Val {
+                                rec: false,
+                                pattern: v.clone(),
+                                expr: Expr {
+                                    ty: cty.clone(),
+                                    inner: ExprKind::Symbol { name: cond.clone() },
+                                },
+                            }],
+                            ret: arm.boxed(),
+                        },
                     };
                     Some((pat, arm))
                 }
@@ -437,17 +464,19 @@ impl CaseSimplify {
             .cloned()
             .filter_map(|(p, (pat, arm))| match p {
                 var @ Pattern::Variable { .. } => {
-                    let arm = Expr::Binds {
-                        binds: vec![Statement::Val {
-                            rec: false,
-                            expr: Expr::Symbol {
-                                name: c.clone(),
-                                ty: var.ty(),
-                            },
-                            pattern: var,
-                        }],
+                    let arm = Expr {
                         ty: arm.ty(),
-                        ret: arm.boxed(),
+                        inner: ExprKind::Binds {
+                            binds: vec![Statement::Val {
+                                rec: false,
+                                expr: Expr {
+                                    ty: var.ty(),
+                                    inner: ExprKind::Symbol { name: c.clone() },
+                                },
+                                pattern: var,
+                            }],
+                            ret: arm.boxed(),
+                        },
                     };
                     Some((pat, arm))
                 }
@@ -517,20 +546,23 @@ impl Transform<Type> for CaseSimplify {
                 let binds = pattern.binds();
                 let tuple = binds
                     .into_iter()
-                    .map(|(name, ty)| Expr::Symbol {
-                        name: name.clone(),
+                    .map(|(name, ty)| Expr {
                         ty: ty.clone(),
+                        inner: ExprKind::Symbol { name: name.clone() },
                     })
                     .collect();
-                let tuple = Expr::Tuple {
+                let tuple = Expr {
                     ty: ty.clone(),
-                    tuple,
+                    inner: ExprKind::Tuple { tuple },
                 };
                 let cond = self.transform_expr(expr);
                 Statement::Val {
                     rec,
                     pattern: tuple_pat,
-                    expr: self.transform_case(ty, cond.boxed(), vec![(pattern, tuple)]),
+                    expr: Expr {
+                        ty,
+                        inner: self.transform_case(cond.boxed(), vec![(pattern, tuple)]),
+                    },
                 }
             }
         }
@@ -538,18 +570,21 @@ impl Transform<Type> for CaseSimplify {
 
     fn transform_case(
         &mut self,
-        ty: Type,
         cond: Box<TypedCoreExpr>,
         clauses: Vec<(TypedPattern, TypedCoreExpr)>,
-    ) -> TypedCoreExpr {
+    ) -> TypedCoreExprKind {
         let condsym = self.gensym("cond");
         let condty = cond.ty();
+        let ty = clauses
+            .iter()
+            .map(|(_, expr)| expr.ty())
+            .next()
+            .expect("case should have at least 1 clause");
         let clauses = clauses
             .into_iter()
             .map(|(pat, arm)| (vec![pat], self.transform_expr(arm)))
             .collect();
-        Expr::Binds {
-            ty: ty.clone(),
+        ExprKind::Binds {
             binds: vec![Statement::Val {
                 pattern: Pattern::Variable {
                     name: condsym.clone(),

@@ -46,29 +46,32 @@ impl VarToConstructor {
 }
 
 impl Transform<()> for VarToConstructor {
-    fn transform_symbol(&mut self, ty: (), name: Symbol) -> UntypedCoreExpr {
+    fn transform_symbol(&mut self, name: Symbol) -> UntypedCoreExprKind {
         if self.is_constructor(&name) {
             if let Some(_) = self.arg_type(&name) {
                 let sym = self.gensym();
-                Expr::Fn {
-                    ty,
+                ExprKind::Fn {
                     param: sym.clone(),
-                    body: Expr::Constructor {
+                    body: Expr {
                         ty: (),
-                        arg: Some(Expr::Symbol { name: sym, ty: () }.boxed()),
-                        name,
+                        inner: ExprKind::Constructor {
+                            arg: Some(
+                                Expr {
+                                    ty: (),
+                                    inner: ExprKind::Symbol { name: sym },
+                                }
+                                .boxed(),
+                            ),
+                            name,
+                        },
                     }
                     .boxed(),
                 }
             } else {
-                Expr::Constructor {
-                    ty,
-                    arg: None,
-                    name,
-                }
+                ExprKind::Constructor { arg: None, name }
             }
         } else {
-            Expr::Symbol { ty, name }
+            ExprKind::Symbol { name }
         }
     }
 

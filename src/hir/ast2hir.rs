@@ -210,9 +210,10 @@ impl AST2HIR {
     }
 
     fn conv_expr(&mut self, expr: ast::TypedCoreExpr) -> Expr {
-        use crate::ast::Expr as E;
-        match expr {
-            E::Binds { ty, binds, ret } => Expr::Binds {
+        use crate::ast::ExprKind as E;
+        let ty = expr.ty;
+        match expr.inner {
+            E::Binds { binds, ret } => Expr::Binds {
                 ty: self.conv_ty(ty),
                 binds: binds
                     .into_iter()
@@ -220,12 +221,12 @@ impl AST2HIR {
                     .collect(),
                 ret: Box::new(self.conv_expr(*ret)),
             },
-            E::BuiltinCall { ty, fun, args } => Expr::BuiltinCall {
+            E::BuiltinCall { fun, args } => Expr::BuiltinCall {
                 ty: self.conv_ty(ty),
                 fun,
                 args: args.into_iter().map(|arg| self.conv_expr(arg)).collect(),
             },
-            E::Fn { ty, param, body } => {
+            E::Fn { param, body } => {
                 let (param_ty, body_ty) = match ty {
                     ast::Type::Fun(param_ty, body_ty) => (*param_ty, *body_ty),
                     _ => panic!("internal error: functon is not typed as function"),
@@ -237,10 +238,10 @@ impl AST2HIR {
                     captures: Vec::new(),
                 }
             }
-            E::App { ty, fun, arg } => self
+            E::App { fun, arg } => self
                 .conv_expr(*fun)
                 .app1(self.conv_ty(ty), self.conv_expr(*arg)),
-            E::Case { ty, cond, clauses } => Expr::Case {
+            E::Case { cond, clauses } => Expr::Case {
                 ty: self.conv_ty(ty),
                 expr: Box::new(self.conv_expr(*cond)),
                 arms: clauses
@@ -248,20 +249,20 @@ impl AST2HIR {
                     .map(|(pat, expr)| (self.conv_pat(pat), self.conv_expr(expr)))
                     .collect(),
             },
-            E::Tuple { ty, tuple } => Expr::Tuple {
+            E::Tuple { tuple } => Expr::Tuple {
                 tys: self.force_tuple(ty),
                 tuple: tuple.into_iter().map(|e| self.conv_expr(e)).collect(),
             },
-            E::Constructor { ty, arg, name } => Expr::Constructor {
+            E::Constructor { arg, name } => Expr::Constructor {
                 ty: self.conv_ty(ty),
                 arg: arg.map(|a| Box::new(self.conv_expr(*a))),
                 descriminant: self.conv_constructor_name(&name),
             },
-            E::Symbol { ty, name } => Expr::Sym {
+            E::Symbol { name } => Expr::Sym {
                 ty: self.conv_ty(ty),
                 name,
             },
-            E::Literal { ty, value } => Expr::Lit {
+            E::Literal { value } => Expr::Lit {
                 ty: self.conv_ty(ty),
                 value,
             },

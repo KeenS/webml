@@ -34,55 +34,44 @@ pub trait Traverse<Ty> {
     }
 
     fn traverse_expr(&mut self, expr: &mut CoreExpr<Ty>) {
-        use crate::ast::Expr::*;
-        match expr {
-            Binds { ty, binds, ret } => self.traverse_binds(ty, binds, ret),
-            BuiltinCall { ty, fun, args } => self.traverse_builtincall(ty, fun, args),
-            Fn { ty, param, body } => self.traverse_fn(ty, param, body),
-            App { ty, fun, arg } => self.traverse_app(ty, fun, arg),
-            Case { ty, cond, clauses } => self.traverse_case(ty, cond, clauses),
-            Tuple { ty, tuple } => self.traverse_tuple(ty, tuple),
-            Constructor { ty, arg, name } => self.traverse_constructor(ty, arg, name),
-            Symbol { ty, name } => self.traverse_sym(ty, name),
-            Literal { ty, value } => self.traverse_lit(ty, value),
+        use crate::ast::ExprKind::*;
+        match &mut expr.inner {
+            Binds { binds, ret } => self.traverse_binds(binds, ret),
+            BuiltinCall { fun, args } => self.traverse_builtincall(fun, args),
+            Fn { param, body } => self.traverse_fn(param, body),
+            App { fun, arg } => self.traverse_app(fun, arg),
+            Case { cond, clauses } => self.traverse_case(cond, clauses),
+            Tuple { tuple } => self.traverse_tuple(tuple),
+            Constructor { arg, name } => self.traverse_constructor(arg, name),
+            Symbol { name } => self.traverse_sym(name),
+            Literal { value } => self.traverse_lit(value),
             D(_) => (),
         }
     }
-    fn traverse_binds(
-        &mut self,
-        _ty: &mut Ty,
-        binds: &mut Vec<CoreStatement<Ty>>,
-        ret: &mut Box<CoreExpr<Ty>>,
-    ) {
+    fn traverse_binds(&mut self, binds: &mut Vec<CoreStatement<Ty>>, ret: &mut Box<CoreExpr<Ty>>) {
         for stmt in binds.iter_mut() {
             self.traverse_statement(stmt)
         }
         self.traverse_expr(ret)
     }
 
-    fn traverse_builtincall(&mut self, _ty: &mut Ty, _: &mut BIF, args: &mut Vec<CoreExpr<Ty>>) {
+    fn traverse_builtincall(&mut self, _: &mut BIF, args: &mut Vec<CoreExpr<Ty>>) {
         for arg in args {
             self.traverse_expr(arg)
         }
     }
 
-    fn traverse_fn(&mut self, _ty: &mut Ty, _param: &mut Symbol, body: &mut Box<CoreExpr<Ty>>) {
+    fn traverse_fn(&mut self, _param: &mut Symbol, body: &mut Box<CoreExpr<Ty>>) {
         self.traverse_expr(body)
     }
 
-    fn traverse_app(
-        &mut self,
-        _ty: &mut Ty,
-        fun: &mut Box<CoreExpr<Ty>>,
-        arg: &mut Box<CoreExpr<Ty>>,
-    ) {
+    fn traverse_app(&mut self, fun: &mut Box<CoreExpr<Ty>>, arg: &mut Box<CoreExpr<Ty>>) {
         self.traverse_expr(fun);
         self.traverse_expr(arg);
     }
 
     fn traverse_case(
         &mut self,
-        _ty: &mut Ty,
         cond: &mut Box<CoreExpr<Ty>>,
         clauses: &mut Vec<(Pattern<Ty>, CoreExpr<Ty>)>,
     ) {
@@ -93,25 +82,20 @@ pub trait Traverse<Ty> {
         }
     }
 
-    fn traverse_tuple(&mut self, _ty: &mut Ty, tuple: &mut Vec<CoreExpr<Ty>>) {
+    fn traverse_tuple(&mut self, tuple: &mut Vec<CoreExpr<Ty>>) {
         for t in tuple.iter_mut() {
             self.traverse_expr(t)
         }
     }
 
-    fn traverse_constructor(
-        &mut self,
-        _ty: &mut Ty,
-        arg: &mut Option<Box<CoreExpr<Ty>>>,
-        _name: &mut Symbol,
-    ) {
+    fn traverse_constructor(&mut self, arg: &mut Option<Box<CoreExpr<Ty>>>, _name: &mut Symbol) {
         if let Some(arg) = arg {
             self.traverse_expr(arg)
         }
     }
-    fn traverse_sym(&mut self, _ty: &mut Ty, _name: &mut Symbol) {}
+    fn traverse_sym(&mut self, _name: &mut Symbol) {}
 
-    fn traverse_lit(&mut self, _ty: &mut Ty, _value: &mut Literal) {}
+    fn traverse_lit(&mut self, _value: &mut Literal) {}
 
     fn traverse_pattern(&mut self, pattern: &mut Pattern<Ty>) {
         use Pattern::*;
@@ -176,29 +160,28 @@ pub trait Transform<Ty> {
         }
     }
 
-    fn transform_expr(&mut self, expr: CoreExpr<Ty>) -> CoreExpr<Ty> {
-        use crate::ast::Expr::*;
-        match expr {
-            Binds { ty, binds, ret } => self.transform_binds(ty, binds, ret),
-            BuiltinCall { ty, fun, args } => self.transform_builtincall(ty, fun, args),
-            Fn { ty, param, body } => self.transform_fn(ty, param, body),
-            App { ty, fun, arg } => self.transform_app(ty, fun, arg),
-            Case { ty, cond, clauses } => self.transform_case(ty, cond, clauses),
-            Tuple { ty, tuple } => self.transform_tuple(ty, tuple),
-            Constructor { ty, arg, name } => self.transform_constructor(ty, arg, name),
-            Symbol { ty, name } => self.transform_symbol(ty, name),
-            Literal { ty, value } => self.transform_literal(ty, value),
+    fn transform_expr(&mut self, mut expr: CoreExpr<Ty>) -> CoreExpr<Ty> {
+        use crate::ast::ExprKind::*;
+        expr.inner = match expr.inner {
+            Binds { binds, ret } => self.transform_binds(binds, ret),
+            BuiltinCall { fun, args } => self.transform_builtincall(fun, args),
+            Fn { param, body } => self.transform_fn(param, body),
+            App { fun, arg } => self.transform_app(fun, arg),
+            Case { cond, clauses } => self.transform_case(cond, clauses),
+            Tuple { tuple } => self.transform_tuple(tuple),
+            Constructor { arg, name } => self.transform_constructor(arg, name),
+            Symbol { name } => self.transform_symbol(name),
+            Literal { value } => self.transform_literal(value),
             D(d) => match d {},
-        }
+        };
+        expr
     }
     fn transform_binds(
         &mut self,
-        ty: Ty,
         binds: Vec<CoreStatement<Ty>>,
         ret: Box<CoreExpr<Ty>>,
-    ) -> CoreExpr<Ty> {
-        Expr::Binds {
-            ty,
+    ) -> CoreExprKind<Ty> {
+        ExprKind::Binds {
             binds: binds
                 .into_iter()
                 .map(|stmt| self.transform_statement(stmt))
@@ -207,9 +190,8 @@ pub trait Transform<Ty> {
         }
     }
 
-    fn transform_builtincall(&mut self, ty: Ty, fun: BIF, args: Vec<CoreExpr<Ty>>) -> CoreExpr<Ty> {
-        Expr::BuiltinCall {
-            ty,
+    fn transform_builtincall(&mut self, fun: BIF, args: Vec<CoreExpr<Ty>>) -> CoreExprKind<Ty> {
+        ExprKind::BuiltinCall {
             fun,
             args: args
                 .into_iter()
@@ -218,9 +200,8 @@ pub trait Transform<Ty> {
         }
     }
 
-    fn transform_fn(&mut self, ty: Ty, param: Symbol, body: Box<CoreExpr<Ty>>) -> CoreExpr<Ty> {
-        Expr::Fn {
-            ty,
+    fn transform_fn(&mut self, param: Symbol, body: Box<CoreExpr<Ty>>) -> CoreExprKind<Ty> {
+        ExprKind::Fn {
             param,
             body: self.transform_expr(*body).boxed(),
         }
@@ -228,12 +209,10 @@ pub trait Transform<Ty> {
 
     fn transform_app(
         &mut self,
-        ty: Ty,
         fun: Box<CoreExpr<Ty>>,
         arg: Box<CoreExpr<Ty>>,
-    ) -> CoreExpr<Ty> {
-        Expr::App {
-            ty,
+    ) -> CoreExprKind<Ty> {
+        ExprKind::App {
             fun: self.transform_expr(*fun).boxed(),
             arg: self.transform_expr(*arg).boxed(),
         }
@@ -241,12 +220,10 @@ pub trait Transform<Ty> {
 
     fn transform_case(
         &mut self,
-        ty: Ty,
         cond: Box<CoreExpr<Ty>>,
         clauses: Vec<(Pattern<Ty>, CoreExpr<Ty>)>,
-    ) -> CoreExpr<Ty> {
-        Expr::Case {
-            ty,
+    ) -> CoreExprKind<Ty> {
+        ExprKind::Case {
             cond: self.transform_expr(*cond).boxed(),
             clauses: clauses
                 .into_iter()
@@ -255,31 +232,28 @@ pub trait Transform<Ty> {
         }
     }
 
-    fn transform_tuple(&mut self, ty: Ty, tuple: Vec<CoreExpr<Ty>>) -> CoreExpr<Ty> {
-        Expr::Tuple {
-            ty,
+    fn transform_tuple(&mut self, tuple: Vec<CoreExpr<Ty>>) -> CoreExprKind<Ty> {
+        ExprKind::Tuple {
             tuple: tuple.into_iter().map(|t| self.transform_expr(t)).collect(),
         }
     }
 
     fn transform_constructor(
         &mut self,
-        ty: Ty,
         arg: Option<Box<CoreExpr<Ty>>>,
         name: Symbol,
-    ) -> CoreExpr<Ty> {
-        Expr::Constructor {
-            ty,
+    ) -> CoreExprKind<Ty> {
+        ExprKind::Constructor {
             arg: arg.map(|e| self.transform_expr(*e).boxed()),
             name,
         }
     }
-    fn transform_symbol(&mut self, ty: Ty, name: Symbol) -> CoreExpr<Ty> {
-        Expr::Symbol { ty, name }
+    fn transform_symbol(&mut self, name: Symbol) -> CoreExprKind<Ty> {
+        ExprKind::Symbol { name }
     }
 
-    fn transform_literal(&mut self, ty: Ty, value: Literal) -> CoreExpr<Ty> {
-        Expr::Literal { ty, value }
+    fn transform_literal(&mut self, value: Literal) -> CoreExprKind<Ty> {
+        ExprKind::Literal { value }
     }
 
     fn transform_pattern(&mut self, pattern: Pattern<Ty>) -> Pattern<Ty> {

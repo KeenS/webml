@@ -142,10 +142,12 @@ fn expr_bind(i: &str) -> IResult<&str, Expr<()>> {
     let (i, _) = tag("end")(i)?;
     Ok((
         i,
-        Expr::Binds {
+        Expr {
             ty: (),
-            binds: binds,
-            ret: ret.boxed(),
+            inner: ExprKind::Binds {
+                binds: binds,
+                ret: ret.boxed(),
+            },
         },
     ))
 }
@@ -160,10 +162,12 @@ fn expr_fun(i: &str) -> IResult<&str, Expr<()>> {
     let (i, body) = expr(i)?;
     Ok((
         i,
-        Expr::Fn {
+        Expr {
             ty: (),
-            param: param,
-            body: body.boxed(),
+            inner: ExprKind::Fn {
+                param: param,
+                body: body.boxed(),
+            },
         },
     ))
 }
@@ -182,12 +186,14 @@ fn expr_if(i: &str) -> IResult<&str, Expr<()>> {
     let (i, else_) = expr(i)?;
     Ok((
         i,
-        Expr::D(DerivedExpr::If {
+        Expr {
             ty: (),
-            cond: cond.boxed(),
-            then: then.boxed(),
-            else_: else_.boxed(),
-        }),
+            inner: ExprKind::D(DerivedExprKind::If {
+                cond: cond.boxed(),
+                then: then.boxed(),
+                else_: else_.boxed(),
+            }),
+        },
     ))
 }
 
@@ -207,10 +213,12 @@ fn expr_case(i: &str) -> IResult<&str, Expr<()>> {
     )(i)?;
     Ok((
         i,
-        Expr::Case {
+        Expr {
             ty: (),
-            cond: cond.boxed(),
-            clauses: clauses,
+            inner: ExprKind::Case {
+                cond: cond.boxed(),
+                clauses: clauses,
+            },
         },
     ))
 }
@@ -304,25 +312,31 @@ fn expr_infix_and_app(i: &str) -> IResult<&str, Expr<()>> {
     // find infixes
     let mixed = mixed
         .into_iter()
-        .map(|e| match e {
-            Expr::Symbol { ty, name } => {
+        .map(|mut e| match e.inner {
+            ExprKind::Symbol { name } => {
                 for (f, table) in FIXTY_TABLE.iter().enumerate() {
                     if table.contains(&name.0.as_str()) {
                         return Fix(f as u8 + 1, name);
                     }
                 }
-                E(Expr::Symbol { ty, name })
+                e.inner = ExprKind::Symbol { name };
+                E(e)
             }
-            e => E(e),
+            inner => {
+                e.inner = inner;
+                E(e)
+            }
         })
         .collect::<Vec<_>>();
     // reduce applys
     let rest = map_window2(mixed, |m1, m2| match (m1, m2) {
         (E(e1), E(e2)) => (
-            E(Expr::App {
+            E(Expr {
                 ty: (),
-                fun: e1.boxed(),
-                arg: e2.boxed(),
+                inner: ExprKind::App {
+                    fun: e1.boxed(),
+                    arg: e2.boxed(),
+                },
             }),
             None,
         ),
@@ -334,14 +348,20 @@ fn expr_infix_and_app(i: &str) -> IResult<&str, Expr<()>> {
         use Mixed::*;
         map_window3(mixed, |m1, m2, m3| match (m1, m2, m3) {
             (E(l), Fix(fixty, op), E(r)) if fixty == n => (
-                E(Expr::App {
+                E(Expr {
                     ty: (),
-                    fun: Expr::Symbol { ty: (), name: op }.boxed(),
-                    arg: Expr::Tuple {
-                        ty: (),
-                        tuple: vec![l, r],
-                    }
-                    .boxed(),
+                    inner: ExprKind::App {
+                        fun: Expr {
+                            ty: (),
+                            inner: ExprKind::Symbol { name: op },
+                        }
+                        .boxed(),
+                        arg: Expr {
+                            ty: (),
+                            inner: ExprKind::Tuple { tuple: vec![l, r] },
+                        }
+                        .boxed(),
+                    },
                 }),
                 None,
             ),
@@ -367,10 +387,12 @@ fn test_expr_infix_and_app() {
         ret,
         (
             "",
-            Expr::Constructor {
+            Expr {
                 ty: (),
-                arg: None,
-                name: Symbol::new("true")
+                inner: ExprKind::Constructor {
+                    arg: None,
+                    name: Symbol::new("true")
+                }
             }
         )
     )
@@ -384,18 +406,24 @@ fn test_expr_infix_and_app2() {
         ret,
         (
             "",
-            Expr::App {
+            Expr {
                 ty: (),
-                fun: Expr::Symbol {
-                    ty: (),
-                    name: Symbol::new("f"),
+                inner: ExprKind::App {
+                    fun: Expr {
+                        ty: (),
+                        inner: ExprKind::Symbol {
+                            name: Symbol::new("f"),
+                        }
+                    }
+                    .boxed(),
+                    arg: Expr {
+                        ty: (),
+                        inner: ExprKind::Symbol {
+                            name: Symbol::new("arg"),
+                        }
+                    }
+                    .boxed()
                 }
-                .boxed(),
-                arg: Expr::Symbol {
-                    ty: (),
-                    name: Symbol::new("arg"),
-                }
-                .boxed()
             }
         )
     )
@@ -403,42 +431,51 @@ fn test_expr_infix_and_app2() {
 
 fn expr1_sym(i: &str) -> IResult<&str, Expr<()>> {
     // = is allowed to be used in expression exceptionally
-    map(alt((symbol, map(tag("="), Symbol::new))), |s| {
-        Expr::Symbol { ty: (), name: s }
+    map(alt((symbol, map(tag("="), Symbol::new))), |name| Expr {
+        ty: (),
+        inner: ExprKind::Symbol { name },
     })(i)
 }
 
 fn expr1_int(i: &str) -> IResult<&str, Expr<()>> {
-    map(digit1, |s: &str| Expr::Literal {
+    map(digit1, |s: &str| Expr {
         ty: (),
-        value: Literal::Int(s.parse().unwrap()),
+        inner: ExprKind::Literal {
+            value: Literal::Int(s.parse().unwrap()),
+        },
     })(i)
 }
 
 fn expr1_float(i: &str) -> IResult<&str, Expr<()>> {
     let not_int = verify(recognize_float, |s: &&str| s.contains('.'));
 
-    map(not_int, |s: &str| Expr::Literal {
+    map(not_int, |s: &str| Expr {
         ty: (),
-        value: Literal::Real(s.parse().unwrap()),
+        inner: ExprKind::Literal {
+            value: Literal::Real(s.parse().unwrap()),
+        },
     })(i)
 }
 
 fn expr1_bool(i: &str) -> IResult<&str, Expr<()>> {
     alt((
         value(
-            Expr::Constructor {
-                name: Symbol::new("true"),
-                arg: None,
+            Expr {
                 ty: (),
+                inner: ExprKind::Constructor {
+                    name: Symbol::new("true"),
+                    arg: None,
+                },
             },
             tag("true"),
         ),
         value(
-            Expr::Constructor {
-                name: Symbol::new("false"),
-                arg: None,
+            Expr {
                 ty: (),
+                inner: ExprKind::Constructor {
+                    name: Symbol::new("false"),
+                    arg: None,
+                },
             },
             tag("false"),
         ),
@@ -465,14 +502,20 @@ fn expr1_tuple(i: &str) -> IResult<&str, Expr<()>> {
 
     let mut es = es;
     es.push(e);
-    Ok((i, Expr::Tuple { ty: (), tuple: es }))
+    Ok((
+        i,
+        Expr {
+            ty: (),
+            inner: ExprKind::Tuple { tuple: es },
+        },
+    ))
 }
 
 fn expr1_unit(i: &str) -> IResult<&str, Expr<()>> {
     value(
-        Expr::Tuple {
+        Expr {
             ty: (),
-            tuple: vec![],
+            inner: ExprKind::Tuple { tuple: vec![] },
         },
         tuple((tag("("), multispace0, tag(")"))),
     )(i)
@@ -503,7 +546,13 @@ fn expr1_builtincall(i: &str) -> IResult<&str, Expr<()>> {
     let (i, _) = tag("(")(i)?;
     let (i, args) = separated_nonempty_list(tuple((multispace0, tag(","), multispace0)), expr)(i)?;
     let (i, _) = tag(")")(i)?;
-    Ok((i, Expr::BuiltinCall { ty: (), fun, args }))
+    Ok((
+        i,
+        Expr {
+            ty: (),
+            inner: ExprKind::BuiltinCall { fun, args },
+        },
+    ))
 }
 
 fn typename(i: &str) -> IResult<&str, Type> {
