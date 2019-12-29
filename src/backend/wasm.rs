@@ -167,7 +167,7 @@ impl LIR2WASM {
     }
 
     fn function_index(&self, fname: &Symbol) -> FunctionSpaceIndex {
-        let findex = FunctionIndex(self.function_table[dbg!(fname)]);
+        let findex = FunctionIndex(self.function_table[fname]);
         Into::<FunctionSpaceIndex>::into(findex)
     }
 
