@@ -67,10 +67,13 @@ pub type TypedCoreExpr = CoreExpr<Type>;
 pub type TypedCoreExprKind = CoreExprKind<Type>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Expr<Ty, DE = DerivedExprKind<Ty>, DS = DerivedStatement<Ty>> {
+pub struct Annot<Ty, Inner> {
     pub ty: Ty,
-    pub inner: ExprKind<Ty, DE, DS>,
+    pub inner: Inner,
 }
+
+pub type Expr<Ty, DE = DerivedExprKind<Ty>, DS = DerivedStatement<Ty>> =
+    Annot<Ty, ExprKind<Ty, DE, DS>>;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExprKind<Ty, DE = DerivedExprKind<Ty>, DS = DerivedStatement<Ty>> {
@@ -120,31 +123,29 @@ pub enum DerivedExprKind<Ty> {
 }
 
 pub type UntypedPattern = Pattern<()>;
+pub type UntypedPatternKind = PatternKind<()>;
 pub type TypedPattern = Pattern<Type>;
+pub type TypedPatternKind = PatternKind<Type>;
+
+pub type Pattern<Ty> = Annot<Ty, PatternKind<Ty>>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Pattern<Ty> {
+pub enum PatternKind<Ty> {
     Constant {
         // same type as Literal::Int
         value: i64,
-        ty: Ty,
     },
     Constructor {
         name: Symbol,
         arg: Option<Box<Pattern<Ty>>>,
-        ty: Ty,
     },
     Tuple {
         tuple: Vec<Pattern<Ty>>,
-        ty: Ty,
     },
     Variable {
         name: Symbol,
-        ty: Ty,
     },
-    Wildcard {
-        ty: Ty,
-    },
+    Wildcard {},
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -168,13 +169,13 @@ pub struct TypeInfo {
     pub constructors: Vec<(Symbol, Option<Type>)>,
 }
 
-impl<Ty, DE, DS> Expr<Ty, DE, DS> {
+impl<Ty, Inner> Annot<Ty, Inner> {
     pub fn boxed(self) -> Box<Self> {
         Box::new(self)
     }
 }
 
-impl<Ty: Clone> CoreExpr<Ty> {
+impl<Ty: Clone, Inner> Annot<Ty, Inner> {
     fn ty(&self) -> Ty {
         self.ty.clone()
     }
@@ -182,57 +183,44 @@ impl<Ty: Clone> CoreExpr<Ty> {
 
 impl<Ty> Pattern<Ty> {
     pub fn binds(&self) -> Vec<(&Symbol, &Ty)> {
-        use self::Pattern::*;
-        match self {
+        use self::PatternKind::*;
+        match &self.inner {
             Constant { .. } | Wildcard { .. } => vec![],
-            Variable { name, ty } => vec![(name, ty)],
+            Variable { name } => vec![(name, &self.ty)],
             Tuple { tuple, .. } => tuple.iter().flat_map(|pat| pat.binds()).collect(),
             Constructor { arg, .. } => arg.iter().flat_map(|pat| pat.binds()).collect(),
         }
     }
 
     pub fn is_variable(&self) -> bool {
-        use self::Pattern::*;
-        match self {
+        use self::PatternKind::*;
+        match &self.inner {
             Variable { .. } => true,
             _ => false,
         }
     }
 
     pub fn is_constructor(&self) -> bool {
-        use self::Pattern::*;
-        match self {
+        use self::PatternKind::*;
+        match &self.inner {
             Constructor { .. } => true,
             _ => false,
         }
     }
 
     pub fn is_constant(&self) -> bool {
-        use self::Pattern::*;
-        match self {
+        use self::PatternKind::*;
+        match &self.inner {
             Constant { .. } => true,
             _ => false,
         }
     }
 
     pub fn is_tuple(&self) -> bool {
-        use self::Pattern::*;
-        match self {
+        use self::PatternKind::*;
+        match &self.inner {
             Tuple { .. } => true,
             _ => false,
-        }
-    }
-}
-
-impl<Ty: Clone> Pattern<Ty> {
-    fn ty(&self) -> Ty {
-        use self::Pattern::*;
-        match self {
-            Constant { ty, .. }
-            | Variable { ty, .. }
-            | Wildcard { ty }
-            | Tuple { ty, .. }
-            | Constructor { ty, .. } => ty.clone(),
         }
     }
 }

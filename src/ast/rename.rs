@@ -220,19 +220,14 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
         }
     }
 
-    fn traverse_pat_constructor(
-        &mut self,
-        _ty: &mut Ty,
-        name: &mut Symbol,
-        arg: &mut Option<Box<Pattern<Ty>>>,
-    ) {
+    fn traverse_pat_constructor(&mut self, name: &mut Symbol, arg: &mut Option<Box<Pattern<Ty>>>) {
         self.rename_constructor(name);
         if let Some(pat) = arg {
             self.traverse_pattern(&mut *pat);
         }
     }
 
-    fn traverse_pat_variable(&mut self, _ty: &mut Ty, name: &mut Symbol) {
+    fn traverse_pat_variable(&mut self, name: &mut Symbol) {
         if self.is_constructor(name) {
             self.rename_constructor(name)
         } else {
@@ -240,7 +235,7 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
         }
     }
 
-    fn traverse_pat_tuple(&mut self, _ty: &mut Ty, tuple: &mut Vec<Pattern<Ty>>) {
+    fn traverse_pat_tuple(&mut self, tuple: &mut Vec<Pattern<Ty>>) {
         for pat in tuple {
             self.traverse_pattern(pat)
         }
@@ -369,18 +364,24 @@ impl Transform<()> for WrapBIF {
                                     }
                                     .boxed(),
                                     clauses: vec![(
-                                        Pattern::Tuple {
+                                        Pattern {
                                             ty: (),
-                                            tuple: vec![
-                                                Pattern::Variable {
-                                                    ty: (),
-                                                    name: l.clone(),
-                                                },
-                                                Pattern::Variable {
-                                                    ty: (),
-                                                    name: r.clone(),
-                                                },
-                                            ],
+                                            inner: PatternKind::Tuple {
+                                                tuple: vec![
+                                                    Pattern {
+                                                        ty: (),
+                                                        inner: PatternKind::Variable {
+                                                            name: l.clone(),
+                                                        },
+                                                    },
+                                                    Pattern {
+                                                        ty: (),
+                                                        inner: PatternKind::Variable {
+                                                            name: r.clone(),
+                                                        },
+                                                    },
+                                                ],
+                                            },
                                         },
                                         Expr {
                                             ty: (),

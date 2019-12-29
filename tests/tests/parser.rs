@@ -1,5 +1,5 @@
 use webml::ast::{
-    DerivedExprKind, DerivedStatement, Expr, ExprKind, Pattern, Statement, Type, AST,
+    DerivedExprKind, DerivedStatement, Expr, ExprKind, Pattern, PatternKind, Statement, Type, AST,
 };
 use webml::parse;
 use webml::prim::*;
@@ -12,9 +12,11 @@ fn parse_int() {
         ast,
         AST(vec![Statement::Val {
             rec: false,
-            pattern: Pattern::Variable {
-                name: Symbol::new("x"),
+            pattern: Pattern {
                 ty: (),
+                inner: PatternKind::Variable {
+                    name: Symbol::new("x"),
+                }
             },
             expr: Expr {
                 ty: (),
@@ -34,9 +36,11 @@ fn parse_float() {
         ast,
         AST(vec![Statement::Val {
             rec: false,
-            pattern: Pattern::Variable {
-                name: Symbol::new("x"),
+            pattern: Pattern {
                 ty: (),
+                inner: PatternKind::Variable {
+                    name: Symbol::new("x"),
+                }
             },
             expr: Expr {
                 ty: (),
@@ -56,9 +60,11 @@ fn parse_bool_true() {
         ast,
         AST(vec![Statement::Val {
             rec: false,
-            pattern: Pattern::Variable {
-                name: Symbol::new("x"),
+            pattern: Pattern {
                 ty: (),
+                inner: PatternKind::Variable {
+                    name: Symbol::new("x"),
+                }
             },
             expr: Expr {
                 ty: (),
@@ -79,9 +85,11 @@ fn parse_bool_false() {
         ast,
         AST(vec![Statement::Val {
             rec: false,
-            pattern: Pattern::Variable {
-                name: Symbol::new("x"),
+            pattern: Pattern {
                 ty: (),
+                inner: PatternKind::Variable {
+                    name: Symbol::new("x"),
+                }
             },
             expr: Expr {
                 ty: (),
@@ -102,9 +110,11 @@ fn parse_unit() {
         ast,
         AST(vec![Statement::Val {
             rec: false,
-            pattern: Pattern::Variable {
-                name: Symbol::new("x"),
+            pattern: Pattern {
                 ty: (),
+                inner: PatternKind::Variable {
+                    name: Symbol::new("x"),
+                }
             },
             expr: Expr {
                 ty: (),
@@ -122,9 +132,11 @@ fn parse_binop() {
         ast,
         AST(vec![Statement::Val {
             rec: false,
-            pattern: Pattern::Variable {
+            pattern: Pattern {
                 ty: (),
-                name: Symbol::new("x"),
+                inner: PatternKind::Variable {
+                    name: Symbol::new("x"),
+                }
             },
             expr: Expr {
                 ty: (),
@@ -170,9 +182,11 @@ fn parse_binop_assoc() {
         ast,
         AST(vec![Statement::Val {
             rec: false,
-            pattern: Pattern::Variable {
-                name: Symbol::new("x"),
+            pattern: Pattern {
                 ty: (),
+                inner: PatternKind::Variable {
+                    name: Symbol::new("x"),
+                }
             },
             expr: Expr {
                 ty: (),
@@ -244,9 +258,11 @@ fn parse_uiltincall() {
         ast,
         AST(vec![Statement::Val {
             rec: false,
-            pattern: Pattern::Variable {
-                name: Symbol::new("ret"),
+            pattern: Pattern {
                 ty: (),
+                inner: PatternKind::Variable {
+                    name: Symbol::new("ret"),
+                }
             },
             expr: Expr {
                 ty: (),
@@ -280,9 +296,11 @@ fn parse_binop_pref() {
         ast,
         AST(vec![Statement::Val {
             rec: false,
-            pattern: Pattern::Variable {
-                name: Symbol::new("x"),
+            pattern: Pattern {
                 ty: (),
+                inner: PatternKind::Variable {
+                    name: Symbol::new("x"),
+                }
             },
             expr: Expr {
                 ty: (),
@@ -354,9 +372,11 @@ fn parse_fn_unary() {
         ast,
         AST(vec![Statement::Val {
             rec: false,
-            pattern: Pattern::Variable {
-                name: Symbol::new("f"),
+            pattern: Pattern {
                 ty: (),
+                inner: PatternKind::Variable {
+                    name: Symbol::new("f"),
+                }
             },
             expr: Expr {
                 ty: (),
@@ -496,9 +516,11 @@ fn parse_fun_unary() {
         AST(vec![Statement::D(DerivedStatement::Fun {
             name: Symbol::new("f"),
             clauses: vec![(
-                vec![Pattern::Variable {
-                    name: Symbol::new("x"),
-                    ty: ()
+                vec![Pattern {
+                    ty: (),
+                    inner: PatternKind::Variable {
+                        name: Symbol::new("x"),
+                    }
                 }],
                 Expr {
                     ty: (),
@@ -521,13 +543,17 @@ fn parse_fun_binary() {
             name: Symbol::new("f"),
             clauses: vec![(
                 vec![
-                    Pattern::Variable {
-                        name: Symbol::new("x"),
-                        ty: ()
+                    Pattern {
+                        ty: (),
+                        inner: PatternKind::Variable {
+                            name: Symbol::new("x"),
+                        }
                     },
-                    Pattern::Variable {
-                        name: Symbol::new("y"),
-                        ty: ()
+                    Pattern {
+                        ty: (),
+                        inner: PatternKind::Variable {
+                            name: Symbol::new("y"),
+                        }
                     }
                 ],
                 Expr {
@@ -550,18 +576,24 @@ fn parse_fun_pattern() {
         AST(vec![Statement::D(DerivedStatement::Fun {
             name: Symbol::new("f"),
             clauses: vec![(
-                vec![Pattern::Tuple {
+                vec![Pattern {
                     ty: (),
-                    tuple: vec![
-                        Pattern::Variable {
-                            name: Symbol::new("x"),
-                            ty: ()
-                        },
-                        Pattern::Variable {
-                            name: Symbol::new("y"),
-                            ty: ()
-                        },
-                    ]
+                    inner: PatternKind::Tuple {
+                        tuple: vec![
+                            Pattern {
+                                ty: (),
+                                inner: PatternKind::Variable {
+                                    name: Symbol::new("x"),
+                                }
+                            },
+                            Pattern {
+                                ty: (),
+                                inner: PatternKind::Variable {
+                                    name: Symbol::new("y"),
+                                }
+                            },
+                        ]
+                    }
                 }],
                 Expr {
                     ty: (),
@@ -583,18 +615,24 @@ fn parse_fun_op() {
         AST(vec![Statement::D(DerivedStatement::Fun {
             name: Symbol::new("+"),
             clauses: vec![(
-                vec![Pattern::Tuple {
+                vec![Pattern {
                     ty: (),
-                    tuple: vec![
-                        Pattern::Variable {
-                            name: Symbol::new("x"),
-                            ty: ()
-                        },
-                        Pattern::Variable {
-                            name: Symbol::new("y"),
-                            ty: ()
-                        },
-                    ]
+                    inner: PatternKind::Tuple {
+                        tuple: vec![
+                            Pattern {
+                                ty: (),
+                                inner: PatternKind::Variable {
+                                    name: Symbol::new("x"),
+                                }
+                            },
+                            Pattern {
+                                ty: (),
+                                inner: PatternKind::Variable {
+                                    name: Symbol::new("y"),
+                                }
+                            },
+                        ]
+                    }
                 }],
                 Expr {
                     ty: (),
@@ -618,11 +656,16 @@ fn parse_fun_multiclause() {
             clauses: vec![
                 (
                     vec![
-                        Pattern::Variable {
-                            name: Symbol::new("Nil"),
-                            ty: ()
+                        Pattern {
+                            ty: (),
+                            inner: PatternKind::Variable {
+                                name: Symbol::new("Nil"),
+                            }
                         },
-                        Pattern::Wildcard { ty: () }
+                        Pattern {
+                            ty: (),
+                            inner: PatternKind::Wildcard {}
+                        }
                     ],
                     Expr {
                         ty: (),
@@ -633,10 +676,15 @@ fn parse_fun_multiclause() {
                 ),
                 (
                     vec![
-                        Pattern::Wildcard { ty: () },
-                        Pattern::Variable {
-                            name: Symbol::new("Nil"),
-                            ty: ()
+                        Pattern {
+                            ty: (),
+                            inner: PatternKind::Wildcard {}
+                        },
+                        Pattern {
+                            ty: (),
+                            inner: PatternKind::Variable {
+                                name: Symbol::new("Nil"),
+                            }
                         },
                     ],
                     Expr {
@@ -666,9 +714,11 @@ fn parse_if() {
         ast,
         AST(vec![Statement::Val {
             rec: false,
-            pattern: Pattern::Variable {
-                name: Symbol::new("x"),
+            pattern: Pattern {
                 ty: (),
+                inner: PatternKind::Variable {
+                    name: Symbol::new("x"),
+                }
             },
             expr: Expr {
                 ty: (),
@@ -711,9 +761,11 @@ fn parse_case_bool() {
         ast,
         AST(vec![Statement::Val {
             rec: false,
-            pattern: Pattern::Variable {
-                name: Symbol::new("x"),
+            pattern: Pattern {
                 ty: (),
+                inner: PatternKind::Variable {
+                    name: Symbol::new("x"),
+                }
             },
             expr: Expr {
                 ty: (),
@@ -728,10 +780,12 @@ fn parse_case_bool() {
                     .boxed(),
                     clauses: vec![
                         (
-                            Pattern::Constructor {
+                            Pattern {
                                 ty: (),
-                                arg: None,
-                                name: Symbol::new("true")
+                                inner: PatternKind::Constructor {
+                                    arg: None,
+                                    name: Symbol::new("true")
+                                }
                             },
                             Expr {
                                 ty: (),
@@ -742,10 +796,12 @@ fn parse_case_bool() {
                             },
                         ),
                         (
-                            Pattern::Constructor {
+                            Pattern {
                                 ty: (),
-                                arg: None,
-                                name: Symbol::new("false"),
+                                inner: PatternKind::Constructor {
+                                    arg: None,
+                                    name: Symbol::new("false"),
+                                }
                             },
                             Expr {
                                 ty: (),
@@ -770,9 +826,11 @@ fn parse_case_constructor() {
         ast,
         AST(vec![Statement::Val {
             rec: false,
-            pattern: Pattern::Variable {
-                name: Symbol::new("x"),
+            pattern: Pattern {
                 ty: (),
+                inner: PatternKind::Variable {
+                    name: Symbol::new("x"),
+                }
             },
             expr: Expr {
                 ty: (),
@@ -786,13 +844,17 @@ fn parse_case_constructor() {
                     .boxed(),
                     clauses: vec![
                         (
-                            Pattern::Constructor {
+                            Pattern {
                                 ty: (),
-                                name: Symbol::new("SOME"),
-                                arg: Some(Box::new(Pattern::Variable {
-                                    name: Symbol::new("x"),
-                                    ty: ()
-                                })),
+                                inner: PatternKind::Constructor {
+                                    name: Symbol::new("SOME"),
+                                    arg: Some(Box::new(Pattern {
+                                        ty: (),
+                                        inner: PatternKind::Variable {
+                                            name: Symbol::new("x"),
+                                        }
+                                    })),
+                                }
                             },
                             Expr {
                                 ty: (),
@@ -803,9 +865,11 @@ fn parse_case_constructor() {
                             },
                         ),
                         (
-                            Pattern::Variable {
+                            Pattern {
                                 ty: (),
-                                name: Symbol::new("NONE"),
+                                inner: PatternKind::Variable {
+                                    name: Symbol::new("NONE"),
+                                }
                             },
                             Expr {
                                 ty: (),
@@ -830,9 +894,11 @@ fn parse_case_var() {
         ast,
         AST(vec![Statement::Val {
             rec: false,
-            pattern: Pattern::Variable {
-                name: Symbol::new("x"),
+            pattern: Pattern {
                 ty: (),
+                inner: PatternKind::Variable {
+                    name: Symbol::new("x"),
+                }
             },
             expr: Expr {
                 ty: (),
@@ -847,10 +913,12 @@ fn parse_case_var() {
                     .boxed(),
                     clauses: vec![
                         (
-                            Pattern::Constructor {
+                            Pattern {
                                 ty: (),
-                                arg: None,
-                                name: Symbol::new("true")
+                                inner: PatternKind::Constructor {
+                                    arg: None,
+                                    name: Symbol::new("true")
+                                }
                             },
                             Expr {
                                 ty: (),
@@ -861,9 +929,11 @@ fn parse_case_var() {
                             },
                         ),
                         (
-                            Pattern::Variable {
+                            Pattern {
                                 ty: (),
-                                name: Symbol::new("x"),
+                                inner: PatternKind::Variable {
+                                    name: Symbol::new("x"),
+                                }
                             },
                             Expr {
                                 ty: (),
@@ -888,9 +958,11 @@ fn parse_case_wildcard() {
         ast,
         AST(vec![Statement::Val {
             rec: false,
-            pattern: Pattern::Variable {
-                name: Symbol::new("x"),
+            pattern: Pattern {
                 ty: (),
+                inner: PatternKind::Variable {
+                    name: Symbol::new("x"),
+                }
             },
             expr: Expr {
                 ty: (),
@@ -905,10 +977,12 @@ fn parse_case_wildcard() {
                     .boxed(),
                     clauses: vec![
                         (
-                            Pattern::Constructor {
+                            Pattern {
                                 ty: (),
-                                arg: None,
-                                name: Symbol::new("true")
+                                inner: PatternKind::Constructor {
+                                    arg: None,
+                                    name: Symbol::new("true")
+                                }
                             },
                             Expr {
                                 ty: (),
@@ -919,7 +993,10 @@ fn parse_case_wildcard() {
                             },
                         ),
                         (
-                            Pattern::Wildcard { ty: () },
+                            Pattern {
+                                ty: (),
+                                inner: PatternKind::Wildcard {}
+                            },
                             Expr {
                                 ty: (),
                                 inner: ExprKind::Constructor {
@@ -943,9 +1020,11 @@ fn parse_case_int() {
         ast,
         AST(vec![Statement::Val {
             rec: false,
-            pattern: Pattern::Variable {
-                name: Symbol::new("x"),
+            pattern: Pattern {
                 ty: (),
+                inner: PatternKind::Variable {
+                    name: Symbol::new("x"),
+                }
             },
             expr: Expr {
                 ty: (),
@@ -959,7 +1038,10 @@ fn parse_case_int() {
                     .boxed(),
                     clauses: vec![
                         (
-                            Pattern::Constant { value: 1, ty: () },
+                            Pattern {
+                                ty: (),
+                                inner: PatternKind::Constant { value: 1 }
+                            },
                             Expr {
                                 ty: (),
                                 inner: ExprKind::Literal {
@@ -968,7 +1050,10 @@ fn parse_case_int() {
                             },
                         ),
                         (
-                            Pattern::Constant { value: 2, ty: () },
+                            Pattern {
+                                ty: (),
+                                inner: PatternKind::Constant { value: 2 }
+                            },
                             Expr {
                                 ty: (),
                                 inner: ExprKind::Literal {
@@ -977,7 +1062,10 @@ fn parse_case_int() {
                             },
                         ),
                         (
-                            Pattern::Wildcard { ty: () },
+                            Pattern {
+                                ty: (),
+                                inner: PatternKind::Wildcard {}
+                            },
                             Expr {
                                 ty: (),
                                 inner: ExprKind::Literal {
@@ -1000,9 +1088,11 @@ fn parse_case_tuple() {
         ast,
         AST(vec![Statement::Val {
             rec: false,
-            pattern: Pattern::Variable {
-                name: Symbol::new("x"),
+            pattern: Pattern {
                 ty: (),
+                inner: PatternKind::Variable {
+                    name: Symbol::new("x"),
+                }
             },
             expr: Expr {
                 ty: (),
@@ -1034,22 +1124,30 @@ fn parse_case_tuple() {
                     }
                     .boxed(),
                     clauses: vec![(
-                        Pattern::Tuple {
-                            tuple: vec![
-                                Pattern::Variable {
-                                    name: Symbol::new("x"),
-                                    ty: ()
-                                },
-                                Pattern::Variable {
-                                    name: Symbol::new("y"),
-                                    ty: ()
-                                },
-                                Pattern::Variable {
-                                    name: Symbol::new("z"),
-                                    ty: ()
-                                },
-                            ],
-                            ty: ()
+                        Pattern {
+                            ty: (),
+                            inner: PatternKind::Tuple {
+                                tuple: vec![
+                                    Pattern {
+                                        ty: (),
+                                        inner: PatternKind::Variable {
+                                            name: Symbol::new("x"),
+                                        }
+                                    },
+                                    Pattern {
+                                        ty: (),
+                                        inner: PatternKind::Variable {
+                                            name: Symbol::new("y"),
+                                        }
+                                    },
+                                    Pattern {
+                                        ty: (),
+                                        inner: PatternKind::Variable {
+                                            name: Symbol::new("z"),
+                                        }
+                                    },
+                                ],
+                            }
                         },
                         Expr {
                             ty: (),
@@ -1072,9 +1170,9 @@ fn parse_pattern_unit() {
         ast,
         AST(vec![Statement::Val {
             rec: false,
-            pattern: Pattern::Tuple {
-                tuple: vec![],
+            pattern: Pattern {
                 ty: (),
+                inner: PatternKind::Tuple { tuple: vec![] }
             },
             expr: Expr {
                 ty: (),
@@ -1092,7 +1190,10 @@ fn parse_case_val_pattern_wildcard() {
         ast,
         AST(vec![Statement::Val {
             rec: false,
-            pattern: Pattern::Wildcard { ty: () },
+            pattern: Pattern {
+                ty: (),
+                inner: PatternKind::Wildcard {}
+            },
             expr: Expr {
                 ty: (),
                 inner: ExprKind::Literal {
@@ -1114,15 +1215,25 @@ fn parse_funarg_pattern() {
             clauses: vec![
                 (
                     vec![
-                        Pattern::Constructor {
+                        Pattern {
                             ty: (),
-                            name: Symbol::new("SOME"),
-                            arg: Some(Box::new(Pattern::Wildcard { ty: () }))
+                            inner: PatternKind::Constructor {
+                                name: Symbol::new("SOME"),
+                                arg: Some(Box::new(Pattern {
+                                    ty: (),
+                                    inner: PatternKind::Wildcard {}
+                                }))
+                            }
                         },
-                        Pattern::Constructor {
+                        Pattern {
                             ty: (),
-                            name: Symbol::new("SOME"),
-                            arg: Some(Box::new(Pattern::Wildcard { ty: () }))
+                            inner: PatternKind::Constructor {
+                                name: Symbol::new("SOME"),
+                                arg: Some(Box::new(Pattern {
+                                    ty: (),
+                                    inner: PatternKind::Wildcard {}
+                                }))
+                            }
                         }
                     ],
                     Expr {
@@ -1134,17 +1245,23 @@ fn parse_funarg_pattern() {
                 ),
                 (
                     vec![
-                        Pattern::Variable {
+                        Pattern {
                             ty: (),
-                            name: Symbol::new("NONE"),
+                            inner: PatternKind::Variable {
+                                name: Symbol::new("NONE"),
+                            }
                         },
-                        Pattern::Constructor {
+                        Pattern {
                             ty: (),
-                            name: Symbol::new("SOME"),
-                            arg: Some(Box::new(Pattern::Variable {
-                                ty: (),
-                                name: Symbol::new("x")
-                            }))
+                            inner: PatternKind::Constructor {
+                                name: Symbol::new("SOME"),
+                                arg: Some(Box::new(Pattern {
+                                    ty: (),
+                                    inner: PatternKind::Variable {
+                                        name: Symbol::new("x")
+                                    }
+                                }))
+                            }
                         }
                     ],
                     Expr {
@@ -1169,17 +1286,23 @@ fn parse_funarg_pattern() {
                 ),
                 (
                     vec![
-                        Pattern::Constructor {
+                        Pattern {
                             ty: (),
-                            name: Symbol::new("SOME"),
-                            arg: Some(Box::new(Pattern::Variable {
-                                ty: (),
-                                name: Symbol::new("x")
-                            }))
+                            inner: PatternKind::Constructor {
+                                name: Symbol::new("SOME"),
+                                arg: Some(Box::new(Pattern {
+                                    ty: (),
+                                    inner: PatternKind::Variable {
+                                        name: Symbol::new("x")
+                                    }
+                                }))
+                            }
                         },
-                        Pattern::Variable {
+                        Pattern {
                             ty: (),
-                            name: Symbol::new("NONE"),
+                            inner: PatternKind::Variable {
+                                name: Symbol::new("NONE"),
+                            }
                         },
                     ],
                     Expr {
@@ -1204,13 +1327,17 @@ fn parse_funarg_pattern() {
                 ),
                 (
                     vec![
-                        Pattern::Variable {
+                        Pattern {
                             ty: (),
-                            name: Symbol::new("NONE"),
+                            inner: PatternKind::Variable {
+                                name: Symbol::new("NONE"),
+                            }
                         },
-                        Pattern::Variable {
+                        Pattern {
                             ty: (),
-                            name: Symbol::new("NONE"),
+                            inner: PatternKind::Variable {
+                                name: Symbol::new("NONE"),
+                            }
                         },
                     ],
                     Expr {
@@ -1234,9 +1361,11 @@ fn parse_multistatement_val_datatype() {
         AST(vec![
             Statement::Val {
                 rec: false,
-                pattern: Pattern::Variable {
+                pattern: Pattern {
                     ty: (),
-                    name: Symbol::new("version")
+                    inner: PatternKind::Variable {
+                        name: Symbol::new("version")
+                    }
                 },
                 expr: Expr {
                     ty: (),

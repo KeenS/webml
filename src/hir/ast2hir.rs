@@ -77,14 +77,15 @@ impl AST2HIR {
                 vec![]
             }
             ast::Statement::Val { rec, pattern, expr } => {
-                match pattern {
-                    ast::Pattern::Variable { name, ty } => vec![Val {
+                let ty = pattern.ty.clone();
+                match pattern.inner {
+                    ast::PatternKind::Variable { name } => vec![Val {
                         ty: self.conv_ty(ty),
                         rec: false,
                         name: name,
                         expr: self.conv_expr(expr),
                     }],
-                    ast::Pattern::Wildcard { ty } => vec![Val {
+                    ast::PatternKind::Wildcard {} => vec![Val {
                         ty: self.conv_ty(ty),
                         rec: false,
                         name: self.gensym(),
@@ -103,7 +104,7 @@ impl AST2HIR {
                     // ```
                     //
                     // FIXME: raise Match error when not match
-                    ast::Pattern::Constant { ty, .. } => vec![Val {
+                    ast::PatternKind::Constant { .. } => vec![Val {
                         ty: self.conv_ty(ty),
                         rec: false,
                         name: self.gensym(),
@@ -125,13 +126,13 @@ impl AST2HIR {
                     // ```
                     //
                     // FIXME: raise Match error when not match
-                    ast::Pattern::Constructor { ty, .. } => vec![Val {
+                    ast::PatternKind::Constructor { .. } => vec![Val {
                         ty: self.conv_ty(ty),
                         rec: false,
                         name: self.gensym(),
                         expr: self.conv_expr(expr),
                     }],
-                    ast::Pattern::Tuple { .. } => {
+                    ast::PatternKind::Tuple { .. } => {
                         // when (p1, p2, p3) binds var1 var2 var3, convert
                         //
                         // ```
@@ -270,34 +271,41 @@ impl AST2HIR {
         }
     }
     fn conv_pat(&mut self, pat: ast::TypedPattern) -> Pattern {
-        match pat {
-            ast::Pattern::Constant { value, ty } => Pattern::Constant {
+        let ty = pat.ty;
+        match pat.inner {
+            ast::PatternKind::Constant { value } => Pattern::Constant {
                 value,
                 ty: self.conv_ty(ty),
             },
-            ast::Pattern::Constructor { ty, arg, name } => Pattern::Constructor {
+            ast::PatternKind::Constructor { arg, name } => Pattern::Constructor {
                 ty: self.conv_ty(ty),
                 arg: arg.map(|pat| match *pat {
-                    ast::Pattern::Variable { name, ty } => (self.conv_ty(ty), name),
+                    ast::Pattern {
+                        ty,
+                        inner: ast::PatternKind::Variable { name },
+                    } => (self.conv_ty(ty), name),
                     _ => panic!("internal error: pattern"),
                 }),
                 descriminant: self.conv_constructor_name(&name),
             },
-            ast::Pattern::Tuple { tuple, .. } => {
+            ast::PatternKind::Tuple { tuple, .. } => {
                 let (tys, tuple) = tuple
                     .into_iter()
                     .map(|pat| match pat {
-                        ast::Pattern::Variable { name, ty } => (self.conv_ty(ty), name),
+                        ast::Pattern {
+                            ty,
+                            inner: ast::PatternKind::Variable { name },
+                        } => (self.conv_ty(ty), name),
                         _ => panic!("internal error: pattern"),
                     })
                     .unzip();
                 Pattern::Tuple { tuple, tys }
             }
-            ast::Pattern::Variable { name, ty } => Pattern::Var {
+            ast::PatternKind::Variable { name } => Pattern::Var {
                 name,
                 ty: self.conv_ty(ty),
             },
-            ast::Pattern::Wildcard { ty } => Pattern::Var {
+            ast::PatternKind::Wildcard {} => Pattern::Var {
                 name: Symbol::new("_"),
                 ty: self.conv_ty(ty),
             },

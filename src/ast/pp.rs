@@ -196,9 +196,10 @@ impl PP for Nothing {
 
 impl<Ty> PP for Pattern<Ty> {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
-        match self {
-            Pattern::Constant { value, .. } => write!(w, "{}", value),
-            Pattern::Constructor { name, arg, .. } => {
+        use PatternKind::*;
+        match &self.inner {
+            Constant { value, .. } => write!(w, "{}", value),
+            Constructor { name, arg, .. } => {
                 name.pp(w, indent)?;
                 if let Some(arg) = arg {
                     // TODO: handle cases when its in function args
@@ -208,7 +209,7 @@ impl<Ty> PP for Pattern<Ty> {
 
                 Ok(())
             }
-            Pattern::Tuple { tuple, .. } => {
+            Tuple { tuple, .. } => {
                 write!(w, "(")?;
                 inter_iter! {
                     tuple.iter(),
@@ -219,8 +220,8 @@ impl<Ty> PP for Pattern<Ty> {
                 }
                 write!(w, ")")
             }
-            Pattern::Variable { name, .. } => name.pp(w, indent),
-            Pattern::Wildcard { .. } => write!(w, "_"),
+            Variable { name, .. } => name.pp(w, indent),
+            Wildcard { .. } => write!(w, "_"),
         }
     }
 }

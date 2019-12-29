@@ -156,21 +156,21 @@ impl<Ty> CoreExpr<Ty> {
 
 impl<Ty> Pattern<Ty> {
     fn map_ty<Ty2>(self, f: &mut dyn FnMut(Ty) -> Ty2) -> Pattern<Ty2> {
-        use Pattern::*;
-        match self {
-            Constant { value, ty } => Constant { value, ty: f(ty) },
-            Constructor { name, arg, ty } => Constructor {
+        use PatternKind::*;
+        let ty = f(self.ty);
+        let inner = match self.inner {
+            Constant { value } => Constant { value },
+            Constructor { name, arg } => Constructor {
                 name,
                 arg: arg.map(|pat| Box::new(pat.map_ty(f))),
-                ty: f(ty),
             },
-            Tuple { tuple, ty } => Tuple {
+            Tuple { tuple } => Tuple {
                 tuple: tuple.into_iter().map(|pat| pat.map_ty(f)).collect(),
-                ty: f(ty),
             },
-            Variable { name, ty } => Variable { name, ty: f(ty) },
-            Wildcard { ty } => Wildcard { ty: f(ty) },
-        }
+            Variable { name } => Variable { name },
+            Wildcard {} => Wildcard {},
+        };
+        Pattern { ty, inner }
     }
 }
 
@@ -523,12 +523,13 @@ impl TyEnv {
     }
 
     fn infer_pat<'b, 'r>(&'b mut self, pat: &Pattern<NodeId>) -> Result<'r, ()> {
-        use self::Pattern::*;
-        match pat {
-            Constant { ty, value } => {
+        use self::PatternKind::*;
+        let ty = &pat.ty();
+        match &pat.inner {
+            Constant { value } => {
                 self.infer_constant(value, *ty)?;
             }
-            Constructor { ty, arg, name } => {
+            Constructor { arg, name } => {
                 let type_name = self
                     .symbol_table()
                     .get_datatype_of_constructor(name)
@@ -552,7 +553,7 @@ impl TyEnv {
                     self.unify(arg.ty(), arg_ty_id)?;
                 }
             }
-            Tuple { ty, tuple } => {
+            Tuple { tuple } => {
                 for t in tuple {
                     self.infer_pat(t)?;
                 }

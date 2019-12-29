@@ -69,9 +69,9 @@ impl Desugar {
             .into_iter()
             .map(|(pats, expr)| {
                 (
-                    Pattern::Tuple {
+                    Pattern {
                         ty: (),
-                        tuple: pats,
+                        inner: PatternKind::Tuple { tuple: pats },
                     },
                     self.transform_expr(expr),
                 )
@@ -110,7 +110,10 @@ impl Desugar {
         });
         Statement::Val {
             rec: true,
-            pattern: Pattern::Variable { ty: (), name: name },
+            pattern: Pattern {
+                ty: (),
+                inner: PatternKind::Variable { name: name },
+            },
             expr: fun,
         }
     }
@@ -183,18 +186,22 @@ impl Desugar {
             cond: self.transform_expr(*cond).boxed(),
             clauses: vec![
                 (
-                    Pattern::Constructor {
+                    Pattern {
                         ty: (),
-                        arg: None,
-                        name: Symbol::new("true"),
+                        inner: PatternKind::Constructor {
+                            arg: None,
+                            name: Symbol::new("true"),
+                        },
                     },
                     self.transform_expr(*then),
                 ),
                 (
-                    Pattern::Constructor {
+                    Pattern {
                         ty: (),
-                        arg: None,
-                        name: Symbol::new("false"),
+                        inner: PatternKind::Constructor {
+                            arg: None,
+                            name: Symbol::new("false"),
+                        },
                     },
                     self.transform_expr(*else_),
                 ),

@@ -675,23 +675,29 @@ fn pattern_atmic(i: &str) -> IResult<&str, Pattern<()>> {
 
 fn pattern_bool(i: &str) -> IResult<&str, Pattern<()>> {
     alt((
-        map(tag("true"), |_| Pattern::Constructor {
-            name: Symbol::new("true"),
-            arg: None,
+        map(tag("true"), |_| Pattern {
             ty: (),
+            inner: PatternKind::Constructor {
+                name: Symbol::new("true"),
+                arg: None,
+            },
         }),
-        map(tag("false"), |_| Pattern::Constructor {
-            name: Symbol::new("false"),
-            arg: None,
+        map(tag("false"), |_| Pattern {
             ty: (),
+            inner: PatternKind::Constructor {
+                name: Symbol::new("false"),
+                arg: None,
+            },
         }),
     ))(i)
 }
 
 fn pattern_int(i: &str) -> IResult<&str, Pattern<()>> {
-    map(digit1, |s: &str| Pattern::Constant {
+    map(digit1, |s: &str| Pattern {
         ty: (),
-        value: s.parse().unwrap(),
+        inner: PatternKind::Constant {
+            value: s.parse().unwrap(),
+        },
     })(i)
 }
 
@@ -706,14 +712,20 @@ fn pattern_tuple(i: &str) -> IResult<&str, Pattern<()>> {
 
     let mut es = es;
     es.push(e);
-    Ok((i, Pattern::Tuple { tuple: es, ty: () }))
+    Ok((
+        i,
+        Pattern {
+            ty: (),
+            inner: PatternKind::Tuple { tuple: es },
+        },
+    ))
 }
 
 fn pattern_unit(i: &str) -> IResult<&str, Pattern<()>> {
     value(
-        Pattern::Tuple {
-            tuple: vec![],
+        Pattern {
             ty: (),
+            inner: PatternKind::Tuple { tuple: vec![] },
         },
         tuple((tag("("), multispace0, tag(")"))),
     )(i)
@@ -727,20 +739,31 @@ fn pattern_constructor(i: &str) -> IResult<&str, Pattern<()>> {
     let (i, arg) = pattern_atmic(i)?;
     Ok((
         i,
-        Pattern::Constructor {
-            name,
-            arg: Some(Box::new(arg)),
+        Pattern {
             ty: (),
+            inner: PatternKind::Constructor {
+                name,
+                arg: Some(Box::new(arg)),
+            },
         },
     ))
 }
 
 fn pattern_var(i: &str) -> IResult<&str, Pattern<()>> {
-    map(symbol, |name| Pattern::Variable { name: name, ty: () })(i)
+    map(symbol, |name| Pattern {
+        ty: (),
+        inner: PatternKind::Variable { name: name },
+    })(i)
 }
 
 fn pattern_wildcard(i: &str) -> IResult<&str, Pattern<()>> {
-    value(Pattern::Wildcard { ty: () }, tag("_"))(i)
+    value(
+        Pattern {
+            ty: (),
+            inner: PatternKind::Wildcard {},
+        },
+        tag("_"),
+    )(i)
 }
 
 fn pattern_paren(i: &str) -> IResult<&str, Pattern<()>> {

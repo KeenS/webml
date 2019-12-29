@@ -75,15 +75,11 @@ impl Transform<()> for VarToConstructor {
         }
     }
 
-    fn transform_pat_variable(&mut self, ty: (), name: Symbol) -> UntypedPattern {
+    fn transform_pat_variable(&mut self, name: Symbol) -> UntypedPatternKind {
         if self.is_constructor(&name) {
-            Pattern::Constructor {
-                ty,
-                arg: None,
-                name,
-            }
+            PatternKind::Constructor { arg: None, name }
         } else {
-            Pattern::Variable { ty, name }
+            PatternKind::Variable { name }
         }
     }
 }

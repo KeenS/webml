@@ -98,27 +98,26 @@ pub trait Traverse<Ty> {
     fn traverse_lit(&mut self, _value: &mut Literal) {}
 
     fn traverse_pattern(&mut self, pattern: &mut Pattern<Ty>) {
-        use Pattern::*;
-        match pattern {
-            Constant { ty, value } => self.traverse_pat_constant(ty, value),
-            Constructor { ty, name, arg } => self.traverse_pat_constructor(ty, name, arg),
-            Tuple { ty, tuple } => self.traverse_pat_tuple(ty, tuple),
-            Variable { ty, name } => self.traverse_pat_variable(ty, name),
-            Wildcard { ty } => self.traverse_pat_wildcard(ty),
+        use PatternKind::*;
+        match &mut pattern.inner {
+            Constant { value } => self.traverse_pat_constant(value),
+            Constructor { name, arg } => self.traverse_pat_constructor(name, arg),
+            Tuple { tuple } => self.traverse_pat_tuple(tuple),
+            Variable { name } => self.traverse_pat_variable(name),
+            Wildcard {} => self.traverse_pat_wildcard(),
         }
     }
 
-    fn traverse_pat_constant(&mut self, _ty: &mut Ty, _value: &mut i64) {}
+    fn traverse_pat_constant(&mut self, _value: &mut i64) {}
     fn traverse_pat_constructor(
         &mut self,
-        _ty: &mut Ty,
         _name: &mut Symbol,
         _arg: &mut Option<Box<Pattern<Ty>>>,
     ) {
     }
-    fn traverse_pat_tuple(&mut self, _ty: &mut Ty, _tuple: &mut Vec<Pattern<Ty>>) {}
-    fn traverse_pat_variable(&mut self, _ty: &mut Ty, _value: &mut Symbol) {}
-    fn traverse_pat_wildcard(&mut self, _ty: &mut Ty) {}
+    fn traverse_pat_tuple(&mut self, _tuple: &mut Vec<Pattern<Ty>>) {}
+    fn traverse_pat_variable(&mut self, _value: &mut Symbol) {}
+    fn traverse_pat_wildcard(&mut self) {}
 }
 
 pub trait Transform<Ty> {
@@ -256,37 +255,35 @@ pub trait Transform<Ty> {
         ExprKind::Literal { value }
     }
 
-    fn transform_pattern(&mut self, pattern: Pattern<Ty>) -> Pattern<Ty> {
-        use Pattern::*;
-        match pattern {
-            Constant { ty, value } => self.transform_pat_constant(ty, value),
-            Constructor { ty, arg, name } => self.transform_pat_constructor(ty, arg, name),
-            Tuple { ty, tuple } => self.transform_pat_tuple(ty, tuple),
-            Variable { ty, name } => self.transform_pat_variable(ty, name),
-            Wildcard { ty } => self.transform_pat_wildcard(ty),
-        }
+    fn transform_pattern(&mut self, mut pattern: Pattern<Ty>) -> Pattern<Ty> {
+        use PatternKind::*;
+        pattern.inner = match pattern.inner {
+            Constant { value } => self.transform_pat_constant(value),
+            Constructor { arg, name } => self.transform_pat_constructor(arg, name),
+            Tuple { tuple } => self.transform_pat_tuple(tuple),
+            Variable { name } => self.transform_pat_variable(name),
+            Wildcard {} => self.transform_pat_wildcard(),
+        };
+        pattern
     }
 
-    fn transform_pat_constant(&mut self, ty: Ty, value: i64) -> Pattern<Ty> {
-        Pattern::Constant { value, ty }
+    fn transform_pat_constant(&mut self, value: i64) -> PatternKind<Ty> {
+        PatternKind::Constant { value }
     }
 
     fn transform_pat_constructor(
         &mut self,
-        ty: Ty,
         arg: Option<Box<Pattern<Ty>>>,
         name: Symbol,
-    ) -> Pattern<Ty> {
-        Pattern::Constructor {
+    ) -> PatternKind<Ty> {
+        PatternKind::Constructor {
             name,
             arg: arg.map(|pat| Box::new(self.transform_pattern(*pat))),
-            ty,
         }
     }
 
-    fn transform_pat_tuple(&mut self, ty: Ty, tuple: Vec<Pattern<Ty>>) -> Pattern<Ty> {
-        Pattern::Tuple {
-            ty,
+    fn transform_pat_tuple(&mut self, tuple: Vec<Pattern<Ty>>) -> PatternKind<Ty> {
+        PatternKind::Tuple {
             tuple: tuple
                 .into_iter()
                 .map(|pat| self.transform_pattern(pat))
@@ -294,11 +291,11 @@ pub trait Transform<Ty> {
         }
     }
 
-    fn transform_pat_variable(&mut self, ty: Ty, name: Symbol) -> Pattern<Ty> {
-        Pattern::Variable { name, ty }
+    fn transform_pat_variable(&mut self, name: Symbol) -> PatternKind<Ty> {
+        PatternKind::Variable { name }
     }
 
-    fn transform_pat_wildcard(&mut self, ty: Ty) -> Pattern<Ty> {
-        Pattern::Wildcard { ty }
+    fn transform_pat_wildcard(&mut self) -> PatternKind<Ty> {
+        PatternKind::Wildcard {}
     }
 }
