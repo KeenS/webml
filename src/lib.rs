@@ -17,11 +17,6 @@ pub use crate::config::Config;
 pub use crate::parser::parse;
 pub use crate::pass::{Chain, Pass};
 
-static BUILTIN_FUNCTIONS: &[&str] = &[
-    "print", // "+", "-", "*", "div", "/", "mod",
-            // "=", "<>", ">", ">=", "<", "<="
-];
-
 pub fn compile_str<'a>(input: &'a str, config: &Config) -> Result<Vec<u8>, TypeError<'a>> {
     use crate::pass::{ConvError, PrintablePass};
     use wasm::Dump;

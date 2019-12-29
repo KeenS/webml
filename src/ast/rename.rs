@@ -1,4 +1,4 @@
-use crate::ast::util::Traverse;
+use crate::ast::util::{Transform, Traverse};
 use crate::ast::*;
 use crate::config::Config;
 use crate::id::Id;
@@ -247,12 +247,28 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
     }
 }
 
+static BUILTIN_FUNCTIONS: &[(&str, BIF)] = &[
+    ("print", BIF::Print),
+    ("+", BIF::Add),
+    ("-", BIF::Sub),
+    ("*", BIF::Mul),
+    ("div", BIF::Div),
+    ("/", BIF::Divf),
+    ("mod", BIF::Mod),
+    ("=", BIF::Eq),
+    ("<>", BIF::Neq),
+    (">", BIF::Gt),
+    (">=", BIF::Ge),
+    ("<", BIF::Lt),
+    ("<=", BIF::Le),
+];
+
 impl Rename {
     pub fn new(id: Id) -> Self {
         // leave built in functions as non_renamed
-        let functions = crate::BUILTIN_FUNCTIONS
+        let functions = BUILTIN_FUNCTIONS
             .iter()
-            .map(|s| (Symbol::new(*s), 0))
+            .map(|(s, _)| (Symbol::new(*s), 0))
             .collect();
         let datatypes = ["bool"].iter().map(|s| (Symbol::new(*s), 0)).collect();
         let constructors = ["false", "true"]
@@ -291,11 +307,121 @@ impl Rename {
     }
 }
 
-impl<E, Ty: Clone> Pass<Core<Ty>, E> for Rename {
-    type Target = (SymbolTable, Core<Ty>);
+// bif -> fn x => _builtincall "bif"(x)
+struct WrapBIF {
+    bif_table: HashMap<String, BIF>,
+    id: Id,
+}
+impl WrapBIF {
+    fn new(id: Id) -> Self {
+        Self {
+            bif_table: BUILTIN_FUNCTIONS
+                .iter()
+                .map(|(s, bif)| (s.to_string(), *bif))
+                .collect(),
+            id,
+        }
+    }
 
-    fn trans(&mut self, mut ast: Core<Ty>, _: &Config) -> ::std::result::Result<Self::Target, E> {
+    fn gensym(&mut self, name: impl Into<String>) -> Symbol {
+        let id = self.id.next();
+        Symbol(name.into(), id)
+    }
+}
+
+impl Transform<()> for WrapBIF {
+    fn transform_symbol(&mut self, name: Symbol) -> UntypedCoreExprKind {
+        if name.1 == 0 {
+            if let Some(bif) = self.bif_table.get(&name.0).cloned() {
+                use BIF::*;
+                return match bif {
+                    Print => {
+                        let param = self.gensym("x");
+                        // fn x => _builtincall "print" (x)
+                        ExprKind::Fn {
+                            param: param.clone(),
+                            body: Expr {
+                                ty: (),
+                                inner: ExprKind::BuiltinCall {
+                                    fun: bif,
+                                    args: vec![Expr {
+                                        ty: (),
+                                        inner: ExprKind::Symbol { name: param },
+                                    }],
+                                },
+                            }
+                            .boxed(),
+                        }
+                    }
+                    Add | Sub | Mul | Div | Divf | Mod | Eq | Neq | Gt | Ge | Lt | Le => {
+                        let tuple = self.gensym("tuple");
+                        let l = self.gensym("x");
+                        let r = self.gensym("y");
+                        // fn tuple => case tuple of (x, y) => _builtincall "op"(x, y)
+                        ExprKind::Fn {
+                            param: tuple.clone(),
+                            body: Expr {
+                                ty: (),
+                                inner: ExprKind::Case {
+                                    cond: Expr {
+                                        ty: (),
+                                        inner: ExprKind::Symbol { name: tuple },
+                                    }
+                                    .boxed(),
+                                    clauses: vec![(
+                                        Pattern::Tuple {
+                                            ty: (),
+                                            tuple: vec![
+                                                Pattern::Variable {
+                                                    ty: (),
+                                                    name: l.clone(),
+                                                },
+                                                Pattern::Variable {
+                                                    ty: (),
+                                                    name: r.clone(),
+                                                },
+                                            ],
+                                        },
+                                        Expr {
+                                            ty: (),
+                                            inner: ExprKind::BuiltinCall {
+                                                fun: bif,
+                                                args: vec![
+                                                    Expr {
+                                                        ty: (),
+                                                        inner: ExprKind::Symbol { name: l },
+                                                    },
+                                                    Expr {
+                                                        ty: (),
+                                                        inner: ExprKind::Symbol { name: r },
+                                                    },
+                                                ],
+                                            },
+                                        },
+                                    )],
+                                },
+                            }
+                            .boxed(),
+                        }
+                    }
+                };
+            }
+        }
+        ExprKind::Symbol { name }
+    }
+}
+
+impl<E> Pass<UntypedCore, E> for Rename {
+    type Target = (SymbolTable, UntypedCore);
+
+    fn trans(
+        &mut self,
+        mut ast: UntypedCore,
+        _: &Config,
+    ) -> ::std::result::Result<Self::Target, E> {
         self.scope().traverse_ast(&mut ast);
+        let mut wrap_bif = WrapBIF::new(self.id.clone());
+        let ast = wrap_bif.transform_ast(ast);
         let symbol_table = self.generate_symbol_table();
         Ok((symbol_table, ast))
     }
