@@ -53,6 +53,10 @@ pub enum DerivedDeclaration<Ty> {
         name: Symbol,
         clauses: Vec<(Vec<Pattern<Ty>>, Expr<Ty>)>,
     },
+    Infix {
+        priority: Option<u8>,
+        names: Vec<Symbol>,
+    },
 }
 
 #[derive(Debug, Clone, PartialEq)]

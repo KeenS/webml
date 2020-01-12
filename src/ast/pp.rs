@@ -78,6 +78,17 @@ impl<Ty: PP> PP for DerivedDeclaration<Ty> {
                 });
                 Ok(())
             }
+            Infix { priority, names } => {
+                write!(w, "infix")?;
+                if let Some(p) = priority {
+                    write!(w, " {}", p)?;
+                }
+                for name in names {
+                    write!(w, " ")?;
+                    name.pp(w, indent)?;
+                }
+                Ok(())
+            }
         }
     }
 }

@@ -9,16 +9,17 @@ use nom::number::complete::recognize_float;
 use nom::sequence::tuple;
 use nom::IResult;
 use std::cell::RefCell;
+use std::collections::BTreeMap;
 
 static KEYWORDS: &[&str] = &[
     "val", "fun", "fn", "let", "in", "end", "if", "then", "else", "case", "of", "_", "datatype",
-    "op", "=>",
+    "op", "=>", "infix", "infixr",
 ];
 
 static RESERVED: &[&str] = &["|", "=", "#"];
 
 struct Parser {
-    infixes: RefCell<Vec<Vec<String>>>,
+    infixes: RefCell<BTreeMap<u8, Vec<Symbol>>>,
 }
 
 impl Parser {
@@ -32,18 +33,35 @@ impl Parser {
         static INFIX3: &[&str] = &[];
         static INFIX2: &[&str] = &[];
         static INFIX1: &[&str] = &[];
+        static INFIX0: &[&str] = &[];
 
-        static FIXTY_TABLE: [&[&str]; 9] = [
-            INFIX1, INFIX2, INFIX3, INFIX4, INFIX5, INFIX6, INFIX7, INFIX8, INFIX9,
+        static FIXTY_TABLE: [&[&str]; 10] = [
+            INFIX0, INFIX1, INFIX2, INFIX3, INFIX4, INFIX5, INFIX6, INFIX7, INFIX8, INFIX9,
         ];
 
         let infixes = FIXTY_TABLE
             .into_iter()
-            .map(|&fixties| fixties.into_iter().map(|&s| s.into()).collect())
+            .enumerate()
+            .map(|(priority, &fixties)| {
+                (
+                    priority as u8,
+                    fixties.into_iter().map(|&s| Symbol::new(s)).collect(),
+                )
+            })
             .collect();
         Self {
             infixes: RefCell::new(infixes),
         }
+    }
+
+    // TODO: support let scopes
+    fn new_infix_op(&self, priority: Option<u8>, mut names: Vec<Symbol>) {
+        let priority = priority.unwrap_or(0);
+        let mut infixes = self.infixes.borrow_mut();
+        infixes
+            .entry(priority)
+            .or_insert(Vec::new())
+            .append(&mut names)
     }
 }
 
@@ -57,7 +75,14 @@ impl Parser {
         }
     }
     fn decl(&self) -> impl Fn(&str) -> IResult<&str, Declaration<()>> + '_ {
-        move |i| alt((self.decl_datatype(), self.decl_val(), self.decl_fun()))(i)
+        move |i| {
+            alt((
+                self.decl_datatype(),
+                self.decl_val(),
+                self.decl_fun(),
+                self.decl_infix(),
+            ))(i)
+        }
     }
 
     fn decl_datatype(&self) -> impl Fn(&str) -> IResult<&str, Declaration<()>> + '_ {
@@ -148,6 +173,25 @@ impl Parser {
             )))(i)?;
 
             Ok((i, (name, param)))
+        }
+    }
+
+    fn decl_infix(&self) -> impl Fn(&str) -> IResult<&str, Declaration<()>> + '_ {
+        move |i| {
+            let (i, _) = tag("infix")(i)?;
+            let (i, _) = multispace1(i)?;
+            let (i, priority) = opt(digit1)(i)?;
+            let (i, _) = multispace1(i)?;
+            let (i, names) = separated_nonempty_list(multispace1, self.symbol())(i)?;
+            let priority = priority.map(|s| {
+                s.parse()
+                    .expect("internal error: falied to parse digits as integer")
+            });
+            self.new_infix_op(priority, names.clone());
+            Ok((
+                i,
+                Declaration::D(DerivedDeclaration::Infix { priority, names }),
+            ))
         }
     }
 
@@ -301,9 +345,9 @@ impl Parser {
                 .into_iter()
                 .map(|mut e| match e.inner {
                     ExprKind::Symbol { name } => {
-                        for (f, table) in self.infixes.borrow().iter().enumerate() {
-                            if table.contains(&name.0) {
-                                return Fix(f as u8 + 1, name);
+                        for (&f, table) in &*self.infixes.borrow() {
+                            if table.contains(&name) {
+                                return Fix(f, name);
                             }
                         }
                         e.inner = ExprKind::Symbol { name };
