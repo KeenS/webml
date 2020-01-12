@@ -51,16 +51,16 @@ impl Parser {
     fn top(&self) -> impl Fn(&str) -> IResult<&str, UntypedAst> + '_ {
         move |i| {
             let (i, _) = multispace0(i)?;
-            let (i, tops) = separated_list(multispace1, self.bind())(i)?;
+            let (i, tops) = separated_list(multispace1, self.decl())(i)?;
             let (i, _) = multispace0(i)?;
             Ok((i, AST(tops)))
         }
     }
-    fn bind(&self) -> impl Fn(&str) -> IResult<&str, Statement<()>> + '_ {
-        move |i| alt((self.bind_datatype(), self.bind_val(), self.bind_fun()))(i)
+    fn decl(&self) -> impl Fn(&str) -> IResult<&str, Statement<()>> + '_ {
+        move |i| alt((self.decl_datatype(), self.decl_val(), self.decl_fun()))(i)
     }
 
-    fn bind_datatype(&self) -> impl Fn(&str) -> IResult<&str, Statement<()>> + '_ {
+    fn decl_datatype(&self) -> impl Fn(&str) -> IResult<&str, Statement<()>> + '_ {
         move |i| {
             let (i, _) = tag("datatype")(i)?;
             let (i, _) = multispace1(i)?;
@@ -76,7 +76,7 @@ impl Parser {
         }
     }
 
-    fn bind_val(&self) -> impl Fn(&str) -> IResult<&str, Statement<()>> + '_ {
+    fn decl_val(&self) -> impl Fn(&str) -> IResult<&str, Statement<()>> + '_ {
         move |i| {
             let (i, _) = tag("val")(i)?;
             let (i, _) = multispace1(i)?;
@@ -96,7 +96,7 @@ impl Parser {
         }
     }
 
-    fn bind_fun(&self) -> impl Fn(&str) -> IResult<&str, Statement<()>> + '_ {
+    fn decl_fun(&self) -> impl Fn(&str) -> IResult<&str, Statement<()>> + '_ {
         move |i| {
             let (i, _) = tag("fun")(i)?;
             let (i, _) = multispace1(i)?;
@@ -104,7 +104,7 @@ impl Parser {
                 tuple((multispace0, tag("|"), multispace0)),
                 map(
                     tuple((
-                        self.bind_funbind(),
+                        self.decl_funbind(),
                         multispace0,
                         tag("="),
                         multispace0,
@@ -126,7 +126,7 @@ impl Parser {
         }
     }
 
-    fn bind_funbind(&self) -> impl Fn(&str) -> IResult<&str, (Symbol, Vec<Pattern<()>>)> + '_ {
+    fn decl_funbind(&self) -> impl Fn(&str) -> IResult<&str, (Symbol, Vec<Pattern<()>>)> + '_ {
         move |i| {
             map(
                 tuple((
@@ -182,7 +182,7 @@ impl Parser {
         move |i| {
             let (i, _) = tag("let")(i)?;
             let (i, _) = multispace1(i)?;
-            let (i, binds) = separated_list(multispace1, self.bind())(i)?;
+            let (i, binds) = separated_list(multispace1, self.decl())(i)?;
             let (i, _) = multispace1(i)?;
             let (i, _) = tag("in")(i)?;
             let (i, _) = multispace1(i)?;
