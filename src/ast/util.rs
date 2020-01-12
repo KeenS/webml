@@ -2,14 +2,14 @@ use crate::ast::*;
 
 pub trait Traverse<Ty> {
     fn traverse_ast(&mut self, ast: &mut Core<Ty>) {
-        for stmt in ast.0.iter_mut() {
-            self.traverse_statement(stmt)
+        for decl in ast.0.iter_mut() {
+            self.traverse_statement(decl)
         }
     }
 
-    fn traverse_statement(&mut self, stmt: &mut CoreDeclaration<Ty>) {
+    fn traverse_statement(&mut self, decl: &mut CoreDeclaration<Ty>) {
         use Declaration::*;
-        match stmt {
+        match decl {
             Datatype { name, constructors } => self.traverse_datatype(name, constructors),
             Val { rec, pattern, expr } => self.traverse_val(rec, pattern, expr),
             D(_) => (),
@@ -49,8 +49,8 @@ pub trait Traverse<Ty> {
         }
     }
     fn traverse_binds(&mut self, binds: &mut Vec<CoreDeclaration<Ty>>, ret: &mut Box<CoreExpr<Ty>>) {
-        for stmt in binds.iter_mut() {
-            self.traverse_statement(stmt)
+        for decl in binds.iter_mut() {
+            self.traverse_statement(decl)
         }
         self.traverse_expr(ret)
     }
@@ -125,13 +125,13 @@ pub trait Transform<Ty> {
         AST(ast
             .0
             .into_iter()
-            .map(|stmt| self.transform_statement(stmt))
+            .map(|decl| self.transform_statement(decl))
             .collect())
     }
 
-    fn transform_statement(&mut self, stmt: CoreDeclaration<Ty>) -> CoreDeclaration<Ty> {
+    fn transform_statement(&mut self, decl: CoreDeclaration<Ty>) -> CoreDeclaration<Ty> {
         use Declaration::*;
-        match stmt {
+        match decl {
             Datatype { name, constructors } => self.transform_datatype(name, constructors),
             Val { rec, pattern, expr } => self.transform_val(rec, pattern, expr),
             D(d) => match d {},
@@ -183,7 +183,7 @@ pub trait Transform<Ty> {
         ExprKind::Binds {
             binds: binds
                 .into_iter()
-                .map(|stmt| self.transform_statement(stmt))
+                .map(|decl| self.transform_statement(decl))
                 .collect(),
             ret: self.transform_expr(*ret).boxed(),
         }

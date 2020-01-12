@@ -326,15 +326,15 @@ impl TyEnv {
 
 impl TyEnv {
     fn infer_ast<'b, 'r>(&'b mut self, ast: &Core<NodeId>) -> Result<'r, ()> {
-        for stmt in ast.0.iter() {
-            self.infer_statement(&stmt)?;
+        for decl in ast.0.iter() {
+            self.infer_statement(&decl)?;
         }
         Ok(())
     }
 
-    fn infer_statement<'b, 'r>(&'b mut self, stmt: &CoreDeclaration<NodeId>) -> Result<'r, ()> {
+    fn infer_statement<'b, 'r>(&'b mut self, decl: &CoreDeclaration<NodeId>) -> Result<'r, ()> {
         use Declaration::*;
-        match stmt {
+        match decl {
             Datatype { .. } => Ok(()),
             Val { rec, pattern, expr } => {
                 let names = pattern.binds();
@@ -366,8 +366,8 @@ impl TyEnv {
         let ty = &expr.ty;
         match &expr.inner {
             Binds { binds, ret } => {
-                for stmt in binds {
-                    self.infer_statement(stmt)?;
+                for decl in binds {
+                    self.infer_statement(decl)?;
                 }
                 self.unify(ret.ty(), *ty)?;
                 self.infer_expr(ret)?;

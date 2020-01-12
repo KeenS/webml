@@ -66,12 +66,12 @@ impl AST2HIR {
         HIR(ast
             .0
             .into_iter()
-            .flat_map(|stmt| self.conv_statement(stmt))
+            .flat_map(|decl| self.conv_statement(decl))
             .collect())
     }
 
-    fn conv_statement(&mut self, stmt: ast::TypedCoreDeclaration) -> Vec<Val> {
-        match stmt {
+    fn conv_statement(&mut self, decl: ast::TypedCoreDeclaration) -> Vec<Val> {
+        match decl {
             ast::Declaration::Datatype { .. } => {
                 // ignore
                 vec![]

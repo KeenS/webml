@@ -24,13 +24,13 @@ impl Desugar {
         AST(ast
             .0
             .into_iter()
-            .map(|stmt| self.transform_statement(stmt))
+            .map(|decl| self.transform_statement(decl))
             .collect())
     }
 
-    fn transform_statement(&mut self, stmt: Declaration<()>) -> UntypedCoreDeclaration {
+    fn transform_statement(&mut self, decl: Declaration<()>) -> UntypedCoreDeclaration {
         use Declaration::*;
-        match stmt {
+        match decl {
             Datatype { name, constructors } => self.transform_datatype(name, constructors),
             Val { rec, pattern, expr } => self.transform_val(rec, pattern, expr),
             D(DerivedDeclaration::Fun { name, clauses }) => self.transform_fun(name, clauses),
@@ -142,7 +142,7 @@ impl Desugar {
         ExprKind::Binds {
             binds: binds
                 .into_iter()
-                .map(|stmt| self.transform_statement(stmt))
+                .map(|decl| self.transform_statement(decl))
                 .collect(),
             ret: self.transform_expr(*ret).boxed(),
         }
