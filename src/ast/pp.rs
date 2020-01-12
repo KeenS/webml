@@ -18,9 +18,9 @@ impl<Ty: PP, DE: PP, DS: PP> PP for AST<Ty, DE, DS> {
     }
 }
 
-impl<Ty: PP, DE: PP, DS: PP> PP for Statement<Ty, DE, DS> {
+impl<Ty: PP, DE: PP, DS: PP> PP for Declaration<Ty, DE, DS> {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
-        use Statement::*;
+        use Declaration::*;
         match self {
             Datatype { name, constructors } => {
                 write!(w, "datatype ")?;
@@ -54,9 +54,9 @@ impl<Ty: PP, DE: PP, DS: PP> PP for Statement<Ty, DE, DS> {
     }
 }
 
-impl<Ty: PP> PP for DerivedStatement<Ty> {
+impl<Ty: PP> PP for DerivedDeclaration<Ty> {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
-        use DerivedStatement::*;
+        use DerivedDeclaration::*;
         match self {
             Fun { name, clauses, .. } => {
                 write!(w, "{}", Self::nspaces(indent))?;

@@ -28,12 +28,12 @@ impl Desugar {
             .collect())
     }
 
-    fn transform_statement(&mut self, stmt: Statement<()>) -> UntypedCoreStatement {
-        use Statement::*;
+    fn transform_statement(&mut self, stmt: Declaration<()>) -> UntypedCoreDeclaration {
+        use Declaration::*;
         match stmt {
             Datatype { name, constructors } => self.transform_datatype(name, constructors),
             Val { rec, pattern, expr } => self.transform_val(rec, pattern, expr),
-            D(DerivedStatement::Fun { name, clauses }) => self.transform_fun(name, clauses),
+            D(DerivedDeclaration::Fun { name, clauses }) => self.transform_fun(name, clauses),
         }
     }
 
@@ -41,8 +41,8 @@ impl Desugar {
         &mut self,
         name: Symbol,
         constructors: Vec<(Symbol, Option<Type>)>,
-    ) -> UntypedCoreStatement {
-        Statement::Datatype { name, constructors }
+    ) -> UntypedCoreDeclaration {
+        Declaration::Datatype { name, constructors }
     }
 
     fn transform_val(
@@ -50,8 +50,8 @@ impl Desugar {
         rec: bool,
         pattern: UntypedPattern,
         expr: UntypedExpr,
-    ) -> UntypedCoreStatement {
-        Statement::Val {
+    ) -> UntypedCoreDeclaration {
+        Declaration::Val {
             rec,
             pattern: self.transform_pattern(pattern),
             expr: self.transform_expr(expr),
@@ -62,7 +62,7 @@ impl Desugar {
         &mut self,
         name: Symbol,
         clauses: Vec<(Vec<UntypedPattern>, UntypedExpr)>,
-    ) -> UntypedCoreStatement {
+    ) -> UntypedCoreDeclaration {
         let arity = clauses[0].0.len();
 
         let clauses = clauses
@@ -108,7 +108,7 @@ impl Desugar {
                 body: body.boxed(),
             },
         });
-        Statement::Val {
+        Declaration::Val {
             rec: true,
             pattern: Pattern {
                 ty: (),
@@ -136,7 +136,7 @@ impl Desugar {
     }
     fn transform_binds(
         &mut self,
-        binds: Vec<UntypedStatement>,
+        binds: Vec<UntypedDeclaration>,
         ret: Box<UntypedExpr>,
     ) -> UntypedCoreExprKind {
         ExprKind::Binds {

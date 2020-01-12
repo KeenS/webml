@@ -24,17 +24,17 @@ pub type UntypedCore = Core<()>;
 pub type TypedCore = Core<Type>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct AST<Ty, DE = DerivedExprKind<Ty>, DS = DerivedStatement<Ty>>(
-    pub Vec<Statement<Ty, DE, DS>>,
+pub struct AST<Ty, DE = DerivedExprKind<Ty>, DS = DerivedDeclaration<Ty>>(
+    pub Vec<Declaration<Ty, DE, DS>>,
 );
 
-pub type UntypedStatement = Statement<(), DerivedExprKind<()>, DerivedStatement<()>>;
-pub type CoreStatement<Ty> = Statement<Ty, Nothing, Nothing>;
-pub type UntypedCoreStatement = CoreStatement<()>;
-pub type TypedCoreStatement = CoreStatement<Type>;
+pub type UntypedDeclaration = Declaration<(), DerivedExprKind<()>, DerivedDeclaration<()>>;
+pub type CoreDeclaration<Ty> = Declaration<Ty, Nothing, Nothing>;
+pub type UntypedCoreDeclaration = CoreDeclaration<()>;
+pub type TypedCoreDeclaration = CoreDeclaration<Type>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Statement<Ty, DE = DerivedExprKind<Ty>, DS = DerivedStatement<Ty>> {
+pub enum Declaration<Ty, DE = DerivedExprKind<Ty>, DS = DerivedDeclaration<Ty>> {
     Datatype {
         name: Symbol,
         constructors: Vec<(Symbol, Option<Type>)>,
@@ -48,7 +48,7 @@ pub enum Statement<Ty, DE = DerivedExprKind<Ty>, DS = DerivedStatement<Ty>> {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum DerivedStatement<Ty> {
+pub enum DerivedDeclaration<Ty> {
     Fun {
         name: Symbol,
         clauses: Vec<(Vec<Pattern<Ty>>, Expr<Ty>)>,
@@ -72,13 +72,13 @@ pub struct Annot<Ty, Inner> {
     pub inner: Inner,
 }
 
-pub type Expr<Ty, DE = DerivedExprKind<Ty>, DS = DerivedStatement<Ty>> =
+pub type Expr<Ty, DE = DerivedExprKind<Ty>, DS = DerivedDeclaration<Ty>> =
     Annot<Ty, ExprKind<Ty, DE, DS>>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum ExprKind<Ty, DE = DerivedExprKind<Ty>, DS = DerivedStatement<Ty>> {
+pub enum ExprKind<Ty, DE = DerivedExprKind<Ty>, DS = DerivedDeclaration<Ty>> {
     Binds {
-        binds: Vec<Statement<Ty, DE, DS>>,
+        binds: Vec<Declaration<Ty, DE, DS>>,
         ret: Box<Expr<Ty, DE, DS>>,
     },
     BuiltinCall {

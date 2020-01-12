@@ -70,13 +70,13 @@ impl AST2HIR {
             .collect())
     }
 
-    fn conv_statement(&mut self, stmt: ast::TypedCoreStatement) -> Vec<Val> {
+    fn conv_statement(&mut self, stmt: ast::TypedCoreDeclaration) -> Vec<Val> {
         match stmt {
-            ast::Statement::Datatype { .. } => {
+            ast::Declaration::Datatype { .. } => {
                 // ignore
                 vec![]
             }
-            ast::Statement::Val { rec, pattern, expr } => {
+            ast::Declaration::Val { rec, pattern, expr } => {
                 let ty = pattern.ty.clone();
                 match pattern.inner {
                     ast::PatternKind::Variable { name } => vec![Val {
@@ -206,7 +206,7 @@ impl AST2HIR {
                     }
                 }
             }
-            ast::Statement::D(d) => match d {},
+            ast::Declaration::D(d) => match d {},
         }
     }
 

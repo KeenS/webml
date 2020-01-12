@@ -185,7 +185,7 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
         }
     }
 
-    fn traverse_binds(&mut self, binds: &mut Vec<CoreStatement<Ty>>, ret: &mut Box<CoreExpr<Ty>>) {
+    fn traverse_binds(&mut self, binds: &mut Vec<CoreDeclaration<Ty>>, ret: &mut Box<CoreExpr<Ty>>) {
         let mut scope = self.new_scope();
         for bind in binds.iter_mut() {
             scope.traverse_statement(bind);

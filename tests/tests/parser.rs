@@ -1,5 +1,5 @@
 use webml::ast::{
-    DerivedExprKind, DerivedStatement, Expr, ExprKind, Pattern, PatternKind, Statement, Type, AST,
+    DerivedExprKind, DerivedDeclaration, Expr, ExprKind, Pattern, PatternKind, Declaration, Type, AST,
 };
 use webml::parse;
 use webml::prim::*;
@@ -10,7 +10,7 @@ fn parse_int() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Statement::Val {
+        AST(vec![Declaration::Val {
             rec: false,
             pattern: Pattern {
                 ty: (),
@@ -34,7 +34,7 @@ fn parse_float() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Statement::Val {
+        AST(vec![Declaration::Val {
             rec: false,
             pattern: Pattern {
                 ty: (),
@@ -58,7 +58,7 @@ fn parse_bool_true() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Statement::Val {
+        AST(vec![Declaration::Val {
             rec: false,
             pattern: Pattern {
                 ty: (),
@@ -83,7 +83,7 @@ fn parse_bool_false() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Statement::Val {
+        AST(vec![Declaration::Val {
             rec: false,
             pattern: Pattern {
                 ty: (),
@@ -108,7 +108,7 @@ fn parse_unit() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Statement::Val {
+        AST(vec![Declaration::Val {
             rec: false,
             pattern: Pattern {
                 ty: (),
@@ -130,7 +130,7 @@ fn parse_binop() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Statement::Val {
+        AST(vec![Declaration::Val {
             rec: false,
             pattern: Pattern {
                 ty: (),
@@ -180,7 +180,7 @@ fn parse_binop_assoc() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Statement::Val {
+        AST(vec![Declaration::Val {
             rec: false,
             pattern: Pattern {
                 ty: (),
@@ -256,7 +256,7 @@ fn parse_uiltincall() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Statement::Val {
+        AST(vec![Declaration::Val {
             rec: false,
             pattern: Pattern {
                 ty: (),
@@ -294,7 +294,7 @@ fn parse_binop_pref() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Statement::Val {
+        AST(vec![Declaration::Val {
             rec: false,
             pattern: Pattern {
                 ty: (),
@@ -370,7 +370,7 @@ fn parse_fn_unary() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Statement::Val {
+        AST(vec![Declaration::Val {
             rec: false,
             pattern: Pattern {
                 ty: (),
@@ -401,7 +401,7 @@ fn parse_datatype_single() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Statement::Datatype {
+        AST(vec![Declaration::Datatype {
             name: Symbol::new("hoge"),
             constructors: vec![(Symbol::new("Hoge"), None)]
         },])
@@ -414,7 +414,7 @@ fn parse_datatype_multi() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Statement::Datatype {
+        AST(vec![Declaration::Datatype {
             name: Symbol::new("hoge"),
             constructors: vec![
                 (Symbol::new("Hoge"), None),
@@ -431,7 +431,7 @@ fn parse_datatype_arg1() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Statement::Datatype {
+        AST(vec![Declaration::Datatype {
             name: Symbol::new("hoge"),
             constructors: vec![
                 (Symbol::new("Hoge"), Some(Type::Int)),
@@ -447,7 +447,7 @@ fn parse_datatype_arg2() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Statement::Datatype {
+        AST(vec![Declaration::Datatype {
             name: Symbol::new("hoge"),
             constructors: vec![
                 (Symbol::new("Hoge"), Some(Type::Int)),
@@ -470,7 +470,7 @@ fn parse_datatype_tuple() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Statement::Datatype {
+        AST(vec![Declaration::Datatype {
             name: Symbol::new("hoge"),
             constructors: vec![(
                 Symbol::new("Hoge"),
@@ -487,7 +487,7 @@ fn parse_datatype_arg3() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Statement::Datatype {
+        AST(vec![Declaration::Datatype {
             name: Symbol::new("hoge"),
             constructors: vec![
                 (Symbol::new("Hoge"), Some(Type::Int)),
@@ -513,7 +513,7 @@ fn parse_fun_unary() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Statement::D(DerivedStatement::Fun {
+        AST(vec![Declaration::D(DerivedDeclaration::Fun {
             name: Symbol::new("f"),
             clauses: vec![(
                 vec![Pattern {
@@ -539,7 +539,7 @@ fn parse_fun_binary() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Statement::D(DerivedStatement::Fun {
+        AST(vec![Declaration::D(DerivedDeclaration::Fun {
             name: Symbol::new("f"),
             clauses: vec![(
                 vec![
@@ -573,7 +573,7 @@ fn parse_fun_pattern() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Statement::D(DerivedStatement::Fun {
+        AST(vec![Declaration::D(DerivedDeclaration::Fun {
             name: Symbol::new("f"),
             clauses: vec![(
                 vec![Pattern {
@@ -612,7 +612,7 @@ fn parse_fun_op() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Statement::D(DerivedStatement::Fun {
+        AST(vec![Declaration::D(DerivedDeclaration::Fun {
             name: Symbol::new("+"),
             clauses: vec![(
                 vec![Pattern {
@@ -651,7 +651,7 @@ fn parse_fun_multiclause() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Statement::D(DerivedStatement::Fun {
+        AST(vec![Declaration::D(DerivedDeclaration::Fun {
             name: Symbol::new("f"),
             clauses: vec![
                 (
@@ -712,7 +712,7 @@ fn parse_if() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Statement::Val {
+        AST(vec![Declaration::Val {
             rec: false,
             pattern: Pattern {
                 ty: (),
@@ -759,7 +759,7 @@ fn parse_case_bool() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Statement::Val {
+        AST(vec![Declaration::Val {
             rec: false,
             pattern: Pattern {
                 ty: (),
@@ -824,7 +824,7 @@ fn parse_case_constructor() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Statement::Val {
+        AST(vec![Declaration::Val {
             rec: false,
             pattern: Pattern {
                 ty: (),
@@ -892,7 +892,7 @@ fn parse_case_var() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Statement::Val {
+        AST(vec![Declaration::Val {
             rec: false,
             pattern: Pattern {
                 ty: (),
@@ -956,7 +956,7 @@ fn parse_case_wildcard() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Statement::Val {
+        AST(vec![Declaration::Val {
             rec: false,
             pattern: Pattern {
                 ty: (),
@@ -1018,7 +1018,7 @@ fn parse_case_int() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Statement::Val {
+        AST(vec![Declaration::Val {
             rec: false,
             pattern: Pattern {
                 ty: (),
@@ -1086,7 +1086,7 @@ fn parse_case_tuple() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Statement::Val {
+        AST(vec![Declaration::Val {
             rec: false,
             pattern: Pattern {
                 ty: (),
@@ -1168,7 +1168,7 @@ fn parse_pattern_unit() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Statement::Val {
+        AST(vec![Declaration::Val {
             rec: false,
             pattern: Pattern {
                 ty: (),
@@ -1188,7 +1188,7 @@ fn parse_case_val_pattern_wildcard() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Statement::Val {
+        AST(vec![Declaration::Val {
             rec: false,
             pattern: Pattern {
                 ty: (),
@@ -1210,7 +1210,7 @@ fn parse_funarg_pattern() {
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Statement::D(DerivedStatement::Fun {
+        AST(vec![Declaration::D(DerivedDeclaration::Fun {
             name: Symbol::new("xor"),
             clauses: vec![
                 (
@@ -1359,7 +1359,7 @@ fn parse_multistatement_val_datatype() {
     assert_eq!(
         ast,
         AST(vec![
-            Statement::Val {
+            Declaration::Val {
                 rec: false,
                 pattern: Pattern {
                     ty: (),
@@ -1374,7 +1374,7 @@ fn parse_multistatement_val_datatype() {
                     }
                 }
             },
-            Statement::Datatype {
+            Declaration::Datatype {
                 name: Symbol::new("order"),
                 constructors: vec![
                     (Symbol::new("GREATER"), None),

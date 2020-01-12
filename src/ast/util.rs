@@ -7,8 +7,8 @@ pub trait Traverse<Ty> {
         }
     }
 
-    fn traverse_statement(&mut self, stmt: &mut CoreStatement<Ty>) {
-        use Statement::*;
+    fn traverse_statement(&mut self, stmt: &mut CoreDeclaration<Ty>) {
+        use Declaration::*;
         match stmt {
             Datatype { name, constructors } => self.traverse_datatype(name, constructors),
             Val { rec, pattern, expr } => self.traverse_val(rec, pattern, expr),
@@ -48,7 +48,7 @@ pub trait Traverse<Ty> {
             D(_) => (),
         }
     }
-    fn traverse_binds(&mut self, binds: &mut Vec<CoreStatement<Ty>>, ret: &mut Box<CoreExpr<Ty>>) {
+    fn traverse_binds(&mut self, binds: &mut Vec<CoreDeclaration<Ty>>, ret: &mut Box<CoreExpr<Ty>>) {
         for stmt in binds.iter_mut() {
             self.traverse_statement(stmt)
         }
@@ -129,8 +129,8 @@ pub trait Transform<Ty> {
             .collect())
     }
 
-    fn transform_statement(&mut self, stmt: CoreStatement<Ty>) -> CoreStatement<Ty> {
-        use Statement::*;
+    fn transform_statement(&mut self, stmt: CoreDeclaration<Ty>) -> CoreDeclaration<Ty> {
+        use Declaration::*;
         match stmt {
             Datatype { name, constructors } => self.transform_datatype(name, constructors),
             Val { rec, pattern, expr } => self.transform_val(rec, pattern, expr),
@@ -142,8 +142,8 @@ pub trait Transform<Ty> {
         &mut self,
         name: Symbol,
         constructors: Vec<(Symbol, Option<Type>)>,
-    ) -> CoreStatement<Ty> {
-        Statement::Datatype { name, constructors }
+    ) -> CoreDeclaration<Ty> {
+        Declaration::Datatype { name, constructors }
     }
 
     fn transform_val(
@@ -151,8 +151,8 @@ pub trait Transform<Ty> {
         rec: bool,
         pattern: Pattern<Ty>,
         expr: CoreExpr<Ty>,
-    ) -> CoreStatement<Ty> {
-        Statement::Val {
+    ) -> CoreDeclaration<Ty> {
+        Declaration::Val {
             rec,
             pattern: self.transform_pattern(pattern),
             expr: self.transform_expr(expr),
@@ -177,7 +177,7 @@ pub trait Transform<Ty> {
     }
     fn transform_binds(
         &mut self,
-        binds: Vec<CoreStatement<Ty>>,
+        binds: Vec<CoreDeclaration<Ty>>,
         ret: Box<CoreExpr<Ty>>,
     ) -> CoreExprKind<Ty> {
         ExprKind::Binds {

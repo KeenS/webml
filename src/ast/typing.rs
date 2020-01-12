@@ -94,9 +94,9 @@ impl<Ty> Core<Ty> {
     }
 }
 
-impl<Ty> CoreStatement<Ty> {
-    fn map_ty<Ty2>(self, f: &mut dyn FnMut(Ty) -> Ty2) -> CoreStatement<Ty2> {
-        use Statement::*;
+impl<Ty> CoreDeclaration<Ty> {
+    fn map_ty<Ty2>(self, f: &mut dyn FnMut(Ty) -> Ty2) -> CoreDeclaration<Ty2> {
+        use Declaration::*;
         match self {
             Datatype { name, constructors } => Datatype { name, constructors },
 
@@ -332,8 +332,8 @@ impl TyEnv {
         Ok(())
     }
 
-    fn infer_statement<'b, 'r>(&'b mut self, stmt: &CoreStatement<NodeId>) -> Result<'r, ()> {
-        use Statement::*;
+    fn infer_statement<'b, 'r>(&'b mut self, stmt: &CoreDeclaration<NodeId>) -> Result<'r, ()> {
+        use Declaration::*;
         match stmt {
             Datatype { .. } => Ok(()),
             Val { rec, pattern, expr } => {

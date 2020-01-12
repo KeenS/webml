@@ -100,7 +100,7 @@ impl CaseSimplify {
             .fold(expr, |acc, (pattern, (cty, name))| Expr {
                 ty: ty.clone(),
                 inner: ExprKind::Binds {
-                    binds: vec![Statement::Val {
+                    binds: vec![Declaration::Val {
                         rec: false,
                         expr: Expr {
                             ty: cty,
@@ -145,7 +145,7 @@ impl CaseSimplify {
                         arm = Expr {
                             ty: arm.ty(),
                             inner: ExprKind::Binds {
-                                binds: vec![Statement::Val {
+                                binds: vec![Declaration::Val {
                                     rec: false,
                                     pattern: Pattern {
                                         ty: removed_pattern.ty,
@@ -418,7 +418,7 @@ impl CaseSimplify {
                     let arm = Expr {
                         ty: arm.ty(),
                         inner: ExprKind::Binds {
-                            binds: vec![Statement::Val {
+                            binds: vec![Declaration::Val {
                                 rec: false,
                                 pattern: Pattern {
                                     ty: head.ty.clone(),
@@ -461,7 +461,7 @@ impl CaseSimplify {
                     let arm = Expr {
                         ty: arm.ty(),
                         inner: ExprKind::Binds {
-                            binds: vec![Statement::Val {
+                            binds: vec![Declaration::Val {
                                 rec: false,
                                 pattern: Pattern {
                                     ty: head.ty.clone(),
@@ -498,7 +498,7 @@ impl CaseSimplify {
                     let arm = Expr {
                         ty: arm.ty(),
                         inner: ExprKind::Binds {
-                            binds: vec![Statement::Val {
+                            binds: vec![Declaration::Val {
                                 rec: false,
                                 expr: Expr {
                                     ty: p.ty.clone(),
@@ -550,7 +550,7 @@ impl Transform<Type> for CaseSimplify {
         rec: bool,
         pattern: TypedPattern,
         expr: TypedCoreExpr,
-    ) -> TypedCoreStatement {
+    ) -> TypedCoreDeclaration {
         match pattern {
             // dirty heuristic for simple patterns
             TypedPattern {
@@ -560,7 +560,7 @@ impl Transform<Type> for CaseSimplify {
             | TypedPattern {
                 inner: TypedPatternKind::Wildcard { .. },
                 ..
-            } => Statement::Val {
+            } => Declaration::Val {
                 rec,
                 pattern,
                 expr: self.transform_expr(expr),
@@ -594,7 +594,7 @@ impl Transform<Type> for CaseSimplify {
                     inner: ExprKind::Tuple { tuple },
                 };
                 let cond = self.transform_expr(expr);
-                Statement::Val {
+                Declaration::Val {
                     rec,
                     pattern: tuple_pat,
                     expr: Expr {
@@ -623,7 +623,7 @@ impl Transform<Type> for CaseSimplify {
             .map(|(pat, arm)| (vec![pat], self.transform_expr(arm)))
             .collect();
         ExprKind::Binds {
-            binds: vec![Statement::Val {
+            binds: vec![Declaration::Val {
                 pattern: Pattern {
                     ty: condty.clone(),
                     inner: PatternKind::Variable {

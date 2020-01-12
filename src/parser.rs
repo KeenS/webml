@@ -56,11 +56,11 @@ impl Parser {
             Ok((i, AST(tops)))
         }
     }
-    fn decl(&self) -> impl Fn(&str) -> IResult<&str, Statement<()>> + '_ {
+    fn decl(&self) -> impl Fn(&str) -> IResult<&str, Declaration<()>> + '_ {
         move |i| alt((self.decl_datatype(), self.decl_val(), self.decl_fun()))(i)
     }
 
-    fn decl_datatype(&self) -> impl Fn(&str) -> IResult<&str, Statement<()>> + '_ {
+    fn decl_datatype(&self) -> impl Fn(&str) -> IResult<&str, Declaration<()>> + '_ {
         move |i| {
             let (i, _) = tag("datatype")(i)?;
             let (i, _) = multispace1(i)?;
@@ -72,11 +72,11 @@ impl Parser {
                 tuple((multispace0, tag("|"), multispace0)),
                 self.constructor_def(),
             )(i)?;
-            Ok((i, Statement::Datatype { name, constructors }))
+            Ok((i, Declaration::Datatype { name, constructors }))
         }
     }
 
-    fn decl_val(&self) -> impl Fn(&str) -> IResult<&str, Statement<()>> + '_ {
+    fn decl_val(&self) -> impl Fn(&str) -> IResult<&str, Declaration<()>> + '_ {
         move |i| {
             let (i, _) = tag("val")(i)?;
             let (i, _) = multispace1(i)?;
@@ -87,7 +87,7 @@ impl Parser {
             let (i, expr) = self.expr()(i)?;
             Ok((
                 i,
-                Statement::Val {
+                Declaration::Val {
                     rec: false,
                     pattern,
                     expr,
@@ -96,7 +96,7 @@ impl Parser {
         }
     }
 
-    fn decl_fun(&self) -> impl Fn(&str) -> IResult<&str, Statement<()>> + '_ {
+    fn decl_fun(&self) -> impl Fn(&str) -> IResult<&str, Declaration<()>> + '_ {
         move |i| {
             let (i, _) = tag("fun")(i)?;
             let (i, _) = multispace1(i)?;
@@ -122,7 +122,7 @@ impl Parser {
                 }
                 clauses.push((params, expr))
             }
-            Ok((i, Statement::D(DerivedStatement::Fun { name, clauses })))
+            Ok((i, Declaration::D(DerivedDeclaration::Fun { name, clauses })))
         }
     }
 
