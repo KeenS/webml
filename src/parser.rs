@@ -24,33 +24,8 @@ struct Parser {
 
 impl Parser {
     fn new() -> Self {
-        static INFIX9: &[&str] = &[];
-        static INFIX8: &[&str] = &[];
-        static INFIX7: &[&str] = &["*", "/", "div", "mod"];
-        static INFIX6: &[&str] = &["+", "-"];
-        static INFIX5: &[&str] = &[];
-        static INFIX4: &[&str] = &["=", "<>", "<=", "<", ">=", ">"];
-        static INFIX3: &[&str] = &[];
-        static INFIX2: &[&str] = &[];
-        static INFIX1: &[&str] = &[];
-        static INFIX0: &[&str] = &[];
-
-        static FIXTY_TABLE: [&[&str]; 10] = [
-            INFIX0, INFIX1, INFIX2, INFIX3, INFIX4, INFIX5, INFIX6, INFIX7, INFIX8, INFIX9,
-        ];
-
-        let infixes = FIXTY_TABLE
-            .into_iter()
-            .enumerate()
-            .map(|(priority, &fixties)| {
-                (
-                    priority as u8,
-                    fixties.into_iter().map(|&s| Symbol::new(s)).collect(),
-                )
-            })
-            .collect();
         Self {
-            infixes: RefCell::new(infixes),
+            infixes: RefCell::new(BTreeMap::default()),
         }
     }
 
@@ -182,7 +157,7 @@ impl Parser {
             let (i, _) = multispace1(i)?;
             let (i, priority) = opt(digit1)(i)?;
             let (i, _) = multispace1(i)?;
-            let (i, names) = separated_nonempty_list(multispace1, self.symbol())(i)?;
+            let (i, names) = separated_nonempty_list(multispace1, self.symbol_eq())(i)?;
             let priority = priority.map(|s| {
                 s.parse()
                     .expect("internal error: falied to parse digits as integer")
@@ -632,6 +607,10 @@ impl Parser {
         move |i| map(self.symbol(), |name| Type::Datatype(name))(i)
     }
 
+    fn symbol_eq(&self) -> impl Fn(&str) -> IResult<&str, Symbol> + '_ {
+        move |i| alt((self.symbol_alphanumeric(), self.symbol_symbolic_eq()))(i)
+    }
+
     fn symbol(&self) -> impl Fn(&str) -> IResult<&str, Symbol> + '_ {
         move |i| alt((self.symbol_alphanumeric(), self.symbol_symbolic()))(i)
     }
@@ -660,6 +639,10 @@ impl Parser {
             let (i, sym) = verify(alphanumeric1, |s: &str| !KEYWORDS.contains(&s))(i)?;
             Ok((i, Symbol::new(sym.to_string())))
         }
+    }
+
+    fn symbol_symbolic_eq(&self) -> impl Fn(&str) -> IResult<&str, Symbol> + '_ {
+        move |i| alt((self.symbol_symbolic(), value(Symbol::new("="), tag("="))))(i)
     }
 
     fn symbol_symbolic(&self) -> impl Fn(&str) -> IResult<&str, Symbol> + '_ {

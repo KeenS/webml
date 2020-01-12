@@ -1,5 +1,6 @@
 use webml::ast::{
-    DerivedExprKind, DerivedDeclaration, Expr, ExprKind, Pattern, PatternKind, Declaration, Type, AST,
+    Declaration, DerivedDeclaration, DerivedExprKind, Expr, ExprKind, Pattern, PatternKind, Type,
+    AST,
 };
 use webml::parse;
 use webml::prim::*;
@@ -126,127 +127,139 @@ fn parse_unit() {
 
 #[test]
 fn parse_binop() {
-    let input = r#"val x = 1 + 2"#;
+    let input = r#"infix 6 + val x = 1 + 2"#;
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Declaration::Val {
-            rec: false,
-            pattern: Pattern {
-                ty: (),
-                inner: PatternKind::Variable {
-                    name: Symbol::new("x"),
+        AST(vec![
+            Declaration::D(DerivedDeclaration::Infix {
+                priority: Some(6),
+                names: vec![Symbol::new("+")],
+            }),
+            Declaration::Val {
+                rec: false,
+                pattern: Pattern {
+                    ty: (),
+                    inner: PatternKind::Variable {
+                        name: Symbol::new("x"),
+                    }
+                },
+                expr: Expr {
+                    ty: (),
+                    inner: ExprKind::App {
+                        fun: Expr {
+                            ty: (),
+                            inner: ExprKind::Symbol {
+                                name: Symbol::new("+")
+                            }
+                        }
+                        .boxed(),
+                        arg: Expr {
+                            ty: (),
+                            inner: ExprKind::Tuple {
+                                tuple: vec![
+                                    Expr {
+                                        ty: (),
+                                        inner: ExprKind::Literal {
+                                            value: Literal::Int(1),
+                                        }
+                                    },
+                                    Expr {
+                                        ty: (),
+                                        inner: ExprKind::Literal {
+                                            value: Literal::Int(2),
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                        .boxed()
+                    }
                 }
             },
-            expr: Expr {
-                ty: (),
-                inner: ExprKind::App {
-                    fun: Expr {
-                        ty: (),
-                        inner: ExprKind::Symbol {
-                            name: Symbol::new("+")
-                        }
-                    }
-                    .boxed(),
-                    arg: Expr {
-                        ty: (),
-                        inner: ExprKind::Tuple {
-                            tuple: vec![
-                                Expr {
-                                    ty: (),
-                                    inner: ExprKind::Literal {
-                                        value: Literal::Int(1),
-                                    }
-                                },
-                                Expr {
-                                    ty: (),
-                                    inner: ExprKind::Literal {
-                                        value: Literal::Int(2),
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                    .boxed()
-                }
-            }
-        },])
+        ])
     )
 }
 
 #[test]
 fn parse_binop_assoc() {
-    let input = r#"val x = 1 + 2 + 3"#;
+    let input = r#"infix 6 + val x = 1 + 2 + 3"#;
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Declaration::Val {
-            rec: false,
-            pattern: Pattern {
-                ty: (),
-                inner: PatternKind::Variable {
-                    name: Symbol::new("x"),
+        AST(vec![
+            Declaration::D(DerivedDeclaration::Infix {
+                priority: Some(6),
+                names: vec![Symbol::new("+")],
+            }),
+            Declaration::Val {
+                rec: false,
+                pattern: Pattern {
+                    ty: (),
+                    inner: PatternKind::Variable {
+                        name: Symbol::new("x"),
+                    }
+                },
+                expr: Expr {
+                    ty: (),
+                    inner: ExprKind::App {
+                        fun: Expr {
+                            ty: (),
+                            inner: ExprKind::Symbol {
+                                name: Symbol::new("+"),
+                            }
+                        }
+                        .boxed(),
+                        arg: Expr {
+                            ty: (),
+                            inner: ExprKind::Tuple {
+                                tuple: vec![
+                                    Expr {
+                                        ty: (),
+                                        inner: ExprKind::App {
+                                            fun: Expr {
+                                                ty: (),
+                                                inner: ExprKind::Symbol {
+                                                    name: Symbol::new("+"),
+                                                }
+                                            }
+                                            .boxed(),
+                                            arg: Expr {
+                                                ty: (),
+                                                inner: ExprKind::Tuple {
+                                                    tuple: vec![
+                                                        Expr {
+                                                            ty: (),
+                                                            inner: ExprKind::Literal {
+                                                                value: Literal::Int(1),
+                                                            }
+                                                        },
+                                                        Expr {
+                                                            ty: (),
+                                                            inner: ExprKind::Literal {
+                                                                value: Literal::Int(2),
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                            .boxed()
+                                        }
+                                    },
+                                    Expr {
+                                        ty: (),
+                                        inner: ExprKind::Literal {
+                                            value: Literal::Int(3),
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                        .boxed()
+                    }
                 }
             },
-            expr: Expr {
-                ty: (),
-                inner: ExprKind::App {
-                    fun: Expr {
-                        ty: (),
-                        inner: ExprKind::Symbol {
-                            name: Symbol::new("+"),
-                        }
-                    }
-                    .boxed(),
-                    arg: Expr {
-                        ty: (),
-                        inner: ExprKind::Tuple {
-                            tuple: vec![
-                                Expr {
-                                    ty: (),
-                                    inner: ExprKind::App {
-                                        fun: Expr {
-                                            ty: (),
-                                            inner: ExprKind::Symbol {
-                                                name: Symbol::new("+"),
-                                            }
-                                        }
-                                        .boxed(),
-                                        arg: Expr {
-                                            ty: (),
-                                            inner: ExprKind::Tuple {
-                                                tuple: vec![
-                                                    Expr {
-                                                        ty: (),
-                                                        inner: ExprKind::Literal {
-                                                            value: Literal::Int(1),
-                                                        }
-                                                    },
-                                                    Expr {
-                                                        ty: (),
-                                                        inner: ExprKind::Literal {
-                                                            value: Literal::Int(2),
-                                                        }
-                                                    }
-                                                ]
-                                            }
-                                        }
-                                        .boxed()
-                                    }
-                                },
-                                Expr {
-                                    ty: (),
-                                    inner: ExprKind::Literal {
-                                        value: Literal::Int(3),
-                                    }
-                                }
-                            ]
-                        }
-                    }
-                    .boxed()
-                }
-            }
-        },])
+        ])
     )
 }
 
@@ -290,77 +303,87 @@ fn parse_uiltincall() {
 
 #[test]
 fn parse_binop_pref() {
-    let input = r#"val x = 1 + 2 * 3"#;
+    let input = r#"infix 6 + infix 7 * val x = 1 + 2 * 3"#;
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
-        AST(vec![Declaration::Val {
-            rec: false,
-            pattern: Pattern {
-                ty: (),
-                inner: PatternKind::Variable {
-                    name: Symbol::new("x"),
+        AST(vec![
+            Declaration::D(DerivedDeclaration::Infix {
+                priority: Some(6),
+                names: vec![Symbol::new("+")],
+            }),
+            Declaration::D(DerivedDeclaration::Infix {
+                priority: Some(7),
+                names: vec![Symbol::new("*")],
+            }),
+            Declaration::Val {
+                rec: false,
+                pattern: Pattern {
+                    ty: (),
+                    inner: PatternKind::Variable {
+                        name: Symbol::new("x"),
+                    }
+                },
+                expr: Expr {
+                    ty: (),
+                    inner: ExprKind::App {
+                        fun: Expr {
+                            ty: (),
+                            inner: ExprKind::Symbol {
+                                name: Symbol::new("+")
+                            }
+                        }
+                        .boxed(),
+                        arg: Expr {
+                            ty: (),
+                            inner: ExprKind::Tuple {
+                                tuple: vec![
+                                    Expr {
+                                        ty: (),
+                                        inner: ExprKind::Literal {
+                                            value: Literal::Int(1),
+                                        }
+                                    },
+                                    Expr {
+                                        ty: (),
+                                        inner: ExprKind::App {
+                                            fun: Expr {
+                                                ty: (),
+                                                inner: ExprKind::Symbol {
+                                                    name: Symbol::new("*"),
+                                                }
+                                            }
+                                            .boxed(),
+                                            arg: Expr {
+                                                ty: (),
+                                                inner: ExprKind::Tuple {
+                                                    tuple: vec![
+                                                        Expr {
+                                                            ty: (),
+                                                            inner: ExprKind::Literal {
+                                                                value: Literal::Int(2),
+                                                            }
+                                                        },
+                                                        Expr {
+                                                            ty: (),
+                                                            inner: ExprKind::Literal {
+                                                                value: Literal::Int(3),
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                            .boxed()
+                                        }
+                                    }
+                                ],
+                            }
+                        }
+                        .boxed()
+                    }
                 }
             },
-            expr: Expr {
-                ty: (),
-                inner: ExprKind::App {
-                    fun: Expr {
-                        ty: (),
-                        inner: ExprKind::Symbol {
-                            name: Symbol::new("+")
-                        }
-                    }
-                    .boxed(),
-                    arg: Expr {
-                        ty: (),
-                        inner: ExprKind::Tuple {
-                            tuple: vec![
-                                Expr {
-                                    ty: (),
-                                    inner: ExprKind::Literal {
-                                        value: Literal::Int(1),
-                                    }
-                                },
-                                Expr {
-                                    ty: (),
-                                    inner: ExprKind::App {
-                                        fun: Expr {
-                                            ty: (),
-                                            inner: ExprKind::Symbol {
-                                                name: Symbol::new("*"),
-                                            }
-                                        }
-                                        .boxed(),
-                                        arg: Expr {
-                                            ty: (),
-                                            inner: ExprKind::Tuple {
-                                                tuple: vec![
-                                                    Expr {
-                                                        ty: (),
-                                                        inner: ExprKind::Literal {
-                                                            value: Literal::Int(2),
-                                                        }
-                                                    },
-                                                    Expr {
-                                                        ty: (),
-                                                        inner: ExprKind::Literal {
-                                                            value: Literal::Int(3),
-                                                        }
-                                                    }
-                                                ]
-                                            }
-                                        }
-                                        .boxed()
-                                    }
-                                }
-                            ],
-                        }
-                    }
-                    .boxed()
-                }
-            }
-        },])
+        ])
     )
 }
 
