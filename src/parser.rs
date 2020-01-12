@@ -9,7 +9,7 @@ use nom::number::complete::recognize_float;
 use nom::sequence::tuple;
 use nom::IResult;
 use std::cell::RefCell;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 
 static KEYWORDS: &[&str] = &[
     "val", "fun", "fn", "let", "in", "end", "if", "then", "else", "case", "of", "_", "datatype",
@@ -19,24 +19,51 @@ static KEYWORDS: &[&str] = &[
 static RESERVED: &[&str] = &["|", "=", "#"];
 
 struct Parser {
-    infixes: RefCell<BTreeMap<u8, Vec<Symbol>>>,
+    infixes: RefCell<Vec<BTreeMap<u8, Vec<Symbol>>>>,
 }
 
 impl Parser {
     fn new() -> Self {
         Self {
-            infixes: RefCell::new(BTreeMap::default()),
+            infixes: RefCell::new(vec![BTreeMap::new()]),
         }
+    }
+
+    fn with_scope<R>(&self, f: impl FnOnce() -> R) -> R {
+        self.infixes.borrow_mut().push(BTreeMap::default());
+        let r = f();
+        self.infixes.borrow_mut().pop();
+        r
     }
 
     // TODO: support let scopes
     fn new_infix_op(&self, priority: Option<u8>, mut names: Vec<Symbol>) {
         let priority = priority.unwrap_or(0);
         let mut infixes = self.infixes.borrow_mut();
-        infixes
+        let len = infixes.len();
+        infixes[len - 1]
             .entry(priority)
             .or_insert(Vec::new())
             .append(&mut names)
+    }
+
+    fn get_table(&self) -> BTreeMap<u8, Vec<Symbol>> {
+        self.infixes
+            .borrow()
+            .iter()
+            .fold(HashMap::new(), |mut acc, map| {
+                for (&priority, names) in map {
+                    for name in names {
+                        acc.insert(name, priority);
+                    }
+                }
+                acc
+            })
+            .into_iter()
+            .fold(BTreeMap::new(), |mut acc, (name, priority)| {
+                acc.entry(priority).or_insert(Vec::new()).push(name.clone());
+                acc
+            })
     }
 }
 
@@ -199,25 +226,27 @@ impl Parser {
 
     fn expr_bind(&self) -> impl Fn(&str) -> IResult<&str, Expr<()>> + '_ {
         move |i| {
-            let (i, _) = tag("let")(i)?;
-            let (i, _) = multispace1(i)?;
-            let (i, binds) = separated_list(multispace1, self.decl())(i)?;
-            let (i, _) = multispace1(i)?;
-            let (i, _) = tag("in")(i)?;
-            let (i, _) = multispace1(i)?;
-            let (i, ret) = self.expr()(i)?;
-            let (i, _) = multispace1(i)?;
-            let (i, _) = tag("end")(i)?;
-            Ok((
-                i,
-                Expr {
-                    ty: (),
-                    inner: ExprKind::Binds {
-                        binds: binds,
-                        ret: ret.boxed(),
+            self.with_scope(|| {
+                let (i, _) = tag("let")(i)?;
+                let (i, _) = multispace1(i)?;
+                let (i, binds) = separated_list(multispace1, self.decl())(i)?;
+                let (i, _) = multispace1(i)?;
+                let (i, _) = tag("in")(i)?;
+                let (i, _) = multispace1(i)?;
+                let (i, ret) = self.expr()(i)?;
+                let (i, _) = multispace1(i)?;
+                let (i, _) = tag("end")(i)?;
+                Ok((
+                    i,
+                    Expr {
+                        ty: (),
+                        inner: ExprKind::Binds {
+                            binds: binds,
+                            ret: ret.boxed(),
+                        },
                     },
-                },
-            ))
+                ))
+            })
         }
     }
 
@@ -320,7 +349,7 @@ impl Parser {
                 .into_iter()
                 .map(|mut e| match e.inner {
                     ExprKind::Symbol { name } => {
-                        for (&f, table) in &*self.infixes.borrow() {
+                        for (f, table) in self.get_table() {
                             if table.contains(&name) {
                                 return Fix(f, name);
                             }
