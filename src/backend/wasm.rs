@@ -649,33 +649,39 @@ impl LIR2WASM {
                                         cb = cb.get_local(reg!(arg))
                                     }
 
+                                    let ret = lty_to_valuetype_opt(&reg.0);
                                     let ftype = {
-                                        let ret = lty_to_valuetype_opt(&reg.0);
                                         let mut params = vec![
                                             // pointer to closure
                                             ValueType::I32,
                                         ];
                                         params.extend(args.iter().map(|r| lty_to_valuetype(&r.0)));
-                                        FuncType { params, ret }
+                                        FuncType {
+                                            params,
+                                            ret: ret.clone(),
+                                        }
                                     };
 
                                     cb = cb
                                         .get_local(reg!(fun))
                                         // load function
                                         .i32_load(0)
-                                        .call_indirect(self.function_type_table[&ftype], false)
-                                        // FIXME: if ret ty isn't unit
-                                        .set_local(reg!(reg));
+                                        .call_indirect(self.function_type_table[&ftype], false);
+
+                                    if let Some(_) = ret {
+                                        cb = cb.set_local(reg!(reg));
+                                    }
                                 }
                                 FunCall(ref reg, ref fun, ref args) => {
                                     for arg in args.iter() {
                                         cb = cb.get_local(reg!(arg))
                                     }
 
-                                    cb = cb
-                                        .call(self.function_index(fun))
-                                        // FIXME: if ret ty isn't unit
-                                        .set_local(reg!(reg));
+                                    cb = cb.call(self.function_index(fun));
+                                    let ret = lty_to_valuetype_opt(&reg.0);
+                                    if let Some(_) = ret {
+                                        cb = cb.set_local(reg!(reg));
+                                    }
                                 }
                                 BuiltinCall(ref _reg, ref fun, ref args) => {
                                     for arg in args.iter() {

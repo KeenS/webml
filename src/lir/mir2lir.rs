@@ -512,9 +512,10 @@ impl MIR2LIR {
                             }
                             ops.push(Jump(Label(target.clone())))
                         }
-                        &m::Ret { ref value, .. } => {
-                            ops.push(Ret(value.as_ref().map(|v| reg!(v))));
-                        }
+                        &m::Ret { ref value, ref ty } => match ty {
+                            mir::EbbTy::Unit => ops.push(Ret(None)),
+                            _ => ops.push(Ret(value.as_ref().map(|v| reg!(v)))),
+                        },
                     }
                 }
                 blocks.push(Block {
