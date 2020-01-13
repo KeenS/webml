@@ -6,9 +6,12 @@ use crate::unification_pool::{NodeId, UnificationPool};
 use std::collections::HashMap;
 
 #[derive(Debug)]
-pub struct TyEnv {
+pub struct Typer;
+
+#[derive(Debug)]
+struct TyEnv {
     env: HashMap<Symbol, NodeId>,
-    symbol_table: Option<SymbolTable>,
+    symbol_table: SymbolTable,
     pool: TypePool,
 }
 
@@ -88,89 +91,13 @@ fn try_unify<'b, 'r>(
     }
 }
 
-impl<Ty> Core<Ty> {
-    fn map_ty<Ty2>(self, f: &mut dyn FnMut(Ty) -> Ty2) -> Core<Ty2> {
-        AST(self.0.into_iter().map(move |val| val.map_ty(f)).collect())
+impl Typer {
+    pub fn new() -> Self {
+        Typer
     }
-}
 
-impl<Ty> CoreDeclaration<Ty> {
-    fn map_ty<Ty2>(self, f: &mut dyn FnMut(Ty) -> Ty2) -> CoreDeclaration<Ty2> {
-        use Declaration::*;
-        match self {
-            Datatype { name, constructors } => Datatype { name, constructors },
-
-            Val { pattern, expr, rec } => Val {
-                rec,
-                pattern: pattern.map_ty(&mut *f),
-                expr: expr.map_ty(f),
-            },
-            D(d) => match d {},
-        }
-    }
-}
-
-impl<Ty> CoreExpr<Ty> {
-    fn map_ty<Ty2>(self, f: &mut dyn FnMut(Ty) -> Ty2) -> CoreExpr<Ty2> {
-        use crate::ast::ExprKind::*;
-        let ty = f(self.ty);
-        let inner = match self.inner {
-            Binds { binds, ret } => Binds {
-                binds: binds.into_iter().map(|val| val.map_ty(f)).collect(),
-                ret: ret.map_ty(f).boxed(),
-            },
-            BuiltinCall { fun, args } => BuiltinCall {
-                fun,
-                args: args.into_iter().map(|arg| arg.map_ty(f)).collect(),
-            },
-            Fn { param, body } => Fn {
-                param,
-                body: body.map_ty(f).boxed(),
-            },
-            App { fun, arg } => App {
-                fun: fun.map_ty(f).boxed(),
-                arg: arg.map_ty(f).boxed(),
-            },
-            Case { cond, clauses } => Case {
-                cond: cond.map_ty(&mut *f).boxed(),
-                clauses: clauses
-                    .into_iter()
-                    .map(move |(pat, expr)| (pat.map_ty(&mut *f), expr.map_ty(f)))
-                    .collect(),
-            },
-            Tuple { tuple } => Tuple {
-                tuple: tuple.into_iter().map(|t| t.map_ty(f)).collect(),
-            },
-
-            Symbol { name } => Symbol { name },
-            Constructor { arg, name } => Constructor {
-                arg: arg.map(|a| a.map_ty(f).boxed()),
-                name,
-            },
-            Literal { value } => Literal { value },
-            D(d) => match d {},
-        };
-        Expr { ty, inner }
-    }
-}
-
-impl<Ty> Pattern<Ty> {
-    fn map_ty<Ty2>(self, f: &mut dyn FnMut(Ty) -> Ty2) -> Pattern<Ty2> {
-        use PatternKind::*;
-        let ty = f(self.ty);
-        let inner = match self.inner {
-            Constant { value } => Constant { value },
-            Constructor { name, arg } => Constructor {
-                name,
-                arg: arg.map(|pat| Box::new(pat.map_ty(f))),
-            },
-            Tuple { tuple } => Tuple {
-                tuple: tuple.into_iter().map(|pat| pat.map_ty(f)).collect(),
-            },
-            Variable { name } => Variable { name },
-            Wildcard {} => Wildcard {},
-        };
-        Pattern { ty, inner }
+    fn generate_pass(&mut self, symbol_table: SymbolTable) -> TyEnv {
+        TyEnv::new(symbol_table)
     }
 }
 
@@ -257,26 +184,35 @@ impl TypePool {
 }
 
 impl TyEnv {
-    pub fn new() -> Self {
-        TyEnv {
+    pub fn new(symbol_table: SymbolTable) -> Self {
+        let mut ret = TyEnv {
             env: HashMap::new(),
-            symbol_table: None,
+            symbol_table: symbol_table,
             pool: TypePool::new(),
-        }
+        };
+        ret.init();
+
+        ret
     }
 
-    pub fn init(&mut self, symbol_table: SymbolTable) {
-        self.pool.feed_symbol_table(&symbol_table);
-        for cname in symbol_table.constructors.keys() {
-            let ty = symbol_table
-                .get_datatype_of_constructor(cname)
+    fn init(&mut self) {
+        self.pool.feed_symbol_table(&self.symbol_table);
+        let cnames = self
+            .symbol_table
+            .constructors
+            .keys()
+            .cloned()
+            .collect::<Vec<_>>();
+        for cname in cnames {
+            let ty = self
+                .symbol_table
+                .get_datatype_of_constructor(&cname)
                 .expect("internal error: typing");
             let ty = Type::Datatype(ty.clone());
             let typing = self.convert(ty);
             let node_id = self.pool.ty(typing);
-            self.insert(cname.clone(), node_id);
+            self.insert(cname, node_id);
         }
-        self.symbol_table = Some(symbol_table);
     }
 
     pub fn infer<'a, 'b>(&'a mut self, ast: &mut ast::Core<NodeId>) -> Result<'b, ()> {
@@ -285,11 +221,11 @@ impl TyEnv {
     }
 
     fn symbol_table(&self) -> &SymbolTable {
-        self.symbol_table.as_ref().unwrap()
+        &self.symbol_table
     }
 
-    pub fn generate_symbol_table(&mut self) -> SymbolTable {
-        self.symbol_table.take().unwrap()
+    pub fn into_symbol_table(self) -> SymbolTable {
+        self.symbol_table
     }
 
     fn get(&self, name: &Symbol) -> Option<NodeId> {
@@ -600,7 +536,7 @@ impl TyEnv {
 }
 
 use crate::pass::Pass;
-impl<'a> Pass<(SymbolTable, UntypedCore), TypeError<'a>> for TyEnv {
+impl<'a> Pass<(SymbolTable, UntypedCore), TypeError<'a>> for Typer {
     type Target = (SymbolTable, TypedCore);
 
     fn trans<'b>(
@@ -608,12 +544,12 @@ impl<'a> Pass<(SymbolTable, UntypedCore), TypeError<'a>> for TyEnv {
         (symbol_table, ast): (SymbolTable, UntypedCore),
         _: &Config,
     ) -> Result<'a, Self::Target> {
-        self.init(symbol_table);
-        let mut typing_ast = self.pool.typing_ast(ast);
-        self.infer(&mut typing_ast)?;
-        let typed_ast = self.pool.typed_ast(typing_ast);
+        let mut pass = self.generate_pass(symbol_table);
+        let mut typing_ast = pass.pool.typing_ast(ast);
+        pass.infer(&mut typing_ast)?;
+        let typed_ast = pass.pool.typed_ast(typing_ast);
 
-        let symbol_table = self.generate_symbol_table();
+        let symbol_table = pass.into_symbol_table();
         Ok((symbol_table, typed_ast))
     }
 }

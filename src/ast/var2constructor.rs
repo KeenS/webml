@@ -5,28 +5,35 @@ use crate::id::Id;
 use crate::pass::Pass;
 
 pub struct VarToConstructor {
-    symbol_table: Option<SymbolTable>,
     id: Id,
 }
 
 impl VarToConstructor {
     pub fn new(id: Id) -> Self {
-        Self {
-            symbol_table: None,
-            id,
-        }
+        VarToConstructor { id }
     }
 
-    fn init(&mut self, symbol_table: SymbolTable) {
-        self.symbol_table = Some(symbol_table)
+    fn generate_pass(&mut self, symbol_table: SymbolTable) -> VarToConstructorPass {
+        VarToConstructorPass::new(symbol_table, self.id.clone())
+    }
+}
+
+struct VarToConstructorPass {
+    symbol_table: SymbolTable,
+    id: Id,
+}
+
+impl VarToConstructorPass {
+    fn new(symbol_table: SymbolTable, id: Id) -> Self {
+        Self { symbol_table, id }
     }
 
-    fn generate_symbol_table(&mut self) -> SymbolTable {
-        self.symbol_table.take().unwrap()
+    fn into_inner(self) -> (SymbolTable, Id) {
+        (self.symbol_table, self.id)
     }
 
     fn symbol_table(&self) -> &SymbolTable {
-        self.symbol_table.as_ref().unwrap()
+        &self.symbol_table
     }
 
     fn is_constructor(&self, name: &Symbol) -> bool {
@@ -45,7 +52,7 @@ impl VarToConstructor {
     }
 }
 
-impl Transform<()> for VarToConstructor {
+impl Transform<()> for VarToConstructorPass {
     fn transform_symbol(&mut self, name: Symbol) -> UntypedCoreExprKind {
         if self.is_constructor(&name) {
             if let Some(_) = self.arg_type(&name) {
@@ -92,9 +99,9 @@ impl<E> Pass<(SymbolTable, UntypedCore), E> for VarToConstructor {
         (symbol_table, ast): (SymbolTable, UntypedCore),
         _: &Config,
     ) -> ::std::result::Result<Self::Target, E> {
-        self.init(symbol_table);
-        let ast = self.transform_ast(ast);
-        let symbol_table = self.generate_symbol_table();
+        let mut pass = self.generate_pass(symbol_table);
+        let ast = pass.transform_ast(ast);
+        let (symbol_table, _) = pass.into_inner();
         Ok((symbol_table, ast))
     }
 }

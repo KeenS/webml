@@ -7,7 +7,12 @@ use std::collections::{HashMap, HashSet};
 #[derive(Debug)]
 pub struct CaseSimplify {
     id: Id,
-    symbol_table: Option<SymbolTable>,
+}
+
+#[derive(Debug)]
+pub struct CaseSimplifyPass {
+    symbol_table: SymbolTable,
+    id: Id,
 }
 
 #[derive(Debug)]
@@ -19,16 +24,23 @@ type Stack<T> = Vec<T>;
 
 impl CaseSimplify {
     pub fn new(id: Id) -> Self {
-        CaseSimplify {
-            symbol_table: None,
-            id,
-        }
+        Self { id }
+    }
+
+    fn generate_pass(&mut self, symbol_table: SymbolTable) -> CaseSimplifyPass {
+        CaseSimplifyPass::new(symbol_table, self.id.clone())
+    }
+}
+
+impl CaseSimplifyPass {
+    fn new(symbol_table: SymbolTable, id: Id) -> Self {
+        Self { symbol_table, id }
     }
     fn symbol_table(&self) -> &SymbolTable {
-        self.symbol_table.as_ref().unwrap()
+        &self.symbol_table
     }
-    fn generate_symbol_table(&mut self) -> SymbolTable {
-        self.symbol_table.take().unwrap()
+    fn into_inner(self) -> (SymbolTable, Id) {
+        (self.symbol_table, self.id)
     }
 
     fn gensym(&mut self, name: &str) -> Symbol {
@@ -544,7 +556,7 @@ impl CaseSimplify {
     }
 }
 
-impl Transform<Type> for CaseSimplify {
+impl Transform<Type> for CaseSimplifyPass {
     fn transform_val(
         &mut self,
         rec: bool,
@@ -668,10 +680,10 @@ impl<'a> Pass<(SymbolTable, TypedCore), TypeError<'a>> for CaseSimplify {
         (symbol_table, ast): (SymbolTable, TypedCore),
         _: &Config,
     ) -> Result<'a, Self::Target> {
-        self.symbol_table = Some(symbol_table);
-        let ast = self.wildcard_to_variable(ast);
-        let ast = self.transform_ast(ast);
-        let symbol_table = self.generate_symbol_table();
+        let mut pass = self.generate_pass(symbol_table);
+        let ast = pass.wildcard_to_variable(ast);
+        let ast = pass.transform_ast(ast);
+        let (symbol_table, _) = pass.into_inner();
         Ok((symbol_table, ast))
     }
 }

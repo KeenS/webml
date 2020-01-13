@@ -9,7 +9,7 @@ mod var2constructor;
 pub use self::case_simplify::CaseSimplify;
 pub use self::desugar::Desugar;
 pub use self::rename::Rename;
-pub use self::typing::TyEnv as Typer;
+pub use self::typing::Typer;
 pub use self::var2constructor::VarToConstructor;
 use crate::ast;
 use crate::prim::*;
@@ -185,7 +185,91 @@ impl<Ty: Clone, Inner> Annot<Ty, Inner> {
     }
 }
 
+impl<Ty> Core<Ty> {
+    fn map_ty<Ty2>(self, f: &mut dyn FnMut(Ty) -> Ty2) -> Core<Ty2> {
+        AST(self.0.into_iter().map(move |val| val.map_ty(f)).collect())
+    }
+}
+
+impl<Ty> CoreDeclaration<Ty> {
+    fn map_ty<Ty2>(self, f: &mut dyn FnMut(Ty) -> Ty2) -> CoreDeclaration<Ty2> {
+        use Declaration::*;
+        match self {
+            Datatype { name, constructors } => Datatype { name, constructors },
+
+            Val { pattern, expr, rec } => Val {
+                rec,
+                pattern: pattern.map_ty(&mut *f),
+                expr: expr.map_ty(f),
+            },
+            D(d) => match d {},
+        }
+    }
+}
+
+impl<Ty> CoreExpr<Ty> {
+    fn map_ty<Ty2>(self, f: &mut dyn FnMut(Ty) -> Ty2) -> CoreExpr<Ty2> {
+        use crate::ast::ExprKind::*;
+        let ty = f(self.ty);
+        let inner = match self.inner {
+            Binds { binds, ret } => Binds {
+                binds: binds.into_iter().map(|val| val.map_ty(f)).collect(),
+                ret: ret.map_ty(f).boxed(),
+            },
+            BuiltinCall { fun, args } => BuiltinCall {
+                fun,
+                args: args.into_iter().map(|arg| arg.map_ty(f)).collect(),
+            },
+            Fn { param, body } => Fn {
+                param,
+                body: body.map_ty(f).boxed(),
+            },
+            App { fun, arg } => App {
+                fun: fun.map_ty(f).boxed(),
+                arg: arg.map_ty(f).boxed(),
+            },
+            Case { cond, clauses } => Case {
+                cond: cond.map_ty(&mut *f).boxed(),
+                clauses: clauses
+                    .into_iter()
+                    .map(move |(pat, expr)| (pat.map_ty(&mut *f), expr.map_ty(f)))
+                    .collect(),
+            },
+            Tuple { tuple } => Tuple {
+                tuple: tuple.into_iter().map(|t| t.map_ty(f)).collect(),
+            },
+
+            Symbol { name } => Symbol { name },
+            Constructor { arg, name } => Constructor {
+                arg: arg.map(|a| a.map_ty(f).boxed()),
+                name,
+            },
+            Literal { value } => Literal { value },
+            D(d) => match d {},
+        };
+        Expr { ty, inner }
+    }
+}
+
 impl<Ty> Pattern<Ty> {
+    fn map_ty<Ty2>(self, f: &mut dyn FnMut(Ty) -> Ty2) -> Pattern<Ty2> {
+        use PatternKind::*;
+        let ty = f(self.ty);
+        let inner = match self.inner {
+            Constant { value } => Constant { value },
+            Constructor { name, arg } => Constructor {
+                name,
+                arg: arg.map(|pat| Box::new(pat.map_ty(f))),
+            },
+            Tuple { tuple } => Tuple {
+                tuple: tuple.into_iter().map(|pat| pat.map_ty(f)).collect(),
+            },
+            Variable { name } => Variable { name },
+            Wildcard {} => Wildcard {},
+        };
+        Pattern { ty, inner }
+    }
+
     pub fn binds(&self) -> Vec<(&Symbol, &Ty)> {
         use self::PatternKind::*;
         match &self.inner {

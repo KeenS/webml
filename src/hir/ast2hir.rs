@@ -7,22 +7,29 @@ use crate::prim::*;
 
 pub struct AST2HIR {
     id: Id,
-    symbol_table: Option<ast::SymbolTable>,
+}
+
+struct AST2HIRPass {
+    symbol_table: ast::SymbolTable,
+    id: Id,
 }
 
 impl AST2HIR {
     pub fn new(id: Id) -> Self {
-        Self {
-            id,
-            symbol_table: None,
-        }
-    }
-    fn init(&mut self, symbol_table: ast::SymbolTable) {
-        self.symbol_table = Some(symbol_table)
+        Self { id }
     }
 
+    fn generate_pass(&mut self, symbol_table: ast::SymbolTable) -> AST2HIRPass {
+        AST2HIRPass::new(symbol_table, self.id.clone())
+    }
+}
+
+impl AST2HIRPass {
+    fn new(symbol_table: ast::SymbolTable, id: Id) -> Self {
+        Self { symbol_table, id }
+    }
     fn symbol_table(&self) -> &ast::SymbolTable {
-        self.symbol_table.as_ref().unwrap()
+        &self.symbol_table
     }
 
     pub fn gensym(&mut self) -> Symbol {
@@ -325,7 +332,7 @@ impl<E> Pass<(ast::SymbolTable, ast::TypedCore), E> for AST2HIR {
         (symbol_table, ast): (ast::SymbolTable, ast::TypedCore),
         _: &Config,
     ) -> ::std::result::Result<Self::Target, E> {
-        self.init(symbol_table);
-        Ok(self.conv_ast(ast))
+        let mut pass = self.generate_pass(symbol_table);
+        Ok(pass.conv_ast(ast))
     }
 }
