@@ -131,7 +131,7 @@ impl UnAlias {
                         self.resolv_alias(var);
                     }
                 }
-                &mut BuiltinCall { ref mut args, .. } => {
+                &mut ExternCall { ref mut args, .. } => {
                     for arg in args.iter_mut() {
                         self.resolv_alias(arg);
                     }

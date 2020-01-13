@@ -6,11 +6,15 @@ use crate::prim::*;
 use log::debug;
 use std::collections::HashMap;
 
-pub struct MIR2LIR;
+pub struct MIR2LIR {
+    extern_types: ExternTypes,
+}
 
 impl MIR2LIR {
     pub fn new() -> Self {
-        MIR2LIR
+        MIR2LIR {
+            extern_types: HashMap::new(),
+        }
     }
 
     fn ebbty_to_lty<'a>(&self, ty: &mir::EbbTy) -> LTy {
@@ -28,11 +32,11 @@ impl MIR2LIR {
         }
     }
 
-    pub fn trans_mir(&self, mir: mir::MIR) -> LIR {
+    pub fn trans_mir(&mut self, mir: mir::MIR) -> LIR {
         LIR(mir.0.into_iter().map(|f| self.trans_function(f)).collect())
     }
 
-    fn trans_function(&self, f: mir::Function) -> Function {
+    fn trans_function(&mut self, f: mir::Function) -> Function {
         use crate::lir::Op::*;
         use crate::lir::Value::*;
         use crate::mir::Op as m;
@@ -405,14 +409,28 @@ impl MIR2LIR {
                                 acc += 8;
                             }
                         }
-                        &m::BuiltinCall {
+                        &m::ExternCall {
                             ref var,
                             ref fun,
                             ref args,
                             ..
                         } => {
                             let args = args.iter().map(|a| reg!(a)).collect();
-                            ops.push(BuiltinCall(reg!(var), fun.clone(), args))
+                            match fun {
+                                BIF::Print => {
+                                    self.extern_types.insert(
+                                        ("js-ffi".to_string(), "print".to_string()),
+                                        (vec![LTy::I32], LTy::Unit),
+                                    );
+                                    ops.push(ExternCall(
+                                        reg!(var),
+                                        "js-ffi".to_string(),
+                                        "print".to_string(),
+                                        args,
+                                    ))
+                                }
+                                _ => unreachable!(),
+                            };
                         }
                         &m::Call {
                             ref var,
@@ -613,7 +631,7 @@ impl MIR2LIR {
                     | &mir::Op::Select {
                         ref var, ref ty, ..
                     }
-                    | &mir::Op::BuiltinCall {
+                    | &mir::Op::ExternCall {
                         ref var, ref ty, ..
                     }
                     | &mir::Op::Call {
@@ -652,9 +670,11 @@ impl MIR2LIR {
 }
 
 impl<E> Pass<mir::MIR, E> for MIR2LIR {
-    type Target = LIR;
+    type Target = (ExternTypes, LIR);
 
     fn trans(&mut self, mir: mir::MIR, _: &Config) -> ::std::result::Result<Self::Target, E> {
-        Ok(self.trans_mir(mir))
+        let lir = self.trans_mir(mir);
+        let types = self.extern_types.drain().collect();
+        Ok((types, lir))
     }
 }

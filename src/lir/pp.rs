@@ -2,6 +2,12 @@ use crate::lir::*;
 use crate::util::PP;
 use std::io;
 
+impl<T> PP for (T, LIR) {
+    fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
+        self.1.pp(w, indent)
+    }
+}
+
 impl PP for LIR {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         for fun in &self.0 {
@@ -59,8 +65,8 @@ impl PP for Value {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         use crate::lir::Value::*;
         match self {
-            &I(ref i) => write!(w, "{}", i),
-            &R(ref r) => r.pp(w, indent),
+            I(i) => write!(w, "{}", i),
+            R(r) => r.pp(w, indent),
         }
     }
 }
@@ -68,7 +74,7 @@ impl PP for Value {
 impl PP for LTy {
     fn pp<W: io::Write>(&self, w: &mut W, _indent: usize) -> io::Result<()> {
         use crate::lir::LTy::*;
-        match *self {
+        match self {
             Unit => write!(w, "()")?,
             I32 => write!(w, "i32")?,
             I64 => write!(w, "i64")?,
@@ -98,53 +104,44 @@ impl PP for Op {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         use crate::lir::Op::*;
         let indent = indent + 4;
-        match *self {
-            ConstI32(ref reg, ref i) => {
+        match self {
+            ConstI32(reg, i) => {
                 reg.pp(w, indent)?;
                 write!(w, ": ")?;
                 reg.0.pp(w, indent)?;
                 write!(w, " <- {}", i)?;
             }
-            MoveI32(ref r1, ref r2)
-            | MoveI64(ref r1, ref r2)
-            | MoveF32(ref r1, ref r2)
-            | MoveF64(ref r1, ref r2) => {
+            MoveI32(r1, r2) | MoveI64(r1, r2) | MoveF32(r1, r2) | MoveF64(r1, r2) => {
                 r1.pp(w, indent)?;
                 write!(w, ": ")?;
                 r1.0.pp(w, indent)?;
                 write!(w, " <- ")?;
                 r2.pp(w, indent)?;
             }
-            StoreI32(ref addr, ref v)
-            | StoreI64(ref addr, ref v)
-            | StoreF32(ref addr, ref v)
-            | StoreF64(ref addr, ref v) => {
+            StoreI32(addr, v) | StoreI64(addr, v) | StoreF32(addr, v) | StoreF64(addr, v) => {
                 addr.pp(w, indent)?;
                 write!(w, " <- ")?;
                 v.pp(w, indent)?;
             }
-            StoreFnPtr(ref addr, ref f) => {
+            StoreFnPtr(addr, f) => {
                 addr.pp(w, indent)?;
                 write!(w, " <- ")?;
                 f.pp(w, indent)?;
             }
-            LoadI32(ref reg, ref addr)
-            | LoadI64(ref reg, ref addr)
-            | LoadF32(ref reg, ref addr)
-            | LoadF64(ref reg, ref addr) => {
+            LoadI32(reg, addr) | LoadI64(reg, addr) | LoadF32(reg, addr) | LoadF64(reg, addr) => {
                 reg.pp(w, indent)?;
                 write!(w, ": ")?;
                 reg.0.pp(w, indent)?;
                 write!(w, " <- ")?;
                 addr.pp(w, indent)?;
             }
-            JumpIfI32(ref reg, ref label) => {
+            JumpIfI32(reg, label) => {
                 write!(w, "jump_if ")?;
                 reg.pp(w, indent)?;
                 write!(w, " ")?;
                 label.pp(w, indent)?;
             }
-            JumpTableI32(ref reg, ref labels, ref default) => {
+            JumpTableI32(reg, labels, default) => {
                 write!(w, "jump_table ")?;
                 reg.pp(w, indent)?;
                 write!(w, " ")?;
@@ -158,16 +155,13 @@ impl PP for Op {
                     label.pp(w, indent)?;
                 }
             }
-            ConstI64(ref reg, ref i) => {
+            ConstI64(reg, i) => {
                 reg.pp(w, indent)?;
                 write!(w, ": ")?;
                 reg.0.pp(w, indent)?;
                 write!(w, " <- {}", i)?;
             }
-            AddI32(ref r1, ref r2, ref r3)
-            | AddI64(ref r1, ref r2, ref r3)
-            | AddF32(ref r1, ref r2, ref r3)
-            | AddF64(ref r1, ref r2, ref r3) => {
+            AddI32(r1, r2, r3) | AddI64(r1, r2, r3) | AddF32(r1, r2, r3) | AddF64(r1, r2, r3) => {
                 r1.pp(w, indent)?;
                 write!(w, ": ")?;
                 r1.0.pp(w, indent)?;
@@ -176,10 +170,7 @@ impl PP for Op {
                 write!(w, " + ")?;
                 r3.pp(w, indent)?;
             }
-            SubI32(ref r1, ref r2, ref r3)
-            | SubI64(ref r1, ref r2, ref r3)
-            | SubF32(ref r1, ref r2, ref r3)
-            | SubF64(ref r1, ref r2, ref r3) => {
+            SubI32(r1, r2, r3) | SubI64(r1, r2, r3) | SubF32(r1, r2, r3) | SubF64(r1, r2, r3) => {
                 r1.pp(w, indent)?;
                 write!(w, ": ")?;
                 r1.0.pp(w, indent)?;
@@ -188,10 +179,7 @@ impl PP for Op {
                 write!(w, " - ")?;
                 r3.pp(w, indent)?;
             }
-            MulI32(ref r1, ref r2, ref r3)
-            | MulI64(ref r1, ref r2, ref r3)
-            | MulF32(ref r1, ref r2, ref r3)
-            | MulF64(ref r1, ref r2, ref r3) => {
+            MulI32(r1, r2, r3) | MulI64(r1, r2, r3) | MulF32(r1, r2, r3) | MulF64(r1, r2, r3) => {
                 r1.pp(w, indent)?;
                 write!(w, ": ")?;
                 r1.0.pp(w, indent)?;
@@ -200,10 +188,7 @@ impl PP for Op {
                 write!(w, " * ")?;
                 r3.pp(w, indent)?;
             }
-            DivI32(ref r1, ref r2, ref r3)
-            | DivI64(ref r1, ref r2, ref r3)
-            | DivF32(ref r1, ref r2, ref r3)
-            | DivF64(ref r1, ref r2, ref r3) => {
+            DivI32(r1, r2, r3) | DivI64(r1, r2, r3) | DivF32(r1, r2, r3) | DivF64(r1, r2, r3) => {
                 r1.pp(w, indent)?;
                 write!(w, ": ")?;
                 r1.0.pp(w, indent)?;
@@ -212,7 +197,7 @@ impl PP for Op {
                 write!(w, " / ")?;
                 r3.pp(w, indent)?;
             }
-            ModI32(ref r1, ref r2, ref r3) | ModI64(ref r1, ref r2, ref r3) => {
+            ModI32(r1, r2, r3) | ModI64(r1, r2, r3) => {
                 r1.pp(w, indent)?;
                 write!(w, ": ")?;
                 r1.0.pp(w, indent)?;
@@ -221,10 +206,7 @@ impl PP for Op {
                 write!(w, " mod ")?;
                 r3.pp(w, indent)?;
             }
-            EqI32(ref r1, ref r2, ref r3)
-            | EqI64(ref r1, ref r2, ref r3)
-            | EqF32(ref r1, ref r2, ref r3)
-            | EqF64(ref r1, ref r2, ref r3) => {
+            EqI32(r1, r2, r3) | EqI64(r1, r2, r3) | EqF32(r1, r2, r3) | EqF64(r1, r2, r3) => {
                 r1.pp(w, indent)?;
                 write!(w, ": ")?;
                 r1.0.pp(w, indent)?;
@@ -233,10 +215,7 @@ impl PP for Op {
                 write!(w, " = ")?;
                 r3.pp(w, indent)?;
             }
-            NeqI32(ref r1, ref r2, ref r3)
-            | NeqI64(ref r1, ref r2, ref r3)
-            | NeqF32(ref r1, ref r2, ref r3)
-            | NeqF64(ref r1, ref r2, ref r3) => {
+            NeqI32(r1, r2, r3) | NeqI64(r1, r2, r3) | NeqF32(r1, r2, r3) | NeqF64(r1, r2, r3) => {
                 r1.pp(w, indent)?;
                 write!(w, ": ")?;
                 r1.0.pp(w, indent)?;
@@ -245,10 +224,7 @@ impl PP for Op {
                 write!(w, " <> ")?;
                 r3.pp(w, indent)?;
             }
-            GtI32(ref r1, ref r2, ref r3)
-            | GtI64(ref r1, ref r2, ref r3)
-            | GtF32(ref r1, ref r2, ref r3)
-            | GtF64(ref r1, ref r2, ref r3) => {
+            GtI32(r1, r2, r3) | GtI64(r1, r2, r3) | GtF32(r1, r2, r3) | GtF64(r1, r2, r3) => {
                 r1.pp(w, indent)?;
                 write!(w, ": ")?;
                 r1.0.pp(w, indent)?;
@@ -257,10 +233,7 @@ impl PP for Op {
                 write!(w, " > ")?;
                 r3.pp(w, indent)?;
             }
-            GeI32(ref r1, ref r2, ref r3)
-            | GeI64(ref r1, ref r2, ref r3)
-            | GeF32(ref r1, ref r2, ref r3)
-            | GeF64(ref r1, ref r2, ref r3) => {
+            GeI32(r1, r2, r3) | GeI64(r1, r2, r3) | GeF32(r1, r2, r3) | GeF64(r1, r2, r3) => {
                 r1.pp(w, indent)?;
                 write!(w, ": ")?;
                 r1.0.pp(w, indent)?;
@@ -269,10 +242,7 @@ impl PP for Op {
                 write!(w, " >= ")?;
                 r3.pp(w, indent)?;
             }
-            LtI32(ref r1, ref r2, ref r3)
-            | LtI64(ref r1, ref r2, ref r3)
-            | LtF32(ref r1, ref r2, ref r3)
-            | LtF64(ref r1, ref r2, ref r3) => {
+            LtI32(r1, r2, r3) | LtI64(r1, r2, r3) | LtF32(r1, r2, r3) | LtF64(r1, r2, r3) => {
                 r1.pp(w, indent)?;
                 write!(w, ": ")?;
                 r1.0.pp(w, indent)?;
@@ -281,10 +251,7 @@ impl PP for Op {
                 write!(w, " < ")?;
                 r3.pp(w, indent)?;
             }
-            LeI32(ref r1, ref r2, ref r3)
-            | LeI64(ref r1, ref r2, ref r3)
-            | LeF32(ref r1, ref r2, ref r3)
-            | LeF64(ref r1, ref r2, ref r3) => {
+            LeI32(r1, r2, r3) | LeI64(r1, r2, r3) | LeF32(r1, r2, r3) | LeF64(r1, r2, r3) => {
                 r1.pp(w, indent)?;
                 write!(w, ": ")?;
                 r1.0.pp(w, indent)?;
@@ -293,19 +260,19 @@ impl PP for Op {
                 write!(w, " <= ")?;
                 r3.pp(w, indent)?;
             }
-            ConstF32(ref reg, ref i) => {
+            ConstF32(reg, i) => {
                 reg.pp(w, indent)?;
                 write!(w, ": ")?;
                 reg.0.pp(w, indent)?;
                 write!(w, " <- {}", i)?;
             }
-            ConstF64(ref reg, ref i) => {
+            ConstF64(reg, i) => {
                 reg.pp(w, indent)?;
                 write!(w, ": ")?;
                 reg.0.pp(w, indent)?;
                 write!(w, " <- {}", i)?;
             }
-            HeapAlloc(ref reg, ref value, ref tys) => {
+            HeapAlloc(reg, value, tys) => {
                 reg.pp(w, indent)?;
                 write!(w, ": ")?;
                 reg.0.pp(w, indent)?;
@@ -315,13 +282,13 @@ impl PP for Op {
                 write!(w, "{:?}", tys.as_slice())?;
                 write!(w, ")")?;
             }
-            StackAlloc(ref reg, ref value, ref tys) => {
+            StackAlloc(reg, value, tys) => {
                 reg.pp(w, indent)?;
                 write!(w, ": ")?;
                 reg.0.pp(w, indent)?;
                 write!(w, " <- stackalloc({}, {:?})", value, tys)?;
             }
-            ClosureCall(ref reg, ref name, ref args) => {
+            ClosureCall(reg, name, args) => {
                 reg.pp(w, indent)?;
                 write!(w, ": ")?;
                 reg.0.pp(w, indent)?;
@@ -335,7 +302,7 @@ impl PP for Op {
                 };
                 write!(w, ")")?;
             }
-            FunCall(ref reg, ref name, ref args) => {
+            FunCall(reg, name, args) => {
                 reg.pp(w, indent)?;
                 write!(w, ": ")?;
                 reg.0.pp(w, indent)?;
@@ -349,12 +316,11 @@ impl PP for Op {
                 }
                 write!(w, ")")?;
             }
-            BuiltinCall(ref reg, ref name, ref args) => {
+            ExternCall(reg, module, name, args) => {
                 reg.pp(w, indent)?;
                 write!(w, ": ")?;
                 reg.0.pp(w, indent)?;
-                write!(w, " <- builtin call ")?;
-                name.pp(w, indent)?;
+                write!(w, " <- extern call \"{}\" \"{}\"", module, name)?;
                 write!(w, "(")?;
                 inter_iter! {
                     args.iter(),
@@ -363,14 +329,14 @@ impl PP for Op {
                 }
                 write!(w, ")")?;
             }
-            Jump(ref label) => {
+            Jump(label) => {
                 write!(w, "jump ")?;
                 label.pp(w, indent)?;
             }
             Unreachable => {
                 write!(w, "unreachable")?;
             }
-            Ret(ref reg) => {
+            Ret(reg) => {
                 write!(w, "ret ")?;
                 reg.as_ref().map(|r| r.pp(w, indent)).unwrap_or(Ok(()))?;
             }
