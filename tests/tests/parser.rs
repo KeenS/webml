@@ -264,7 +264,7 @@ fn parse_binop_assoc() {
 }
 
 #[test]
-fn parse_uiltincall() {
+fn parse_builtincall() {
     let input = r#"val ret = _builtincall "add" (x, y)"#;
     let ast = parse(input).unwrap();
     assert_eq!(
@@ -295,6 +295,47 @@ fn parse_uiltincall() {
                             }
                         }
                     ]
+                }
+            }
+        }])
+    )
+}
+
+#[test]
+fn parse_externcall() {
+    let input = r#"val ret = _externcall ("module" . "add" : (int, int) -> int) (x, y)"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![Declaration::Val {
+            rec: false,
+            pattern: Pattern {
+                ty: (),
+                inner: PatternKind::Variable {
+                    name: Symbol::new("ret"),
+                }
+            },
+            expr: Expr {
+                ty: (),
+                inner: ExprKind::ExternCall {
+                    module: "module".into(),
+                    fun: "add".into(),
+                    args: vec![
+                        Expr {
+                            ty: (),
+                            inner: ExprKind::Symbol {
+                                name: Symbol::new("x")
+                            }
+                        },
+                        Expr {
+                            ty: (),
+                            inner: ExprKind::Symbol {
+                                name: Symbol::new("y")
+                            }
+                        }
+                    ],
+                    argty: vec![Type::Int, Type::Int],
+                    retty: Type::Int
                 }
             }
         }])

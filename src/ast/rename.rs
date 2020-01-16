@@ -185,7 +185,11 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
         }
     }
 
-    fn traverse_binds(&mut self, binds: &mut Vec<CoreDeclaration<Ty>>, ret: &mut Box<CoreExpr<Ty>>) {
+    fn traverse_binds(
+        &mut self,
+        binds: &mut Vec<CoreDeclaration<Ty>>,
+        ret: &mut Box<CoreExpr<Ty>>,
+    ) {
         let mut scope = self.new_scope();
         for bind in binds.iter_mut() {
             scope.traverse_statement(bind);
@@ -243,7 +247,6 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
 }
 
 static BUILTIN_FUNCTIONS: &[(&str, BIF)] = &[
-    ("print", BIF::Print),
     ("+", BIF::Add),
     ("-", BIF::Sub),
     ("*", BIF::Mul),
@@ -330,24 +333,6 @@ impl Transform<()> for WrapBIF {
             if let Some(bif) = self.bif_table.get(&name.0).cloned() {
                 use BIF::*;
                 return match bif {
-                    Print => {
-                        let param = self.gensym("x");
-                        // fn x => _builtincall "print" (x)
-                        ExprKind::Fn {
-                            param: param.clone(),
-                            body: Expr {
-                                ty: (),
-                                inner: ExprKind::BuiltinCall {
-                                    fun: bif,
-                                    args: vec![Expr {
-                                        ty: (),
-                                        inner: ExprKind::Symbol { name: param },
-                                    }],
-                                },
-                            }
-                            .boxed(),
-                        }
-                    }
                     Add | Sub | Mul | Div | Divf | Mod | Eq | Neq | Gt | Ge | Lt | Le => {
                         let tuple = self.gensym("tuple");
                         let l = self.gensym("x");

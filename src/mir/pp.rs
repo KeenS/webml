@@ -230,13 +230,18 @@ impl PP for Op {
                 }
                 write!(w, ")")?;
             }
-            BuiltinCall { var, ty, fun, args } => {
+            ExternCall {
+                var,
+                ty,
+                module,
+                fun,
+                args,
+            } => {
                 write!(w, "{}", space)?;
                 var.pp(w, indent)?;
                 write!(w, ": ")?;
                 ty.pp(w, indent)?;
-                write!(w, " := ")?;
-                fun.pp(w, indent)?;
+                write!(w, " := \"{}\".\"{}\"", module, fun)?;
                 write!(w, "(")?;
                 inter_iter! {
                     args.iter(),

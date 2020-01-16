@@ -122,7 +122,33 @@ impl<Ty: PP, DE: PP, DS: PP> PP for Expr<Ty, DE, DS> {
                 }
                 write!(w, ")")?;
             }
+            ExternCall {
+                module,
+                fun,
+                args,
+                argty,
+                retty,
+            } => {
+                write!(w, "_externcall \"{}\".\"{}\"(", module, fun)?;
 
+                inter_iter! {
+                    &args,
+                    write!(w, ", ")?,
+                    |arg| => {
+                        arg.pp(w, indent)?
+                    }
+                };
+                write!(w, "): (")?;
+                inter_iter! {
+                    &argty,
+                    write!(w, ", ")?,
+                    |ty| => {
+                        ty.pp(w, indent)?
+                    }
+                };
+                write!(w, ") -> ")?;
+                retty.pp(w, indent)?;
+            }
             Fn { body, param } => {
                 write!(w, "fn ")?;
                 param.pp(w, indent)?;

@@ -71,6 +71,15 @@ impl<'a> Traverse for Trav<'a> {
                 self.traverse_builtin_call(ty, fun, args);
                 return;
             }
+            ExternCall {
+                ty,
+                module,
+                fun,
+                args,
+            } => {
+                self.traverse_extern_call(ty, module, fun, args);
+                return;
+            }
             App { ty, fun, arg } => {
                 self.traverse_app(ty, fun, arg);
                 return;

@@ -3,6 +3,7 @@ pub mod pp;
 
 pub use self::mir2lir::MIR2LIR;
 use crate::prim::*;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum LTy {
@@ -35,6 +36,8 @@ impl LTy {
         }
     }
 }
+
+pub type ExternTypes = HashMap<(String, String), (Vec<LTy>, LTy)>;
 
 #[derive(Debug, Clone)]
 pub struct Reg(pub LTy, pub u32);
@@ -146,7 +149,7 @@ pub enum Op {
     StackAlloc(Reg, u32, Vec<LTy>),
 
     StoreFnPtr(Addr, Symbol),
-    BuiltinCall(Reg, BIF, Vec<Reg>),
+    ExternCall(Reg, String, String, Vec<Reg>),
     FunCall(Reg, Symbol, Vec<Reg>),
     ClosureCall(Reg, Reg, Vec<Reg>),
     Jump(Label),

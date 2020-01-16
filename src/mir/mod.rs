@@ -120,10 +120,11 @@ pub enum Op {
         fun: Symbol,
         env: Vec<(EbbTy, Symbol)>,
     },
-    BuiltinCall {
+    ExternCall {
         var: Symbol,
         ty: EbbTy,
-        fun: BIF,
+        module: String,
+        fun: String,
         args: Vec<Symbol>,
     },
     Call {

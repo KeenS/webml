@@ -6,7 +6,7 @@ use nom::character::complete::{alphanumeric1, digit1, multispace0, multispace1};
 use nom::combinator::{all_consuming, complete, map, map_res, opt, recognize, value, verify};
 use nom::multi::{many1, separated_list, separated_nonempty_list};
 use nom::number::complete::recognize_float;
-use nom::sequence::tuple;
+use nom::sequence::{preceded, terminated, tuple};
 use nom::IResult;
 use std::cell::RefCell;
 use std::collections::{BTreeMap, HashMap};
@@ -220,6 +220,7 @@ impl Parser {
                 self.expr1_bool(),
                 self.expr1_sym(),
                 self.expr1_builtincall(),
+                self.expr1_externcall(),
             ))(i)
         }
     }
@@ -528,7 +529,6 @@ impl Parser {
             let (i, _) = multispace0(i)?;
             let (i, _) = tag("\"")(i)?;
             let (i, fun) = map_res(alphanumeric1, |name| match name {
-                "print" => Ok(BIF::Print),
                 "add" => Ok(BIF::Add),
                 "sub" => Ok(BIF::Sub),
                 "mul" => Ok(BIF::Mul),
@@ -556,6 +556,60 @@ impl Parser {
                 Expr {
                     ty: (),
                     inner: ExprKind::BuiltinCall { fun, args },
+                },
+            ))
+        }
+    }
+
+    /// `_externcall ("module"."fun": (arg, ty) -> retty) (arg, s)`
+    fn expr1_externcall(&self) -> impl Fn(&str) -> IResult<&str, Expr<()>> + '_ {
+        move |i| {
+            fn name_parser(i: &str) -> IResult<&str, &str> {
+                let allowed = recognize(many1(nom::character::complete::none_of("\"")));
+                preceded(tag("\""), terminated(allowed, tag("\"")))(i)
+            }
+            let (i, _) = tag("_externcall")(i)?;
+            let (i, _) = multispace0(i)?;
+            let (i, _) = tag("(")(i)?;
+            let (i, _) = multispace0(i)?;
+            let (i, module) = map(name_parser, String::from)(i)?;
+            let (i, _) = multispace0(i)?;
+            let (i, _) = tag(".")(i)?;
+            let (i, _) = multispace0(i)?;
+            let (i, fun) = map(name_parser, String::from)(i)?;
+            let (i, _) = multispace0(i)?;
+            let (i, _) = tag(":")(i)?;
+            let (i, _) = multispace0(i)?;
+            let (i, _) = tag("(")(i)?;
+            let (i, argty) = separated_nonempty_list(
+                tuple((multispace0, tag(","), multispace0)),
+                self.typename(),
+            )(i)?;
+            let (i, _) = tag(")")(i)?;
+            let (i, _) = multispace0(i)?;
+            let (i, _) = tag("->")(i)?;
+            let (i, _) = multispace0(i)?;
+            let (i, retty) = self.typename()(i)?;
+            let (i, _) = multispace0(i)?;
+            let (i, _) = tag(")")(i)?;
+            let (i, _) = multispace0(i)?;
+            let (i, _) = tag("(")(i)?;
+            let (i, args) = separated_nonempty_list(
+                tuple((multispace0, tag(","), multispace0)),
+                self.expr(),
+            )(i)?;
+            let (i, _) = tag(")")(i)?;
+            Ok((
+                i,
+                Expr {
+                    ty: (),
+                    inner: ExprKind::ExternCall {
+                        module,
+                        fun,
+                        args,
+                        argty,
+                        retty,
+                    },
                 },
             ))
         }

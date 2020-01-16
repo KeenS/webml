@@ -124,14 +124,21 @@ impl EBBBuilder {
         self
     }
 
-    pub fn builtin_call(
+    pub fn extern_call(
         &mut self,
         var: Symbol,
         ty: EbbTy,
-        fun: BIF,
+        module: String,
+        fun: String,
         args: Vec<Symbol>,
     ) -> &mut Self {
-        self.push(Op::BuiltinCall { var, ty, fun, args });
+        self.push(Op::ExternCall {
+            var,
+            ty,
+            module,
+            fun,
+            args,
+        });
         self
     }
 
