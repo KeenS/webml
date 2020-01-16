@@ -123,7 +123,8 @@ pub enum Op {
     ExternCall {
         var: Symbol,
         ty: EbbTy,
-        fun: BIF,
+        module: String,
+        fun: String,
         args: Vec<Symbol>,
     },
     Call {

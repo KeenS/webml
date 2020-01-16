@@ -128,10 +128,17 @@ impl EBBBuilder {
         &mut self,
         var: Symbol,
         ty: EbbTy,
-        fun: BIF,
+        module: String,
+        fun: String,
         args: Vec<Symbol>,
     ) -> &mut Self {
-        self.push(Op::ExternCall { var, ty, fun, args });
+        self.push(Op::ExternCall {
+            var,
+            ty,
+            module,
+            fun,
+            args,
+        });
         self
     }
 

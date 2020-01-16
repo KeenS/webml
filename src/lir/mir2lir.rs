@@ -411,26 +411,22 @@ impl MIR2LIR {
                         }
                         &m::ExternCall {
                             ref var,
+                            ref module,
                             ref fun,
                             ref args,
                             ..
                         } => {
                             let args = args.iter().map(|a| reg!(a)).collect();
-                            match fun {
-                                BIF::Print => {
-                                    self.extern_types.insert(
-                                        ("js-ffi".to_string(), "print".to_string()),
-                                        (vec![LTy::I32], LTy::Unit),
-                                    );
-                                    ops.push(ExternCall(
-                                        reg!(var),
-                                        "js-ffi".to_string(),
-                                        "print".to_string(),
-                                        args,
-                                    ))
-                                }
-                                _ => unreachable!(),
-                            };
+                            self.extern_types.insert(
+                                (module.to_string(), fun.to_string()),
+                                (vec![LTy::I32], LTy::Unit),
+                            );
+                            ops.push(ExternCall(
+                                reg!(var),
+                                module.to_string(),
+                                fun.to_string(),
+                                args,
+                            ))
                         }
                         &m::Call {
                             ref var,

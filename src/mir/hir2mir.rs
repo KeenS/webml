@@ -198,7 +198,13 @@ impl HIR2MIR {
                     };
                 }
                 match fun {
-                    Print => eb.extern_call(name, self.trans_ty(ty), fun, args),
+                    Print => eb.extern_call(
+                        name,
+                        self.trans_ty(ty),
+                        "js-ffi".into(),
+                        "print".into(),
+                        args,
+                    ),
                     Add => eb.add(name, self.trans_ty(ty), pop!(), pop!()),
                     Sub => eb.sub(name, self.trans_ty(ty), pop!(), pop!()),
                     Mul => eb.mul(name, self.trans_ty(ty), pop!(), pop!()),
