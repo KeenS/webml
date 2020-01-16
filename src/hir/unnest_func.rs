@@ -193,6 +193,23 @@ impl<'a> Scope<'a> {
                     .collect();
                 BuiltinCall { ty, fun, args }
             }
+            ExternCall {
+                ty,
+                module,
+                fun,
+                args,
+            } => {
+                let args = args
+                    .into_iter()
+                    .map(|arg| self.conv_expr(arg, None, false))
+                    .collect();
+                ExternCall {
+                    ty,
+                    module,
+                    fun,
+                    args,
+                }
+            }
             App {
                 ty,
                 mut fun,
@@ -282,6 +299,11 @@ impl<'a> Scope<'a> {
                     self.analyze_free_expr(frees, bound, arg);
                 }
             }
+            ExternCall { args, .. } => {
+                for arg in args {
+                    self.analyze_free_expr(frees, bound, arg);
+                }
+            }
             App { fun, arg, .. } => {
                 self.analyze_free_expr(frees, bound, fun);
                 self.analyze_free_expr(frees, bound, arg);
@@ -346,6 +368,11 @@ impl<'a> Scope<'a> {
             }
             Fun { body, .. } => self.rename(body, from, to),
             BuiltinCall { args, .. } => {
+                for arg in args {
+                    self.rename(arg, from, to);
+                }
+            }
+            ExternCall { args, .. } => {
                 for arg in args {
                     self.rename(arg, from, to);
                 }

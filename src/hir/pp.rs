@@ -113,6 +113,13 @@ impl PP for Expr {
                 inter_iter! {args.iter(), write!(w, ", ")?, |arg| => arg.pp(w, indent)?};
                 write!(w, ")")?;
             }
+            ExternCall {
+                module, fun, args, ..
+            } => {
+                write!(w, "\"{}\".\"{}\"(", module, fun)?;
+                inter_iter! {args.iter(), write!(w, ", ")?, |arg| => arg.pp(w, indent)?};
+                write!(w, ")")?;
+            }
             Constructor {
                 descriminant, arg, ..
             } => match arg {

@@ -38,6 +38,13 @@ pub trait Traverse<Ty> {
         match &mut expr.inner {
             Binds { binds, ret } => self.traverse_binds(binds, ret),
             BuiltinCall { fun, args } => self.traverse_builtincall(fun, args),
+            ExternCall {
+                module,
+                fun,
+                args,
+                argty,
+                retty,
+            } => self.traverse_externcall(module, fun, args, argty, retty),
             Fn { param, body } => self.traverse_fn(param, body),
             App { fun, arg } => self.traverse_app(fun, arg),
             Case { cond, clauses } => self.traverse_case(cond, clauses),
@@ -48,7 +55,11 @@ pub trait Traverse<Ty> {
             D(_) => (),
         }
     }
-    fn traverse_binds(&mut self, binds: &mut Vec<CoreDeclaration<Ty>>, ret: &mut Box<CoreExpr<Ty>>) {
+    fn traverse_binds(
+        &mut self,
+        binds: &mut Vec<CoreDeclaration<Ty>>,
+        ret: &mut Box<CoreExpr<Ty>>,
+    ) {
         for decl in binds.iter_mut() {
             self.traverse_statement(decl)
         }
@@ -56,6 +67,19 @@ pub trait Traverse<Ty> {
     }
 
     fn traverse_builtincall(&mut self, _: &mut BIF, args: &mut Vec<CoreExpr<Ty>>) {
+        for arg in args {
+            self.traverse_expr(arg)
+        }
+    }
+
+    fn traverse_externcall(
+        &mut self,
+        _module: &mut String,
+        _fun: &mut String,
+        args: &mut Vec<CoreExpr<Ty>>,
+        _argty: &mut Vec<Type>,
+        _retty: &mut Type,
+    ) {
         for arg in args {
             self.traverse_expr(arg)
         }
@@ -164,6 +188,13 @@ pub trait Transform<Ty> {
         expr.inner = match expr.inner {
             Binds { binds, ret } => self.transform_binds(binds, ret),
             BuiltinCall { fun, args } => self.transform_builtincall(fun, args),
+            ExternCall {
+                module,
+                fun,
+                args,
+                argty,
+                retty,
+            } => self.transform_externcall(module, fun, args, argty, retty),
             Fn { param, body } => self.transform_fn(param, body),
             App { fun, arg } => self.transform_app(fun, arg),
             Case { cond, clauses } => self.transform_case(cond, clauses),
@@ -196,6 +227,26 @@ pub trait Transform<Ty> {
                 .into_iter()
                 .map(|arg| self.transform_expr(arg))
                 .collect(),
+        }
+    }
+
+    fn transform_externcall(
+        &mut self,
+        module: String,
+        fun: String,
+        args: Vec<CoreExpr<Ty>>,
+        argty: Vec<Type>,
+        retty: Type,
+    ) -> CoreExprKind<Ty> {
+        ExprKind::ExternCall {
+            module,
+            fun,
+            args: args
+                .into_iter()
+                .map(|arg| self.transform_expr(arg))
+                .collect(),
+            argty,
+            retty,
         }
     }
 

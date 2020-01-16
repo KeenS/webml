@@ -53,6 +53,7 @@ impl AST2HIRPass {
             Tuple(tys) => HTy::Tuple(tys.into_iter().map(|ty| self.conv_ty(ty)).collect()),
             Fun(arg, ret) => HTy::fun(self.conv_ty(*arg), self.conv_ty(*ret)),
             Datatype(name) => {
+                println!("{:?}", name);
                 let constructors = &self
                     .symbol_table()
                     .get_type(&name)
@@ -232,6 +233,19 @@ impl AST2HIRPass {
             E::BuiltinCall { fun, args } => Expr::BuiltinCall {
                 ty: self.conv_ty(ty),
                 fun,
+                args: args.into_iter().map(|arg| self.conv_expr(arg)).collect(),
+            },
+            E::ExternCall {
+                module,
+                fun,
+                args,
+                argty: _,
+                retty: _,
+            } => Expr::ExternCall {
+                ty: self.conv_ty(ty),
+                module,
+                fun,
+
                 args: args.into_iter().map(|arg| self.conv_expr(arg)).collect(),
             },
             E::Fn { param, body } => {

@@ -191,20 +191,16 @@ impl HIR2MIR {
             BuiltinCall { ty, fun, args } => {
                 assert_eq!(ty, ty_);
                 use crate::prim::BIF::*;
-                let mut args = args.into_iter().map(|arg| force_symbol(arg)).collect();
+                let mut args = args
+                    .into_iter()
+                    .map(|arg| force_symbol(arg))
+                    .collect::<Vec<Symbol>>();
                 macro_rules! pop {
                     () => {
                         args.remove(0)
                     };
                 }
                 match fun {
-                    Print => eb.extern_call(
-                        name,
-                        self.trans_ty(ty),
-                        "js-ffi".into(),
-                        "print".into(),
-                        args,
-                    ),
                     Add => eb.add(name, self.trans_ty(ty), pop!(), pop!()),
                     Sub => eb.sub(name, self.trans_ty(ty), pop!(), pop!()),
                     Mul => eb.mul(name, self.trans_ty(ty), pop!(), pop!()),
@@ -218,6 +214,17 @@ impl HIR2MIR {
                     Lt => eb.lt(name, self.trans_ty(ty), pop!(), pop!()),
                     Le => eb.le(name, self.trans_ty(ty), pop!(), pop!()),
                 };
+                eb
+            }
+            ExternCall {
+                ty,
+                module,
+                fun,
+                args,
+            } => {
+                assert_eq!(ty, ty_);
+                let args = args.into_iter().map(|arg| force_symbol(arg)).collect();
+                eb.extern_call(name, self.trans_ty(ty), module, fun, args);
                 eb
             }
             App { ty, fun, arg } => {

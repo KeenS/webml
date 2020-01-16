@@ -17,6 +17,21 @@ fn take_binds(mut expr: Expr) -> (Expr, Vec<Val>) {
             let expr = BuiltinCall { fun, args, ty };
             (expr, bindss.into_iter().flat_map(Vec::into_iter).collect())
         }
+        ExternCall {
+            args,
+            ty,
+            module,
+            fun,
+        } => {
+            let (args, bindss): (_, Vec<_>) = args.into_iter().map(take_binds).unzip();
+            let expr = ExternCall {
+                module,
+                fun,
+                args,
+                ty,
+            };
+            (expr, bindss.into_iter().flat_map(Vec::into_iter).collect())
+        }
         App {
             mut fun,
             mut arg,

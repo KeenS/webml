@@ -37,6 +37,12 @@ pub enum Expr {
         fun: BIF,
         args: Vec<Expr>,
     },
+    ExternCall {
+        ty: HTy,
+        module: String,
+        fun: String,
+        args: Vec<Expr>,
+    },
     Fun {
         param: (HTy, Symbol),
         body_ty: HTy,
@@ -173,6 +179,7 @@ impl Expr {
             &Proj { ref ty, .. }
             | &Binds { ref ty, .. }
             | &BuiltinCall { ref ty, .. }
+            | &ExternCall { ref ty, .. }
             | &App { ref ty, .. }
             | &Case { ref ty, .. }
             | &Constructor { ref ty, .. }

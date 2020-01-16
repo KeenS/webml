@@ -124,6 +124,13 @@ impl Desugar {
         let inner = match expr.inner {
             Binds { binds, ret } => self.transform_binds(binds, ret),
             BuiltinCall { fun, args } => self.transform_builtincall(fun, args),
+            ExternCall {
+                module,
+                fun,
+                args,
+                argty,
+                retty,
+            } => self.transform_externcall(module, fun, args, argty, retty),
             Fn { param, body } => self.transform_fn(param, body),
             App { fun, arg } => self.transform_app(fun, arg),
             Case { cond, clauses } => self.transform_case(cond, clauses),
@@ -156,6 +163,26 @@ impl Desugar {
                 .into_iter()
                 .map(|arg| self.transform_expr(arg))
                 .collect(),
+        }
+    }
+
+    fn transform_externcall(
+        &mut self,
+        module: String,
+        fun: String,
+        args: Vec<UntypedExpr>,
+        argty: Vec<Type>,
+        retty: Type,
+    ) -> UntypedCoreExprKind {
+        ExprKind::ExternCall {
+            module,
+            fun,
+            args: args
+                .into_iter()
+                .map(|arg| self.transform_expr(arg))
+                .collect(),
+            argty,
+            retty,
         }
     }
 

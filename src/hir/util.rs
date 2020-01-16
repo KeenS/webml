@@ -28,6 +28,12 @@ pub trait Traverse {
                 fname,
             } => self.traverse_closure(envs, param_ty, body_ty, fname),
             BuiltinCall { ty, fun, args } => self.traverse_builtin_call(ty, fun, args),
+            ExternCall {
+                ty,
+                module,
+                fun,
+                args,
+            } => self.traverse_extern_call(ty, module, fun, args),
             App { ty, fun, arg } => self.traverse_app(ty, fun, arg),
             Case { ty, expr, arms } => self.traverse_case(ty, expr, arms),
             Tuple { tys, tuple } => self.traverse_tuple(tys, tuple),
@@ -68,6 +74,18 @@ pub trait Traverse {
     }
 
     fn traverse_builtin_call(&mut self, _ty: &mut HTy, _fun: &mut BIF, args: &mut Vec<Expr>) {
+        for arg in args {
+            self.traverse_expr(arg)
+        }
+    }
+
+    fn traverse_extern_call(
+        &mut self,
+        _ty: &mut HTy,
+        _module: &mut String,
+        _fun: &mut String,
+        args: &mut Vec<Expr>,
+    ) {
         for arg in args {
             self.traverse_expr(arg)
         }
@@ -146,6 +164,12 @@ pub trait Transform {
             Tuple { tys, tuple } => self.transform_tuple(tys, tuple),
             Proj { ty, index, tuple } => self.transform_proj(ty, index, tuple),
             BuiltinCall { ty, fun, args } => self.transform_builtin_call(ty, fun, args),
+            ExternCall {
+                ty,
+                module,
+                fun,
+                args,
+            } => self.transform_extern_call(ty, module, fun, args),
             Closure {
                 envs,
                 param_ty,
@@ -206,6 +230,24 @@ pub trait Transform {
     fn transform_builtin_call(&mut self, ty: HTy, fun: BIF, args: Vec<Expr>) -> Expr {
         Expr::BuiltinCall {
             ty,
+            fun,
+            args: args
+                .into_iter()
+                .map(|arg| self.transform_expr(arg))
+                .collect(),
+        }
+    }
+
+    fn transform_extern_call(
+        &mut self,
+        ty: HTy,
+        module: String,
+        fun: String,
+        args: Vec<Expr>,
+    ) -> Expr {
+        Expr::ExternCall {
+            ty,
+            module,
             fun,
             args: args
                 .into_iter()

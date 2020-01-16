@@ -89,6 +89,13 @@ pub enum ExprKind<Ty, DE = DerivedExprKind<Ty>, DS = DerivedDeclaration<Ty>> {
         fun: BIF,
         args: Vec<Expr<Ty, DE, DS>>,
     },
+    ExternCall {
+        module: String,
+        fun: String,
+        args: Vec<Expr<Ty, DE, DS>>,
+        argty: Vec<Type>,
+        retty: Type,
+    },
     Fn {
         param: Symbol,
         body: Box<Expr<Ty, DE, DS>>,
@@ -219,6 +226,19 @@ impl<Ty> CoreExpr<Ty> {
             BuiltinCall { fun, args } => BuiltinCall {
                 fun,
                 args: args.into_iter().map(|arg| arg.map_ty(f)).collect(),
+            },
+            ExternCall {
+                module,
+                fun,
+                args,
+                argty,
+                retty,
+            } => ExternCall {
+                module,
+                fun,
+                args: args.into_iter().map(|arg| arg.map_ty(f)).collect(),
+                retty: retty,
+                argty: argty,
             },
             Fn { param, body } => Fn {
                 param,

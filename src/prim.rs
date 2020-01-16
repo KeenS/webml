@@ -40,7 +40,6 @@ impl PP for Literal {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BIF {
-    Print,
     Add,
     Sub,
     Mul,
@@ -59,9 +58,6 @@ impl PP for BIF {
     fn pp<W: io::Write>(&self, w: &mut W, _indent: usize) -> io::Result<()> {
         use self::BIF::*;
         match self {
-            Print => {
-                write!(w, "print")?;
-            }
             Add => {
                 write!(w, "add")?;
             }

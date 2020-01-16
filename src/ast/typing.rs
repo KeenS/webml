@@ -312,14 +312,6 @@ impl TyEnv {
             BuiltinCall { fun, args } => {
                 use BIF::*;
                 match fun {
-                    Print => {
-                        assert!(args.len() == 1);
-                        let arg = &args[0];
-                        self.infer_expr(arg)?;
-                        self.unify(arg.ty(), int)?;
-                        self.give(*ty, Typing::Tuple(vec![]))?;
-                        Ok(())
-                    }
                     Add | Sub | Mul => {
                         assert!(args.len() == 2);
                         let l = &args[0];
@@ -369,6 +361,18 @@ impl TyEnv {
                         Ok(())
                     }
                 }
+            }
+            ExternCall {
+                args, argty, retty, ..
+            } => {
+                for (arg, argty) in args.into_iter().zip(argty) {
+                    self.infer_expr(arg)?;
+                    let argty = self.convert(argty.clone());
+                    self.give(arg.ty(), argty)?;
+                }
+                let retty = self.convert(retty.clone());
+                self.give(*ty, retty)?;
+                Ok(())
             }
             Fn { param, body } => {
                 let param_ty = self.pool.tyvar();
