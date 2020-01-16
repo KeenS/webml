@@ -466,7 +466,7 @@ fn parse_datatype_arg1() {
 
 #[test]
 fn parse_datatype_arg2() {
-    let input = r#"datatype hoge = Hoge of int | Fuga of real | Piyo of bool -> real -> int"#;
+    let input = r#"datatype hoge = Hoge of int | Fuga of real | Piyo of bool -> unit -> int"#;
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
@@ -479,7 +479,10 @@ fn parse_datatype_arg2() {
                     Symbol::new("Piyo"),
                     Some(Type::Fun(
                         Box::new(Type::Datatype(Symbol::new("bool"))),
-                        Box::new(Type::Fun(Box::new(Type::Real), Box::new(Type::Int)))
+                        Box::new(Type::Fun(
+                            Box::new(Type::Tuple(vec![])),
+                            Box::new(Type::Int)
+                        ))
                     ))
                 )
             ]

@@ -618,7 +618,7 @@ impl Parser {
     }
 
     fn typename2_unit(&self) -> impl Fn(&str) -> IResult<&str, Type> + '_ {
-        move |i| map(tag("()"), |_| Type::Tuple(vec![]))(i)
+        move |i| map(tag("unit"), |_| Type::Tuple(vec![]))(i)
     }
 
     fn typename2_paren(&self) -> impl Fn(&str) -> IResult<&str, Type> + '_ {
