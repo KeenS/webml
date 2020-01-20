@@ -3,6 +3,11 @@ use std::io;
 use crate::mir::*;
 use crate::util::PP;
 
+impl PP for (SymbolTable, MIR) {
+    fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
+        self.1.pp(w, indent)
+    }
+}
 impl PP for MIR {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         for fun in &self.0 {
@@ -90,6 +95,9 @@ impl PP for EbbTy {
                 }
                 write!(w, ") -> ")?;
                 ret.pp(w, indent)?;
+            }
+            Variable(name) => {
+                name.pp(w, indent)?;
             }
         };
         Ok(())

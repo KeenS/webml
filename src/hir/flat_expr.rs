@@ -214,10 +214,14 @@ impl Transform for FlatExpr {
     }
 }
 
-impl<E> Pass<HIR, E> for FlatExpr {
-    type Target = HIR;
+impl<E> Pass<(SymbolTable, HIR), E> for FlatExpr {
+    type Target = (SymbolTable, HIR);
 
-    fn trans(&mut self, hir: HIR, _: &Config) -> ::std::result::Result<Self::Target, E> {
-        Ok(self.transform_hir(hir))
+    fn trans(
+        &mut self,
+        (symbol_table, hir): (SymbolTable, HIR),
+        _: &Config,
+    ) -> ::std::result::Result<Self::Target, E> {
+        Ok((symbol_table, self.transform_hir(hir)))
     }
 }

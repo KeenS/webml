@@ -6,14 +6,28 @@ use crate::prim::*;
 use log::debug;
 use std::collections::HashMap;
 
-pub struct MIR2LIR {
+pub struct MIR2LIR {}
+
+pub struct MIR2LIRPass {
     extern_types: ExternTypes,
+    symbol_table: mir::SymbolTable,
 }
 
 impl MIR2LIR {
     pub fn new() -> Self {
-        MIR2LIR {
+        MIR2LIR {}
+    }
+
+    fn generate_pass(&mut self, symbol_table: mir::SymbolTable) -> MIR2LIRPass {
+        MIR2LIRPass::new(symbol_table)
+    }
+}
+
+impl MIR2LIRPass {
+    fn new(symbol_table: mir::SymbolTable) -> Self {
+        Self {
             extern_types: HashMap::new(),
+            symbol_table,
         }
     }
 
@@ -29,6 +43,7 @@ impl MIR2LIR {
             Union(_) => LTy::Ptr,
             Cls { .. } => LTy::Ptr,
             Ebb { .. } => LTy::FPtr,
+            Variable(name) => self.ebbty_to_lty(self.symbol_table.canonical_value(name).unwrap()),
         }
     }
 
@@ -87,6 +102,12 @@ impl MIR2LIR {
                             ref ty,
                             ref sym,
                         } => {
+                            let ty = match ty {
+                                mir::EbbTy::Variable(name) => {
+                                    self.symbol_table.canonical_value(name).unwrap()
+                                }
+                                ty => ty,
+                            };
                             match ty {
                                 &mir::EbbTy::Unit => {
                                     // do nothing
@@ -101,6 +122,9 @@ impl MIR2LIR {
                                 &mir::EbbTy::Float => ops.push(MoveF64(reg!(var), reg!(sym))),
                                 // FIXME: consider `union { () }`
                                 &mir::EbbTy::Union(_) => ops.push(MoveI64(reg!(var), reg!(sym))),
+                                &mir::EbbTy::Variable(_) => {
+                                    unreachable!("canonical value isn't canonical")
+                                }
                             }
                         }
                         &m::Add {
@@ -665,12 +689,17 @@ impl MIR2LIR {
     }
 }
 
-impl<E> Pass<mir::MIR, E> for MIR2LIR {
+impl<E> Pass<(mir::SymbolTable, mir::MIR), E> for MIR2LIR {
     type Target = (ExternTypes, LIR);
 
-    fn trans(&mut self, mir: mir::MIR, _: &Config) -> ::std::result::Result<Self::Target, E> {
-        let lir = self.trans_mir(mir);
-        let types = self.extern_types.drain().collect();
+    fn trans(
+        &mut self,
+        (symbol_table, mir): (mir::SymbolTable, mir::MIR),
+        _: &Config,
+    ) -> ::std::result::Result<Self::Target, E> {
+        let mut pass = self.generate_pass(symbol_table);
+        let lir = pass.trans_mir(mir);
+        let types = pass.extern_types.drain().collect();
         Ok((types, lir))
     }
 }

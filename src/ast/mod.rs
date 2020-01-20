@@ -161,8 +161,8 @@ pub enum PatternKind<Ty> {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct SymbolTable {
-    types: HashMap<Symbol, TypeInfo>,
-    constructors: HashMap<Symbol, Symbol>,
+    pub types: HashMap<Symbol, TypeInfo>,
+    pub constructors: HashMap<Symbol, Symbol>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

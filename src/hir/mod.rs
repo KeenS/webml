@@ -11,6 +11,7 @@ pub use self::flat_expr::FlatExpr;
 pub use self::flat_let::FlatLet;
 pub use self::force_closure::ForceClosure;
 pub use self::unnest_func::UnnestFunc;
+use std::collections::HashMap;
 
 use crate::prim::*;
 
@@ -111,45 +112,24 @@ pub enum Pattern {
     },
 }
 
-impl Pattern {
-    pub fn match_key(&self) -> u32 {
-        use self::Pattern::*;
-        // FIXME do not panic
-        match self {
-            Constant { value, .. } => *value as u32,
-            Tuple { .. } => panic!("bug: non-variant expression does not have keys"),
-            Constructor { descriminant, .. } => *descriminant as u32,
-            Var { .. } => panic!("bug: default like branch does not have keys"),
-        }
-    }
-
-    pub fn binds(&self) -> Option<Symbol> {
-        use self::Pattern::*;
-        // FIXME do not panic
-        match self {
-            Constant { .. } => None,
-            Tuple { .. } => panic!("bug: non-variant expression does not have keys"),
-            Constructor { arg, .. } => arg.as_ref().map(|(_, name)| name.clone()),
-            Var { name, .. } => Some(name.clone()),
-        }
-    }
-
-    pub fn is_irrefutable(&self) -> bool {
-        use self::Pattern::*;
-        match *self {
-            Constructor { .. } | Constant { .. } => false,
-            Tuple { .. } | Var { .. } => true,
-        }
-    }
+#[derive(Debug, Clone, PartialEq)]
+pub struct SymbolTable {
+    pub types: HashMap<Symbol, TypeInfo>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum HTy {
     Int,
     Real,
-    Tuple(Vec<HTy>),
     Fun(Box<HTy>, Box<HTy>),
-    Datatype(Vec<(u32, Option<HTy>)>),
+    Tuple(Vec<HTy>),
+    Datatype(Symbol),
+    // Datatype(Vec<(u32, Option<HTy>)>),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TypeInfo {
+    pub constructors: Vec<(u32, Option<HTy>)>,
 }
 
 impl Expr {
@@ -185,6 +165,38 @@ impl Expr {
             | &Constructor { ref ty, .. }
             | &Sym { ref ty, .. }
             | &Lit { ref ty, .. } => ty.clone(),
+        }
+    }
+}
+
+impl Pattern {
+    pub fn match_key(&self) -> u32 {
+        use self::Pattern::*;
+        // FIXME do not panic
+        match self {
+            Constant { value, .. } => *value as u32,
+            Tuple { .. } => panic!("bug: non-variant expression does not have keys"),
+            Constructor { descriminant, .. } => *descriminant as u32,
+            Var { .. } => panic!("bug: default like branch does not have keys"),
+        }
+    }
+
+    pub fn binds(&self) -> Option<Symbol> {
+        use self::Pattern::*;
+        // FIXME do not panic
+        match self {
+            Constant { .. } => None,
+            Tuple { .. } => panic!("bug: non-variant expression does not have keys"),
+            Constructor { arg, .. } => arg.as_ref().map(|(_, name)| name.clone()),
+            Var { name, .. } => Some(name.clone()),
+        }
+    }
+
+    pub fn is_irrefutable(&self) -> bool {
+        use self::Pattern::*;
+        match *self {
+            Constructor { .. } | Constant { .. } => false,
+            Tuple { .. } | Var { .. } => true,
         }
     }
 }
