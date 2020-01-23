@@ -102,29 +102,18 @@ impl MIR2LIRPass {
                             ref ty,
                             ref sym,
                         } => {
-                            let ty = match ty {
-                                mir::EbbTy::Variable(name) => {
-                                    self.symbol_table.canonical_value(name).unwrap()
-                                }
-                                ty => ty,
-                            };
+                            let ty = self.ebbty_to_lty(ty);
                             match ty {
-                                &mir::EbbTy::Unit => {
+                                LTy::Unit => {
                                     // do nothing
                                 }
-                                &mir::EbbTy::Bool => ops.push(MoveI32(reg!(var), reg!(sym))),
-                                &mir::EbbTy::Int
-                                | &mir::EbbTy::Tuple(_)
-                                | &mir::EbbTy::Cls { .. }
-                                | &mir::EbbTy::Ebb { .. } => {
-                                    ops.push(MoveI64(reg!(var), reg!(sym)))
-                                }
-                                &mir::EbbTy::Float => ops.push(MoveF64(reg!(var), reg!(sym))),
-                                // FIXME: consider `union { () }`
-                                &mir::EbbTy::Union(_) => ops.push(MoveI64(reg!(var), reg!(sym))),
-                                &mir::EbbTy::Variable(_) => {
-                                    unreachable!("canonical value isn't canonical")
-                                }
+                                LTy::I32 => ops.push(MoveI32(reg!(var), reg!(sym))),
+                                LTy::I64 => ops.push(MoveI64(reg!(var), reg!(sym))),
+                                LTy::F32 => ops.push(MoveF32(reg!(var), reg!(sym))),
+                                LTy::F64 => ops.push(MoveF64(reg!(var), reg!(sym))),
+                                // assuming ptr size is i32
+                                LTy::Ptr => ops.push(MoveI32(reg!(var), reg!(sym))),
+                                LTy::FPtr => ops.push(MoveI32(reg!(var), reg!(sym))),
                             }
                         }
                         &m::Add {
@@ -317,8 +306,8 @@ impl MIR2LIRPass {
                                     LTy::F64 => LoadF64,
                                     LTy::I32 => LoadI32,
                                     LTy::I64 => LoadI64,
-                                    LTy::Ptr => LoadI64,
-                                    LTy::FPtr => LoadI64,
+                                    LTy::Ptr => LoadI32,
+                                    LTy::FPtr => LoadI32,
                                     LTy::Unit =>
                                     // do nothing
                                     {
@@ -344,8 +333,8 @@ impl MIR2LIRPass {
                                     LTy::F64 => MoveF64,
                                     LTy::I32 => MoveI32,
                                     LTy::I64 => MoveI64,
-                                    LTy::Ptr => MoveI64,
-                                    LTy::FPtr => MoveI64,
+                                    LTy::Ptr => MoveI32,
+                                    LTy::FPtr => MoveI32,
                                     LTy::Unit => MoveI32,
                                 };
                                 ops.push(ctor(reg!(var), reg!(variant)));
@@ -365,8 +354,8 @@ impl MIR2LIRPass {
                                     LTy::F64 => MoveF64,
                                     LTy::I32 => MoveI32,
                                     LTy::I64 => MoveI64,
-                                    LTy::Ptr => MoveI64,
-                                    LTy::FPtr => MoveI64,
+                                    LTy::Ptr => MoveI32,
+                                    LTy::FPtr => MoveI32,
                                     LTy::Unit =>
                                     // do nothing
                                     {
