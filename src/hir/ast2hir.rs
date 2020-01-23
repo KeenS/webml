@@ -1,6 +1,6 @@
 use crate::ast;
 use crate::config::Config;
-use crate::hir::{Expr, HTy, Pattern, Val, HIR};
+use crate::hir::{Expr, HTy, Pattern, SymbolTable, TypeInfo, Val, HIR};
 use crate::id::Id;
 use crate::pass::Pass;
 use crate::prim::*;
@@ -24,6 +24,39 @@ impl AST2HIR {
     }
 }
 
+fn conv_symbol_table(symbol_table: ast::SymbolTable) -> SymbolTable {
+    SymbolTable {
+        types: symbol_table
+            .types
+            .into_iter()
+            .map(|(k, v)| (k, conv_type_info(v)))
+            .collect(),
+    }
+}
+
+fn conv_type_info(type_info: ast::TypeInfo) -> TypeInfo {
+    TypeInfo {
+        constructors: type_info
+            .constructors
+            .into_iter()
+            .enumerate()
+            .map(|(des, (_, arg))| (des as u32, arg.map(|ty| conv_ty(ty))))
+            .collect(),
+    }
+}
+
+fn conv_ty(ty: ast::Type) -> HTy {
+    use crate::ast::Type::*;
+    match ty {
+        Int => HTy::Int,
+        Real => HTy::Real,
+        Tuple(tys) => HTy::Tuple(tys.into_iter().map(|ty| conv_ty(ty)).collect()),
+        Fun(arg, ret) => HTy::fun(conv_ty(*arg), conv_ty(*ret)),
+        Datatype(name) => HTy::Datatype(name),
+        Variable(_) => panic!("polymorphism is not supported yet"),
+    }
+}
+
 impl AST2HIRPass {
     fn new(symbol_table: ast::SymbolTable, id: Id) -> Self {
         Self { symbol_table, id }
@@ -40,33 +73,8 @@ impl AST2HIRPass {
     fn force_tuple(&self, ty: ast::Type) -> Vec<HTy> {
         use crate::ast::Type::*;
         match ty {
-            Tuple(tys) => tys.into_iter().map(|ty| self.conv_ty(ty)).collect(),
+            Tuple(tys) => tys.into_iter().map(|ty| conv_ty(ty)).collect(),
             _ => panic!(),
-        }
-    }
-
-    fn conv_ty(&self, ty: ast::Type) -> HTy {
-        use crate::ast::Type::*;
-        match ty {
-            Int => HTy::Int,
-            Real => HTy::Real,
-            Tuple(tys) => HTy::Tuple(tys.into_iter().map(|ty| self.conv_ty(ty)).collect()),
-            Fun(arg, ret) => HTy::fun(self.conv_ty(*arg), self.conv_ty(*ret)),
-            Datatype(name) => {
-                println!("{:?}", name);
-                let constructors = &self
-                    .symbol_table()
-                    .get_type(&name)
-                    .expect("internal error: type not found")
-                    .constructors;
-                let descriminants = constructors
-                    .into_iter()
-                    .enumerate()
-                    .map(|(i, (_, ty))| (i as u32, ty.as_ref().map(|ty| self.conv_ty(ty.clone()))))
-                    .collect();
-                HTy::Datatype(descriminants)
-            }
-            Variable(_) => panic!("polymorphism is not supported yet"),
         }
     }
 
@@ -88,13 +96,13 @@ impl AST2HIRPass {
                 let ty = pattern.ty.clone();
                 match pattern.inner {
                     ast::PatternKind::Variable { name } => vec![Val {
-                        ty: self.conv_ty(ty),
+                        ty: conv_ty(ty),
                         rec: false,
                         name: name,
                         expr: self.conv_expr(expr),
                     }],
                     ast::PatternKind::Wildcard {} => vec![Val {
-                        ty: self.conv_ty(ty),
+                        ty: conv_ty(ty),
                         rec: false,
                         name: self.gensym(),
                         expr: self.conv_expr(expr),
@@ -113,7 +121,7 @@ impl AST2HIRPass {
                     //
                     // FIXME: raise Match error when not match
                     ast::PatternKind::Constant { .. } => vec![Val {
-                        ty: self.conv_ty(ty),
+                        ty: conv_ty(ty),
                         rec: false,
                         name: self.gensym(),
                         expr: self.conv_expr(expr),
@@ -135,7 +143,7 @@ impl AST2HIRPass {
                     //
                     // FIXME: raise Match error when not match
                     ast::PatternKind::Constructor { .. } => vec![Val {
-                        ty: self.conv_ty(ty),
+                        ty: conv_ty(ty),
                         rec: false,
                         name: self.gensym(),
                         expr: self.conv_expr(expr),
@@ -165,7 +173,7 @@ impl AST2HIRPass {
                                 .binds()
                                 .iter()
                                 .map(|&(name, ty)| {
-                                    let ty = self.conv_ty(ty.clone());
+                                    let ty = conv_ty(ty.clone());
                                     let expr = Expr::Sym {
                                         ty: ty.clone(),
                                         name: name.clone(),
@@ -198,7 +206,7 @@ impl AST2HIRPass {
                         }];
                         let tuple = Box::new(Expr::Sym { ty: tuple_ty, name });
                         for (index, (var, ty)) in binds.into_iter().enumerate() {
-                            let ty = self.conv_ty(ty.clone());
+                            let ty = conv_ty(ty.clone());
                             ret.push(Val {
                                 ty: ty.clone(),
                                 rec,
@@ -223,7 +231,7 @@ impl AST2HIRPass {
         let ty = expr.ty;
         match expr.inner {
             E::Binds { binds, ret } => Expr::Binds {
-                ty: self.conv_ty(ty),
+                ty: conv_ty(ty),
                 binds: binds
                     .into_iter()
                     .flat_map(|s| self.conv_statement(s))
@@ -231,7 +239,7 @@ impl AST2HIRPass {
                 ret: Box::new(self.conv_expr(*ret)),
             },
             E::BuiltinCall { fun, args } => Expr::BuiltinCall {
-                ty: self.conv_ty(ty),
+                ty: conv_ty(ty),
                 fun,
                 args: args.into_iter().map(|arg| self.conv_expr(arg)).collect(),
             },
@@ -242,7 +250,7 @@ impl AST2HIRPass {
                 argty: _,
                 retty: _,
             } => Expr::ExternCall {
-                ty: self.conv_ty(ty),
+                ty: conv_ty(ty),
                 module,
                 fun,
 
@@ -254,17 +262,15 @@ impl AST2HIRPass {
                     _ => panic!("internal error: functon is not typed as function"),
                 };
                 Expr::Fun {
-                    param: (self.conv_ty(param_ty), param),
-                    body_ty: self.conv_ty(body_ty),
+                    param: (conv_ty(param_ty), param),
+                    body_ty: conv_ty(body_ty),
                     body: Box::new(self.conv_expr(*body)),
                     captures: Vec::new(),
                 }
             }
-            E::App { fun, arg } => self
-                .conv_expr(*fun)
-                .app1(self.conv_ty(ty), self.conv_expr(*arg)),
+            E::App { fun, arg } => self.conv_expr(*fun).app1(conv_ty(ty), self.conv_expr(*arg)),
             E::Case { cond, clauses } => Expr::Case {
-                ty: self.conv_ty(ty),
+                ty: conv_ty(ty),
                 expr: Box::new(self.conv_expr(*cond)),
                 arms: clauses
                     .into_iter()
@@ -276,16 +282,16 @@ impl AST2HIRPass {
                 tuple: tuple.into_iter().map(|e| self.conv_expr(e)).collect(),
             },
             E::Constructor { arg, name } => Expr::Constructor {
-                ty: self.conv_ty(ty),
+                ty: conv_ty(ty),
                 arg: arg.map(|a| Box::new(self.conv_expr(*a))),
                 descriminant: self.conv_constructor_name(&name),
             },
             E::Symbol { name } => Expr::Sym {
-                ty: self.conv_ty(ty),
+                ty: conv_ty(ty),
                 name,
             },
             E::Literal { value } => Expr::Lit {
-                ty: self.conv_ty(ty),
+                ty: conv_ty(ty),
                 value,
             },
             E::D(d) => match d {},
@@ -296,15 +302,15 @@ impl AST2HIRPass {
         match pat.inner {
             ast::PatternKind::Constant { value } => Pattern::Constant {
                 value,
-                ty: self.conv_ty(ty),
+                ty: conv_ty(ty),
             },
             ast::PatternKind::Constructor { arg, name } => Pattern::Constructor {
-                ty: self.conv_ty(ty),
+                ty: conv_ty(ty),
                 arg: arg.map(|pat| match *pat {
                     ast::Pattern {
                         ty,
                         inner: ast::PatternKind::Variable { name },
-                    } => (self.conv_ty(ty), name),
+                    } => (conv_ty(ty), name),
                     _ => panic!("internal error: pattern"),
                 }),
                 descriminant: self.conv_constructor_name(&name),
@@ -316,7 +322,7 @@ impl AST2HIRPass {
                         ast::Pattern {
                             ty,
                             inner: ast::PatternKind::Variable { name },
-                        } => (self.conv_ty(ty), name),
+                        } => (conv_ty(ty), name),
                         _ => panic!("internal error: pattern"),
                     })
                     .unzip();
@@ -324,11 +330,11 @@ impl AST2HIRPass {
             }
             ast::PatternKind::Variable { name } => Pattern::Var {
                 name,
-                ty: self.conv_ty(ty),
+                ty: conv_ty(ty),
             },
             ast::PatternKind::Wildcard {} => Pattern::Var {
                 name: Symbol::new("_"),
-                ty: self.conv_ty(ty),
+                ty: conv_ty(ty),
             },
         }
     }
@@ -339,7 +345,7 @@ impl AST2HIRPass {
 }
 
 impl<E> Pass<(ast::SymbolTable, ast::TypedCore), E> for AST2HIR {
-    type Target = HIR;
+    type Target = (SymbolTable, HIR);
 
     fn trans(
         &mut self,
@@ -347,6 +353,8 @@ impl<E> Pass<(ast::SymbolTable, ast::TypedCore), E> for AST2HIR {
         _: &Config,
     ) -> ::std::result::Result<Self::Target, E> {
         let mut pass = self.generate_pass(symbol_table);
-        Ok(pass.conv_ast(ast))
+        let ast = pass.conv_ast(ast);
+        let symbol_table = conv_symbol_table(pass.symbol_table);
+        Ok((symbol_table, ast))
     }
 }

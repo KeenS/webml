@@ -9,6 +9,7 @@ pub use self::block_arrange::BlockArrange;
 pub use self::hir2mir::HIR2MIR;
 pub use self::unalias::UnAlias;
 use crate::prim::*;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
 pub struct MIR(pub Vec<Function>);
@@ -176,6 +177,11 @@ pub enum Op {
     },
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct SymbolTable {
+    table: HashMap<Symbol, EbbTy>,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EbbTy {
     Unit,
@@ -193,10 +199,21 @@ pub enum EbbTy {
         params: Vec<EbbTy>,
         ret: Box<EbbTy>,
     },
+    Variable(Symbol),
 }
 
 impl MIR {
     pub fn add(&mut self, f: Function) {
         self.0.push(f)
+    }
+}
+
+impl SymbolTable {
+    pub fn canonical_value(&self, name: &Symbol) -> Option<&EbbTy> {
+        match self.table.get(name) {
+            None => None,
+            Some(EbbTy::Variable(other_name)) => self.canonical_value(other_name),
+            Some(ty) => Some(ty),
+        }
     }
 }

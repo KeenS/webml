@@ -3,6 +3,12 @@ use std::io;
 use crate::hir::*;
 use crate::util::PP;
 
+impl PP for (SymbolTable, HIR) {
+    fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
+        self.1.pp(w, indent)
+    }
+}
+
 impl PP for HIR {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         for bind in &self.0 {
@@ -195,17 +201,9 @@ impl PP for HTy {
                 write!(w, " -> ")?;
                 t2.pp(w, indent)?;
             }
-            Datatype(descriminants) => inter_iter!(
-                descriminants.iter(),
-                write!(w, " | ")?,
-                |(descriminanst, param)| => {
-                    write!(w,"{}", descriminanst)?;
-                    if let Some(param) = param {
-                        write!(w," of ")?;
-                        param.pp(w, indent)?;
-                    }
-                }
-            ),
+            Datatype(name) => {
+                name.pp(w, indent)?;
+            }
         }
         Ok(())
     }

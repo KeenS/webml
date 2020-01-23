@@ -46,10 +46,14 @@ fn visit(
     blocks
 }
 
-impl<E> Pass<MIR, E> for BlockArrange {
-    type Target = MIR;
+impl<E> Pass<(SymbolTable, MIR), E> for BlockArrange {
+    type Target = (SymbolTable, MIR);
 
-    fn trans(&mut self, mir: MIR, _: &Config) -> ::std::result::Result<Self::Target, E> {
-        Ok(self.arrange_mir(mir))
+    fn trans(
+        &mut self,
+        (symbol_table, mir): (SymbolTable, MIR),
+        _: &Config,
+    ) -> ::std::result::Result<Self::Target, E> {
+        Ok((symbol_table, self.arrange_mir(mir)))
     }
 }

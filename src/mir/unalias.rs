@@ -184,10 +184,14 @@ impl UnAlias {
     }
 }
 
-impl<E> Pass<MIR, E> for UnAlias {
-    type Target = MIR;
+impl<E> Pass<(SymbolTable, MIR), E> for UnAlias {
+    type Target = (SymbolTable, MIR);
 
-    fn trans(&mut self, mir: MIR, _: &Config) -> ::std::result::Result<Self::Target, E> {
-        Ok(self.conv_mir(mir))
+    fn trans(
+        &mut self,
+        (symbol_table, mir): (SymbolTable, MIR),
+        _: &Config,
+    ) -> ::std::result::Result<Self::Target, E> {
+        Ok((symbol_table, self.conv_mir(mir)))
     }
 }

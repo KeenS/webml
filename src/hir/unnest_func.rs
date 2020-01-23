@@ -423,10 +423,14 @@ impl UnnestFunc {
     }
 }
 
-impl<E> Pass<HIR, E> for UnnestFunc {
-    type Target = HIR;
+impl<E> Pass<(SymbolTable, HIR), E> for UnnestFunc {
+    type Target = (SymbolTable, HIR);
 
-    fn trans(&mut self, hir: HIR, _: &Config) -> ::std::result::Result<Self::Target, E> {
-        Ok(self.scope().conv_hir(hir))
+    fn trans(
+        &mut self,
+        (symbol_table, hir): (SymbolTable, HIR),
+        _: &Config,
+    ) -> ::std::result::Result<Self::Target, E> {
+        Ok((symbol_table, self.scope().conv_hir(hir)))
     }
 }

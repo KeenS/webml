@@ -6,14 +6,28 @@ use crate::prim::*;
 use log::debug;
 use std::collections::HashMap;
 
-pub struct MIR2LIR {
+pub struct MIR2LIR {}
+
+pub struct MIR2LIRPass {
     extern_types: ExternTypes,
+    symbol_table: mir::SymbolTable,
 }
 
 impl MIR2LIR {
     pub fn new() -> Self {
-        MIR2LIR {
+        MIR2LIR {}
+    }
+
+    fn generate_pass(&mut self, symbol_table: mir::SymbolTable) -> MIR2LIRPass {
+        MIR2LIRPass::new(symbol_table)
+    }
+}
+
+impl MIR2LIRPass {
+    fn new(symbol_table: mir::SymbolTable) -> Self {
+        Self {
             extern_types: HashMap::new(),
+            symbol_table,
         }
     }
 
@@ -29,6 +43,7 @@ impl MIR2LIR {
             Union(_) => LTy::Ptr,
             Cls { .. } => LTy::Ptr,
             Ebb { .. } => LTy::FPtr,
+            Variable(name) => self.ebbty_to_lty(self.symbol_table.canonical_value(name).unwrap()),
         }
     }
 
@@ -87,20 +102,18 @@ impl MIR2LIR {
                             ref ty,
                             ref sym,
                         } => {
+                            let ty = self.ebbty_to_lty(ty);
                             match ty {
-                                &mir::EbbTy::Unit => {
+                                LTy::Unit => {
                                     // do nothing
                                 }
-                                &mir::EbbTy::Bool => ops.push(MoveI32(reg!(var), reg!(sym))),
-                                &mir::EbbTy::Int
-                                | &mir::EbbTy::Tuple(_)
-                                | &mir::EbbTy::Cls { .. }
-                                | &mir::EbbTy::Ebb { .. } => {
-                                    ops.push(MoveI64(reg!(var), reg!(sym)))
-                                }
-                                &mir::EbbTy::Float => ops.push(MoveF64(reg!(var), reg!(sym))),
-                                // FIXME: consider `union { () }`
-                                &mir::EbbTy::Union(_) => ops.push(MoveI64(reg!(var), reg!(sym))),
+                                LTy::I32 => ops.push(MoveI32(reg!(var), reg!(sym))),
+                                LTy::I64 => ops.push(MoveI64(reg!(var), reg!(sym))),
+                                LTy::F32 => ops.push(MoveF32(reg!(var), reg!(sym))),
+                                LTy::F64 => ops.push(MoveF64(reg!(var), reg!(sym))),
+                                // assuming ptr size is i32
+                                LTy::Ptr => ops.push(MoveI32(reg!(var), reg!(sym))),
+                                LTy::FPtr => ops.push(MoveI32(reg!(var), reg!(sym))),
                             }
                         }
                         &m::Add {
@@ -293,8 +306,8 @@ impl MIR2LIR {
                                     LTy::F64 => LoadF64,
                                     LTy::I32 => LoadI32,
                                     LTy::I64 => LoadI64,
-                                    LTy::Ptr => LoadI64,
-                                    LTy::FPtr => LoadI64,
+                                    LTy::Ptr => LoadI32,
+                                    LTy::FPtr => LoadI32,
                                     LTy::Unit =>
                                     // do nothing
                                     {
@@ -320,8 +333,8 @@ impl MIR2LIR {
                                     LTy::F64 => MoveF64,
                                     LTy::I32 => MoveI32,
                                     LTy::I64 => MoveI64,
-                                    LTy::Ptr => MoveI64,
-                                    LTy::FPtr => MoveI64,
+                                    LTy::Ptr => MoveI32,
+                                    LTy::FPtr => MoveI32,
                                     LTy::Unit => MoveI32,
                                 };
                                 ops.push(ctor(reg!(var), reg!(variant)));
@@ -341,8 +354,8 @@ impl MIR2LIR {
                                     LTy::F64 => MoveF64,
                                     LTy::I32 => MoveI32,
                                     LTy::I64 => MoveI64,
-                                    LTy::Ptr => MoveI64,
-                                    LTy::FPtr => MoveI64,
+                                    LTy::Ptr => MoveI32,
+                                    LTy::FPtr => MoveI32,
                                     LTy::Unit =>
                                     // do nothing
                                     {
@@ -665,12 +678,17 @@ impl MIR2LIR {
     }
 }
 
-impl<E> Pass<mir::MIR, E> for MIR2LIR {
+impl<E> Pass<(mir::SymbolTable, mir::MIR), E> for MIR2LIR {
     type Target = (ExternTypes, LIR);
 
-    fn trans(&mut self, mir: mir::MIR, _: &Config) -> ::std::result::Result<Self::Target, E> {
-        let lir = self.trans_mir(mir);
-        let types = self.extern_types.drain().collect();
+    fn trans(
+        &mut self,
+        (symbol_table, mir): (mir::SymbolTable, mir::MIR),
+        _: &Config,
+    ) -> ::std::result::Result<Self::Target, E> {
+        let mut pass = self.generate_pass(symbol_table);
+        let lir = pass.trans_mir(mir);
+        let types = pass.extern_types.drain().collect();
         Ok((types, lir))
     }
 }
