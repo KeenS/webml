@@ -826,7 +826,8 @@ impl Parser {
     }
 
     // require constructor to have arg for now.
-    // it will be converted in later phases
+    // constructor withouth arg is parsed as variable and
+    //  will be converted in later phases
     fn pattern_constructor(&self) -> impl Fn(&str) -> IResult<&str, Pattern<()>> + '_ {
         move |i| {
             let (i, name) = self.symbol()(i)?;
