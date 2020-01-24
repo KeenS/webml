@@ -168,6 +168,7 @@ pub struct SymbolTable {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Type {
     Variable(u64),
+    Char,
     Int,
     Real,
     Fun(Box<Type>, Box<Type>),

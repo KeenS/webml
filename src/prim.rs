@@ -21,6 +21,7 @@ impl PP for Symbol {
 pub enum Literal {
     Int(i64),
     Real(f64),
+    Char(u32),
 }
 
 impl PP for Literal {
@@ -32,6 +33,9 @@ impl PP for Literal {
             }
             Real(v) => {
                 write!(w, "{}", v)?;
+            }
+            Char(c) => {
+                write!(w, r##"#"{}""##, c)?;
             }
         }
         Ok(())

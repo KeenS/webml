@@ -8,7 +8,9 @@ use std::collections::HashMap;
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub enum LTy {
     I32,
+    U32,
     I64,
+    U64,
     F32,
     F64,
     Unit,
@@ -20,8 +22,8 @@ impl LTy {
     pub fn size(&self) -> u32 {
         use self::LTy::*;
         match *self {
-            I32 | F32 => 4,
-            I64 | F64 => 8,
+            I32 | U32 | F32 => 4,
+            I64 | U64 | F64 => 8,
             // pointer size is 4
             FPtr | Ptr => 4,
             Unit => 0,
@@ -32,7 +34,7 @@ impl LTy {
         use self::LTy::*;
         match *self {
             Ptr | FPtr => true,
-            I32 | I64 | F32 | F64 | Unit => false,
+            I32 | U32 | I64 | U64 | F32 | F64 | Unit => false,
         }
     }
 }
@@ -96,8 +98,25 @@ pub enum Op {
     LeI32(Reg, Reg, Reg),
     StoreI32(Addr, Reg),
     LoadI32(Reg, Addr),
+
     JumpIfI32(Reg, Label),
     JumpTableI32(Reg, Vec<Label>, Option<Label>),
+
+    ConstU32(Reg, u32),
+    MoveU32(Reg, Reg),
+    AddU32(Reg, Reg, Reg),
+    SubU32(Reg, Reg, Reg),
+    MulU32(Reg, Reg, Reg),
+    DivU32(Reg, Reg, Reg),
+    ModU32(Reg, Reg, Reg),
+    EqU32(Reg, Reg, Reg),
+    NeqU32(Reg, Reg, Reg),
+    GtU32(Reg, Reg, Reg),
+    GeU32(Reg, Reg, Reg),
+    LtU32(Reg, Reg, Reg),
+    LeU32(Reg, Reg, Reg),
+    StoreU32(Addr, Reg),
+    LoadU32(Reg, Addr),
 
     ConstI64(Reg, u64),
     MoveI64(Reg, Reg),
@@ -114,6 +133,22 @@ pub enum Op {
     LeI64(Reg, Reg, Reg),
     StoreI64(Addr, Reg),
     LoadI64(Reg, Addr),
+
+    ConstU64(Reg, u64),
+    MoveU64(Reg, Reg),
+    AddU64(Reg, Reg, Reg),
+    SubU64(Reg, Reg, Reg),
+    MulU64(Reg, Reg, Reg),
+    DivU64(Reg, Reg, Reg),
+    ModU64(Reg, Reg, Reg),
+    EqU64(Reg, Reg, Reg),
+    NeqU64(Reg, Reg, Reg),
+    GtU64(Reg, Reg, Reg),
+    GeU64(Reg, Reg, Reg),
+    LtU64(Reg, Reg, Reg),
+    LeU64(Reg, Reg, Reg),
+    StoreU64(Addr, Reg),
+    LoadU64(Reg, Addr),
 
     ConstF32(Reg, f32),
     MoveF32(Reg, Reg),

@@ -48,6 +48,7 @@ fn conv_type_info(type_info: ast::TypeInfo) -> TypeInfo {
 fn conv_ty(ty: ast::Type) -> HTy {
     use crate::ast::Type::*;
     match ty {
+        Char => HTy::Char,
         Int => HTy::Int,
         Real => HTy::Real,
         Tuple(tys) => HTy::Tuple(tys.into_iter().map(|ty| conv_ty(ty)).collect()),

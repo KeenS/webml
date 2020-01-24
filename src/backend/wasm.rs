@@ -20,7 +20,9 @@ fn lty_to_valuetype_opt(t: &lir::LTy) -> Option<ValueType> {
     match *t {
         Unit => None,
         I32 => Some(ValueType::I32),
+        U32 => Some(ValueType::I32),
         I64 => Some(ValueType::I64),
+        U64 => Some(ValueType::I64),
         F32 => Some(ValueType::F32),
         F64 => Some(ValueType::F64),
         FPtr => Some(ValueType::I32),
@@ -268,24 +270,24 @@ impl LIR2WASMPass {
                         use crate::lir::Op::*;
                         for op in &b.body {
                             match op {
-                                ConstI32(reg, c) => {
+                                ConstI32(reg, c) | ConstU32(reg, c) => {
                                     cb = cb.constant(*c as i32).set_local(reg!(reg))
                                 }
-                                AddI32(reg1, reg2, reg3) => {
+                                AddI32(reg1, reg2, reg3) | AddU32(reg1, reg2, reg3) => {
                                     cb = cb
                                         .get_local(reg!(reg2))
                                         .get_local(reg!(reg3))
                                         .i32_add()
                                         .set_local(reg!(reg1))
                                 }
-                                SubI32(reg1, reg2, reg3) => {
+                                SubI32(reg1, reg2, reg3) | SubU32(reg1, reg2, reg3) => {
                                     cb = cb
                                         .get_local(reg!(reg2))
                                         .get_local(reg!(reg3))
                                         .i32_sub()
                                         .set_local(reg!(reg1))
                                 }
-                                MulI32(reg1, reg2, reg3) => {
+                                MulI32(reg1, reg2, reg3) | MulU32(reg1, reg2, reg3) => {
                                     cb = cb
                                         .get_local(reg!(reg2))
                                         .get_local(reg!(reg3))
@@ -299,6 +301,13 @@ impl LIR2WASMPass {
                                         .i32_div_s()
                                         .set_local(reg!(reg1))
                                 }
+                                DivU32(reg1, reg2, reg3) => {
+                                    cb = cb
+                                        .get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .i32_div_u()
+                                        .set_local(reg!(reg1))
+                                }
                                 ModI32(reg1, reg2, reg3) => {
                                     cb = cb
                                         .get_local(reg!(reg2))
@@ -306,14 +315,21 @@ impl LIR2WASMPass {
                                         .i32_rem_s()
                                         .set_local(reg!(reg1))
                                 }
-                                EqI32(reg1, reg2, reg3) => {
+                                ModU32(reg1, reg2, reg3) => {
+                                    cb = cb
+                                        .get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .i32_rem_u()
+                                        .set_local(reg!(reg1))
+                                }
+                                EqI32(reg1, reg2, reg3) | EqU32(reg1, reg2, reg3) => {
                                     cb = cb
                                         .get_local(reg!(reg2))
                                         .get_local(reg!(reg3))
                                         .i32_eq()
                                         .set_local(reg!(reg1))
                                 }
-                                NeqI32(reg1, reg2, reg3) => {
+                                NeqI32(reg1, reg2, reg3) | NeqU32(reg1, reg2, reg3) => {
                                     cb = cb
                                         .get_local(reg!(reg2))
                                         .get_local(reg!(reg3))
@@ -327,11 +343,25 @@ impl LIR2WASMPass {
                                         .i32_gt_s()
                                         .set_local(reg!(reg1))
                                 }
+                                GtU32(reg1, reg2, reg3) => {
+                                    cb = cb
+                                        .get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .i32_gt_u()
+                                        .set_local(reg!(reg1))
+                                }
                                 GeI32(reg1, reg2, reg3) => {
                                     cb = cb
                                         .get_local(reg!(reg2))
                                         .get_local(reg!(reg3))
                                         .i32_ge_s()
+                                        .set_local(reg!(reg1))
+                                }
+                                GeU32(reg1, reg2, reg3) => {
+                                    cb = cb
+                                        .get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .i32_ge_u()
                                         .set_local(reg!(reg1))
                                 }
                                 LtI32(reg1, reg2, reg3) => {
@@ -341,6 +371,13 @@ impl LIR2WASMPass {
                                         .i32_lt_s()
                                         .set_local(reg!(reg1))
                                 }
+                                LtU32(reg1, reg2, reg3) => {
+                                    cb = cb
+                                        .get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .i32_lt_u()
+                                        .set_local(reg!(reg1))
+                                }
                                 LeI32(reg1, reg2, reg3) => {
                                     cb = cb
                                         .get_local(reg!(reg2))
@@ -348,19 +385,28 @@ impl LIR2WASMPass {
                                         .i32_le_s()
                                         .set_local(reg!(reg1))
                                 }
+                                LeU32(reg1, reg2, reg3) => {
+                                    cb = cb
+                                        .get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .i32_le_u()
+                                        .set_local(reg!(reg1))
+                                }
                                 MoveI32(reg1, reg2)
+                                | MoveU32(reg1, reg2)
                                 | MoveI64(reg1, reg2)
+                                | MoveU64(reg1, reg2)
                                 | MoveF32(reg1, reg2)
                                 | MoveF64(reg1, reg2) => {
                                     cb = cb.get_local(reg!(reg2)).set_local(reg!(reg1))
                                 }
-                                StoreI32(addr, value) => {
+                                StoreI32(addr, value) | StoreU32(addr, value) => {
                                     cb = cb
                                         .get_local(reg!(addr.0))
                                         .get_local(reg!(value))
                                         .i32_store(addr.1);
                                 }
-                                LoadI32(reg, addr) => {
+                                LoadI32(reg, addr) | LoadU32(reg, addr) => {
                                     cb = cb
                                         .get_local(reg!(addr.0))
                                         .i32_load(addr.1)
@@ -380,24 +426,24 @@ impl LIR2WASMPass {
                                     );
                                 }
 
-                                ConstI64(reg, c) => {
+                                ConstI64(reg, c) | ConstU64(reg, c) => {
                                     cb = cb.constant(*c as i64).set_local(reg!(reg))
                                 }
-                                AddI64(reg1, reg2, reg3) => {
+                                AddI64(reg1, reg2, reg3) | AddU64(reg1, reg2, reg3) => {
                                     cb = cb
                                         .get_local(reg!(reg2))
                                         .get_local(reg!(reg3))
                                         .i64_add()
                                         .set_local(reg!(reg1))
                                 }
-                                SubI64(reg1, reg2, reg3) => {
+                                SubI64(reg1, reg2, reg3) | SubU64(reg1, reg2, reg3) => {
                                     cb = cb
                                         .get_local(reg!(reg2))
                                         .get_local(reg!(reg3))
                                         .i64_sub()
                                         .set_local(reg!(reg1))
                                 }
-                                MulI64(reg1, reg2, reg3) => {
+                                MulI64(reg1, reg2, reg3) | MulU64(reg1, reg2, reg3) => {
                                     cb = cb
                                         .get_local(reg!(reg2))
                                         .get_local(reg!(reg3))
@@ -411,6 +457,13 @@ impl LIR2WASMPass {
                                         .i64_div_s()
                                         .set_local(reg!(reg1))
                                 }
+                                DivU64(reg1, reg2, reg3) => {
+                                    cb = cb
+                                        .get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .i64_div_u()
+                                        .set_local(reg!(reg1))
+                                }
                                 ModI64(reg1, reg2, reg3) => {
                                     cb = cb
                                         .get_local(reg!(reg2))
@@ -418,14 +471,21 @@ impl LIR2WASMPass {
                                         .i64_rem_s()
                                         .set_local(reg!(reg1))
                                 }
-                                EqI64(reg1, reg2, reg3) => {
+                                ModU64(reg1, reg2, reg3) => {
+                                    cb = cb
+                                        .get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .i64_rem_u()
+                                        .set_local(reg!(reg1))
+                                }
+                                EqI64(reg1, reg2, reg3) | EqU64(reg1, reg2, reg3) => {
                                     cb = cb
                                         .get_local(reg!(reg2))
                                         .get_local(reg!(reg3))
                                         .i64_eq()
                                         .set_local(reg!(reg1))
                                 }
-                                NeqI64(reg1, reg2, reg3) => {
+                                NeqI64(reg1, reg2, reg3) | NeqU64(reg1, reg2, reg3) => {
                                     cb = cb
                                         .get_local(reg!(reg2))
                                         .get_local(reg!(reg3))
@@ -439,11 +499,25 @@ impl LIR2WASMPass {
                                         .i64_gt_s()
                                         .set_local(reg!(reg1))
                                 }
+                                GtU64(reg1, reg2, reg3) => {
+                                    cb = cb
+                                        .get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .i64_gt_u()
+                                        .set_local(reg!(reg1))
+                                }
                                 GeI64(reg1, reg2, reg3) => {
                                     cb = cb
                                         .get_local(reg!(reg2))
                                         .get_local(reg!(reg3))
                                         .i64_ge_s()
+                                        .set_local(reg!(reg1))
+                                }
+                                GeU64(reg1, reg2, reg3) => {
+                                    cb = cb
+                                        .get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .i64_ge_u()
                                         .set_local(reg!(reg1))
                                 }
                                 LtI64(reg1, reg2, reg3) => {
@@ -453,6 +527,13 @@ impl LIR2WASMPass {
                                         .i64_lt_s()
                                         .set_local(reg!(reg1))
                                 }
+                                LtU64(reg1, reg2, reg3) => {
+                                    cb = cb
+                                        .get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .i64_lt_u()
+                                        .set_local(reg!(reg1))
+                                }
                                 LeI64(reg1, reg2, reg3) => {
                                     cb = cb
                                         .get_local(reg!(reg2))
@@ -460,14 +541,20 @@ impl LIR2WASMPass {
                                         .i64_le_s()
                                         .set_local(reg!(reg1))
                                 }
-                                LoadI64(reg, addr) => {
+                                LeU64(reg1, reg2, reg3) => {
+                                    cb = cb
+                                        .get_local(reg!(reg2))
+                                        .get_local(reg!(reg3))
+                                        .i64_le_u()
+                                        .set_local(reg!(reg1))
+                                }
+                                LoadI64(reg, addr) | LoadU64(reg, addr) => {
                                     cb = cb
                                         .get_local(reg!(addr.0))
                                         .i64_load(addr.1)
                                         .set_local(reg!(reg));
                                 }
-
-                                StoreI64(addr, value) => {
+                                StoreI64(addr, value) | StoreU64(addr, value) => {
                                     cb = cb
                                         .get_local(reg!(addr.0))
                                         .get_local(reg!(value))

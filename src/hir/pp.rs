@@ -183,6 +183,7 @@ impl PP for HTy {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         use crate::hir::HTy::*;
         match self {
+            Char => write!(w, "char")?,
             Int => write!(w, "int")?,
             Real => write!(w, "real")?,
             Tuple(tys) => {

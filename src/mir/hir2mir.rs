@@ -76,6 +76,7 @@ impl HIR2MIRPass {
     fn trans_ty(&self, ty: &hir::HTy) -> EbbTy {
         use crate::hir::HTy::*;
         match ty {
+            Char => EbbTy::Char,
             Int => EbbTy::Int,
             Real => EbbTy::Float,
             Tuple(tys) => match tys.len() {

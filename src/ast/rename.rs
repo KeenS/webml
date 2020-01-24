@@ -117,7 +117,7 @@ impl<'a> Scope<'a> {
         use Type::*;
 
         match ty {
-            Variable(_) | Int | Real => {
+            Variable(_) | Char | Int | Real => {
                 // noop
                 ()
             }

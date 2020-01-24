@@ -119,6 +119,7 @@ pub struct SymbolTable {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum HTy {
+    Char,
     Int,
     Real,
     Fun(Box<HTy>, Box<HTy>),

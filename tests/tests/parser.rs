@@ -6,6 +6,30 @@ use webml::parse;
 use webml::prim::*;
 
 #[test]
+fn parse_char() {
+    let input = r##"val x = #"a""##;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![Declaration::Val {
+            rec: false,
+            pattern: Pattern {
+                ty: (),
+                inner: PatternKind::Variable {
+                    name: Symbol::new("x"),
+                }
+            },
+            expr: Expr {
+                ty: (),
+                inner: ExprKind::Literal {
+                    value: Literal::Char('a' as u32),
+                }
+            },
+        },])
+    )
+}
+
+#[test]
 fn parse_int() {
     let input = r#"val x = 1"#;
     let ast = parse(input).unwrap();
