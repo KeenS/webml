@@ -311,6 +311,7 @@ impl HIR2MIRPass {
                     Tuple(Vec<EbbTy>),
                     Datatype(Vec<EbbTy>),
                     Int,
+                    Char,
                 }
 
                 let exprty = match exprty {
@@ -330,6 +331,7 @@ impl HIR2MIRPass {
                             .collect(),
                     ),
                     hir::HTy::Int => MatchTy::Int,
+                    hir::HTy::Char => MatchTy::Char,
                     ty => unreachable!("{:?}", ty),
                 };
                 match &exprty {
@@ -342,6 +344,9 @@ impl HIR2MIRPass {
                     }
                     MatchTy::Int => {
                         eb.alias(descriminant.clone(), EbbTy::Int, var.clone());
+                    }
+                    MatchTy::Char => {
+                        eb.alias(descriminant.clone(), EbbTy::Char, var.clone());
                     }
                 }
                 // an easy optimization of non branching case
@@ -391,9 +396,9 @@ impl HIR2MIRPass {
                                 }
                                 eb
                             }
-                            hir::Pattern::Constructor { .. } | hir::Pattern::Constant { .. } => {
-                                unreachable!()
-                            }
+                            hir::Pattern::Constructor { .. }
+                            | hir::Pattern::Constant { .. }
+                            | hir::Pattern::Char { .. } => unreachable!(),
                         };
 
                         let (eb, var) = self.trans_expr_block(fb, eb, ty.clone(), arm);

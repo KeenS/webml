@@ -146,6 +146,10 @@ pub enum PatternKind<Ty> {
         // same type as Literal::Int
         value: i64,
     },
+    Char {
+        // same type as Literal::Char
+        value: u32,
+    },
     Constructor {
         name: Symbol,
         arg: Option<Box<Pattern<Ty>>>,
@@ -278,6 +282,7 @@ impl<Ty> Pattern<Ty> {
         let ty = f(self.ty);
         let inner = match self.inner {
             Constant { value } => Constant { value },
+            Char { value } => Char { value },
             Constructor { name, arg } => Constructor {
                 name,
                 arg: arg.map(|pat| Box::new(pat.map_ty(f))),
@@ -294,7 +299,7 @@ impl<Ty> Pattern<Ty> {
     pub fn binds(&self) -> Vec<(&Symbol, &Ty)> {
         use self::PatternKind::*;
         match &self.inner {
-            Constant { .. } | Wildcard { .. } => vec![],
+            Constant { .. } | Char { .. } | Wildcard { .. } => vec![],
             Variable { name } => vec![(name, &self.ty)],
             Tuple { tuple, .. } => tuple.iter().flat_map(|pat| pat.binds()).collect(),
             Constructor { arg, .. } => arg.iter().flat_map(|pat| pat.binds()).collect(),
@@ -321,6 +326,14 @@ impl<Ty> Pattern<Ty> {
         use self::PatternKind::*;
         match &self.inner {
             Constant { .. } => true,
+            _ => false,
+        }
+    }
+
+    pub fn is_char(&self) -> bool {
+        use self::PatternKind::*;
+        match &self.inner {
+            Char { .. } => true,
             _ => false,
         }
     }

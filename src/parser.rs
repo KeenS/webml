@@ -455,7 +455,7 @@ impl Parser {
     fn expr1_char(&self) -> impl Fn(&str) -> IResult<&str, Expr<()>> + '_ {
         move |i| {
             let (i, _) = tag("#")(i)?;
-            let (i, s) = self.expr1_string_literal()(i)?;
+            let (i, s) = self.string_literal()(i)?;
             assert_eq!(s.iter().count(), 1);
             let c = s.into_iter().next().unwrap();
             Ok((
@@ -470,7 +470,7 @@ impl Parser {
         }
     }
 
-    fn expr1_string_literal(&self) -> impl Fn(&str) -> IResult<&str, Vec<u32>> + '_ {
+    fn string_literal(&self) -> impl Fn(&str) -> IResult<&str, Vec<u32>> + '_ {
         move |i| {
             let (i, _) = tag("\"")(i)?;
             let mut s = vec![];
@@ -771,6 +771,7 @@ impl Parser {
         move |i| {
             alt((
                 self.pattern_bool(),
+                self.pattern_char(),
                 self.pattern_int(),
                 self.pattern_tuple(),
                 self.pattern_var(),
@@ -810,6 +811,22 @@ impl Parser {
                     value: s.parse().unwrap(),
                 },
             })(i)
+        }
+    }
+
+    fn pattern_char(&self) -> impl Fn(&str) -> IResult<&str, Pattern<()>> + '_ {
+        move |i| {
+            let (i, _) = tag("#")(i)?;
+            let (i, s) = self.string_literal()(i)?;
+            assert_eq!(s.iter().count(), 1);
+            let c = s.into_iter().next().unwrap();
+            Ok((
+                i,
+                Pattern {
+                    ty: (),
+                    inner: PatternKind::Char { value: c },
+                },
+            ))
         }
     }
 

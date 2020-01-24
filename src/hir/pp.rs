@@ -152,6 +152,7 @@ impl PP for Pattern {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         match self {
             Pattern::Constant { value, .. } => write!(w, "{}", value),
+            Pattern::Char { value, .. } => write!(w, r##"#"{}""##, value),
             Pattern::Constructor {
                 descriminant, arg, ..
             } => match arg {

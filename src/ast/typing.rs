@@ -484,12 +484,21 @@ impl TyEnv {
         Ok(())
     }
 
+    fn infer_char<'b, 'r>(&'b mut self, _: &u32, given: NodeId) -> Result<'r, ()> {
+        let ty = self.pool.ty_char();
+        self.unify(given, ty)?;
+        Ok(())
+    }
+
     fn infer_pat<'b, 'r>(&'b mut self, pat: &Pattern<NodeId>) -> Result<'r, ()> {
         use self::PatternKind::*;
         let ty = &pat.ty();
         match &pat.inner {
             Constant { value } => {
                 self.infer_constant(value, *ty)?;
+            }
+            Char { value } => {
+                self.infer_char(value, *ty)?;
             }
             Constructor { arg, name } => {
                 let type_name = self

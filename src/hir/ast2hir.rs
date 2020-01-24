@@ -127,6 +127,12 @@ impl AST2HIRPass {
                         name: self.gensym(),
                         expr: self.conv_expr(expr),
                     }],
+                    ast::PatternKind::Char { .. } => vec![Val {
+                        ty: conv_ty(ty),
+                        rec: false,
+                        name: self.gensym(),
+                        expr: self.conv_expr(expr),
+                    }],
                     // when C(p1, p2, p3) binds var1 var2 var3, convert
                     //
                     // ```
@@ -302,6 +308,10 @@ impl AST2HIRPass {
         let ty = pat.ty;
         match pat.inner {
             ast::PatternKind::Constant { value } => Pattern::Constant {
+                value,
+                ty: conv_ty(ty),
+            },
+            ast::PatternKind::Char { value } => Pattern::Char {
                 value,
                 ty: conv_ty(ty),
             },

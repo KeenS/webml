@@ -536,18 +536,35 @@ impl MIR2LIRPass {
                                 ))
                             } else {
                                 let cond = reg!(cond);
-                                // currently supports only i32 types
-                                assert_eq!(cond.0, LTy::I32);
-                                let boolean = new_reg(LTy::I32);
-                                let constant = new_reg(LTy::I32);
-                                for (key, label, _) in clauses {
-                                    ops.push(ConstI32(constant.clone(), key as u32));
-                                    ops.push(EqI32(
-                                        boolean.clone(),
-                                        cond.clone(),
-                                        constant.clone(),
-                                    ));
-                                    ops.push(JumpIfI32(boolean.clone(), Label(label)))
+
+                                match cond.0 {
+                                    LTy::I32 => {
+                                        let boolean = new_reg(LTy::I32);
+                                        let constant = new_reg(LTy::I32);
+                                        for (key, label, _) in clauses {
+                                            ops.push(ConstI32(constant.clone(), key as u32));
+                                            ops.push(EqI32(
+                                                boolean.clone(),
+                                                cond.clone(),
+                                                constant.clone(),
+                                            ));
+                                            ops.push(JumpIfI32(boolean.clone(), Label(label)))
+                                        }
+                                    }
+                                    LTy::U32 => {
+                                        let boolean = new_reg(LTy::U32);
+                                        let constant = new_reg(LTy::U32);
+                                        for (key, label, _) in clauses {
+                                            ops.push(ConstU32(constant.clone(), key as u32));
+                                            ops.push(EqU32(
+                                                boolean.clone(),
+                                                cond.clone(),
+                                                constant.clone(),
+                                            ));
+                                            ops.push(JumpIfI32(boolean.clone(), Label(label)))
+                                        }
+                                    }
+                                    _ => panic!("internal error: branching currently supports only 32 bit types"),
                                 }
                                 if let Some(label) = default_label {
                                     ops.push(Jump(label))

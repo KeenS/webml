@@ -320,6 +320,7 @@ impl<'a> Scope<'a> {
                             }
                         }
                         Constant { .. } => (),
+                        Char { .. } => (),
                         Tuple { tuple, .. } => {
                             for name in tuple {
                                 scope.add_scope(name.clone())

@@ -236,6 +236,7 @@ impl<Ty> PP for Pattern<Ty> {
         use PatternKind::*;
         match &self.inner {
             Constant { value, .. } => write!(w, "{}", value),
+            Char { value } => write!(w, r##"#"{}""##, value),
             Constructor { name, arg, .. } => {
                 name.pp(w, indent)?;
                 if let Some(arg) = arg {
