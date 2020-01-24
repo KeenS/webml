@@ -628,15 +628,7 @@ impl Parser {
     }
 
     fn typename2(&self) -> impl Fn(&str) -> IResult<&str, Type> + '_ {
-        move |i| {
-            alt((
-                self.typename2_int(),
-                self.typename2_real(),
-                self.typename2_unit(),
-                self.typename2_paren(),
-                self.typename2_datatype(),
-            ))(i)
-        }
+        move |i| alt((self.typename2_paren(), self.typename2_datatype()))(i)
     }
 
     fn typename0_fun(&self) -> impl Fn(&str) -> IResult<&str, Type> + '_ {
@@ -663,18 +655,6 @@ impl Parser {
         }
     }
 
-    fn typename2_int(&self) -> impl Fn(&str) -> IResult<&str, Type> + '_ {
-        move |i| map(tag("int"), |_| Type::Int)(i)
-    }
-
-    fn typename2_real(&self) -> impl Fn(&str) -> IResult<&str, Type> + '_ {
-        move |i| map(tag("real"), |_| Type::Real)(i)
-    }
-
-    fn typename2_unit(&self) -> impl Fn(&str) -> IResult<&str, Type> + '_ {
-        move |i| map(tag("unit"), |_| Type::Tuple(vec![]))(i)
-    }
-
     fn typename2_paren(&self) -> impl Fn(&str) -> IResult<&str, Type> + '_ {
         move |i| {
             let (i, _) = tag("(")(i)?;
@@ -687,7 +667,14 @@ impl Parser {
     }
 
     fn typename2_datatype(&self) -> impl Fn(&str) -> IResult<&str, Type> + '_ {
-        move |i| map(self.symbol(), |name| Type::Datatype(name))(i)
+        move |i| {
+            map(self.symbol(), |name| match name.0.as_str() {
+                "unit" => Type::Tuple(vec![]),
+                "real" => Type::Real,
+                "int" => Type::Int,
+                _ => Type::Datatype(name),
+            })(i)
+        }
     }
 
     fn symbol_eq(&self) -> impl Fn(&str) -> IResult<&str, Symbol> + '_ {

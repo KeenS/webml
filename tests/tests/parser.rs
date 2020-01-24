@@ -717,6 +717,28 @@ fn parse_datatype_arg3() {
 }
 
 #[test]
+fn parse_datatype_primlike() {
+    let input = r#"datatype intlist = Cons of int * intlist | Nil"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![Declaration::Datatype {
+            name: Symbol::new("intlist"),
+            constructors: vec![
+                (
+                    Symbol::new("Cons"),
+                    Some(Type::Tuple(vec![
+                        Type::Int,
+                        Type::Datatype(Symbol::new("intlist"))
+                    ]))
+                ),
+                (Symbol::new("Nil"), None)
+            ]
+        },])
+    )
+}
+
+#[test]
 fn parse_fun_unary() {
     let input = r#"fun f x = x"#;
     let ast = parse(input).unwrap();
