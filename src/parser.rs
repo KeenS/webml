@@ -830,7 +830,7 @@ impl Parser {
     fn pattern_constructor(&self) -> impl Fn(&str) -> IResult<&str, Pattern<()>> + '_ {
         move |i| {
             let (i, name) = self.symbol()(i)?;
-            let (i, _) = multispace1(i)?;
+            let (i, _) = multispace0(i)?;
             let (i, arg) = self.pattern_atmic()(i)?;
             Ok((
                 i,
