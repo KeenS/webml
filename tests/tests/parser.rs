@@ -126,8 +126,150 @@ fn parse_unit() {
 }
 
 #[test]
+fn parse_apply() {
+    let input = r#"val x = f x"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![Declaration::Val {
+            rec: false,
+            pattern: Pattern {
+                ty: (),
+                inner: PatternKind::Variable {
+                    name: Symbol::new("x"),
+                }
+            },
+            expr: Expr {
+                ty: (),
+                inner: ExprKind::App {
+                    fun: Expr {
+                        ty: (),
+                        inner: ExprKind::Symbol {
+                            name: Symbol::new("f")
+                        }
+                    }
+                    .boxed(),
+                    arg: Expr {
+                        ty: (),
+                        inner: ExprKind::Symbol {
+                            name: Symbol::new("x")
+                        }
+                    }
+                    .boxed()
+                }
+            }
+        }])
+    )
+}
+
+#[test]
+fn parse_apply_tuple() {
+    let input = r#"val x = f(x, y)"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![Declaration::Val {
+            rec: false,
+            pattern: Pattern {
+                ty: (),
+                inner: PatternKind::Variable {
+                    name: Symbol::new("x"),
+                }
+            },
+            expr: Expr {
+                ty: (),
+                inner: ExprKind::App {
+                    fun: Expr {
+                        ty: (),
+                        inner: ExprKind::Symbol {
+                            name: Symbol::new("f")
+                        }
+                    }
+                    .boxed(),
+                    arg: Expr {
+                        ty: (),
+                        inner: ExprKind::Tuple {
+                            tuple: vec![
+                                Expr {
+                                    ty: (),
+                                    inner: ExprKind::Symbol {
+                                        name: Symbol::new("x")
+                                    }
+                                },
+                                Expr {
+                                    ty: (),
+                                    inner: ExprKind::Symbol {
+                                        name: Symbol::new("y")
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                    .boxed()
+                }
+            }
+        }])
+    )
+}
+#[test]
 fn parse_binop() {
     let input = r#"infix 6 + val x = 1 + 2"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![
+            Declaration::D(DerivedDeclaration::Infix {
+                priority: Some(6),
+                names: vec![Symbol::new("+")],
+            }),
+            Declaration::Val {
+                rec: false,
+                pattern: Pattern {
+                    ty: (),
+                    inner: PatternKind::Variable {
+                        name: Symbol::new("x"),
+                    }
+                },
+                expr: Expr {
+                    ty: (),
+                    inner: ExprKind::App {
+                        fun: Expr {
+                            ty: (),
+                            inner: ExprKind::Symbol {
+                                name: Symbol::new("+")
+                            }
+                        }
+                        .boxed(),
+                        arg: Expr {
+                            ty: (),
+                            inner: ExprKind::Tuple {
+                                tuple: vec![
+                                    Expr {
+                                        ty: (),
+                                        inner: ExprKind::Literal {
+                                            value: Literal::Int(1),
+                                        }
+                                    },
+                                    Expr {
+                                        ty: (),
+                                        inner: ExprKind::Literal {
+                                            value: Literal::Int(2),
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                        .boxed()
+                    }
+                }
+            },
+        ])
+    )
+}
+
+#[test]
+fn parse_binop_space() {
+    let input = r#"infix 6 + val x = 1+2"#;
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,

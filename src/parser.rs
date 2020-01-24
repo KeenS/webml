@@ -338,7 +338,7 @@ impl Parser {
     fn expr_infix_and_app(&self) -> impl Fn(&str) -> IResult<&str, Expr<()>> + '_ {
         move |i| {
             // TODO: support 1+1
-            let (i, mixed) = separated_nonempty_list(multispace1, self.expr1())(i)?;
+            let (i, mixed) = many1(map(tuple((multispace0, self.expr1())), |(_, e)| e))(i)?;
             #[derive(Debug)]
             enum Mixed {
                 E(Expr<()>),
