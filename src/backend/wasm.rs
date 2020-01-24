@@ -71,7 +71,6 @@ impl LIR2WASM {
                     .collect(),
                 ret: lty_to_valuetype_opt(&retty),
             };
-            println!("{:?}", ftype);
             let tyind = if !function_type_table.contains_key(&ftype) {
                 let tyi = md.add_type(ftype.clone());
                 function_type_table.insert(ftype, tyi.clone());
@@ -84,7 +83,6 @@ impl LIR2WASM {
             let fun = md.function_index_of(funind).unwrap();
             extern_functions.insert((module, name), fun);
         }
-        println!("{:?}", extern_functions);
         LIR2WASMPass::new(md, extern_functions, function_type_table)
     }
 }
@@ -722,7 +720,6 @@ impl LIR2WASMPass {
                                         cb = cb.get_local(reg!(arg))
                                     }
                                     let fun = self.extern_functions[&(module.clone(), fun.clone())];
-                                    println!("{:?}", fun);
                                     cb = cb.call(fun);
                                     let ret = lty_to_valuetype_opt(&reg.0);
                                     if let Some(_) = ret {
