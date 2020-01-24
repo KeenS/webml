@@ -5,5 +5,5 @@ fun printAll xs = case xs of
                  | Cons (x, xs) => let val () = print x
                                    in printAll xs end
 
-val list = Cons (1, Cons (2, Cons (3, Nil)))
+val list = Cons(1, Cons(2, Cons(3, Nil)))
 val () = printAll list
