@@ -48,6 +48,7 @@ fn conv_type_info(type_info: ast::TypeInfo) -> TypeInfo {
 fn conv_ty(ty: ast::Type) -> HTy {
     use crate::ast::Type::*;
     match ty {
+        Char => HTy::Char,
         Int => HTy::Int,
         Real => HTy::Real,
         Tuple(tys) => HTy::Tuple(tys.into_iter().map(|ty| conv_ty(ty)).collect()),
@@ -121,6 +122,12 @@ impl AST2HIRPass {
                     //
                     // FIXME: raise Match error when not match
                     ast::PatternKind::Constant { .. } => vec![Val {
+                        ty: conv_ty(ty),
+                        rec: false,
+                        name: self.gensym(),
+                        expr: self.conv_expr(expr),
+                    }],
+                    ast::PatternKind::Char { .. } => vec![Val {
                         ty: conv_ty(ty),
                         rec: false,
                         name: self.gensym(),
@@ -301,6 +308,10 @@ impl AST2HIRPass {
         let ty = pat.ty;
         match pat.inner {
             ast::PatternKind::Constant { value } => Pattern::Constant {
+                value,
+                ty: conv_ty(ty),
+            },
+            ast::PatternKind::Char { value } => Pattern::Char {
                 value,
                 ty: conv_ty(ty),
             },

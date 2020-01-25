@@ -185,6 +185,7 @@ pub struct SymbolTable {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EbbTy {
     Unit,
+    Char,
     Int,
     Float,
     Bool,

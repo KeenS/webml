@@ -125,6 +125,7 @@ pub trait Traverse<Ty> {
         use PatternKind::*;
         match &mut pattern.inner {
             Constant { value } => self.traverse_pat_constant(value),
+            Char { value } => self.traverse_pat_char(value),
             Constructor { name, arg } => self.traverse_pat_constructor(name, arg),
             Tuple { tuple } => self.traverse_pat_tuple(tuple),
             Variable { name } => self.traverse_pat_variable(name),
@@ -133,6 +134,7 @@ pub trait Traverse<Ty> {
     }
 
     fn traverse_pat_constant(&mut self, _value: &mut i64) {}
+    fn traverse_pat_char(&mut self, _value: &mut u32) {}
     fn traverse_pat_constructor(
         &mut self,
         _name: &mut Symbol,
@@ -310,6 +312,7 @@ pub trait Transform<Ty> {
         use PatternKind::*;
         pattern.inner = match pattern.inner {
             Constant { value } => self.transform_pat_constant(value),
+            Char { value } => self.transform_pat_char(value),
             Constructor { arg, name } => self.transform_pat_constructor(arg, name),
             Tuple { tuple } => self.transform_pat_tuple(tuple),
             Variable { name } => self.transform_pat_variable(name),
@@ -320,6 +323,10 @@ pub trait Transform<Ty> {
 
     fn transform_pat_constant(&mut self, value: i64) -> PatternKind<Ty> {
         PatternKind::Constant { value }
+    }
+
+    fn transform_pat_char(&mut self, value: u32) -> PatternKind<Ty> {
+        PatternKind::Char { value }
     }
 
     fn transform_pat_constructor(

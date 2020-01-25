@@ -50,6 +50,7 @@ impl PP for EbbTy {
         match self {
             Unit => write!(w, "()")?,
             Bool => write!(w, "bool")?,
+            Char => write!(w, "char")?,
             Int => write!(w, "int")?,
             Float => write!(w, "float")?,
             Tuple(tys) => {

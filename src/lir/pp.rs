@@ -77,7 +77,9 @@ impl PP for LTy {
         match self {
             Unit => write!(w, "()")?,
             I32 => write!(w, "i32")?,
+            U32 => write!(w, "u32")?,
             I64 => write!(w, "i64")?,
+            U64 => write!(w, "u64")?,
             F32 => write!(w, "f32")?,
             F64 => write!(w, "f64")?,
             Ptr => write!(w, "ptr")?,
@@ -105,20 +107,30 @@ impl PP for Op {
         use crate::lir::Op::*;
         let indent = indent + 4;
         match self {
-            ConstI32(reg, i) => {
+            ConstI32(reg, i) | ConstU32(reg, i) => {
                 reg.pp(w, indent)?;
                 write!(w, ": ")?;
                 reg.0.pp(w, indent)?;
                 write!(w, " <- {}", i)?;
             }
-            MoveI32(r1, r2) | MoveI64(r1, r2) | MoveF32(r1, r2) | MoveF64(r1, r2) => {
+            MoveI32(r1, r2)
+            | MoveU32(r1, r2)
+            | MoveI64(r1, r2)
+            | MoveU64(r1, r2)
+            | MoveF32(r1, r2)
+            | MoveF64(r1, r2) => {
                 r1.pp(w, indent)?;
                 write!(w, ": ")?;
                 r1.0.pp(w, indent)?;
                 write!(w, " <- ")?;
                 r2.pp(w, indent)?;
             }
-            StoreI32(addr, v) | StoreI64(addr, v) | StoreF32(addr, v) | StoreF64(addr, v) => {
+            StoreI32(addr, v)
+            | StoreU32(addr, v)
+            | StoreI64(addr, v)
+            | StoreU64(addr, v)
+            | StoreF32(addr, v)
+            | StoreF64(addr, v) => {
                 addr.pp(w, indent)?;
                 write!(w, " <- ")?;
                 v.pp(w, indent)?;
@@ -128,7 +140,12 @@ impl PP for Op {
                 write!(w, " <- ")?;
                 f.pp(w, indent)?;
             }
-            LoadI32(reg, addr) | LoadI64(reg, addr) | LoadF32(reg, addr) | LoadF64(reg, addr) => {
+            LoadI32(reg, addr)
+            | LoadU32(reg, addr)
+            | LoadI64(reg, addr)
+            | LoadU64(reg, addr)
+            | LoadF32(reg, addr)
+            | LoadF64(reg, addr) => {
                 reg.pp(w, indent)?;
                 write!(w, ": ")?;
                 reg.0.pp(w, indent)?;
@@ -155,13 +172,18 @@ impl PP for Op {
                     label.pp(w, indent)?;
                 }
             }
-            ConstI64(reg, i) => {
+            ConstI64(reg, i) | ConstU64(reg, i) => {
                 reg.pp(w, indent)?;
                 write!(w, ": ")?;
                 reg.0.pp(w, indent)?;
                 write!(w, " <- {}", i)?;
             }
-            AddI32(r1, r2, r3) | AddI64(r1, r2, r3) | AddF32(r1, r2, r3) | AddF64(r1, r2, r3) => {
+            AddI32(r1, r2, r3)
+            | AddU32(r1, r2, r3)
+            | AddI64(r1, r2, r3)
+            | AddU64(r1, r2, r3)
+            | AddF32(r1, r2, r3)
+            | AddF64(r1, r2, r3) => {
                 r1.pp(w, indent)?;
                 write!(w, ": ")?;
                 r1.0.pp(w, indent)?;
@@ -170,7 +192,12 @@ impl PP for Op {
                 write!(w, " + ")?;
                 r3.pp(w, indent)?;
             }
-            SubI32(r1, r2, r3) | SubI64(r1, r2, r3) | SubF32(r1, r2, r3) | SubF64(r1, r2, r3) => {
+            SubI32(r1, r2, r3)
+            | SubU32(r1, r2, r3)
+            | SubI64(r1, r2, r3)
+            | SubU64(r1, r2, r3)
+            | SubF32(r1, r2, r3)
+            | SubF64(r1, r2, r3) => {
                 r1.pp(w, indent)?;
                 write!(w, ": ")?;
                 r1.0.pp(w, indent)?;
@@ -179,7 +206,12 @@ impl PP for Op {
                 write!(w, " - ")?;
                 r3.pp(w, indent)?;
             }
-            MulI32(r1, r2, r3) | MulI64(r1, r2, r3) | MulF32(r1, r2, r3) | MulF64(r1, r2, r3) => {
+            MulI32(r1, r2, r3)
+            | MulU32(r1, r2, r3)
+            | MulI64(r1, r2, r3)
+            | MulU64(r1, r2, r3)
+            | MulF32(r1, r2, r3)
+            | MulF64(r1, r2, r3) => {
                 r1.pp(w, indent)?;
                 write!(w, ": ")?;
                 r1.0.pp(w, indent)?;
@@ -188,7 +220,12 @@ impl PP for Op {
                 write!(w, " * ")?;
                 r3.pp(w, indent)?;
             }
-            DivI32(r1, r2, r3) | DivI64(r1, r2, r3) | DivF32(r1, r2, r3) | DivF64(r1, r2, r3) => {
+            DivI32(r1, r2, r3)
+            | DivU32(r1, r2, r3)
+            | DivI64(r1, r2, r3)
+            | DivU64(r1, r2, r3)
+            | DivF32(r1, r2, r3)
+            | DivF64(r1, r2, r3) => {
                 r1.pp(w, indent)?;
                 write!(w, ": ")?;
                 r1.0.pp(w, indent)?;
@@ -197,7 +234,7 @@ impl PP for Op {
                 write!(w, " / ")?;
                 r3.pp(w, indent)?;
             }
-            ModI32(r1, r2, r3) | ModI64(r1, r2, r3) => {
+            ModI32(r1, r2, r3) | ModU32(r1, r2, r3) | ModI64(r1, r2, r3) | ModU64(r1, r2, r3) => {
                 r1.pp(w, indent)?;
                 write!(w, ": ")?;
                 r1.0.pp(w, indent)?;
@@ -206,7 +243,12 @@ impl PP for Op {
                 write!(w, " mod ")?;
                 r3.pp(w, indent)?;
             }
-            EqI32(r1, r2, r3) | EqI64(r1, r2, r3) | EqF32(r1, r2, r3) | EqF64(r1, r2, r3) => {
+            EqI32(r1, r2, r3)
+            | EqU32(r1, r2, r3)
+            | EqI64(r1, r2, r3)
+            | EqU64(r1, r2, r3)
+            | EqF32(r1, r2, r3)
+            | EqF64(r1, r2, r3) => {
                 r1.pp(w, indent)?;
                 write!(w, ": ")?;
                 r1.0.pp(w, indent)?;
@@ -215,7 +257,12 @@ impl PP for Op {
                 write!(w, " = ")?;
                 r3.pp(w, indent)?;
             }
-            NeqI32(r1, r2, r3) | NeqI64(r1, r2, r3) | NeqF32(r1, r2, r3) | NeqF64(r1, r2, r3) => {
+            NeqI32(r1, r2, r3)
+            | NeqU32(r1, r2, r3)
+            | NeqI64(r1, r2, r3)
+            | NeqU64(r1, r2, r3)
+            | NeqF32(r1, r2, r3)
+            | NeqF64(r1, r2, r3) => {
                 r1.pp(w, indent)?;
                 write!(w, ": ")?;
                 r1.0.pp(w, indent)?;
@@ -224,7 +271,12 @@ impl PP for Op {
                 write!(w, " <> ")?;
                 r3.pp(w, indent)?;
             }
-            GtI32(r1, r2, r3) | GtI64(r1, r2, r3) | GtF32(r1, r2, r3) | GtF64(r1, r2, r3) => {
+            GtI32(r1, r2, r3)
+            | GtU32(r1, r2, r3)
+            | GtI64(r1, r2, r3)
+            | GtU64(r1, r2, r3)
+            | GtF32(r1, r2, r3)
+            | GtF64(r1, r2, r3) => {
                 r1.pp(w, indent)?;
                 write!(w, ": ")?;
                 r1.0.pp(w, indent)?;
@@ -233,7 +285,12 @@ impl PP for Op {
                 write!(w, " > ")?;
                 r3.pp(w, indent)?;
             }
-            GeI32(r1, r2, r3) | GeI64(r1, r2, r3) | GeF32(r1, r2, r3) | GeF64(r1, r2, r3) => {
+            GeI32(r1, r2, r3)
+            | GeU32(r1, r2, r3)
+            | GeI64(r1, r2, r3)
+            | GeU64(r1, r2, r3)
+            | GeF32(r1, r2, r3)
+            | GeF64(r1, r2, r3) => {
                 r1.pp(w, indent)?;
                 write!(w, ": ")?;
                 r1.0.pp(w, indent)?;
@@ -242,7 +299,12 @@ impl PP for Op {
                 write!(w, " >= ")?;
                 r3.pp(w, indent)?;
             }
-            LtI32(r1, r2, r3) | LtI64(r1, r2, r3) | LtF32(r1, r2, r3) | LtF64(r1, r2, r3) => {
+            LtI32(r1, r2, r3)
+            | LtU32(r1, r2, r3)
+            | LtI64(r1, r2, r3)
+            | LtU64(r1, r2, r3)
+            | LtF32(r1, r2, r3)
+            | LtF64(r1, r2, r3) => {
                 r1.pp(w, indent)?;
                 write!(w, ": ")?;
                 r1.0.pp(w, indent)?;
@@ -251,7 +313,12 @@ impl PP for Op {
                 write!(w, " < ")?;
                 r3.pp(w, indent)?;
             }
-            LeI32(r1, r2, r3) | LeI64(r1, r2, r3) | LeF32(r1, r2, r3) | LeF64(r1, r2, r3) => {
+            LeI32(r1, r2, r3)
+            | LeU32(r1, r2, r3)
+            | LeI64(r1, r2, r3)
+            | LeU64(r1, r2, r3)
+            | LeF32(r1, r2, r3)
+            | LeF64(r1, r2, r3) => {
                 r1.pp(w, indent)?;
                 write!(w, ": ")?;
                 r1.0.pp(w, indent)?;

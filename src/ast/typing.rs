@@ -25,12 +25,14 @@ struct TypePool {
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum Typing {
     Variable(u64),
+    Char,
     Int,
     Real,
     Fun(NodeId, NodeId),
     Tuple(Vec<NodeId>),
     Datatype(Symbol),
-    OverloadedArith,
+    OverloadedNum,
+    OverloadedNumText,
 }
 
 fn resolve(pool: &UnificationPool<Typing>, id: NodeId) -> Type {
@@ -41,6 +43,7 @@ fn conv_ty(pool: &UnificationPool<Typing>, ty: Typing) -> Type {
     use Typing::*;
     match ty {
         Variable(id) => Type::Variable(id),
+        Char => Type::Char,
         Int => Type::Int,
         Real => Type::Real,
         Fun(param, body) => Type::Fun(
@@ -49,7 +52,8 @@ fn conv_ty(pool: &UnificationPool<Typing>, ty: Typing) -> Type {
         ),
         Tuple(tys) => Type::Tuple(tys.into_iter().map(|ty| resolve(pool, ty)).collect()),
         Datatype(type_id) => Type::Datatype(type_id),
-        OverloadedArith => Type::Int,
+        OverloadedNum => Type::Int,
+        OverloadedNumText => Type::Int,
     }
 }
 
@@ -61,8 +65,14 @@ fn try_unify<'b, 'r>(
     use Typing::*;
     match (t1, t2) {
         (t1, t2) if t1 == t2 => Ok(t1),
-        (Int, OverloadedArith) | (OverloadedArith, Int) => Ok(Int),
-        (Real, OverloadedArith) | (OverloadedArith, Real) => Ok(Real),
+        (Int, OverloadedNum) | (OverloadedNum, Int) => Ok(Int),
+        (Int, OverloadedNumText) | (OverloadedNumText, Int) => Ok(Int),
+        (Char, OverloadedNumText) | (OverloadedNumText, Char) => Ok(Char),
+        (Real, OverloadedNum) | (OverloadedNum, Real) => Ok(Real),
+        (Real, OverloadedNumText) | (OverloadedNumText, Real) => Ok(Real),
+        (OverloadedNumText, OverloadedNum) | (OverloadedNum, OverloadedNumText) => {
+            Ok(OverloadedNumText)
+        }
         (Variable(_), ty) | (ty, Variable(_)) => Ok(ty),
         (Fun(p1, b1), Fun(p2, b2)) => {
             let p = pool.try_unify_with(p1, p2, try_unify)?;
@@ -113,6 +123,7 @@ impl TypePool {
     }
 
     fn init(&mut self) {
+        self.node_new(Typing::Char);
         self.node_new(Typing::Int);
         self.node_new(Typing::Real);
     }
@@ -135,6 +146,10 @@ impl TypePool {
         *self.cache.get(&Typing::Int).unwrap()
     }
 
+    fn ty_char(&mut self) -> NodeId {
+        *self.cache.get(&Typing::Char).unwrap()
+    }
+
     fn ty_bool(&mut self) -> NodeId {
         *self
             .cache
@@ -146,14 +161,18 @@ impl TypePool {
         *self.cache.get(&Typing::Real).unwrap()
     }
 
-    fn ty_overloaded_arith(&mut self) -> NodeId {
-        self.node_new(Typing::OverloadedArith)
+    fn ty_overloaded_num(&mut self) -> NodeId {
+        self.node_new(Typing::OverloadedNum)
+    }
+
+    fn ty_overloaded_num_text(&mut self) -> NodeId {
+        self.node_new(Typing::OverloadedNumText)
     }
 
     fn node_new(&mut self, t: Typing) -> NodeId {
         let node_id = self.pool.node_new(t.clone());
         match t {
-            t @ Typing::Int | t @ Typing::Real | t @ Typing::Datatype(_) => {
+            t @ Typing::Char | t @ Typing::Int | t @ Typing::Real | t @ Typing::Datatype(_) => {
                 self.cache.insert(t, node_id);
             }
             _ => (), // no cache
@@ -239,6 +258,7 @@ impl TyEnv {
     fn convert(&mut self, ty: Type) -> Typing {
         match ty {
             Type::Variable(v) => Typing::Variable(v),
+            Type::Char => Typing::Char,
             Type::Int => Typing::Int,
             Type::Real => Typing::Real,
             Type::Fun(arg, ret) => {
@@ -298,7 +318,8 @@ impl TyEnv {
         let int = self.pool.ty_int();
         let real = self.pool.ty_real();
         let bool = self.pool.ty_bool();
-        let overloaded_arith = self.pool.ty_overloaded_arith();
+        let overloaded_num = self.pool.ty_overloaded_num();
+        let overloaded_num_text = self.pool.ty_overloaded_num_text();
         let ty = &expr.ty;
         match &expr.inner {
             Binds { binds, ret } => {
@@ -320,7 +341,7 @@ impl TyEnv {
                         self.infer_expr(l)?;
                         self.infer_expr(r)?;
                         self.unify(l.ty(), r.ty())?;
-                        self.unify(l.ty(), overloaded_arith)?;
+                        self.unify(l.ty(), overloaded_num)?;
                         self.unify(*ty, l.ty())?;
                         Ok(())
                     }
@@ -332,7 +353,7 @@ impl TyEnv {
                         self.infer_expr(l)?;
                         self.infer_expr(r)?;
                         self.unify(l.ty(), r.ty())?;
-                        self.unify(l.ty(), overloaded_arith)?;
+                        self.unify(l.ty(), overloaded_num_text)?;
                         self.unify(*ty, bool)?;
                         Ok(())
                     }
@@ -451,6 +472,7 @@ impl TyEnv {
         let ty = match lit {
             Int(_) => self.pool.ty_int(),
             Real(_) => self.pool.ty_real(),
+            Char(_) => self.pool.ty_char(),
         };
         self.unify(given, ty)?;
         Ok(())
@@ -462,12 +484,21 @@ impl TyEnv {
         Ok(())
     }
 
+    fn infer_char<'b, 'r>(&'b mut self, _: &u32, given: NodeId) -> Result<'r, ()> {
+        let ty = self.pool.ty_char();
+        self.unify(given, ty)?;
+        Ok(())
+    }
+
     fn infer_pat<'b, 'r>(&'b mut self, pat: &Pattern<NodeId>) -> Result<'r, ()> {
         use self::PatternKind::*;
         let ty = &pat.ty();
         match &pat.inner {
             Constant { value } => {
                 self.infer_constant(value, *ty)?;
+            }
+            Char { value } => {
+                self.infer_char(value, *ty)?;
             }
             Constructor { arg, name } => {
                 let type_name = self

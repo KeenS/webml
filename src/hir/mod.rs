@@ -97,6 +97,10 @@ pub enum Pattern {
         value: i64,
         ty: HTy,
     },
+    Char {
+        value: u32,
+        ty: HTy,
+    },
     Constructor {
         descriminant: u32,
         arg: Option<(HTy, Symbol)>,
@@ -119,6 +123,7 @@ pub struct SymbolTable {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum HTy {
+    Char,
     Int,
     Real,
     Fun(Box<HTy>, Box<HTy>),
@@ -175,6 +180,7 @@ impl Pattern {
         // FIXME do not panic
         match self {
             Constant { value, .. } => *value as u32,
+            Char { value, .. } => *value,
             Tuple { .. } => panic!("bug: non-variant expression does not have keys"),
             Constructor { descriminant, .. } => *descriminant as u32,
             Var { .. } => panic!("bug: default like branch does not have keys"),
@@ -185,7 +191,7 @@ impl Pattern {
         use self::Pattern::*;
         // FIXME do not panic
         match self {
-            Constant { .. } => None,
+            Constant { .. } | Char { .. } => None,
             Tuple { .. } => panic!("bug: non-variant expression does not have keys"),
             Constructor { arg, .. } => arg.as_ref().map(|(_, name)| name.clone()),
             Var { name, .. } => Some(name.clone()),
@@ -195,7 +201,7 @@ impl Pattern {
     pub fn is_irrefutable(&self) -> bool {
         use self::Pattern::*;
         match *self {
-            Constructor { .. } | Constant { .. } => false,
+            Constructor { .. } | Constant { .. } | Char { .. } => false,
             Tuple { .. } | Var { .. } => true,
         }
     }

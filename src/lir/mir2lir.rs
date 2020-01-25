@@ -35,6 +35,7 @@ impl MIR2LIRPass {
         use crate::mir::EbbTy::*;
         match ty {
             Unit => LTy::Unit,
+            Char => LTy::U32,
             Int => LTy::I32,
             Float => LTy::F64,
             Bool => LTy::I32,
@@ -94,6 +95,7 @@ impl MIR2LIRPass {
                         &m::Lit {
                             ref var, ref value, ..
                         } => match value {
+                            &Literal::Char(c) => ops.push(ConstI32(reg!(var), c as u32)),
                             &Literal::Int(i) => ops.push(ConstI32(reg!(var), i as u32)),
                             &Literal::Real(f) => ops.push(ConstF64(reg!(var), f as f64)),
                         },
@@ -108,7 +110,9 @@ impl MIR2LIRPass {
                                     // do nothing
                                 }
                                 LTy::I32 => ops.push(MoveI32(reg!(var), reg!(sym))),
+                                LTy::U32 => ops.push(MoveU32(reg!(var), reg!(sym))),
                                 LTy::I64 => ops.push(MoveI64(reg!(var), reg!(sym))),
+                                LTy::U64 => ops.push(MoveU64(reg!(var), reg!(sym))),
                                 LTy::F32 => ops.push(MoveF32(reg!(var), reg!(sym))),
                                 LTy::F64 => ops.push(MoveF64(reg!(var), reg!(sym))),
                                 // assuming ptr size is i32
@@ -186,7 +190,9 @@ impl MIR2LIRPass {
                             ..
                         } => match (&symbol_table[l].0, &symbol_table[r].0) {
                             (&LTy::I32, &LTy::I32) => ops.push(EqI32(reg!(var), reg!(l), reg!(r))),
+                            (&LTy::U32, &LTy::U32) => ops.push(EqU32(reg!(var), reg!(l), reg!(r))),
                             (&LTy::I64, &LTy::I64) => ops.push(EqI64(reg!(var), reg!(l), reg!(r))),
+                            (&LTy::U64, &LTy::U64) => ops.push(EqU64(reg!(var), reg!(l), reg!(r))),
                             (&LTy::F32, &LTy::F32) => ops.push(EqF32(reg!(var), reg!(l), reg!(r))),
                             (&LTy::F64, &LTy::F64) => ops.push(EqF64(reg!(var), reg!(l), reg!(r))),
                             ty => panic!("unknown overloaded ty {:?} for eq", ty),
@@ -198,7 +204,9 @@ impl MIR2LIRPass {
                             ..
                         } => match (&symbol_table[l].0, &symbol_table[r].0) {
                             (&LTy::I32, &LTy::I32) => ops.push(NeqI32(reg!(var), reg!(l), reg!(r))),
+                            (&LTy::U32, &LTy::U32) => ops.push(NeqU32(reg!(var), reg!(l), reg!(r))),
                             (&LTy::I64, &LTy::I64) => ops.push(NeqI64(reg!(var), reg!(l), reg!(r))),
+                            (&LTy::U64, &LTy::U64) => ops.push(NeqU64(reg!(var), reg!(l), reg!(r))),
                             (&LTy::F32, &LTy::F32) => ops.push(NeqF32(reg!(var), reg!(l), reg!(r))),
                             (&LTy::F64, &LTy::F64) => ops.push(NeqF64(reg!(var), reg!(l), reg!(r))),
                             ty => panic!("unknown overloaded ty {:?} for neq", ty),
@@ -210,7 +218,9 @@ impl MIR2LIRPass {
                             ..
                         } => match (&symbol_table[l].0, &symbol_table[r].0) {
                             (&LTy::I32, &LTy::I32) => ops.push(GtI32(reg!(var), reg!(l), reg!(r))),
+                            (&LTy::U32, &LTy::U32) => ops.push(GtU32(reg!(var), reg!(l), reg!(r))),
                             (&LTy::I64, &LTy::I64) => ops.push(GtI64(reg!(var), reg!(l), reg!(r))),
+                            (&LTy::U64, &LTy::U64) => ops.push(GtU64(reg!(var), reg!(l), reg!(r))),
                             (&LTy::F32, &LTy::F32) => ops.push(GtF32(reg!(var), reg!(l), reg!(r))),
                             (&LTy::F64, &LTy::F64) => ops.push(GtF64(reg!(var), reg!(l), reg!(r))),
                             ty => panic!("unknown overloaded ty {:?} for gt", ty),
@@ -221,8 +231,10 @@ impl MIR2LIRPass {
                             ref r,
                             ..
                         } => match (&symbol_table[l].0, &symbol_table[r].0) {
+                            (&LTy::U32, &LTy::U32) => ops.push(GeU32(reg!(var), reg!(l), reg!(r))),
                             (&LTy::I32, &LTy::I32) => ops.push(GeI32(reg!(var), reg!(l), reg!(r))),
                             (&LTy::I64, &LTy::I64) => ops.push(GeI64(reg!(var), reg!(l), reg!(r))),
+                            (&LTy::U64, &LTy::U64) => ops.push(GeU64(reg!(var), reg!(l), reg!(r))),
                             (&LTy::F32, &LTy::F32) => ops.push(GeF32(reg!(var), reg!(l), reg!(r))),
                             (&LTy::F64, &LTy::F64) => ops.push(GeF64(reg!(var), reg!(l), reg!(r))),
                             ty => panic!("unknown overloaded ty {:?} for ge", ty),
@@ -234,7 +246,9 @@ impl MIR2LIRPass {
                             ..
                         } => match (&symbol_table[l].0, &symbol_table[r].0) {
                             (&LTy::I32, &LTy::I32) => ops.push(LtI32(reg!(var), reg!(l), reg!(r))),
+                            (&LTy::U32, &LTy::U32) => ops.push(LtU32(reg!(var), reg!(l), reg!(r))),
                             (&LTy::I64, &LTy::I64) => ops.push(LtI64(reg!(var), reg!(l), reg!(r))),
+                            (&LTy::U64, &LTy::U64) => ops.push(LtU64(reg!(var), reg!(l), reg!(r))),
                             (&LTy::F32, &LTy::F32) => ops.push(LtF32(reg!(var), reg!(l), reg!(r))),
                             (&LTy::F64, &LTy::F64) => ops.push(LtF64(reg!(var), reg!(l), reg!(r))),
                             ty => panic!("unknown overloaded ty {:?} for lt", ty),
@@ -246,7 +260,9 @@ impl MIR2LIRPass {
                             ..
                         } => match (&symbol_table[l].0, &symbol_table[r].0) {
                             (&LTy::I32, &LTy::I32) => ops.push(LeI32(reg!(var), reg!(l), reg!(r))),
+                            (&LTy::U32, &LTy::U32) => ops.push(LeU32(reg!(var), reg!(l), reg!(r))),
                             (&LTy::I64, &LTy::I64) => ops.push(LeI64(reg!(var), reg!(l), reg!(r))),
+                            (&LTy::U64, &LTy::U64) => ops.push(LeU64(reg!(var), reg!(l), reg!(r))),
                             (&LTy::F32, &LTy::F32) => ops.push(LeF32(reg!(var), reg!(l), reg!(r))),
                             (&LTy::F64, &LTy::F64) => ops.push(LeF64(reg!(var), reg!(l), reg!(r))),
                             ty => panic!("unknown overloaded ty {:?} for le", ty),
@@ -274,8 +290,14 @@ impl MIR2LIRPass {
                                     LTy::I32 => {
                                         ops.push(StoreI32(Addr(reg.clone(), acc), reg!(var)))
                                     }
+                                    LTy::U32 => {
+                                        ops.push(StoreU32(Addr(reg.clone(), acc), reg!(var)))
+                                    }
                                     LTy::I64 => {
                                         ops.push(StoreI64(Addr(reg.clone(), acc), reg!(var)))
+                                    }
+                                    LTy::U64 => {
+                                        ops.push(StoreU64(Addr(reg.clone(), acc), reg!(var)))
                                     }
                                     LTy::F32 => {
                                         ops.push(StoreF32(Addr(reg.clone(), acc), reg!(var)))
@@ -305,7 +327,9 @@ impl MIR2LIRPass {
                                     LTy::F32 => LoadF32,
                                     LTy::F64 => LoadF64,
                                     LTy::I32 => LoadI32,
+                                    LTy::U32 => LoadU32,
                                     LTy::I64 => LoadI64,
+                                    LTy::U64 => LoadU64,
                                     LTy::Ptr => LoadI32,
                                     LTy::FPtr => LoadI32,
                                     LTy::Unit =>
@@ -332,7 +356,9 @@ impl MIR2LIRPass {
                                     LTy::F32 => MoveF32,
                                     LTy::F64 => MoveF64,
                                     LTy::I32 => MoveI32,
+                                    LTy::U32 => MoveU32,
                                     LTy::I64 => MoveI64,
+                                    LTy::U64 => MoveU64,
                                     LTy::Ptr => MoveI32,
                                     LTy::FPtr => MoveI32,
                                     LTy::Unit => MoveI32,
@@ -353,7 +379,9 @@ impl MIR2LIRPass {
                                     LTy::F32 => MoveF32,
                                     LTy::F64 => MoveF64,
                                     LTy::I32 => MoveI32,
+                                    LTy::U32 => MoveU32,
                                     LTy::I64 => MoveI64,
+                                    LTy::U64 => MoveU64,
                                     LTy::Ptr => MoveI32,
                                     LTy::FPtr => MoveI32,
                                     LTy::Unit =>
@@ -403,8 +431,14 @@ impl MIR2LIRPass {
                                     LTy::I32 => {
                                         ops.push(StoreI32(Addr(reg.clone(), acc), reg!(var)))
                                     }
+                                    LTy::U32 => {
+                                        ops.push(StoreU32(Addr(reg.clone(), acc), reg!(var)))
+                                    }
                                     LTy::I64 => {
                                         ops.push(StoreI64(Addr(reg.clone(), acc), reg!(var)))
+                                    }
+                                    LTy::U64 => {
+                                        ops.push(StoreU64(Addr(reg.clone(), acc), reg!(var)))
                                     }
                                     LTy::F32 => {
                                         ops.push(StoreF32(Addr(reg.clone(), acc), reg!(var)))
@@ -472,7 +506,9 @@ impl MIR2LIRPass {
                                             // do nothing
                                         }
                                         LTy::I32 => ops.push(MoveI32(p.clone(), reg!(cond))),
+                                        LTy::U32 => ops.push(MoveU32(p.clone(), reg!(cond))),
                                         LTy::I64 => ops.push(MoveI64(p.clone(), reg!(cond))),
+                                        LTy::U64 => ops.push(MoveU64(p.clone(), reg!(cond))),
                                         LTy::F32 => ops.push(MoveF32(p.clone(), reg!(cond))),
                                         LTy::F64 => ops.push(MoveF64(p.clone(), reg!(cond))),
                                         LTy::Ptr => ops.push(MoveI32(p.clone(), reg!(cond))),
@@ -500,18 +536,35 @@ impl MIR2LIRPass {
                                 ))
                             } else {
                                 let cond = reg!(cond);
-                                // currently supports only i32 types
-                                assert_eq!(cond.0, LTy::I32);
-                                let boolean = new_reg(LTy::I32);
-                                let constant = new_reg(LTy::I32);
-                                for (key, label, _) in clauses {
-                                    ops.push(ConstI32(constant.clone(), key as u32));
-                                    ops.push(EqI32(
-                                        boolean.clone(),
-                                        cond.clone(),
-                                        constant.clone(),
-                                    ));
-                                    ops.push(JumpIfI32(boolean.clone(), Label(label)))
+
+                                match cond.0 {
+                                    LTy::I32 => {
+                                        let boolean = new_reg(LTy::I32);
+                                        let constant = new_reg(LTy::I32);
+                                        for (key, label, _) in clauses {
+                                            ops.push(ConstI32(constant.clone(), key as u32));
+                                            ops.push(EqI32(
+                                                boolean.clone(),
+                                                cond.clone(),
+                                                constant.clone(),
+                                            ));
+                                            ops.push(JumpIfI32(boolean.clone(), Label(label)))
+                                        }
+                                    }
+                                    LTy::U32 => {
+                                        let boolean = new_reg(LTy::U32);
+                                        let constant = new_reg(LTy::U32);
+                                        for (key, label, _) in clauses {
+                                            ops.push(ConstU32(constant.clone(), key as u32));
+                                            ops.push(EqU32(
+                                                boolean.clone(),
+                                                cond.clone(),
+                                                constant.clone(),
+                                            ));
+                                            ops.push(JumpIfI32(boolean.clone(), Label(label)))
+                                        }
+                                    }
+                                    _ => panic!("internal error: branching currently supports only 32 bit types"),
                                 }
                                 if let Some(label) = default_label {
                                     ops.push(Jump(label))
@@ -530,7 +583,9 @@ impl MIR2LIRPass {
                                         // do nothing
                                     }
                                     LTy::I32 => ops.push(MoveI32(p.clone(), reg!(a))),
+                                    LTy::U32 => ops.push(MoveU32(p.clone(), reg!(a))),
                                     LTy::I64 => ops.push(MoveI64(p.clone(), reg!(a))),
+                                    LTy::U64 => ops.push(MoveU64(p.clone(), reg!(a))),
                                     LTy::F32 => ops.push(MoveF32(p.clone(), reg!(a))),
                                     LTy::F64 => ops.push(MoveF64(p.clone(), reg!(a))),
                                     LTy::Ptr => ops.push(MoveI32(p.clone(), reg!(a))),

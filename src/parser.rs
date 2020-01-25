@@ -217,6 +217,7 @@ impl Parser {
                 self.expr1_paren(),
                 self.expr1_float(),
                 self.expr1_int(),
+                self.expr1_char(),
                 self.expr1_bool(),
                 self.expr1_sym(),
                 self.expr1_builtincall(),
@@ -448,6 +449,40 @@ impl Parser {
                     value: Literal::Real(s.parse().unwrap()),
                 },
             })(i)
+        }
+    }
+
+    fn expr1_char(&self) -> impl Fn(&str) -> IResult<&str, Expr<()>> + '_ {
+        move |i| {
+            let (i, _) = tag("#")(i)?;
+            let (i, s) = self.string_literal()(i)?;
+            assert_eq!(s.iter().count(), 1);
+            let c = s.into_iter().next().unwrap();
+            Ok((
+                i,
+                Expr {
+                    ty: (),
+                    inner: ExprKind::Literal {
+                        value: Literal::Char(c),
+                    },
+                },
+            ))
+        }
+    }
+
+    fn string_literal(&self) -> impl Fn(&str) -> IResult<&str, Vec<u32>> + '_ {
+        move |i| {
+            let (i, _) = tag("\"")(i)?;
+            let mut s = vec![];
+            let mut chars = i.chars();
+            while let Some(c) = chars.next() {
+                if c == '"' {
+                    break;
+                }
+                s.push(c as u32)
+            }
+            let i = chars.as_str();
+            Ok((i, s))
         }
     }
 
@@ -736,6 +771,7 @@ impl Parser {
         move |i| {
             alt((
                 self.pattern_bool(),
+                self.pattern_char(),
                 self.pattern_int(),
                 self.pattern_tuple(),
                 self.pattern_var(),
@@ -775,6 +811,22 @@ impl Parser {
                     value: s.parse().unwrap(),
                 },
             })(i)
+        }
+    }
+
+    fn pattern_char(&self) -> impl Fn(&str) -> IResult<&str, Pattern<()>> + '_ {
+        move |i| {
+            let (i, _) = tag("#")(i)?;
+            let (i, s) = self.string_literal()(i)?;
+            assert_eq!(s.iter().count(), 1);
+            let c = s.into_iter().next().unwrap();
+            Ok((
+                i,
+                Pattern {
+                    ty: (),
+                    inner: PatternKind::Char { value: c },
+                },
+            ))
         }
     }
 
