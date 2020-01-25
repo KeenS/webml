@@ -123,7 +123,7 @@ Compiles only minimal subset of SML codes. The garbage collector is not complete
   + [x] `int`
   + [ ] `word`
   + [ ] `string`
-  + [ ] `char`
+  + [x] `char`
   + [ ] `list`
     - [ ] `nil`
     - [ ] `::`
