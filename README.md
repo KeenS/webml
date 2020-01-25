@@ -53,7 +53,7 @@ Compiles only minimal subset of SML codes. The garbage collector is not complete
       - [ ] `123E456`
       - [ ] `123e~456`
     - [ ] word
-    - [ ] char
+    - [x] char
     - [ ] string
   + [x] value identifier
   + [ ] `op`
@@ -90,7 +90,7 @@ Compiles only minimal subset of SML codes. The garbage collector is not complete
   + [ ] special constant
     - [x] integer
     - [ ] word
-    - [ ] char
+    - [x] char
     - [ ] string
   + [x]  value identifier
   + [ ] `op`
