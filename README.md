@@ -95,6 +95,9 @@ Compiles only minimal subset of SML codes. The garbage collector is not complete
   + [x]  value identifier
   + [ ] `op`
   + [ ] record
+    - [ ] basic (`{ label = pat , ...}`)
+    - [ ] wildcard (`...`)
+    - [ ] label as variable (`{ var (as pat), ...}`)
     - [x] tuple
     - [x] 0-tuple
   + [ ] list
