@@ -10,6 +10,7 @@ petgraph = "0.4.1"
 clap = "2.32.0"
 log = "0.4.8"
 env_logger = "0.7.1"
+regex = "1.3.7"
 
 [dependencies.wasm]
 git = "https://github.com/KeenS/WebAssembler-rs"
