@@ -42,11 +42,9 @@ pub struct TestRuntime {
 
 impl TestRuntime {
     pub fn new() -> Self {
-        let store = Store::default();
-        let mut linker = Linker::new(&store);
-        add_ffi_module(&mut linker);
-        add_rt_module(&mut linker);
-        TestRuntime { linker }
+        TestRuntime {
+            linker: test_runtime(),
+        }
     }
 
     pub fn output(&self) -> Vec<u8> {
@@ -67,11 +65,204 @@ impl TestRuntime {
     }
 }
 
+pub fn compile(input: &str) -> Vec<u8> {
+    use webml::{compile_str, Config};
+    let mut prelude = include_str!("../../ml_src/prelude.sml").to_string();
+    prelude.push_str(input);
+    compile_str(&prelude, &Config::default()).expect("failed to compile")
+}
+
 #[test]
 fn itworks() {
     let mut tester = TestRuntime::new();
-
     let module = include_bytes!("../../out.wasm");
 
     tester.test_output(module, "0\n1\n");
+}
+
+#[test]
+fn test_add_and_print() {
+    let mut tester = TestRuntime::new();
+    let module = compile(include_str!("../../ml_example/add_and_print.sml"));
+
+    tester.test_output(&module, "3\n");
+}
+
+#[test]
+fn test_big_expression() {
+    let mut tester = TestRuntime::new();
+    let module = compile(include_str!("../../ml_example/big_expression.sml"));
+
+    tester.test_output(&module, "24\n");
+}
+
+#[test]
+fn test_binary_operators() {
+    let mut tester = TestRuntime::new();
+    let module = compile(include_str!("../../ml_example/binary_operators.sml"));
+
+    tester.test_output(&module, "");
+}
+
+#[test]
+fn test_boolean_case() {
+    let mut tester = TestRuntime::new();
+    let module = compile(include_str!("../../ml_example/boolean_case.sml"));
+
+    tester.test_output(&module, "3\n");
+}
+
+#[test]
+fn test_branches() {
+    let mut tester = TestRuntime::new();
+    let module = compile(include_str!("../../ml_example/branches.sml"));
+
+    tester.test_output(&module, "1\n");
+}
+
+#[test]
+fn test_char() {
+    let mut tester = TestRuntime::new();
+    let module = compile(include_str!("../../ml_example/char.sml"));
+
+    tester.test_output(&module, "0\n1\n");
+}
+
+#[test]
+fn test_closures() {
+    let mut tester = TestRuntime::new();
+    let module = compile(include_str!("../../ml_example/closures.sml"));
+
+    tester.test_output(&module, "3\n");
+}
+
+#[test]
+fn test_datatype() {
+    let mut tester = TestRuntime::new();
+    let module = compile(include_str!("../../ml_example/datatype.sml"));
+
+    tester.test_output(&module, "");
+}
+
+#[test]
+fn test_datatype_pattern() {
+    let mut tester = TestRuntime::new();
+    let module = compile(include_str!("../../ml_example/datatype_pattern.sml"));
+
+    tester.test_output(&module, "");
+}
+
+#[test]
+fn test_fibonacci() {
+    let mut tester = TestRuntime::new();
+    let module = compile(include_str!("../../ml_example/fibonacci.sml"));
+
+    tester.test_output(&module, "3\n");
+}
+#[test]
+fn test_fn() {
+    let mut tester = TestRuntime::new();
+    let module = compile(include_str!("../../ml_example/fn.sml"));
+
+    tester.test_output(&module, "");
+}
+#[test]
+fn test_if() {
+    let mut tester = TestRuntime::new();
+    let module = compile(include_str!("../../ml_example/if.sml"));
+
+    tester.test_output(&module, "1\n");
+}
+#[test]
+fn test_infix() {
+    let mut tester = TestRuntime::new();
+    let module = compile(include_str!("../../ml_example/infix.sml"));
+
+    tester.test_output(&module, "");
+}
+#[test]
+fn test_int_list() {
+    let mut tester = TestRuntime::new();
+    let module = compile(include_str!("../../ml_example/int_list.sml"));
+
+    tester.test_output(&module, "1\n2\n3\n");
+}
+#[test]
+fn test_integer_case() {
+    let mut tester = TestRuntime::new();
+    let module = compile(include_str!("../../ml_example/integer_case.sml"));
+
+    tester.test_output(&module, "1\n1\n2\n3\n5\n8\n");
+}
+#[test]
+fn test_multi_clause_fun() {
+    let mut tester = TestRuntime::new();
+    let module = compile(include_str!("../../ml_example/multi_clause_fun.sml"));
+
+    tester.test_output(&module, "");
+}
+#[test]
+fn test_nested_datatype_pattern() {
+    let mut tester = TestRuntime::new();
+    let module = compile(include_str!("../../ml_example/nested_datatype_pattern.sml"));
+
+    tester.test_output(&module, "");
+}
+#[test]
+fn test_nested_pattern_in_val() {
+    let mut tester = TestRuntime::new();
+    let module = compile(include_str!("../../ml_example/nested_pattern_in_val.sml"));
+
+    tester.test_output(&module, "");
+}
+#[test]
+fn test_non_alphanumeric_identifier() {
+    let mut tester = TestRuntime::new();
+    let module = compile(include_str!(
+        "../../ml_example/non_alphanumeric_identifier.sml"
+    ));
+
+    tester.test_output(&module, "");
+}
+#[test]
+fn test_overloaded_add() {
+    let mut tester = TestRuntime::new();
+    let module = compile(include_str!("../../ml_example/overloaded_add.sml"));
+
+    tester.test_output(&module, "");
+}
+#[test]
+fn test_pattern_in_funarg() {
+    let mut tester = TestRuntime::new();
+    let module = compile(include_str!("../../ml_example/pattern_in_funarg.sml"));
+
+    tester.test_output(&module, "");
+}
+#[test]
+fn test_prelude() {
+    let mut tester = TestRuntime::new();
+    let module = compile(include_str!("../../ml_example/prelude.sml"));
+
+    tester.test_output(&module, "100000\n");
+}
+#[test]
+fn test_random_expressions() {
+    let mut tester = TestRuntime::new();
+    let module = compile(include_str!("../../ml_example/random_expressions.sml"));
+
+    tester.test_output(&module, "");
+}
+#[test]
+fn test_tuple_pattern() {
+    let mut tester = TestRuntime::new();
+    let module = compile(include_str!("../../ml_example/tuple_pattern.sml"));
+
+    tester.test_output(&module, "2\n");
+}
+#[test]
+fn test_variable_scope() {
+    let mut tester = TestRuntime::new();
+    let module = compile(include_str!("../../ml_example/variable_scope.sml"));
+
+    tester.test_output(&module, "3\n");
 }
