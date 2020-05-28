@@ -13,5 +13,5 @@ before_script:
 
 script:
   - cargo test
-  - cd webml-rt && cargo build
-  - cd webml-test && cargo test
+  - (cd webml-rt && cargo build)
+  - (cd webml-test && cargo test)
