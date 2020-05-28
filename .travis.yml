@@ -7,3 +7,11 @@ matrix:
   allow_failures:
     - rust: nightly
   fast_finish: true
+
+before_script:
+  - rustup target add wasm32-unknown-unknown
+
+script:
+  - cargo test
+  - (cd webml-rt && cargo build --release)
+  - (cd webml-test && cargo test)
