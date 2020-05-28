@@ -73,14 +73,6 @@ pub fn compile(input: &str) -> Vec<u8> {
 }
 
 #[test]
-fn itworks() {
-    let mut tester = TestRuntime::new();
-    let module = include_bytes!("../../out.wasm");
-
-    tester.test_output(module, "0\n1\n");
-}
-
-#[test]
 fn test_add_and_print() {
     let mut tester = TestRuntime::new();
     let module = compile(include_str!("../../ml_example/add_and_print.sml"));
@@ -109,7 +101,7 @@ fn test_boolean_case() {
     let mut tester = TestRuntime::new();
     let module = compile(include_str!("../../ml_example/boolean_case.sml"));
 
-    tester.test_output(&module, "3\n");
+    tester.test_output(&module, "1\n1\n2\n3\n5\n8\n");
 }
 
 #[test]
@@ -157,7 +149,7 @@ fn test_fibonacci() {
     let mut tester = TestRuntime::new();
     let module = compile(include_str!("../../ml_example/fibonacci.sml"));
 
-    tester.test_output(&module, "3\n");
+    tester.test_output(&module, "1\n1\n2\n3\n5\n8\n");
 }
 #[test]
 fn test_fn() {
