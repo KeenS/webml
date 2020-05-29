@@ -98,7 +98,7 @@ impl AST2HIRPass {
                 match pattern.inner {
                     ast::PatternKind::Variable { name } => vec![Val {
                         ty: conv_ty(ty),
-                        rec: false,
+                        rec,
                         name: name,
                         expr: self.conv_expr(expr),
                     }],
