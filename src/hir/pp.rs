@@ -21,7 +21,7 @@ impl PP for HIR {
 
 impl PP for Val {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
-        let rec = if self.rec { "rec " } else { "" };
+        let rec = if self.rec { " rec " } else { "" };
         write!(w, "{}val{} ", Self::nspaces(indent), rec)?;
         self.name.pp(w, indent)?;
         write!(w, ": ")?;
