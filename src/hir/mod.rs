@@ -4,6 +4,7 @@ pub mod flat_expr;
 pub mod flat_let;
 pub mod force_closure;
 pub mod pp;
+pub mod simplify;
 pub mod unnest_func;
 pub mod util;
 
@@ -12,6 +13,7 @@ pub use self::constructor2enum::ConstructorToEnum;
 pub use self::flat_expr::FlatExpr;
 pub use self::flat_let::FlatLet;
 pub use self::force_closure::ForceClosure;
+pub use self::simplify::Simplify;
 pub use self::unnest_func::UnnestFunc;
 use std::collections::HashMap;
 
@@ -197,6 +199,14 @@ impl Pattern {
             Tuple { .. } => panic!("bug: non-variant expression does not have keys"),
             Constructor { arg, .. } => arg.as_ref().map(|(_, name)| name.clone()),
             Var { name, .. } => Some(name.clone()),
+        }
+    }
+
+    pub fn is_variable(&self) -> bool {
+        use self::Pattern::*;
+        match self {
+            Var { .. } => true,
+            _ => false,
         }
     }
 
