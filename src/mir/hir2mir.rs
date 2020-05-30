@@ -553,12 +553,12 @@ fn force_symbol(e: hir::Expr) -> Symbol {
     }
 }
 
-impl<E> Pass<(hir::SymbolTable, hir::HIR), E> for HIR2MIR {
+impl<E> Pass<hir::Context, E> for HIR2MIR {
     type Target = (SymbolTable, MIR);
 
     fn trans(
         &mut self,
-        (symbol_table, hir): (hir::SymbolTable, hir::HIR),
+        hir::Context(symbol_table, hir): hir::Context,
         _: &Config,
     ) -> ::std::result::Result<Self::Target, E> {
         let mut pass = self.generate_pass(symbol_table);

@@ -199,14 +199,14 @@ impl Transform for Simplify {
     }
 }
 
-impl<E> Pass<(SymbolTable, HIR), E> for Simplify {
-    type Target = (SymbolTable, HIR);
+impl<E> Pass<Context, E> for Simplify {
+    type Target = Context;
 
     fn trans(
         &mut self,
-        (symbol_table, hir): (SymbolTable, HIR),
+        Context(symbol_table, hir): Context,
         _: &Config,
     ) -> ::std::result::Result<Self::Target, E> {
-        Ok((symbol_table, self.transform_hir(hir)))
+        Ok(Context(symbol_table, self.transform_hir(hir)))
     }
 }

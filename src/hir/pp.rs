@@ -4,9 +4,16 @@ use crate::hir::*;
 use crate::util::PP;
 use std::fmt;
 
-impl PP for (SymbolTable, HIR) {
+impl PP for Context {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         self.1.pp(w, indent)
+    }
+}
+
+impl fmt::Display for Context {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let indent = f.width().unwrap_or(0);
+        write!(f, "{:indent$}", self.1, indent = indent)
     }
 }
 
@@ -22,8 +29,9 @@ impl PP for HIR {
 
 impl fmt::Display for HIR {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let indent = f.width().unwrap_or(0);
         for bind in &self.0 {
-            writeln!(f, "{}\n", bind)?;
+            writeln!(f, "{:indent$}\n", bind, indent = indent)?;
         }
         Ok(())
     }
