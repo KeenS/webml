@@ -1,7 +1,7 @@
 use crate::config::Config;
 use crate::util::PP;
 use log::info;
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 use std::marker::PhantomData;
 
 pub trait Pass<T, E> {
@@ -32,6 +32,22 @@ where
     fn trans(&mut self, i: In, config: &Config) -> Result<Self::Target, Err> {
         let o = self.0.trans(i, config)?;
         println!("{:#?}", o);
+        Ok(o)
+    }
+}
+
+pub struct DisplayPass<T>(pub T);
+
+impl<T, In, Out, Err> Pass<In, Err> for DisplayPass<T>
+where
+    T: Pass<In, Err, Target = Out>,
+    Out: Display,
+{
+    type Target = Out;
+
+    fn trans(&mut self, i: In, config: &Config) -> Result<Self::Target, Err> {
+        let o = self.0.trans(i, config)?;
+        println!("{}", o);
         Ok(o)
     }
 }

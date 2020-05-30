@@ -1,4 +1,5 @@
 use crate::util::PP;
+use std::fmt;
 use std::io;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -14,6 +15,12 @@ impl PP for Symbol {
     fn pp<W: io::Write>(&self, w: &mut W, _indent: usize) -> io::Result<()> {
         write!(w, "{}@{}", self.0, self.1)?;
         Ok(())
+    }
+}
+
+impl fmt::Display for Symbol {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}@{}", self.0, self.1)
     }
 }
 
@@ -36,6 +43,24 @@ impl PP for Literal {
             }
             Char(c) => {
                 write!(w, r##"#"{}""##, c)?;
+            }
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Display for Literal {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use self::Literal::*;
+        match self {
+            Int(v) => {
+                write!(f, "{}", v)?;
+            }
+            Real(v) => {
+                write!(f, "{}", v)?;
+            }
+            Char(c) => {
+                write!(f, r##"#"{}""##, c)?;
             }
         }
         Ok(())
@@ -97,6 +122,51 @@ impl PP for BIF {
             }
             Le => {
                 write!(w, "le")?;
+            }
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Display for BIF {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use self::BIF::*;
+        match self {
+            Add => {
+                write!(f, "add")?;
+            }
+            Sub => {
+                write!(f, "sub")?;
+            }
+            Mul => {
+                write!(f, "mul")?;
+            }
+            Div => {
+                write!(f, "div")?;
+            }
+            Divf => {
+                write!(f, "divf")?;
+            }
+            Mod => {
+                write!(f, "mod")?;
+            }
+            Eq => {
+                write!(f, "eq")?;
+            }
+            Neq => {
+                write!(f, "neq")?;
+            }
+            Gt => {
+                write!(f, "gt")?;
+            }
+            Ge => {
+                write!(f, "ge")?;
+            }
+            Lt => {
+                write!(f, "lt")?;
+            }
+            Le => {
+                write!(f, "le")?;
             }
         }
         Ok(())
