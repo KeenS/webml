@@ -398,7 +398,7 @@ impl Transform<()> for WrapBIF {
 }
 
 impl<E> Pass<UntypedCore, E> for Rename {
-    type Target = (SymbolTable, UntypedCore);
+    type Target = UntypedCoreContext;
 
     fn trans(
         &mut self,
@@ -409,6 +409,6 @@ impl<E> Pass<UntypedCore, E> for Rename {
         let mut wrap_bif = WrapBIF::new(self.id.clone());
         let ast = wrap_bif.transform_ast(ast);
         let symbol_table = self.generate_symbol_table();
-        Ok((symbol_table, ast))
+        Ok(Context(symbol_table, ast))
     }
 }

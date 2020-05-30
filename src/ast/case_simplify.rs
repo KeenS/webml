@@ -785,18 +785,18 @@ impl Transform<Type> for WildcardToVariable {
 }
 
 use crate::pass::Pass;
-impl<'a> Pass<(SymbolTable, TypedCore), TypeError<'a>> for CaseSimplify {
-    type Target = (SymbolTable, TypedCore);
+impl<'a> Pass<TypedCoreContext, TypeError<'a>> for CaseSimplify {
+    type Target = TypedCoreContext;
 
     fn trans<'b>(
         &'b mut self,
-        (symbol_table, ast): (SymbolTable, TypedCore),
+        Context(symbol_table, ast): TypedCoreContext,
         _: &Config,
     ) -> Result<'a, Self::Target> {
         let mut pass = self.generate_pass(symbol_table);
         let ast = pass.wildcard_to_variable(ast);
         let ast = pass.transform_ast(ast);
         let (symbol_table, _) = pass.into_inner();
-        Ok((symbol_table, ast))
+        Ok(Context(symbol_table, ast))
     }
 }

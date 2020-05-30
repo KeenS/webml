@@ -11,6 +11,14 @@ pub trait PP {
     }
 }
 
+pub fn nspaces(n: usize) -> String {
+    let mut s = String::new();
+    for _ in 0..n {
+        s.push(' ');
+    }
+    s
+}
+
 #[macro_export]
 macro_rules! inter_iter {
     ($v:expr, $inter: expr, |$e: pat| => $body: expr) => {

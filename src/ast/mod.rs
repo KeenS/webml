@@ -22,6 +22,16 @@ pub type UntypedAst = AST<()>;
 pub type Core<Ty> = AST<Ty, Nothing, Nothing>;
 pub type UntypedCore = Core<()>;
 pub type TypedCore = Core<Type>;
+pub type UntypedContext = Context<()>;
+pub type CoreContext<Ty> = Context<Ty, Nothing, Nothing>;
+pub type UntypedCoreContext = CoreContext<()>;
+pub type TypedCoreContext = CoreContext<Type>;
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct Context<Ty, DE = DerivedExprKind<Ty>, DS = DerivedDeclaration<Ty>>(
+    pub SymbolTable,
+    pub AST<Ty, DE, DS>,
+);
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct AST<Ty, DE = DerivedExprKind<Ty>, DS = DerivedDeclaration<Ty>>(

@@ -571,12 +571,12 @@ impl TyEnv {
 }
 
 use crate::pass::Pass;
-impl<'a> Pass<(SymbolTable, UntypedCore), TypeError<'a>> for Typer {
-    type Target = (SymbolTable, TypedCore);
+impl<'a> Pass<UntypedCoreContext, TypeError<'a>> for Typer {
+    type Target = TypedCoreContext;
 
     fn trans<'b>(
         &'b mut self,
-        (symbol_table, ast): (SymbolTable, UntypedCore),
+        Context(symbol_table, ast): UntypedCoreContext,
         _: &Config,
     ) -> Result<'a, Self::Target> {
         let mut pass = self.generate_pass(symbol_table);
@@ -585,6 +585,6 @@ impl<'a> Pass<(SymbolTable, UntypedCore), TypeError<'a>> for Typer {
         let typed_ast = pass.pool.typed_ast(typing_ast);
 
         let symbol_table = pass.into_symbol_table();
-        Ok((symbol_table, typed_ast))
+        Ok(Context(symbol_table, typed_ast))
     }
 }
