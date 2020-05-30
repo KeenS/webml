@@ -1640,3 +1640,10 @@ fn parse_multistatement_val_datatype() {
         ])
     )
 }
+
+#[test]
+fn pares_comment() {
+    let input = r#"(* comment (* is *) nestable *)"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(ast, AST(vec![]));
+}

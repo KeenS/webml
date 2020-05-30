@@ -2,9 +2,9 @@ use crate::ast::*;
 use crate::prim::*;
 use nom::branch::alt;
 use nom::bytes::complete::tag;
-use nom::character::complete::{alphanumeric1, digit1, multispace0, multispace1};
+use nom::character::complete::{alphanumeric1, digit1, multispace1};
 use nom::combinator::{all_consuming, complete, map, map_res, opt, recognize, value, verify};
-use nom::multi::{many1, separated_list, separated_nonempty_list};
+use nom::multi::{many0, many1, separated_list, separated_nonempty_list};
 use nom::number::complete::recognize_float;
 use nom::sequence::{preceded, terminated, tuple};
 use nom::IResult;
@@ -70,9 +70,9 @@ impl Parser {
 impl Parser {
     fn top(&self) -> impl Fn(&str) -> IResult<&str, UntypedAst> + '_ {
         move |i| {
-            let (i, _) = multispace0(i)?;
-            let (i, tops) = separated_list(multispace1, self.decl())(i)?;
-            let (i, _) = multispace0(i)?;
+            let (i, _) = self.space0()(i)?;
+            let (i, tops) = separated_list(self.space1(), self.decl())(i)?;
+            let (i, _) = self.space0()(i)?;
             Ok((i, AST(tops)))
         }
     }
@@ -90,13 +90,13 @@ impl Parser {
     fn decl_datatype(&self) -> impl Fn(&str) -> IResult<&str, Declaration<()>> + '_ {
         move |i| {
             let (i, _) = tag("datatype")(i)?;
-            let (i, _) = multispace1(i)?;
+            let (i, _) = self.space1()(i)?;
             let (i, name) = self.symbol()(i)?;
-            let (i, _) = multispace0(i)?;
+            let (i, _) = self.space0()(i)?;
             let (i, _) = tag("=")(i)?;
-            let (i, _) = multispace0(i)?;
+            let (i, _) = self.space0()(i)?;
             let (i, constructors) = separated_nonempty_list(
-                tuple((multispace0, tag("|"), multispace0)),
+                tuple((self.space0(), tag("|"), self.space0())),
                 self.constructor_def(),
             )(i)?;
             Ok((i, Declaration::Datatype { name, constructors }))
@@ -106,11 +106,11 @@ impl Parser {
     fn decl_val(&self) -> impl Fn(&str) -> IResult<&str, Declaration<()>> + '_ {
         move |i| {
             let (i, _) = tag("val")(i)?;
-            let (i, _) = multispace1(i)?;
+            let (i, _) = self.space1()(i)?;
             let (i, pattern) = self.pattern()(i)?;
-            let (i, _) = multispace0(i)?;
+            let (i, _) = self.space0()(i)?;
             let (i, _) = tag("=")(i)?;
-            let (i, _) = multispace0(i)?;
+            let (i, _) = self.space0()(i)?;
             let (i, expr) = self.expr()(i)?;
             Ok((
                 i,
@@ -126,15 +126,15 @@ impl Parser {
     fn decl_fun(&self) -> impl Fn(&str) -> IResult<&str, Declaration<()>> + '_ {
         move |i| {
             let (i, _) = tag("fun")(i)?;
-            let (i, _) = multispace1(i)?;
+            let (i, _) = self.space1()(i)?;
             let (i, cs) = separated_nonempty_list(
-                tuple((multispace0, tag("|"), multispace0)),
+                tuple((self.space0(), tag("|"), self.space0())),
                 map(
                     tuple((
                         self.decl_funbind(),
-                        multispace0,
+                        self.space0(),
                         tag("="),
-                        multispace0,
+                        self.space0(),
                         self.expr(),
                     )),
                     |((name, params), _, _, _, e)| (name, params, e),
@@ -158,8 +158,8 @@ impl Parser {
             map(
                 tuple((
                     self.op_symbol_eq(),
-                    multispace0,
-                    separated_nonempty_list(multispace1, self.pattern_atmic()),
+                    self.space0(),
+                    separated_nonempty_list(self.space1(), self.pattern_atmic()),
                 )),
                 |(name, _, pats)| (name, pats),
             )(i)
@@ -170,7 +170,7 @@ impl Parser {
         move |i| {
             let (i, name) = self.symbol()(i)?;
             let (i, param) = opt(complete(map(
-                tuple((multispace1, tag("of"), multispace1, self.typename())),
+                tuple((self.space1(), tag("of"), self.space1(), self.typename())),
                 |(_, _, _, ty)| ty,
             )))(i)?;
 
@@ -181,10 +181,10 @@ impl Parser {
     fn decl_infix(&self) -> impl Fn(&str) -> IResult<&str, Declaration<()>> + '_ {
         move |i| {
             let (i, _) = tag("infix")(i)?;
-            let (i, _) = multispace1(i)?;
+            let (i, _) = self.space1()(i)?;
             let (i, priority) = opt(digit1)(i)?;
-            let (i, _) = multispace1(i)?;
-            let (i, names) = separated_nonempty_list(multispace1, self.symbol_eq())(i)?;
+            let (i, _) = self.space1()(i)?;
+            let (i, names) = separated_nonempty_list(self.space1(), self.symbol_eq())(i)?;
             let priority = priority.map(|s| {
                 s.parse()
                     .expect("internal error: falied to parse digits as integer")
@@ -230,20 +230,20 @@ impl Parser {
         move |i| {
             self.with_scope(|| {
                 let (i, _) = tag("let")(i)?;
-                let (i, _) = multispace1(i)?;
-                let (i, binds) = separated_list(multispace1, self.decl())(i)?;
-                let (i, _) = multispace1(i)?;
+                let (i, _) = self.space1()(i)?;
+                let (i, binds) = separated_list(self.space1(), self.decl())(i)?;
+                let (i, _) = self.space1()(i)?;
                 let (i, _) = tag("in")(i)?;
-                let (i, _) = multispace1(i)?;
+                let (i, _) = self.space1()(i)?;
                 let (i, ret) = self.expr()(i)?;
-                let (i, _) = multispace1(i)?;
+                let (i, _) = self.space1()(i)?;
                 let (i, _) = tag("end")(i)?;
                 Ok((
                     i,
                     Expr {
                         ty: (),
                         inner: ExprKind::Binds {
-                            binds: binds,
+                            binds,
                             ret: ret.boxed(),
                         },
                     },
@@ -255,18 +255,18 @@ impl Parser {
     fn expr_fun(&self) -> impl Fn(&str) -> IResult<&str, Expr<()>> + '_ {
         move |i| {
             let (i, _) = tag("fn")(i)?;
-            let (i, _) = multispace1(i)?;
+            let (i, _) = self.space1()(i)?;
             let (i, param) = self.symbol()(i)?;
-            let (i, _) = multispace0(i)?;
+            let (i, _) = self.space0()(i)?;
             let (i, _) = tag("=>")(i)?;
-            let (i, _) = multispace1(i)?;
+            let (i, _) = self.space1()(i)?;
             let (i, body) = self.expr()(i)?;
             Ok((
                 i,
                 Expr {
                     ty: (),
                     inner: ExprKind::Fn {
-                        param: param,
+                        param,
                         body: body.boxed(),
                     },
                 },
@@ -277,15 +277,15 @@ impl Parser {
     fn expr_if(&self) -> impl Fn(&str) -> IResult<&str, Expr<()>> + '_ {
         move |i| {
             let (i, _) = tag("if")(i)?;
-            let (i, _) = multispace1(i)?;
+            let (i, _) = self.space1()(i)?;
             let (i, cond) = self.expr()(i)?;
-            let (i, _) = multispace1(i)?;
+            let (i, _) = self.space1()(i)?;
             let (i, _) = tag("then")(i)?;
-            let (i, _) = multispace1(i)?;
+            let (i, _) = self.space1()(i)?;
             let (i, then) = self.expr()(i)?;
-            let (i, _) = multispace1(i)?;
+            let (i, _) = self.space1()(i)?;
             let (i, _) = tag("else")(i)?;
-            let (i, _) = multispace1(i)?;
+            let (i, _) = self.space1()(i)?;
             let (i, else_) = self.expr()(i)?;
             Ok((
                 i,
@@ -304,19 +304,19 @@ impl Parser {
     fn expr_case(&self) -> impl Fn(&str) -> IResult<&str, Expr<()>> + '_ {
         move |i| {
             let (i, _) = tag("case")(i)?;
-            let (i, _) = multispace1(i)?;
+            let (i, _) = self.space1()(i)?;
             let (i, cond) = self.expr()(i)?;
-            let (i, _) = multispace1(i)?;
+            let (i, _) = self.space1()(i)?;
             let (i, _) = tag("of")(i)?;
-            let (i, _) = multispace1(i)?;
+            let (i, _) = self.space1()(i)?;
             let (i, clauses) = separated_nonempty_list(
-                tuple((multispace0, tag("|"), multispace0)),
+                tuple((self.space0(), tag("|"), self.space0())),
                 map(
                     tuple((
                         self.pattern(),
-                        multispace0,
+                        self.space0(),
                         tag("=>"),
-                        multispace0,
+                        self.space0(),
                         self.expr(),
                     )),
                     |(pat, _, _, _, expr)| (pat, expr),
@@ -328,7 +328,7 @@ impl Parser {
                     ty: (),
                     inner: ExprKind::Case {
                         cond: cond.boxed(),
-                        clauses: clauses,
+                        clauses,
                     },
                 },
             ))
@@ -339,7 +339,7 @@ impl Parser {
     fn expr_infix_and_app(&self) -> impl Fn(&str) -> IResult<&str, Expr<()>> + '_ {
         move |i| {
             // TODO: support 1+1
-            let (i, mixed) = many1(map(tuple((multispace0, self.expr1())), |(_, e)| e))(i)?;
+            let (i, mixed) = many1(map(tuple((self.space0(), self.expr1())), |(_, e)| e))(i)?;
             #[derive(Debug)]
             enum Mixed {
                 E(Expr<()>),
@@ -516,9 +516,9 @@ impl Parser {
     fn expr1_paren(&self) -> impl Fn(&str) -> IResult<&str, Expr<()>> + '_ {
         move |i| {
             let (i, _) = tag("(")(i)?;
-            let (i, _) = multispace0(i)?;
+            let (i, _) = self.space0()(i)?;
             let (i, e) = self.expr()(i)?;
-            let (i, _) = multispace0(i)?;
+            let (i, _) = self.space0()(i)?;
             let (i, _) = tag(")")(i)?;
             Ok((i, e))
         }
@@ -527,11 +527,11 @@ impl Parser {
     fn expr1_tuple(&self) -> impl Fn(&str) -> IResult<&str, Expr<()>> + '_ {
         move |i| {
             let (i, _) = tag("(")(i)?;
-            let (i, _) = multispace0(i)?;
-            let sep = tuple((multispace0, tag(","), multispace0));
+            let (i, _) = self.space0()(i)?;
+            let sep = tuple((self.space0(), tag(","), self.space0()));
             let (i, es) = many1(map(tuple((self.expr(), sep)), |(e, _)| e))(i)?;
             let (i, e) = self.expr()(i)?;
-            let (i, _) = multispace0(i)?;
+            let (i, _) = self.space0()(i)?;
             let (i, _) = tag(")")(i)?;
 
             let mut es = es;
@@ -553,7 +553,7 @@ impl Parser {
                     ty: (),
                     inner: ExprKind::Tuple { tuple: vec![] },
                 },
-                tuple((tag("("), multispace0, tag(")"))),
+                tuple((tag("("), self.space0(), tag(")"))),
             )(i)
         }
     }
@@ -561,7 +561,7 @@ impl Parser {
     fn expr1_builtincall(&self) -> impl Fn(&str) -> IResult<&str, Expr<()>> + '_ {
         move |i| {
             let (i, _) = tag("_builtincall")(i)?;
-            let (i, _) = multispace0(i)?;
+            let (i, _) = self.space0()(i)?;
             let (i, _) = tag("\"")(i)?;
             let (i, fun) = map_res(alphanumeric1, |name| match name {
                 "add" => Ok(BIF::Add),
@@ -579,10 +579,10 @@ impl Parser {
                 _ => Err(nom::Err::Error(nom::error::ErrorKind::Tag)),
             })(i)?;
             let (i, _) = tag("\"")(i)?;
-            let (i, _) = multispace0(i)?;
+            let (i, _) = self.space0()(i)?;
             let (i, _) = tag("(")(i)?;
             let (i, args) = separated_nonempty_list(
-                tuple((multispace0, tag(","), multispace0)),
+                tuple((self.space0(), tag(","), self.space0())),
                 self.expr(),
             )(i)?;
             let (i, _) = tag(")")(i)?;
@@ -604,33 +604,33 @@ impl Parser {
                 preceded(tag("\""), terminated(allowed, tag("\"")))(i)
             }
             let (i, _) = tag("_externcall")(i)?;
-            let (i, _) = multispace0(i)?;
+            let (i, _) = self.space0()(i)?;
             let (i, _) = tag("(")(i)?;
-            let (i, _) = multispace0(i)?;
+            let (i, _) = self.space0()(i)?;
             let (i, module) = map(name_parser, String::from)(i)?;
-            let (i, _) = multispace0(i)?;
+            let (i, _) = self.space0()(i)?;
             let (i, _) = tag(".")(i)?;
-            let (i, _) = multispace0(i)?;
+            let (i, _) = self.space0()(i)?;
             let (i, fun) = map(name_parser, String::from)(i)?;
-            let (i, _) = multispace0(i)?;
+            let (i, _) = self.space0()(i)?;
             let (i, _) = tag(":")(i)?;
-            let (i, _) = multispace0(i)?;
+            let (i, _) = self.space0()(i)?;
             let (i, _) = tag("(")(i)?;
             let (i, argty) = separated_nonempty_list(
-                tuple((multispace0, tag(","), multispace0)),
+                tuple((self.space0(), tag(","), self.space0())),
                 self.typename(),
             )(i)?;
             let (i, _) = tag(")")(i)?;
-            let (i, _) = multispace0(i)?;
+            let (i, _) = self.space0()(i)?;
             let (i, _) = tag("->")(i)?;
-            let (i, _) = multispace0(i)?;
+            let (i, _) = self.space0()(i)?;
             let (i, retty) = self.typename()(i)?;
-            let (i, _) = multispace0(i)?;
+            let (i, _) = self.space0()(i)?;
             let (i, _) = tag(")")(i)?;
-            let (i, _) = multispace0(i)?;
+            let (i, _) = self.space0()(i)?;
             let (i, _) = tag("(")(i)?;
             let (i, args) = separated_nonempty_list(
-                tuple((multispace0, tag(","), multispace0)),
+                tuple((self.space0(), tag(","), self.space0())),
                 self.expr(),
             )(i)?;
             let (i, _) = tag(")")(i)?;
@@ -669,9 +669,9 @@ impl Parser {
     fn typename0_fun(&self) -> impl Fn(&str) -> IResult<&str, Type> + '_ {
         move |i| {
             let (i, arg) = self.typename1()(i)?;
-            let (i, _) = multispace0(i)?;
+            let (i, _) = self.space0()(i)?;
             let (i, _) = tag("->")(i)?;
-            let (i, _) = multispace0(i)?;
+            let (i, _) = self.space0()(i)?;
             let (i, ret) = self.typename()(i)?;
             Ok((i, Type::Fun(Box::new(arg), Box::new(ret))))
         }
@@ -679,7 +679,7 @@ impl Parser {
 
     fn typename1_tuple(&self) -> impl Fn(&str) -> IResult<&str, Type> + '_ {
         move |i| {
-            let sep = tuple((multispace0, tag("*"), multispace0));
+            let sep = tuple((self.space0(), tag("*"), self.space0()));
 
             let (i, tys) = many1(map(tuple((self.typename2(), sep)), |(ty, _)| ty))(i)?;
             let (i, ty) = self.typename2()(i)?;
@@ -693,9 +693,9 @@ impl Parser {
     fn typename2_paren(&self) -> impl Fn(&str) -> IResult<&str, Type> + '_ {
         move |i| {
             let (i, _) = tag("(")(i)?;
-            let (i, _) = multispace0(i)?;
+            let (i, _) = self.space0()(i)?;
             let (i, ty) = self.typename()(i)?;
-            let (i, _) = multispace0(i)?;
+            let (i, _) = self.space0()(i)?;
             let (i, _) = tag(")")(i)?;
             Ok((i, ty))
         }
@@ -726,14 +726,14 @@ impl Parser {
 
     fn op_symbol_alphanumeric(&self) -> impl Fn(&str) -> IResult<&str, Symbol> + '_ {
         move |i| {
-            let (i, _) = opt(tuple((tag("op"), multispace1)))(i)?;
+            let (i, _) = opt(tuple((tag("op"), self.space1())))(i)?;
             self.symbol_alphanumeric()(i)
         }
     }
 
     fn op_symbol_symbolic_eq(&self) -> impl Fn(&str) -> IResult<&str, Symbol> + '_ {
         move |i| {
-            let (i, _) = opt(tuple((tag("op"), multispace0)))(i)?;
+            let (i, _) = opt(tuple((tag("op"), self.space0())))(i)?;
             alt((self.symbol_symbolic(), value(Symbol::new("="), tag("="))))(i)
         }
     }
@@ -760,6 +760,55 @@ impl Parser {
                 !KEYWORDS.contains(&s) && !RESERVED.contains(&s)
             })(i)?;
             Ok((i, Symbol::new(sym.to_string())))
+        }
+    }
+
+    fn space0(&self) -> impl Fn(&str) -> IResult<&str, ()> + '_ {
+        move |i| {
+            map(
+                many0(alt((map(multispace1, |_| ()), self.comment()))),
+                |_| (),
+            )(i)
+        }
+    }
+
+    fn space1(&self) -> impl Fn(&str) -> IResult<&str, ()> + '_ {
+        move |i| {
+            map(
+                many1(alt((map(multispace1, |_| ()), self.comment()))),
+                |_| (),
+            )(i)
+        }
+    }
+
+    fn comment(&self) -> impl Fn(&str) -> IResult<&str, ()> + '_ {
+        move |i| {
+            let (i, _) = tag("(*")(i)?;
+            let mut nest = 1;
+            let mut chars = i.chars();
+            while let Some(c) = chars.next() {
+                match c {
+                    '(' => {
+                        if let Some('*') = chars.next() {
+                            nest += 1;
+                        }
+                    }
+                    '*' => {
+                        if let Some(')') = chars.next() {
+                            nest -= 1;
+                            if nest == 0 {
+                                break;
+                            }
+                        }
+                    }
+                    _ => (),
+                }
+            }
+            if nest != 0 {
+                panic!("parser reached EOF while pasing comment; maybe (* is not closed?");
+            }
+            let i = chars.as_str();
+            Ok((i, ()))
         }
     }
 
@@ -833,11 +882,11 @@ impl Parser {
     fn pattern_tuple(&self) -> impl Fn(&str) -> IResult<&str, Pattern<()>> + '_ {
         move |i| {
             let (i, _) = tag("(")(i)?;
-            let (i, _) = multispace0(i)?;
-            let sep = tuple((multispace0, tag(","), multispace0));
+            let (i, _) = self.space0()(i)?;
+            let sep = tuple((self.space0(), tag(","), self.space0()));
             let (i, es) = many1(map(tuple((self.pattern(), sep)), |(e, _)| e))(i)?;
             let (i, e) = self.pattern()(i)?;
-            let (i, _) = multispace0(i)?;
+            let (i, _) = self.space0()(i)?;
             let (i, _) = tag(")")(i)?;
 
             let mut es = es;
@@ -859,7 +908,7 @@ impl Parser {
                     ty: (),
                     inner: PatternKind::Tuple { tuple: vec![] },
                 },
-                tuple((tag("("), multispace0, tag(")"))),
+                tuple((tag("("), self.space0(), tag(")"))),
             )(i)
         }
     }
@@ -870,7 +919,7 @@ impl Parser {
     fn pattern_constructor(&self) -> impl Fn(&str) -> IResult<&str, Pattern<()>> + '_ {
         move |i| {
             let (i, name) = self.symbol()(i)?;
-            let (i, _) = multispace0(i)?;
+            let (i, _) = self.space0()(i)?;
             let (i, arg) = self.pattern_atmic()(i)?;
             Ok((
                 i,
@@ -889,7 +938,7 @@ impl Parser {
         move |i| {
             map(self.symbol(), |name| Pattern {
                 ty: (),
-                inner: PatternKind::Variable { name: name },
+                inner: PatternKind::Variable { name },
             })(i)
         }
     }
@@ -909,9 +958,9 @@ impl Parser {
     fn pattern_paren(&self) -> impl Fn(&str) -> IResult<&str, Pattern<()>> + '_ {
         move |i| {
             let (i, _) = tag("(")(i)?;
-            let (i, _) = multispace0(i)?;
+            let (i, _) = self.space0()(i)?;
             let (i, e) = self.pattern()(i)?;
-            let (i, _) = multispace0(i)?;
+            let (i, _) = self.space0()(i)?;
             let (i, _) = tag(")")(i)?;
 
             Ok((i, e))
