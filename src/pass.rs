@@ -73,7 +73,7 @@ pub struct PrintablePass<T>(pub T, pub &'static str);
 impl<T, In, Out, Err> Pass<In, Err> for PrintablePass<T>
 where
     T: Pass<In, Err, Target = Out>,
-    Out: PP,
+    Out: Display,
 {
     type Target = Out;
 
@@ -81,7 +81,7 @@ where
         let o = self.0.trans(i, config)?;
         info!("pass: {}", self.1);
         if config.pretty_print_ir.contains(self.1) {
-            o.pp(&mut ::std::io::stdout(), 0).unwrap();
+            println!("{}", o);
         }
 
         Ok(o)
