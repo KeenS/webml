@@ -327,7 +327,7 @@ impl WrapBIF {
     }
 }
 
-impl Transform<()> for WrapBIF {
+impl Transform<Empty> for WrapBIF {
     fn transform_symbol(&mut self, name: Symbol) -> UntypedCoreExprKind {
         if name.1 == 0 {
             if let Some(bif) = self.bif_table.get(&name.0).cloned() {
@@ -341,26 +341,26 @@ impl Transform<()> for WrapBIF {
                         ExprKind::Fn {
                             param: tuple.clone(),
                             body: Expr {
-                                ty: (),
+                                ty: Empty {},
                                 inner: ExprKind::Case {
                                     cond: Expr {
-                                        ty: (),
+                                        ty: Empty {},
                                         inner: ExprKind::Symbol { name: tuple },
                                     }
                                     .boxed(),
                                     clauses: vec![(
                                         Pattern {
-                                            ty: (),
+                                            ty: Empty {},
                                             inner: PatternKind::Tuple {
                                                 tuple: vec![
                                                     Pattern {
-                                                        ty: (),
+                                                        ty: Empty {},
                                                         inner: PatternKind::Variable {
                                                             name: l.clone(),
                                                         },
                                                     },
                                                     Pattern {
-                                                        ty: (),
+                                                        ty: Empty {},
                                                         inner: PatternKind::Variable {
                                                             name: r.clone(),
                                                         },
@@ -369,16 +369,16 @@ impl Transform<()> for WrapBIF {
                                             },
                                         },
                                         Expr {
-                                            ty: (),
+                                            ty: Empty {},
                                             inner: ExprKind::BuiltinCall {
                                                 fun: bif,
                                                 args: vec![
                                                     Expr {
-                                                        ty: (),
+                                                        ty: Empty {},
                                                         inner: ExprKind::Symbol { name: l },
                                                     },
                                                     Expr {
-                                                        ty: (),
+                                                        ty: Empty {},
                                                         inner: ExprKind::Symbol { name: r },
                                                     },
                                                 ],

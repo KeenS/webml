@@ -52,7 +52,7 @@ impl VarToConstructorPass {
     }
 }
 
-impl Transform<()> for VarToConstructorPass {
+impl Transform<Empty> for VarToConstructorPass {
     fn transform_symbol(&mut self, name: Symbol) -> UntypedCoreExprKind {
         if self.is_constructor(&name) {
             if let Some(_) = self.arg_type(&name) {
@@ -60,11 +60,11 @@ impl Transform<()> for VarToConstructorPass {
                 ExprKind::Fn {
                     param: sym.clone(),
                     body: Expr {
-                        ty: (),
+                        ty: Empty {},
                         inner: ExprKind::Constructor {
                             arg: Some(
                                 Expr {
-                                    ty: (),
+                                    ty: Empty {},
                                     inner: ExprKind::Symbol { name: sym },
                                 }
                                 .boxed(),

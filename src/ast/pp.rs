@@ -582,8 +582,14 @@ impl fmt::Display for Type {
     }
 }
 
-impl PP for () {
+impl PP for Empty {
     fn pp<W: io::Write>(&self, _: &mut W, _: usize) -> io::Result<()> {
+        Ok(())
+    }
+}
+
+impl fmt::Display for Empty {
+    fn fmt(&self, _: &mut fmt::Formatter) -> fmt::Result {
         Ok(())
     }
 }

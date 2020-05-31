@@ -18,13 +18,13 @@ pub use std::collections::HashMap;
 use std::error::Error;
 use std::fmt;
 
-pub type UntypedAst = AST<()>;
+pub type UntypedAst = AST<Empty>;
 pub type Core<Ty> = AST<Ty, Nothing, Nothing>;
-pub type UntypedCore = Core<()>;
+pub type UntypedCore = Core<Empty>;
 pub type TypedCore = Core<Type>;
-pub type UntypedContext = Context<()>;
+pub type UntypedContext = Context<Empty>;
 pub type CoreContext<Ty> = Context<Ty, Nothing, Nothing>;
-pub type UntypedCoreContext = CoreContext<()>;
+pub type UntypedCoreContext = CoreContext<Empty>;
 pub type TypedCoreContext = CoreContext<Type>;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -38,9 +38,9 @@ pub struct AST<Ty, DE = DerivedExprKind<Ty>, DS = DerivedDeclaration<Ty>>(
     pub Vec<Declaration<Ty, DE, DS>>,
 );
 
-pub type UntypedDeclaration = Declaration<(), DerivedExprKind<()>, DerivedDeclaration<()>>;
+pub type UntypedDeclaration = Declaration<Empty, DerivedExprKind<Empty>, DerivedDeclaration<Empty>>;
 pub type CoreDeclaration<Ty> = Declaration<Ty, Nothing, Nothing>;
-pub type UntypedCoreDeclaration = CoreDeclaration<()>;
+pub type UntypedCoreDeclaration = CoreDeclaration<Empty>;
 pub type TypedCoreDeclaration = CoreDeclaration<Type>;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -71,12 +71,14 @@ pub enum DerivedDeclaration<Ty> {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Nothing {}
+#[derive(Debug, Clone, PartialEq)]
+pub struct Empty {}
 
-pub type UntypedExpr = Expr<()>;
+pub type UntypedExpr = Expr<Empty>;
 pub type CoreExpr<Ty> = Expr<Ty, Nothing, Nothing>;
 pub type CoreExprKind<Ty> = ExprKind<Ty, Nothing, Nothing>;
-pub type UntypedCoreExpr = CoreExpr<()>;
-pub type UntypedCoreExprKind = CoreExprKind<()>;
+pub type UntypedCoreExpr = CoreExpr<Empty>;
+pub type UntypedCoreExprKind = CoreExprKind<Empty>;
 pub type TypedCoreExpr = CoreExpr<Type>;
 pub type TypedCoreExprKind = CoreExprKind<Type>;
 
@@ -143,8 +145,8 @@ pub enum DerivedExprKind<Ty> {
     },
 }
 
-pub type UntypedPattern = Pattern<()>;
-pub type UntypedPatternKind = PatternKind<()>;
+pub type UntypedPattern = Pattern<Empty>;
+pub type UntypedPatternKind = PatternKind<Empty>;
 pub type TypedPattern = Pattern<Type>;
 pub type TypedPatternKind = PatternKind<Type>;
 
