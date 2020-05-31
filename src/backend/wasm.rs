@@ -1,3 +1,4 @@
+use crate::backend::Output;
 use crate::config::Config;
 use crate::lir;
 use crate::pass::Pass;
@@ -1057,7 +1058,7 @@ impl LIR2WASMPass {
 }
 
 impl<E> Pass<lir::Context, E> for LIR2WASM {
-    type Target = Module;
+    type Target = Output;
 
     fn trans(
         &mut self,
@@ -1065,6 +1066,6 @@ impl<E> Pass<lir::Context, E> for LIR2WASM {
         _: &Config,
     ) -> ::std::result::Result<Self::Target, E> {
         let mut pass = self.generate_pass(extern_types);
-        Ok(pass.trans_lir(lir))
+        Ok(Output(pass.trans_lir(lir)))
     }
 }
