@@ -1,11 +1,17 @@
+use crate::mir::*;
+use crate::util::{nspaces, PP};
+use std::fmt;
 use std::io;
 
-use crate::mir::*;
-use crate::util::PP;
-
-impl PP for (SymbolTable, MIR) {
+impl PP for Context {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         self.1.pp(w, indent)
+    }
+}
+
+impl fmt::Display for Context {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}", self.1)
     }
 }
 impl PP for MIR {
@@ -17,6 +23,14 @@ impl PP for MIR {
     }
 }
 
+impl fmt::Display for MIR {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        for fun in &self.0 {
+            write!(f, "{}", fun)?;
+        }
+        Ok(())
+    }
+}
 impl PP for Function {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         let indent = indent + 4;
@@ -43,6 +57,26 @@ impl PP for Function {
     }
 }
 
+impl fmt::Display for Function {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let indent = f.width().unwrap_or(0);
+        let indent = indent + 4;
+        write!(f, "fun {}: (", self.name)?;
+        inter_iter! {
+            self.body[0].params.iter(),
+            write!(f, ", ")?,
+            |&(ref param_ty, ref param)| => {
+                write!(f, "{}: {}", param, param_ty)?;
+            }
+        }
+        write!(f, ") -> {} = {{\n", self.body_ty)?;
+        for ebb in self.body.iter() {
+            write!(f, "{:indent$}", ebb, indent = indent)?;
+        }
+        write!(f, "}}\n")?;
+        Ok(())
+    }
+}
 impl PP for EbbTy {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         use crate::mir::EbbTy::*;
@@ -105,6 +139,71 @@ impl PP for EbbTy {
     }
 }
 
+impl fmt::Display for EbbTy {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use crate::mir::EbbTy::*;
+        match self {
+            Unit => write!(f, "()")?,
+            Bool => write!(f, "bool")?,
+            Char => write!(f, "char")?,
+            Int => write!(f, "int")?,
+            Float => write!(f, "float")?,
+            Tuple(tys) => {
+                write!(f, "(")?;
+                inter_iter! {
+                    tys,
+                    write!(f, ", ")?,
+                    |t| => {
+                        write!(f, "{}", t)?;
+                    }
+                }
+                write!(f, ")")?;
+            }
+            Union(tys) => {
+                write!(f, "union {{")?;
+                inter_iter! {
+                    tys,
+                    write!(f, ", ")?,
+                    |t| => {
+                        write!(f, "{}", t)?;
+                    }
+                }
+                write!(f, "}}")?;
+            }
+            Cls {
+                closures,
+                param,
+                ret,
+            } => {
+                write!(f, "closure_fn<")?;
+                inter_iter! {
+                    closures,
+                    write!(f, ", ")?,
+                    |c| => {
+                        write!(f, "{}", c)?;
+                    }
+                }
+                write!(f, ">({}) -> {}", param, ret)?;
+            }
+            Ebb { params, ret } => {
+                write!(f, "fn(")?;
+                inter_iter! {
+                    params,
+                    write!(f, ", ")?,
+                    |param| => {
+                        write!(f, "{}", param)?;
+                    }
+                }
+                write!(f, ") -> {}", ret)?;
+            }
+            Variable(name) => {
+                write!(f, "{}", name)?;
+            }
+        };
+        Ok(())
+    }
+}
+
 impl PP for EBB {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         let space = Self::nspaces(indent);
@@ -125,6 +224,27 @@ impl PP for EBB {
         for op in self.body.iter() {
             op.pp(w, indent)?;
             write!(w, "\n")?;
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Display for EBB {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let indent = f.width().unwrap_or(0);
+        let space = nspaces(indent);
+        write!(f, "{}{}(", space, self.name)?;
+        let indent = indent + 4;
+        inter_iter! {
+            self.params.iter(),
+            write!(f, ", ")?,
+            |(param_ty, param)| => {
+                write!(f, "{}: {}", param, param_ty)?;
+            }
+        }
+        write!(f, "):\n")?;
+        for op in self.body.iter() {
+            write!(f, "{:indent$}\n", op, indent = indent)?;
         }
         Ok(())
     }
@@ -216,9 +336,7 @@ impl PP for Op {
                 fun,
                 env,
             } => {
-                write!(w, "{}", space)?;
-                var.pp(w, indent)?;
-                write!(w, ": ")?;
+                write!(w, "{}{}: ", space, var)?;
                 (EbbTy::Cls {
                     closures: env.iter().map(|(ty, _)| ty.clone()).collect(),
                     param: Box::new(param_ty.clone()),
@@ -399,6 +517,217 @@ impl PP for Op {
 
                 ty.pp(w, indent)?;
             }
+        };
+        Ok(())
+    }
+}
+
+fn display_binop(
+    f: &mut fmt::Formatter,
+    space: &str,
+    name: &str,
+    var: &Symbol,
+    ty: &EbbTy,
+    l: &Symbol,
+    r: &Symbol,
+) -> fmt::Result {
+    write!(f, "{}{}: {} := {} {} {}", space, var, ty, l, name, r)?;
+    Ok(())
+}
+
+impl fmt::Display for Op {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use crate::mir::Op::*;
+        let indent = f.width().unwrap_or(0);
+        let space = nspaces(indent);
+        match self {
+            Lit { var, ty, value } => {
+                write!(f, "{}{}: {}:= {}", space, var, ty, value)?;
+            }
+            Alias { var, ty, sym } => {
+                write!(f, "{}{}:{} := {}", space, var, ty, sym)?;
+            }
+            Add { var, ty, l, r } => {
+                display_binop(f, &space, "+", var, ty, l, r)?;
+            }
+            Sub { var, ty, l, r } => {
+                display_binop(f, &space, "-", var, ty, l, r)?;
+            }
+            Mul { var, ty, l, r } => {
+                display_binop(f, &space, "*", var, ty, l, r)?;
+            }
+            DivInt { var, ty, l, r } => {
+                display_binop(f, &space, "div", var, ty, l, r)?;
+            }
+            DivFloat { var, ty, l, r } => {
+                display_binop(f, &space, "/", var, ty, l, r)?;
+            }
+            Mod { var, ty, l, r } => {
+                display_binop(f, &space, "mod", var, ty, l, r)?;
+            }
+            Eq { var, ty, l, r } => {
+                display_binop(f, &space, "=", var, ty, l, r)?;
+            }
+            Neq { var, ty, l, r } => {
+                display_binop(f, &space, "<>", var, ty, l, r)?;
+            }
+            Gt { var, ty, l, r } => {
+                display_binop(f, &space, ">", var, ty, l, r)?;
+            }
+            Ge { var, ty, l, r } => {
+                display_binop(f, &space, ">=", var, ty, l, r)?;
+            }
+            Lt { var, ty, l, r } => {
+                display_binop(f, &space, "<", var, ty, l, r)?;
+            }
+            Le { var, ty, l, r } => {
+                display_binop(f, &space, "<=", var, ty, l, r)?;
+            }
+            Closure {
+                var,
+                param_ty,
+                ret_ty,
+                fun,
+                env,
+            } => {
+                let ty = EbbTy::Cls {
+                    closures: env.iter().map(|(ty, _)| ty.clone()).collect(),
+                    param: Box::new(param_ty.clone()),
+                    ret: Box::new(ret_ty.clone()),
+                };
+                write!(f, "{}{}: {} := {}.__close(", space, var, ty, fun)?;
+                inter_iter! {
+                    env.iter(),
+                    write!(f, ", ")?,
+                    |(var_ty, var)| => {
+                        write!(f, "{}: {}", var, var_ty)?;
+                    }
+                }
+                write!(f, ")")?;
+            }
+            ExternCall {
+                var,
+                ty,
+                module,
+                fun,
+                args,
+            } => {
+                write!(
+                    f,
+                    "{}{} : {} := \"{}\".\"{}\"(",
+                    space, var, ty, module, fun
+                )?;
+                inter_iter! {
+                    args.iter(),
+                    write!(f, ", ")?,
+                    |arg| => {
+                        write!(f, "{}", arg)?;
+                    }
+                }
+                write!(f, ")")?;
+            }
+
+            Call { var, ty, fun, args } => {
+                write!(f, "{}{}: {} := {}(", space, var, ty, fun)?;
+                inter_iter! {
+                    args.iter(),
+                    write!(f, ", ")?,
+                    |arg| => {
+                        write!(f, "{}", arg)?;
+                    }
+                }
+                write!(f, ")")?;
+            }
+            Tuple { var, tys, tuple } => {
+                write!(f, "{}{}: (", space, var)?;
+                inter_iter! {
+                    tys.iter(),
+                    write!(f, ", ")?,
+                    |ty| => {
+                        write!(f, "{}", ty)?;
+                    }
+                }
+                write!(f, ") := (")?;
+                write!(f, "(")?;
+                inter_iter! {
+                    tuple.iter(),
+                    write!(f, ", ")?,
+                    |var| => {
+                        write!(f, "{}", var)?;
+                    }
+                }
+                write!(f, ")")?;
+            }
+            Proj {
+                var,
+                ty,
+                index,
+                tuple,
+            } => {
+                write!(f, "{}{}: {} := #{} {}", space, var, ty, index, tuple)?;
+            }
+            Union {
+                var,
+                tys,
+                index,
+                variant,
+            } => {
+                write!(f, "{}{}: union{{", space, var)?;
+                inter_iter! {
+                    tys.iter(),
+                    write!(f, ", ")?,
+                    |ty| => {
+                        write!(f, "{}", ty)?;
+                    }
+                }
+                write!(f, "}} := make_union({}, {})", index, variant)?;
+            }
+            Select {
+                var,
+                ty,
+                index,
+                union,
+            } => {
+                write!(
+                    f,
+                    "{}{}: {} := select({}, {})",
+                    space, var, ty, index, union
+                )?;
+            }
+            Branch {
+                cond,
+                clauses,
+                default,
+                ..
+            } => {
+                write!(f, "{}branch {}{{\n", space, cond)?;
+                {
+                    let indent = indent + 4;
+                    let space = Self::nspaces(indent);
+                    for (val, arm, _) in clauses.iter() {
+                        write!(f, "{}{} => {}()\n", space, val, arm)?;
+                    }
+                    for (arm, _) in default {
+                        write!(f, "{}default => {}({}\n)", space, arm, cond)?;
+                    }
+                }
+                write!(f, "{}}}\n", space)?;
+            }
+            Jump { target, args, .. } => {
+                write!(f, "{}{}(", space, target)?;
+                inter_iter! {
+                    args.iter(),
+                    write!(f, ", ")?,
+                    |arg| => {
+                        write!(f, "{}", arg)?;
+                    }
+                }
+                write!(f, ")")?;
+            }
+            Ret { value, ty } => match value {
+                Some(v) => write!(f, "{}ret {}: {}", space, v, ty)?,
+                None => write!(f, "{}ret: {}", space, ty)?,
+            },
         };
         Ok(())
     }

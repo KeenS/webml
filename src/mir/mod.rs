@@ -12,6 +12,9 @@ use crate::prim::*;
 use std::collections::HashMap;
 
 #[derive(Debug, Clone)]
+pub struct Context(pub SymbolTable, pub MIR);
+
+#[derive(Debug, Clone)]
 pub struct MIR(pub Vec<Function>);
 
 #[derive(Debug, Clone)]
