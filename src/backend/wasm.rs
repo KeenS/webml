@@ -1056,12 +1056,12 @@ impl LIR2WASMPass {
     }
 }
 
-impl<E> Pass<(lir::ExternTypes, lir::LIR), E> for LIR2WASM {
+impl<E> Pass<lir::Context, E> for LIR2WASM {
     type Target = Module;
 
     fn trans(
         &mut self,
-        (extern_types, lir): (lir::ExternTypes, lir::LIR),
+        lir::Context(extern_types, lir): lir::Context,
         _: &Config,
     ) -> ::std::result::Result<Self::Target, E> {
         let mut pass = self.generate_pass(extern_types);

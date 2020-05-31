@@ -734,7 +734,7 @@ impl MIR2LIRPass {
 }
 
 impl<E> Pass<mir::Context, E> for MIR2LIR {
-    type Target = (ExternTypes, LIR);
+    type Target = Context;
 
     fn trans(
         &mut self,
@@ -744,6 +744,6 @@ impl<E> Pass<mir::Context, E> for MIR2LIR {
         let mut pass = self.generate_pass(symbol_table);
         let lir = pass.trans_mir(mir);
         let types = pass.extern_types.drain().collect();
-        Ok((types, lir))
+        Ok(Context(types, lir))
     }
 }

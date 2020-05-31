@@ -64,6 +64,9 @@ pub enum Value {
 }
 
 #[derive(Debug, Clone)]
+pub struct Context(pub ExternTypes, pub LIR);
+
+#[derive(Debug, Clone)]
 pub struct LIR(pub Vec<Function>);
 
 #[derive(Debug, Clone)]
