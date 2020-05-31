@@ -52,7 +52,7 @@ impl VarToConstructorPass {
     }
 }
 
-impl Transform<()> for VarToConstructorPass {
+impl Transform<Empty> for VarToConstructorPass {
     fn transform_symbol(&mut self, name: Symbol) -> UntypedCoreExprKind {
         if self.is_constructor(&name) {
             if let Some(_) = self.arg_type(&name) {
@@ -60,11 +60,11 @@ impl Transform<()> for VarToConstructorPass {
                 ExprKind::Fn {
                     param: sym.clone(),
                     body: Expr {
-                        ty: (),
+                        ty: Empty {},
                         inner: ExprKind::Constructor {
                             arg: Some(
                                 Expr {
-                                    ty: (),
+                                    ty: Empty {},
                                     inner: ExprKind::Symbol { name: sym },
                                 }
                                 .boxed(),
@@ -91,17 +91,17 @@ impl Transform<()> for VarToConstructorPass {
     }
 }
 
-impl<E> Pass<(SymbolTable, UntypedCore), E> for VarToConstructor {
-    type Target = (SymbolTable, UntypedCore);
+impl<E> Pass<UntypedCoreContext, E> for VarToConstructor {
+    type Target = UntypedCoreContext;
 
     fn trans(
         &mut self,
-        (symbol_table, ast): (SymbolTable, UntypedCore),
+        Context(symbol_table, ast): UntypedCoreContext,
         _: &Config,
     ) -> ::std::result::Result<Self::Target, E> {
         let mut pass = self.generate_pass(symbol_table);
         let ast = pass.transform_ast(ast);
         let (symbol_table, _) = pass.into_inner();
-        Ok((symbol_table, ast))
+        Ok(Context(symbol_table, ast))
     }
 }

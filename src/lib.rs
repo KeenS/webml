@@ -44,9 +44,9 @@ pub fn compile_str<'a>(input: &'a str, config: &Config) -> Result<Vec<u8>, TypeE
        backend: backend::LIR2WASM::new(),
     ];
 
-    let module: wasm::Module = passes.trans(input, config)?;
+    let module: backend::Output = passes.trans(input, config)?;
 
     let mut code = Vec::new();
-    module.dump(&mut code);
+    module.0.dump(&mut code);
     Ok(code)
 }

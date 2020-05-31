@@ -733,17 +733,17 @@ impl MIR2LIRPass {
     }
 }
 
-impl<E> Pass<(mir::SymbolTable, mir::MIR), E> for MIR2LIR {
-    type Target = (ExternTypes, LIR);
+impl<E> Pass<mir::Context, E> for MIR2LIR {
+    type Target = Context;
 
     fn trans(
         &mut self,
-        (symbol_table, mir): (mir::SymbolTable, mir::MIR),
+        mir::Context(symbol_table, mir): mir::Context,
         _: &Config,
     ) -> ::std::result::Result<Self::Target, E> {
         let mut pass = self.generate_pass(symbol_table);
         let lir = pass.trans_mir(mir);
         let types = pass.extern_types.drain().collect();
-        Ok((types, lir))
+        Ok(Context(types, lir))
     }
 }

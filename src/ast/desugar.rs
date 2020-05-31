@@ -28,7 +28,7 @@ impl Desugar {
             .collect())
     }
 
-    fn transform_statement(&mut self, decl: Declaration<()>) -> Option<UntypedCoreDeclaration> {
+    fn transform_statement(&mut self, decl: UntypedDeclaration) -> Option<UntypedCoreDeclaration> {
         use Declaration::*;
         match decl {
             Datatype { name, constructors } => Some(self.transform_datatype(name, constructors)),
@@ -71,7 +71,7 @@ impl Desugar {
             .map(|(pats, expr)| {
                 (
                     Pattern {
-                        ty: (),
+                        ty: Empty {},
                         inner: PatternKind::Tuple { tuple: pats },
                     },
                     self.transform_expr(expr),
@@ -82,16 +82,16 @@ impl Desugar {
         let params = (0..arity).map(|_| self.gensym()).collect::<Vec<_>>();
 
         let body = Expr {
-            ty: (),
+            ty: Empty {},
             inner: ExprKind::Case {
                 cond: Expr {
-                    ty: (),
+                    ty: Empty {},
                     inner: ExprKind::Tuple {
                         tuple: params
                             .iter()
                             .cloned()
                             .map(|name| Expr {
-                                ty: (),
+                                ty: Empty {},
                                 inner: ExprKind::Symbol { name },
                             })
                             .collect(),
@@ -103,7 +103,7 @@ impl Desugar {
         };
 
         let fun = params.into_iter().rev().fold(body, |body, param| Expr {
-            ty: (),
+            ty: Empty {},
             inner: ExprKind::Fn {
                 param,
                 body: body.boxed(),
@@ -112,7 +112,7 @@ impl Desugar {
         Declaration::Val {
             rec: true,
             pattern: Pattern {
-                ty: (),
+                ty: Empty {},
                 inner: PatternKind::Variable { name: name },
             },
             expr: fun,
@@ -215,7 +215,7 @@ impl Desugar {
             clauses: vec![
                 (
                     Pattern {
-                        ty: (),
+                        ty: Empty {},
                         inner: PatternKind::Constructor {
                             arg: None,
                             name: Symbol::new("true"),
@@ -225,7 +225,7 @@ impl Desugar {
                 ),
                 (
                     Pattern {
-                        ty: (),
+                        ty: Empty {},
                         inner: PatternKind::Constructor {
                             arg: None,
                             name: Symbol::new("false"),

@@ -20,6 +20,9 @@ use std::collections::HashMap;
 use crate::prim::*;
 
 #[derive(Debug)]
+pub struct Context(pub SymbolTable, pub HIR);
+
+#[derive(Debug)]
 pub struct HIR(pub Vec<Val>);
 
 #[derive(Debug, Clone)]

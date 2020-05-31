@@ -242,16 +242,16 @@ impl ForceClosure {
     }
 }
 
-impl<E> Pass<(SymbolTable, HIR), E> for ForceClosure {
-    type Target = (SymbolTable, HIR);
+impl<E> Pass<Context, E> for ForceClosure {
+    type Target = Context;
 
     fn trans(
         &mut self,
-        (symbol_table, mut hir): (SymbolTable, HIR),
+        Context(symbol_table, mut hir): Context,
         _: &Config,
     ) -> ::std::result::Result<Self::Target, E> {
         Reg::new(self, None).traverse_hir(&mut hir);
         Trav::new(self, false).traverse_hir(&mut hir);
-        Ok((symbol_table, hir))
+        Ok(Context(symbol_table, hir))
     }
 }

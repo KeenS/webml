@@ -1,6 +1,6 @@
 use crate::ast;
 use crate::config::Config;
-use crate::hir::{Expr, HTy, Pattern, SymbolTable, TypeInfo, Val, HIR};
+use crate::hir::{Context, Expr, HTy, Pattern, SymbolTable, TypeInfo, Val, HIR};
 use crate::id::Id;
 use crate::pass::Pass;
 use crate::prim::*;
@@ -355,17 +355,17 @@ impl AST2HIRPass {
     }
 }
 
-impl<E> Pass<(ast::SymbolTable, ast::TypedCore), E> for AST2HIR {
-    type Target = (SymbolTable, HIR);
+impl<E> Pass<ast::TypedCoreContext, E> for AST2HIR {
+    type Target = Context;
 
     fn trans(
         &mut self,
-        (symbol_table, ast): (ast::SymbolTable, ast::TypedCore),
+        ast::Context(symbol_table, ast): ast::TypedCoreContext,
         _: &Config,
     ) -> ::std::result::Result<Self::Target, E> {
         let mut pass = self.generate_pass(symbol_table);
         let ast = pass.conv_ast(ast);
         let symbol_table = conv_symbol_table(pass.symbol_table);
-        Ok((symbol_table, ast))
+        Ok(Context(symbol_table, ast))
     }
 }
