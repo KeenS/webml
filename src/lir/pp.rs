@@ -74,7 +74,7 @@ impl fmt::Display for Function {
         };
         write!(f, ") -> {} = {{\n", self.ret_ty)?;
         for op in self.body.iter() {
-            write!(f, "{}{}", nspaces(indent), op)?;
+            write!(f, "{}{:indent$}", nspaces(indent), op, indent = indent)?;
         }
         write!(f, "}}\n")?;
         Ok(())
