@@ -1,0 +1,33 @@
+name: Deploy Online-Compiler
+
+# Run this workflow every time a new commit pushed to your repository
+on: push
+
+jobs:
+  build:
+    name: Build and deploy online compiler
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout code"
+        uses: actions/checkout@v2
+      - name: "Setup rust toolchain"
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: wasm32-unknown-unknown
+          components: rustfmt, clippy
+      - name: "Install wasm-pack"
+        run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+      - name: "Build the compiler"
+        run: wasm-pack --target web
+      - name: "Build the Runtime"
+        run: cd webml-rt && wasm-pack --target web
+      - name: "Prepare for deployment"
+        run: |
+          mv pkg/*.{js,ts,wasm} public/compiler/
+          mv webml-rt/pkg/*.{js,ts,wasm} public/compiler/
+      - name: "Deploy"
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
