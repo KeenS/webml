@@ -53,12 +53,12 @@ pub fn compile_str<'a>(input: &'a str, config: &Config) -> Result<Vec<u8>, TypeE
     Ok(code)
 }
 
+#[cfg(target_arch = "wasm32")]
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-pub fn compile_string(input: String) -> Vec<u8> {
+pub fn compile_string(input: String) -> Result<Vec<u8>, JsValue> {
     let mut prelude = include_str!("../ml_src/prelude.sml").to_string();
     prelude.push_str(&input);
 
     let config = Config::default();
-    let res = compile_str(&prelude, &config).expect("compile failed");
-    res
+    compile_str(&prelude, &config).map_err(|e| format!("Compile failed: {}", e).into())
 }

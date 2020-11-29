@@ -10,38 +10,63 @@
             <button id="button" type="button" disabled>Loading the compiler</button>
         </form>
         <div>
-            <p>Result:</p>
-            <p id="result"></p>
+            <div id="error" style="display:none;">
+                <p>Error:</p>
+                <p id="error-message"></p>
+            </div>
+            <div id="output">
+                <p>Result:</p>
+                <p id="result"></p>
+            </div>
         </div>
         <script type="module">
          import { default as compilerInit, compile_string } from './pkg/webml.js';
          import { default as rtInit } from './webml-rt/pkg/webml_rt.js';
 
+         let input = document.getElementById("program");
+         let output = document.getElementById("result");
+         let error = document.getElementById("error");
+         let errorMessage = document.getElementById("error-message");
+         let button = document.getElementById("button");
+
+         function showResult(str) {
+             output.innerHTML = str;
+             errorMessage.innerHTML = "";
+             error.style.display = "none";
+         }
+
+         function showError(str) {
+             output.innerHTML = "";
+             errorMessage.innerHTML = str;
+             error.style.display = "inline";
+         }
          async function init() {
              let cPrm = compilerInit();
              let rPrm = rtInit()
              let compilerObj = await cPrm;
              let rtObj = await rPrm;
              function compileAndRun(str, output) {
-                 let buffer = compile_string(str).buffer;
-                 let importObj = {
-                     "js-ffi": {
-                         print: (x) => output.innerHTML = x
-                     },
-                     "webml-rt": {
-                         alloc: rtObj.alloc,
-                         init: rtObj.init,
-                         memory: rtObj.memory},
-                 };
+                 try {
+                     let buffer = compile_string(str).buffer;
+                     let importObj = {
+                         "js-ffi": {
+                             print: showResult
+                         },
+                         "webml-rt": {
+                             alloc: rtObj.alloc,
+                             init: rtObj.init,
+                             memory: rtObj.memory
+                         },
+                     };
 
-                 WebAssembly.instantiate(buffer, importObj);
+                     WebAssembly.instantiate(buffer, importObj);
+                 } catch (e) {
+                     showError(e)
+                 }
              }
              return compileAndRun;
          }
          init().then(compileAndRun => {
-             let input = document.getElementById("program");
-             let output = document.getElementById("result");
-             let button = document.getElementById("button");
              button.removeAttribute("disabled");
              button.onclick = arg => compileAndRun(input.value, output);
              button.innerHTML = "Run";
