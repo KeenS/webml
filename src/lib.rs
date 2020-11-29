@@ -16,6 +16,8 @@ pub use crate::ast::TypeError;
 pub use crate::config::Config;
 pub use crate::parser::parse;
 pub use crate::pass::{Chain, Pass};
+#[cfg(target_arch = "wasm32")]
+use wasm_bindgen::prelude::*;
 
 pub fn compile_str<'a>(input: &'a str, config: &Config) -> Result<Vec<u8>, TypeError<'a>> {
     use crate::pass::{ConvError, PrintablePass};
@@ -49,4 +51,14 @@ pub fn compile_str<'a>(input: &'a str, config: &Config) -> Result<Vec<u8>, TypeE
     let mut code = Vec::new();
     module.0.dump(&mut code);
     Ok(code)
+}
+
+#[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
+pub fn compile_string(input: String) -> Vec<u8> {
+    let mut prelude = include_str!("../ml_src/prelude.sml").to_string();
+    prelude.push_str(&input);
+
+    let config = Config::default();
+    let res = compile_str(&prelude, &config).expect("compile failed");
+    res
 }

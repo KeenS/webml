@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <meta charset="utf-8">
+        <title>WebML Online Compiler</title>
+    </head>
+    <body>
+        <form id="form">
+            <textarea id="program" cols="50" rows="30"></textarea>
+            <button id="button" type="button" disabled>Loading the compiler</button>
+        </form>
+        <div>
+            <p>Result:</p>
+            <p id="result"></p>
+        </div>
+        <script type="module">
+         import { default as compilerInit, compile_string } from './pkg/webml.js';
+         import { default as rtInit } from './webml-rt/pkg/webml_rt.js';
+
+         async function init() {
+             let cPrm = compilerInit();
+             let rPrm = rtInit()
+             let compilerObj = await cPrm;
+             let rtObj = await rPrm;
+             function compileAndRun(str, output) {
+                 let buffer = compile_string(str).buffer;
+                 let importObj = {
+                     "js-ffi": {
+                         print: (x) => output.innerHTML = x
+                     },
+                     "webml-rt": {
+                         alloc: rtObj.alloc,
+                         init: rtObj.init,
+                         memory: rtObj.memory},
+                 };
+
+                 WebAssembly.instantiate(buffer, importObj);
+             }
+             return compileAndRun;
+         }
+         init().then(compileAndRun => {
+             let input = document.getElementById("program");
+             let output = document.getElementById("result");
+             let button = document.getElementById("button");
+             button.removeAttribute("disabled");
+             button.onclick = arg => compileAndRun(input.value, output);
+             button.innerHTML = "Run";
+         });
+        </script>
+    </body>
+</html>
