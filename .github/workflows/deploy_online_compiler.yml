@@ -22,6 +22,11 @@ jobs:
         run: wasm-pack build --target web
       - name: "Build the Runtime"
         run: cd webml-rt && wasm-pack build --target web
+      - uses: ZacJW/markdown-html-action@1.1.0
+        name: "Generate index.html from README.md"
+        with:
+          input_files: '[["README.md"]]'
+          output_files: '["public/index.html"]'
       - name: "Prepare for deployment"
         run: |
           mkdir -p public/compiler
