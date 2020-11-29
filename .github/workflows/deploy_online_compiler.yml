@@ -24,6 +24,7 @@ jobs:
         run: cd webml-rt && wasm-pack build --target web
       - name: "Prepare for deployment"
         run: |
+          mkdir -p public/compiler
           mv pkg/*.{js,ts,wasm} public/compiler/
           mv webml-rt/pkg/*.{js,ts,wasm} public/compiler/
       - name: "Deploy"
