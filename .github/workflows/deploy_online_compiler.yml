@@ -27,6 +27,7 @@ jobs:
         with:
           input_files: '[["README.md"]]'
           output_files: '["public/index.html"]'
+          extensions: '["extra"]'
       - name: "Prepare for deployment"
         run: |
           mkdir -p public/compiler
