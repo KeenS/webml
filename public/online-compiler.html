@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <meta charset="utf-8">
+        <title>WebML Online Compiler</title>
+        <style>
+         #main {
+             width: 44rem;
+         }
+         .message-box {
+             padding: 5px;
+         }
+         .correct {
+             background: #eeeebb;
+         }
+         .error {
+             background: #eebbbb;
+         }
+        </style>
+    </head>
+    <body>
+        <div id="main">
+            <form id="form">
+                <textarea id="program" cols="40" rows="20">
+fun fib 0 = 1
+|   fib 1 = 1
+|   fib n = fib (n - 1) + fib (n - 2)
+val _ = print (fib 10)
+</textarea>
+                <button id="button" type="button" disabled>Loading the compiler</button>
+            </form>
+            <div>
+                <div id="error" style="display:none;">
+                    <p>Error:</p>
+                    <p id="error-message", class="message-box error"></p>
+                </div>
+                <div id="output" style="display:none;">
+                    <p>Output:</p>
+                    <p id="output-message" class="message-box correct"></p>
+                </div>
+            </div>
+        </div>
+        <script type="module">
+         import { default as compilerInit, compile_string } from './compiler/webml.js';
+         import { default as rtInit } from './compiler/webml_rt.js';
+
+         let input = document.getElementById("program");
+         let output = document.getElementById("output");
+         let outputMessage = document.getElementById("output-message");
+         let error = document.getElementById("error");
+         let errorMessage = document.getElementById("error-message");
+         let button = document.getElementById("button");
+
+         function showOutput(str) {
+             outputMessage.innerHTML = str;
+             output.style.display = "inline";
+             errorMessage.innerHTML = "";
+             error.style.display = "none";
+         }
+
+         function showError(str) {
+             outputMessage.innerHTML = "";
+             output.style.display = "none";
+             errorMessage.innerHTML = str;
+             error.style.display = "inline";
+         }
+
+         async function init() {
+             let [compilerObj, rtObj] = await Promise.all([
+                 compilerInit(),
+                 rtInit()
+             ]);
+             function compileAndRun(str, output) {
+                 try {
+                     let buffer = compile_string(str).buffer;
+                     let importObj = {
+                         "js-ffi": {
+                             print: showOutput
+                         },
+                         "webml-rt": {
+                             alloc: rtObj.alloc,
+                             init: rtObj.init,
+                             memory: rtObj.memory
+                         },
+                     };
+
+                     WebAssembly.instantiate(buffer, importObj)
+                                .then(inst => console.log("done"));
+                 } catch (e) {
+                     showError(e)
+                 }
+             }
+             return compileAndRun;
+         }
+         init().then(compileAndRun => {
+             button.removeAttribute("disabled");
+             button.onclick = arg => compileAndRun(input.value, output);
+             button.innerHTML = "Run";
+         });
+        </script>
+    </body>
+</html>

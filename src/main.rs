@@ -47,6 +47,6 @@ fn main() {
     let prelude = include_str!("../ml_src/prelude.sml").to_string();
     let mut input = prelude;
     read_and_append_to_string(filename, &mut input).expect("failed to load file");
-    let code = compile_str(&input, &config).unwrap();
+    let code = compile_str(&input, &config).expect("failed to compile file");
     fs::write("out.wasm", &code).unwrap()
 }

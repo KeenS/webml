@@ -8,6 +8,11 @@ This means you can run SMl REPL on web browsers.
 Under very early stage of initial development.
 Compiles only minimal subset of SML codes. The garbage collector is not complete.
 
+## Links
+
+* Try [Online-compiler](https://KeenS.github.io/webml/online-compiler.html)
+* Project is hosted at [GitHub](https://github.com/KeenS/webml)
+
 ## Implemented features
 ### Core
 
