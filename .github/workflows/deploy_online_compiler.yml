@@ -30,6 +30,7 @@ jobs:
         with:
           input_files: '[["website/head.html", "README.md", "website/foot.html"]]'
           output_files: '["public/index.html"]'
+          packages: 'pymdown-extensions'
           extensions: '["extra", "pymdownx.tasklist"]'
       - name: "Prepare for deployment"
         run: |
