@@ -64,11 +64,12 @@ val _ = print (fib 10)
              errorMessage.innerHTML = str;
              error.style.display = "inline";
          }
+
          async function init() {
-             let cPrm = compilerInit();
-             let rPrm = rtInit()
-             let compilerObj = await cPrm;
-             let rtObj = await rPrm;
+             let [compilerObj, rtObj] = await Promise.all([
+                 compilerInit(),
+                 rtInit()
+             ]);
              function compileAndRun(str, output) {
                  try {
                      let buffer = compile_string(str).buffer;
@@ -83,7 +84,8 @@ val _ = print (fib 10)
                          },
                      };
 
-                     WebAssembly.instantiate(buffer, importObj).then(inst => console.log("done"));
+                     WebAssembly.instantiate(buffer, importObj)
+                                .then(inst => console.log("done"));
                  } catch (e) {
                      showError(e)
                  }
