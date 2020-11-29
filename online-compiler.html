@@ -3,20 +3,41 @@
     <head>
         <meta charset="utf-8">
         <title>WebML Online Compiler</title>
+        <style>
+         #main {
+             width: 44rem;
+         }
+         .message-box {
+             padding: 5px;
+         }
+         .correct {
+             background: #eeeebb;
+         }
+         .error {
+             background: #eebbbb;
+         }
+        </style>
     </head>
     <body>
-        <form id="form">
-            <textarea id="program" cols="50" rows="30"></textarea>
-            <button id="button" type="button" disabled>Loading the compiler</button>
-        </form>
-        <div>
-            <div id="error" style="display:none;">
-                <p>Error:</p>
-                <p id="error-message"></p>
-            </div>
-            <div id="output">
-                <p>Result:</p>
-                <p id="result"></p>
+        <div id="main">
+            <form id="form">
+                <textarea id="program" cols="40" rows="20">
+fun fib 0 = 1
+|   fib 1 = 1
+|   fib n = fib (n - 1) + fib (n - 2)
+val _ = print (fib 10)
+</textarea>
+                <button id="button" type="button" disabled>Loading the compiler</button>
+            </form>
+            <div>
+                <div id="error" style="display:none;">
+                    <p>Error:</p>
+                    <p id="error-message", class="message-box error"></p>
+                </div>
+                <div id="output" style="display:none;">
+                    <p>Output:</p>
+                    <p id="output-message" class="message-box correct"></p>
+                </div>
             </div>
         </div>
         <script type="module">
@@ -24,19 +45,22 @@
          import { default as rtInit } from './webml-rt/pkg/webml_rt.js';
 
          let input = document.getElementById("program");
-         let output = document.getElementById("result");
+         let output = document.getElementById("output");
+         let outputMessage = document.getElementById("output-message");
          let error = document.getElementById("error");
          let errorMessage = document.getElementById("error-message");
          let button = document.getElementById("button");
 
-         function showResult(str) {
-             output.innerHTML = str;
+         function showOutput(str) {
+             outputMessage.innerHTML = str;
+             output.style.display = "inline";
              errorMessage.innerHTML = "";
              error.style.display = "none";
          }
 
          function showError(str) {
-             output.innerHTML = "";
+             outputMessage.innerHTML = "";
+             output.style.display = "none";
              errorMessage.innerHTML = str;
              error.style.display = "inline";
          }
@@ -50,7 +74,7 @@
                      let buffer = compile_string(str).buffer;
                      let importObj = {
                          "js-ffi": {
-                             print: showResult
+                             print: showOutput
                          },
                          "webml-rt": {
                              alloc: rtObj.alloc,
@@ -59,7 +83,7 @@
                          },
                      };
 
-                     WebAssembly.instantiate(buffer, importObj);
+                     WebAssembly.instantiate(buffer, importObj).then(inst => console.log("done"));
                  } catch (e) {
                      showError(e)
                  }
