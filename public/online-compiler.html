@@ -41,8 +41,8 @@ val _ = print (fib 10)
             </div>
         </div>
         <script type="module">
-         import { default as compilerInit, compile_string } from './pkg/webml.js';
-         import { default as rtInit } from './webml-rt/pkg/webml_rt.js';
+         import { default as compilerInit, compile_string } from './compiler/webml.js';
+         import { default as rtInit } from './compiler/webml_rt.js';
 
          let input = document.getElementById("program");
          let output = document.getElementById("output");
