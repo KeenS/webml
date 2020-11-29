@@ -28,7 +28,7 @@ jobs:
       - uses: ZacJW/markdown-html-action@1.1.0
         name: "Generate index.html from README.md"
         with:
-          input_files: '[["README.md"]]'
+          input_files: '[["website/head.html", "README.md", "website/foot.html"]]'
           output_files: '["public/index.html"]'
           extensions: '["extra"]'
       - name: "Prepare for deployment"
