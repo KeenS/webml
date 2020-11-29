@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<h1>WebML -- A Standard ML compiler for the Web</h1>
+<p><a href="https://travis-ci.org/KeenS/webml"><img alt="Build Status" src="https://travis-ci.org/KeenS/webml.svg?branch=master"></a></p>
+<p>WebML is to be a Standard ML (SML '97) Compiler that works on web browsers and generates <a href="http://WebAssembly.org">WebAssembly</a> binaries. WebAssembly binaries can be run on web browsers.
+This means you can run SMl REPL on web browsers.</p>
+<h2>Status</h2>
+<p>Under very early stage of initial development.
+Compiles only minimal subset of SML codes. The garbage collector is not complete.</p>
+<h2>Try it now</h2>
+<p>Use <a href="https://KeenS.github.io/webml/online-compiler.html">online compiler</a></p>
+<h2>Implemented features</h2>
+<h3>Core</h3>
+<ul>
+<li>Declaration</li>
+<li>[ ] <code>val</code><ul>
+<li>[x] basic (<code>val ident = expr</code>)</li>
+<li>[x] pattern (<code>val pat = expr</code>)</li>
+<li>[ ] tyvar <code>val 'a pat = expr</code></li>
+<li>[ ] typed (<code>val pat : ty = expr</code>)</li>
+<li>[ ] <code>and</code> (<code>val pat = expr and pat = expr</code>)</li>
+</ul>
+</li>
+<li>[ ] <code>fun</code><ul>
+<li>[x] basic (<code>fun ident ident ... = expr</code>)</li>
+<li>[x] pattern (<code>fun ident pat ... = expr</code>)</li>
+<li>[x] multi-clause (<code>fun ident pat ... = expr | ident pat ... = expr</code>)</li>
+<li>[x] <code>op</code> (<code>fun op ident pat ... = expr</code>)</li>
+<li>[ ] tyvar (<code>fun 'a ident pat ... = expr</code>)</li>
+<li>[ ] typed (<code>fun ident pat ... : ty = expr</code>)</li>
+<li>[ ] <code>and</code> (<code>fun ident pat ... = expr and ident pat ... = expr</code>)</li>
+</ul>
+</li>
+<li>[ ] <code>type</code> (<code>type ident = ty</code>)</li>
+<li>[ ] <code>datatype</code><ul>
+<li>[ ] <code>datatype ident = Con of ty | Con ...</code></li>
+<li>[x] basic (<code>datatype ident = Con of ty | Con ...</code>)</li>
+<li>[ ] tyvar (<code>datatype 'a ident = Con of ty | Con ...</code>)</li>
+<li>[ ] <code>and</code> (<code>datatype ident = Con | ... and ident = Con | ...</code>)</li>
+<li>[ ] <code>withtype</code> (<code>datatype ident = Con ... withtype ..</code>)</li>
+<li>[ ] <code>datatype ident = datatype ident</code></li>
+</ul>
+</li>
+<li>[ ] <code>abstype</code></li>
+<li>[ ] <code>exception</code></li>
+<li>[ ] <code>local ... in ... end</code></li>
+<li>[ ] <code>open ..</code></li>
+<li>[ ] <code>decl ; decl</code><ul>
+<li>[x] <code>decl decl</code></li>
+<li>[ ] <code>decl ; decl</code></li>
+</ul>
+</li>
+<li>[x] <code>infix</code></li>
+<li>[ ] <code>infixr</code></li>
+<li>[ ] <code>nofix</code></li>
+<li>Expressions</li>
+<li>[ ] special constant<ul>
+<li>[x] integer</li>
+<li>[ ] real</li>
+<li>[x] <code>123.456</code></li>
+<li>[ ] <code>123e456</code></li>
+<li>[ ] <code>123E456</code></li>
+<li>[ ] <code>123e~456</code></li>
+<li>[ ] word</li>
+<li>[x] char</li>
+<li>[ ] string</li>
+</ul>
+</li>
+<li>[x] value identifier</li>
+<li>[ ] <code>op</code></li>
+<li>[ ] record<ul>
+<li>[ ] basic (<code>{ label = expr , ...}</code>)</li>
+<li>[x] tuple</li>
+<li>[x] 0-tuple</li>
+<li>[ ] <code>#label</code></li>
+</ul>
+</li>
+<li>[ ] list (<code>[expr, ..., expr]</code>)</li>
+<li>[ ] <code>(expr; ...; expr)</code></li>
+<li>[x] paren (<code>(expr)</code>)</li>
+<li>[ ] <code>let .. in .. end</code><ul>
+<li>[x] basic (<code>let decl ... in expr end</code>)</li>
+<li>[ ] derived (<code>let decl ... in expr; ...; expr end</code>)</li>
+</ul>
+</li>
+<li>[x] function application</li>
+<li>[ ] infix operator<ul>
+<li>[x] L</li>
+<li>[ ] R</li>
+</ul>
+</li>
+<li>[ ] typed (<code>exp : ty</code>)</li>
+<li>[ ] exception<ul>
+<li>[ ] <code>handle</code></li>
+<li>[ ] <code>raise</code></li>
+</ul>
+</li>
+<li>[ ] <code>fn</code><ul>
+<li>[x] basic (<code>fn ident =&gt; expr</code>)</li>
+<li>[ ] pattern (<code>fn pat =&gt; expr</code>)</li>
+<li>[ ] multi-clause <code>fn pat =&gt; expr | pat =&gt; expr ...</code></li>
+</ul>
+</li>
+<li>[ ] <code>andalso</code></li>
+<li>[ ] <code>orelse</code></li>
+<li>[x] <code>if .. then .. else</code></li>
+<li>[ ] <code>while .. do ..</code></li>
+<li>[x] <code>case .. of ..</code></li>
+<li>Pattern</li>
+<li>[x] wildcard</li>
+<li>[ ] special constant<ul>
+<li>[x] integer</li>
+<li>[ ] word</li>
+<li>[x] char</li>
+<li>[ ] string</li>
+</ul>
+</li>
+<li>[x]  value identifier</li>
+<li>[ ] <code>op</code></li>
+<li>[ ] record<ul>
+<li>[ ] basic (<code>{ label = pat , ...}</code>)</li>
+<li>[ ] wildcard (<code>...</code>)</li>
+<li>[ ] label as variable (<code>{ var (as pat), ...}</code>)</li>
+<li>[x] tuple</li>
+<li>[x] 0-tuple</li>
+</ul>
+</li>
+<li>[ ] list</li>
+<li>[x] paren</li>
+<li>[x] Constructor</li>
+<li>[ ] infix</li>
+<li>[ ] typed (<code>pat : ty</code>)</li>
+<li>[ ] layerd (<code>ident as pat</code>)</li>
+<li>Type</li>
+<li>[ ] type variable</li>
+<li>[ ] record</li>
+<li>[ ] type construction<ul>
+<li>[x] without param (<code>ident</code>)</li>
+<li>[ ] with param (<code>ty ident</code>)</li>
+</ul>
+</li>
+<li>[x] tuple</li>
+<li>[x] function</li>
+<li>[x] paren</li>
+<li>Initial Basis</li>
+<li>[x] <code>unit</code></li>
+<li>[x] <code>bool</code><ul>
+<li>[x] <code>true</code></li>
+<li>[x] <code>false</code></li>
+</ul>
+</li>
+<li>[x] <code>int</code></li>
+<li>[ ] <code>word</code></li>
+<li>[ ] <code>string</code></li>
+<li>[x] <code>char</code></li>
+<li>[ ] <code>list</code><ul>
+<li>[ ] <code>nil</code></li>
+<li>[ ] <code>::</code></li>
+</ul>
+</li>
+<li>[ ] <code>ref</code><ul>
+<li>[ ] <code>ref</code></li>
+<li>[ ] <code>:=</code></li>
+</ul>
+</li>
+<li>[ ] <code>exn</code></li>
+<li>[x] <code>=</code></li>
+<li>[ ] <code>Match</code></li>
+<li>[ ] <code>Bind</code></li>
+<li>Overloaded</li>
+<li>[x] <code>+</code></li>
+<li>[x] <code>-</code></li>
+<li>[x] <code>*</code></li>
+<li>[x] <code>div</code></li>
+<li>[x] <code>mod</code></li>
+<li>[x] <code>/</code></li>
+<li>[x] <code>&lt;</code></li>
+<li>[x] <code>&gt;</code></li>
+<li>[x] <code>&lt;=</code></li>
+<li>[x] <code>&gt;=</code></li>
+<li>[ ] <code>abs</code></li>
+<li>[ ] <code>~</code></li>
+</ul>
+<h3>Module</h3>
+<p>not yet implemented</p>
+<h3>Program</h3>
+<ul>
+<li>Program</li>
+<li>[x] decl (<code>decl decl ...</code>)</li>
+<li>[ ] expr (<code>expr decl ...</code>)<ul>
+<li>Note: toplevel expression <code>expr</code> should be treated as <code>val it = expr</code></li>
+</ul>
+</li>
+</ul>
