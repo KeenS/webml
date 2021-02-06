@@ -45,7 +45,7 @@ impl<'a> Traverse for Trav<'a> {
         use crate::hir::Expr::*;
         let assign;
         match expr {
-            Binds { ty, binds, ret } => {
+            Let { ty, binds, ret } => {
                 self.traverse_binds(ty, binds, ret);
                 return;
             }

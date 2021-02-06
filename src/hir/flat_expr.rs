@@ -52,7 +52,11 @@ impl Transform for FlatExpr {
             .collect();
         let (ret, retval) = self.flat_make_val(*ret);
         binds.push(retval);
-        Binds { binds, ret, ty }
+        Let {
+            bind: binds,
+            ret,
+            ty,
+        }
     }
 
     fn transform_fun(
@@ -63,9 +67,9 @@ impl Transform for FlatExpr {
         captures: Vec<(HTy, Symbol)>,
     ) -> Expr {
         let (ret, bodyval) = self.flat_make_val(*body);
-        body = Box::new(Binds {
+        body = Box::new(Let {
             ty: body_ty.clone(),
-            binds: vec![bodyval],
+            bind: vec![bodyval],
             ret,
         });
         Fun {
@@ -106,9 +110,9 @@ impl Transform for FlatExpr {
         });
 
         vals.push(retval);
-        Binds {
+        Let {
             ty,
-            binds: vals,
+            bind: vals,
             ret,
         }
     }
@@ -121,9 +125,9 @@ impl Transform for FlatExpr {
             arg,
             ty: ty.clone(),
         });
-        Binds {
+        Let {
             ty,
-            binds: vec![funval, argval, retval],
+            bind: vec![funval, argval, retval],
             ret,
         }
     }
@@ -139,9 +143,9 @@ impl Transform for FlatExpr {
                 .map(|((pat, arm), armval)| {
                     (
                         pat,
-                        Binds {
+                        Let {
                             ty: ty.clone(),
-                            binds: vec![armval],
+                            bind: vec![armval],
                             ret: arm,
                         },
                     )
@@ -154,9 +158,9 @@ impl Transform for FlatExpr {
             arms,
         };
         let (ret, retval) = self.make_val(e);
-        Binds {
+        Let {
             ty,
-            binds: vec![exprval, retval],
+            bind: vec![exprval, retval],
             ret,
         }
     }
@@ -174,9 +178,9 @@ impl Transform for FlatExpr {
                 descriminant,
                 arg: Some(arg),
             });
-            Binds {
+            Let {
                 ty,
-                binds: vec![exprval, constval],
+                bind: vec![exprval, constval],
                 ret,
             }
         } else {
@@ -185,9 +189,9 @@ impl Transform for FlatExpr {
                 descriminant,
                 arg,
             });
-            Binds {
+            Let {
                 ty,
-                binds: vec![constval],
+                bind: vec![constval],
                 ret,
             }
         }
@@ -206,9 +210,9 @@ impl Transform for FlatExpr {
             tuple,
         });
         vals.push(tupleval);
-        Binds {
+        Let {
             ty: HTy::Tuple(tys),
-            binds: vals,
+            bind: vals,
             ret,
         }
     }

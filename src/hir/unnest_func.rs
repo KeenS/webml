@@ -111,7 +111,7 @@ impl<'a> Scope<'a> {
     fn conv_expr(&mut self, expr: Expr, bind_name: Option<Symbol>, is_top: bool) -> Expr {
         use crate::hir::Expr::*;
         match expr {
-            Binds {
+            Let {
                 ty,
                 mut binds,
                 mut ret,
@@ -130,7 +130,7 @@ impl<'a> Scope<'a> {
                     })
                     .collect();
                 ret = Box::new(self.conv_expr(*ret, None, false));
-                Binds { ty, binds, ret }
+                Let { ty, binds, ret }
             }
             Fun {
                 param,
@@ -280,7 +280,7 @@ impl<'a> Scope<'a> {
     ) {
         use crate::hir::Expr::*;
         match expr {
-            Binds { binds, ret, .. } => {
+            Let { binds, ret, .. } => {
                 let scope = self;
                 for bind in binds.iter() {
                     if bind.rec {
@@ -361,7 +361,7 @@ impl<'a> Scope<'a> {
     fn rename(&mut self, expr: &mut Expr, from: &Option<Symbol>, to: &Symbol) {
         use crate::hir::Expr::*;
         match expr {
-            Binds { binds, ret, .. } => {
+            Let { binds, ret, .. } => {
                 for bind in binds.iter_mut() {
                     self.rename(&mut bind.expr, from, to)
                 }

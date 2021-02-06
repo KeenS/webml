@@ -237,9 +237,9 @@ impl AST2HIRPass {
         use crate::ast::ExprKind as E;
         let ty = expr.ty;
         match expr.inner {
-            E::Binds { binds, ret } => Expr::Binds {
+            E::Binds { binds, ret } => Expr::Let {
                 ty: conv_ty(ty),
-                binds: binds
+                bind: binds
                     .into_iter()
                     .flat_map(|s| self.conv_statement(s))
                     .collect(),

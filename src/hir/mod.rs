@@ -35,9 +35,9 @@ pub struct Val {
 
 #[derive(Debug, Clone)]
 pub enum Expr {
-    Binds {
+    Let {
         ty: HTy,
-        binds: Vec<Val>,
+        bind: Box<Val>,
         ret: Box<Expr>,
     },
     BuiltinCall {
@@ -169,7 +169,7 @@ impl Expr {
             } => HTy::fun(param_ty.clone(), body_ty.clone()),
             &Tuple { ref tys, .. } => HTy::Tuple(tys.clone()),
             &Proj { ref ty, .. }
-            | &Binds { ref ty, .. }
+            | &Let { ref ty, .. }
             | &BuiltinCall { ref ty, .. }
             | &ExternCall { ref ty, .. }
             | &App { ref ty, .. }

@@ -73,7 +73,7 @@ impl PP for Expr {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         use crate::hir::Expr::*;
         match self {
-            Binds { binds, ret, .. } => {
+            Let { binds, ret, .. } => {
                 let ind = Self::nspaces(indent);
                 let nextind = Self::nspaces(indent + 4);
                 write!(w, "let\n")?;
@@ -192,7 +192,7 @@ impl fmt::Display for Expr {
         let indent = f.width().unwrap_or(0);
         let next = indent + 4;
         match self {
-            Binds { binds, ret, .. } => {
+            Let { binds, ret, .. } => {
                 let ind = Self::nspaces(indent);
                 let nextind = Self::nspaces(indent + 4);
                 write!(f, "let\n")?;

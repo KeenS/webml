@@ -223,7 +223,7 @@ impl HIR2MIRPass {
                 funs.push(function);
                 eb
             }
-            e @ Sym { .. } | e @ Binds { .. } => {
+            e @ Sym { .. } | e @ Let { .. } => {
                 let (mut eb, var) = self.trans_expr_block(fb, eb, ty_.clone(), e);
                 eb.alias(name, self.trans_ty(&ty_), var);
                 eb
@@ -502,7 +502,7 @@ impl HIR2MIRPass {
     ) -> EBB {
         use crate::hir::Expr::*;
         match expr {
-            Binds { ty, binds, ret } => {
+            Let { ty, binds, ret } => {
                 assert_eq!(ty, ty_);
                 let mut funs = Vec::new();
                 for val in binds {
@@ -528,7 +528,7 @@ impl HIR2MIRPass {
     ) -> (EBBBuilder, Symbol) {
         use crate::hir::Expr::*;
         match expr {
-            Binds { ty, binds, ret } => {
+            Let { ty, binds, ret } => {
                 assert_eq!(ty, ty_);
                 let mut funs = Vec::new();
                 for val in binds {

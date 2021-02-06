@@ -8,7 +8,7 @@ pub struct FlatLet;
 fn take_binds(mut expr: Expr) -> (Expr, Vec<Val>) {
     use crate::hir::Expr::*;
     match expr {
-        Binds { binds, ret, .. } => {
+        Let { binds, ret, .. } => {
             expr = *ret;
             (expr, binds)
         }
@@ -110,7 +110,11 @@ impl Transform for FlatLet {
         ret = Box::new(expr);
         vec.append(&mut binds_);
         binds = vec;
-        Expr::Binds { binds, ret, ty }
+        Expr::Let {
+            bind: binds,
+            ret,
+            ty,
+        }
     }
 }
 

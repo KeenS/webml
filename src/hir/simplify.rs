@@ -60,9 +60,9 @@ impl Transform for Simplify {
         if new_binds.is_empty() {
             expr = self.transform_expr(*ret)
         } else {
-            expr = Binds {
+            expr = Let {
                 ty,
-                binds: new_binds
+                bind: new_binds
                     .into_iter()
                     .map(|val| self.transform_val(val))
                     .collect(),
@@ -106,9 +106,9 @@ impl Transform for Simplify {
                 assert!(captures.is_empty());
                 let body = Box::new(self.transform_expr(*body));
                 let (param_ty, param) = param;
-                let ret = Binds {
+                let ret = Let {
                     ty: body_ty,
-                    binds: vec![Val {
+                    bind: vec![Val {
                         ty: param_ty,
                         rec: false,
                         name: param,
@@ -168,9 +168,9 @@ impl Transform for Simplify {
                 pat => unreachable!("expected irrefutable pattern, but got {:?}", pat),
             };
             let arm = self.transform_expr(arm);
-            let ret = Binds {
+            let ret = Let {
                 ty,
-                binds,
+                bind: binds,
                 ret: Box::new(arm),
             };
             self.transform_expr(ret)

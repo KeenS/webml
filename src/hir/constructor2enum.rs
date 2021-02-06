@@ -80,14 +80,11 @@ impl Transform for ConstructorToEnumPass {
         val
     }
 
-    fn transform_binds(&mut self, ty: HTy, binds: Vec<Val>, ret: Box<Expr>) -> Expr {
+    fn transform_binds(&mut self, ty: HTy, bind: Box<Val>, ret: Box<Expr>) -> Expr {
         let ty = self.rewrite_ty(ty);
-        Expr::Binds {
+        Expr::Let {
             ty,
-            binds: binds
-                .into_iter()
-                .map(|val| self.transform_val(val))
-                .collect(),
+            bind: bind.map(|val| self.transform_val(val)),
             ret: Box::new(self.transform_expr(*ret)),
         }
     }

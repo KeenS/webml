@@ -14,7 +14,7 @@ pub trait Traverse {
     fn traverse_expr(&mut self, expr: &mut Expr) {
         use crate::hir::Expr::*;
         match expr {
-            Binds { ty, binds, ret } => self.traverse_binds(ty, binds, ret),
+            Let { ty, binds, ret } => self.traverse_binds(ty, binds, ret),
             Fun {
                 param,
                 body_ty,
@@ -152,7 +152,7 @@ pub trait Transform {
     fn transform_expr(&mut self, expr: Expr) -> Expr {
         use crate::hir::Expr::*;
         match expr {
-            Binds { ty, binds, ret } => self.transform_binds(ty, binds, ret),
+            Let { ty, binds, ret } => self.transform_binds(ty, binds, ret),
             Fun {
                 param,
                 body_ty,
@@ -186,13 +186,10 @@ pub trait Transform {
         }
     }
 
-    fn transform_binds(&mut self, ty: HTy, binds: Vec<Val>, ret: Box<Expr>) -> Expr {
-        Expr::Binds {
+    fn transform_binds(&mut self, ty: HTy, bind: Box<Val>, ret: Box<Expr>) -> Expr {
+        Expr::Let {
             ty,
-            binds: binds
-                .into_iter()
-                .map(|val| self.transform_val(val))
-                .collect(),
+            bind: bind.map(|val| self.transform_val(val)),
             ret: Box::new(self.transform_expr(*ret)),
         }
     }
