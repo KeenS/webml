@@ -418,21 +418,21 @@ impl SymbolTable {
 }
 
 #[derive(Debug)]
-pub enum TypeError<'a> {
+pub enum TypeError {
     MisMatch { expected: Type, actual: Type },
     CannotInfer,
     FreeVar,
     NotFunction(ast::Expr<Type>),
-    ParseError(nom::Err<(&'a str, nom::error::ErrorKind)>),
+    ParseError(nom::Err<(String, nom::error::ErrorKind)>),
 }
 
-impl<'a> fmt::Display for TypeError<'a> {
+impl fmt::Display for TypeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         fmt::Debug::fmt(self, f)
     }
 }
 
-impl<'a> Error for TypeError<'a> {
+impl Error for TypeError {
     fn description(&self) -> &str {
         use self::TypeError::*;
         match self {
@@ -445,8 +445,8 @@ impl<'a> Error for TypeError<'a> {
     }
 }
 
-impl<'a> From<nom::Err<(&'a str, nom::error::ErrorKind)>> for TypeError<'a> {
-    fn from(e: nom::Err<(&'a str, nom::error::ErrorKind)>) -> Self {
+impl From<nom::Err<(String, nom::error::ErrorKind)>> for TypeError {
+    fn from(e: nom::Err<(String, nom::error::ErrorKind)>) -> Self {
         // fn conv<'b>(e: nom::Err<&'b [u8]>) -> nom::Err<&'b str> {
         //     use std::str::from_utf8;
         //     use nom::Err::*;
@@ -464,4 +464,4 @@ impl<'a> From<nom::Err<(&'a str, nom::error::ErrorKind)>> for TypeError<'a> {
     }
 }
 
-pub type Result<'a, T> = ::std::result::Result<T, TypeError<'a>>;
+pub type Result<T> = ::std::result::Result<T, TypeError>;

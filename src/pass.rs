@@ -88,27 +88,22 @@ where
     }
 }
 
-pub struct Chain<F, FO, S, SO> {
-    pub fst: F,
-    pub snd: S,
-    phantom: PhantomData<(FO, SO)>,
+pub struct Chain<In, Mid, Out, E> {
+    pub fst: Box<dyn Pass<In, E, Target = Mid>>,
+    pub snd: Box<dyn Pass<Mid, E, Target = Out>>,
 }
 
-impl<F, FO, S, SO> Chain<F, FO, S, SO> {
-    pub fn new(fst: F, snd: S) -> Self {
-        Chain {
-            fst,
-            snd,
-            phantom: PhantomData,
-        }
-    }
-}
+// impl<F, FO, S, SO> Chain<F, FO, S, SO> {
+//     pub fn new(fst: F, snd: S) -> Self {
+//         Chain {
+//             fst,
+//             snd,
+//             phantom: PhantomData,
+//         }
+//     }
+// }
 
-impl<F, E, S, T, In, Out> Pass<In, E> for Chain<F, T, S, Out>
-where
-    F: Pass<In, E, Target = T>,
-    S: Pass<T, E, Target = Out>,
-{
+impl<In, Mid, Out, E> Pass<In, E> for Chain<In, Mid, Out, E> {
     type Target = Out;
 
     fn trans(&mut self, i: In, config: &Config) -> Result<Self::Target, E> {
@@ -155,7 +150,10 @@ macro_rules! compile_pass {
         compile_pass!($($labels: $passes),*)
     };
     ($label: ident : $pass: expr, $($labels: ident : $passes: expr),*) => {
-        Chain::new(PrintablePass($pass, stringify!($label)), compile_pass!($($labels: $passes),*))
+        Chain{
+            fst:Box::new(PrintablePass($pass, stringify!($label))),
+            snd: Box::new(compile_pass!($($labels: $passes),*)),
+        }
     };
     ($label: ident : $pass: expr) => {
         PrintablePass($pass, stringify!($label))

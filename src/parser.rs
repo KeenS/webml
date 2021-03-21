@@ -1,5 +1,6 @@
-use crate::ast::*;
+use crate::pass::Pass;
 use crate::prim::*;
+use crate::{ast::*, Config};
 use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::character::complete::{alphanumeric1, digit1, multispace1};
@@ -18,12 +19,12 @@ static KEYWORDS: &[&str] = &[
 
 static RESERVED: &[&str] = &["|", "=", "#"];
 
-struct Parser {
+pub struct Parser {
     infixes: RefCell<Vec<BTreeMap<u8, Vec<Symbol>>>>,
 }
 
 impl Parser {
-    fn new() -> Self {
+    pub fn new() -> Self {
         Self {
             infixes: RefCell::new(vec![BTreeMap::new()]),
         }
@@ -1094,10 +1095,15 @@ fn test_expr_infix_and_app2() {
     )
 }
 
-pub fn parse(
-    input: &str,
-) -> ::std::result::Result<UntypedAst, nom::Err<(&str, nom::error::ErrorKind)>> {
-    let parser = Parser::new();
-    let (_, iresult) = all_consuming(parser.top())(input)?;
-    Ok(iresult)
+impl Pass<String, TypeError> for Parser {
+    type Target = UntypedAst;
+
+    fn trans(&mut self, input: String, _: &Config) -> std::result::Result<Self::Target, TypeError> {
+        match all_consuming(self.top())(&input) {
+            Ok((_, iresult)) => Ok(iresult),
+            Err(nom::Err::Incomplete(e)) => Err(nom::Err::Incomplete(e).into()),
+            Err(nom::Err::Error((s, kind))) => Err(nom::Err::Error((s.into(), kind)).into()),
+            Err(nom::Err::Failure((s, kind))) => Err(nom::Err::Error((s.into(), kind)).into()),
+        }
+    }
 }

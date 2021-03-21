@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use std::fs;
 use std::io::{self, prelude::*};
 use std::path::Path;
-use webml::{compile_str, Config};
+use webml::{compile_string, Config};
 
 fn read_and_append_to_string(path: impl AsRef<Path>, buf: &mut String) -> io::Result<usize> {
     let file = fs::File::open(path)?;
@@ -47,6 +47,6 @@ fn main() {
     let prelude = include_str!("../ml_src/prelude.sml").to_string();
     let mut input = prelude;
     read_and_append_to_string(filename, &mut input).expect("failed to load file");
-    let code = compile_str(&input, &config).expect("failed to compile file");
+    let code = compile_string(input, &config).expect("failed to compile file");
     fs::write("out.wasm", &code).unwrap()
 }

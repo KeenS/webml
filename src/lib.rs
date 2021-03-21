@@ -14,19 +14,18 @@ mod unification_pool;
 
 pub use crate::ast::TypeError;
 pub use crate::config::Config;
-pub use crate::parser::parse;
 pub use crate::pass::{Chain, Pass};
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
-pub fn compile_str<'a>(input: &'a str, config: &Config) -> Result<Vec<u8>, TypeError<'a>> {
-    use crate::pass::{ConvError, PrintablePass};
+pub fn compile_string(input: String, config: &Config) -> Result<Vec<u8>, TypeError> {
+    use crate::pass::PrintablePass;
     use wasm::Dump;
 
     let id = id::Id::new();
 
     let mut passes = compile_pass![
-       parse: ConvError::new(parse),
+       parse: parser::Parser::new(),
        desugar: ast::Desugar::new(id.clone()),
        rename: ast::Rename::new(id.clone()),
        var_to_constructor: ast::VarToConstructor::new(id.clone()),

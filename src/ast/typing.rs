@@ -57,11 +57,7 @@ fn conv_ty(pool: &UnificationPool<Typing>, ty: Typing) -> Type {
     }
 }
 
-fn try_unify<'b, 'r>(
-    pool: &'b mut UnificationPool<Typing>,
-    t1: Typing,
-    t2: Typing,
-) -> Result<'r, Typing> {
+fn try_unify<'b>(pool: &'b mut UnificationPool<Typing>, t1: Typing, t2: Typing) -> Result<Typing> {
     use Typing::*;
     match (t1, t2) {
         (t1, t2) if t1 == t2 => Ok(t1),
@@ -90,7 +86,7 @@ fn try_unify<'b, 'r>(
                     .into_iter()
                     .zip(tu2)
                     .map(|(t1, t2)| pool.try_unify_with(t1, t2, try_unify))
-                    .collect::<Result<'_, Vec<_>>>()?;
+                    .collect::<Result<Vec<_>>>()?;
                 Ok(Tuple(tu))
             }
         }
@@ -180,12 +176,12 @@ impl TypePool {
         node_id
     }
 
-    fn try_unify_with<'r>(
+    fn try_unify_with(
         &mut self,
         id1: NodeId,
         id2: NodeId,
-        try_unify: impl FnOnce(&mut UnificationPool<Typing>, Typing, Typing) -> Result<'r, Typing>,
-    ) -> Result<'r, NodeId> {
+        try_unify: impl FnOnce(&mut UnificationPool<Typing>, Typing, Typing) -> Result<Typing>,
+    ) -> Result<NodeId> {
         self.pool.try_unify_with(id1, id2, try_unify)
     }
 }
@@ -234,7 +230,7 @@ impl TyEnv {
         }
     }
 
-    pub fn infer<'a, 'b>(&'a mut self, ast: &mut ast::Core<NodeId>) -> Result<'b, ()> {
+    pub fn infer(&mut self, ast: &mut ast::Core<NodeId>) -> Result<()> {
         self.infer_ast(ast)?;
         Ok(())
     }
@@ -281,14 +277,14 @@ impl TyEnv {
 }
 
 impl TyEnv {
-    fn infer_ast<'b, 'r>(&'b mut self, ast: &Core<NodeId>) -> Result<'r, ()> {
+    fn infer_ast(&mut self, ast: &Core<NodeId>) -> Result<()> {
         for decl in ast.0.iter() {
             self.infer_statement(&decl)?;
         }
         Ok(())
     }
 
-    fn infer_statement<'b, 'r>(&'b mut self, decl: &CoreDeclaration<NodeId>) -> Result<'r, ()> {
+    fn infer_statement(&mut self, decl: &CoreDeclaration<NodeId>) -> Result<()> {
         use Declaration::*;
         match decl {
             Datatype { .. } => Ok(()),
@@ -313,7 +309,7 @@ impl TyEnv {
         }
     }
 
-    fn infer_expr<'b, 'r>(&'b mut self, expr: &CoreExpr<NodeId>) -> Result<'r, ()> {
+    fn infer_expr(&mut self, expr: &CoreExpr<NodeId>) -> Result<()> {
         use crate::ast::ExprKind::*;
         let int = self.pool.ty_int();
         let real = self.pool.ty_real();
@@ -438,12 +434,12 @@ impl TyEnv {
         }
     }
 
-    fn infer_constructor<'b, 'r>(
-        &'b mut self,
+    fn infer_constructor(
+        &mut self,
         sym: &Symbol,
         arg: &Option<Box<CoreExpr<NodeId>>>,
         given: NodeId,
-    ) -> Result<'r, ()> {
+    ) -> Result<()> {
         match self.get(&sym) {
             Some(ty) => {
                 self.unify(ty, given)?;
@@ -460,14 +456,14 @@ impl TyEnv {
         }
     }
 
-    fn infer_symbol<'b, 'r>(&'b mut self, sym: &Symbol, given: NodeId) -> Result<'r, ()> {
+    fn infer_symbol(&mut self, sym: &Symbol, given: NodeId) -> Result<()> {
         match self.get(&sym) {
             Some(t) => self.unify(t, given),
             None => Err(TypeError::FreeVar),
         }
     }
 
-    fn infer_literal<'b, 'r>(&'b mut self, lit: &Literal, given: NodeId) -> Result<'r, ()> {
+    fn infer_literal(&mut self, lit: &Literal, given: NodeId) -> Result<()> {
         use crate::prim::Literal::*;
         let ty = match lit {
             Int(_) => self.pool.ty_int(),
@@ -478,19 +474,19 @@ impl TyEnv {
         Ok(())
     }
 
-    fn infer_constant<'b, 'r>(&'b mut self, _: &i64, given: NodeId) -> Result<'r, ()> {
+    fn infer_constant(&mut self, _: &i64, given: NodeId) -> Result<()> {
         let ty = self.pool.ty_int();
         self.unify(given, ty)?;
         Ok(())
     }
 
-    fn infer_char<'b, 'r>(&'b mut self, _: &u32, given: NodeId) -> Result<'r, ()> {
+    fn infer_char(&mut self, _: &u32, given: NodeId) -> Result<()> {
         let ty = self.pool.ty_char();
         self.unify(given, ty)?;
         Ok(())
     }
 
-    fn infer_pat<'b, 'r>(&'b mut self, pat: &Pattern<NodeId>) -> Result<'r, ()> {
+    fn infer_pat(&mut self, pat: &Pattern<NodeId>) -> Result<()> {
         use self::PatternKind::*;
         let ty = &pat.ty();
         match &pat.inner {
@@ -541,11 +537,7 @@ impl TyEnv {
         Ok(())
     }
 
-    fn infer_tuple<'b, 'r>(
-        &'b mut self,
-        tuple: &Vec<CoreExpr<NodeId>>,
-        given: NodeId,
-    ) -> Result<'r, ()> {
+    fn infer_tuple(&mut self, tuple: &Vec<CoreExpr<NodeId>>, given: NodeId) -> Result<()> {
         use std::iter;
         let tys = iter::repeat_with(|| self.pool.tyvar())
             .take(tuple.len())
@@ -560,25 +552,25 @@ impl TyEnv {
         Ok(())
     }
 
-    fn unify<'b, 'r>(&'b mut self, id1: NodeId, id2: NodeId) -> Result<'r, ()> {
+    fn unify(&mut self, id1: NodeId, id2: NodeId) -> Result<()> {
         self.pool.try_unify_with(id1, id2, try_unify).map(|_| ())
     }
 
-    fn give<'b, 'r>(&'b mut self, id1: NodeId, ty: Typing) -> Result<'r, ()> {
+    fn give(&mut self, id1: NodeId, ty: Typing) -> Result<()> {
         let id2 = self.pool.node_new(ty);
         self.unify(id1, id2)
     }
 }
 
 use crate::pass::Pass;
-impl<'a> Pass<UntypedCoreContext, TypeError<'a>> for Typer {
+impl Pass<UntypedCoreContext, TypeError> for Typer {
     type Target = TypedCoreContext;
 
-    fn trans<'b>(
-        &'b mut self,
+    fn trans(
+        &mut self,
         Context(symbol_table, ast): UntypedCoreContext,
         _: &Config,
-    ) -> Result<'a, Self::Target> {
+    ) -> Result<Self::Target> {
         let mut pass = self.generate_pass(symbol_table);
         let mut typing_ast = pass.pool.typing_ast(ast);
         pass.infer(&mut typing_ast)?;
