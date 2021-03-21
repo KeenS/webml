@@ -73,17 +73,13 @@ impl PP for Expr {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         use crate::hir::Expr::*;
         match self {
-            Let { binds, ret, .. } => {
+            Let { bind, ret, .. } => {
                 let ind = Self::nspaces(indent);
                 let nextind = Self::nspaces(indent + 4);
-                write!(w, "let\n")?;
-                for val in binds {
-                    val.pp(w, indent + 4)?;
-                    write!(w, "\n")?;
-                }
+                write!(w, "let ")?;
+                bind.pp(w, indent + 4)?;
                 write!(w, "{}in\n{}", ind, nextind)?;
                 ret.pp(w, indent + 4)?;
-                write!(w, "\n{}end", ind)?;
             }
             Fun {
                 body,
@@ -192,16 +188,9 @@ impl fmt::Display for Expr {
         let indent = f.width().unwrap_or(0);
         let next = indent + 4;
         match self {
-            Let { binds, ret, .. } => {
-                let ind = Self::nspaces(indent);
-                let nextind = Self::nspaces(indent + 4);
-                write!(f, "let\n")?;
-                for val in binds {
-                    writeln!(f, "{:next$}", val, next = next)?;
-                }
-                write!(f, "{}in\n{}", ind, nextind)?;
+            Let { bind, ret, .. } => {
+                write!(f, "let {} in\n", bind)?;
                 write!(f, "{:next$}", ret, next = next)?;
-                write!(f, "\n{}end", ind)?;
             }
             Fun {
                 body,

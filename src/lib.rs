@@ -14,6 +14,7 @@ mod unification_pool;
 
 pub use crate::ast::TypeError;
 pub use crate::config::Config;
+pub use crate::parser::Parser;
 pub use crate::pass::{Chain, Pass};
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;

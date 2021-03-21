@@ -69,7 +69,7 @@ impl Parser {
 }
 
 impl Parser {
-    fn top(&self) -> impl Fn(&str) -> IResult<&str, UntypedAst> + '_ {
+    pub fn top(&self) -> impl Fn(&str) -> IResult<&str, UntypedAst> + '_ {
         move |i| {
             let (i, _) = self.space0()(i)?;
             let (i, tops) = separated_list(self.space1(), self.decl())(i)?;

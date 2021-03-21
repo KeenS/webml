@@ -84,7 +84,7 @@ impl Transform for ConstructorToEnumPass {
         let ty = self.rewrite_ty(ty);
         Expr::Let {
             ty,
-            bind: bind.map(|val| self.transform_val(val)),
+            bind: Box::new(self.transform_val(*bind)),
             ret: Box::new(self.transform_expr(*ret)),
         }
     }

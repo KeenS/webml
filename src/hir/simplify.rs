@@ -28,46 +28,30 @@ impl Simplify {
 use crate::hir::Expr::*;
 
 impl Transform for Simplify {
-    fn transform_binds(&mut self, ty: HTy, binds: Vec<Val>, ret: Box<Expr>) -> Expr {
+    fn transform_binds(&mut self, ty: HTy, bind: Box<Val>, ret: Box<Expr>) -> Expr {
         let mut aliased = vec![];
-        let mut new_binds = vec![];
-        for Val {
-            ty,
-            rec,
-            name,
-            expr,
-        } in binds
-        {
-            match expr {
-                Sym { name: sym_name, .. } => {
-                    let sym_name = match self.aliases.get(&sym_name) {
-                        Some(alias) => alias.clone(),
-                        None => sym_name,
-                    };
-                    aliased.push(name.clone());
-                    self.aliases.insert(name, sym_name);
-                }
-                _ => new_binds.push(Val {
-                    ty,
-                    rec,
-                    name,
-                    expr,
-                }),
+        let mut new_bind = None;
+        match bind.expr {
+            Sym { name: sym_name, .. } => {
+                let sym_name = match self.aliases.get(&sym_name) {
+                    Some(alias) => alias.clone(),
+                    None => sym_name,
+                };
+                aliased.push(bind.name.clone());
+                self.aliases.insert(bind.name, sym_name);
             }
+            _ => new_bind = Some(*bind),
         }
 
         let expr;
-        if new_binds.is_empty() {
-            expr = self.transform_expr(*ret)
-        } else {
+        if let Some(new_bind) = new_bind {
             expr = Let {
                 ty,
-                bind: new_binds
-                    .into_iter()
-                    .map(|val| self.transform_val(val))
-                    .collect(),
+                bind: Box::new(self.transform_val(new_bind)),
                 ret: Box::new(self.transform_expr(*ret)),
             }
+        } else {
+            expr = self.transform_expr(*ret)
         }
         for name in aliased {
             self.aliases.remove(&name);
@@ -108,12 +92,12 @@ impl Transform for Simplify {
                 let (param_ty, param) = param;
                 let ret = Let {
                     ty: body_ty,
-                    bind: vec![Val {
+                    bind: Box::new(Val {
                         ty: param_ty,
                         rec: false,
                         name: param,
                         expr: *arg,
-                    }],
+                    }),
                     ret: body,
                 };
                 self.transform_expr(ret)
@@ -168,11 +152,13 @@ impl Transform for Simplify {
                 pat => unreachable!("expected irrefutable pattern, but got {:?}", pat),
             };
             let arm = self.transform_expr(arm);
-            let ret = Let {
-                ty,
-                bind: binds,
-                ret: Box::new(arm),
-            };
+
+            let ret = binds.into_iter().rev().fold(arm, |ret, bind| Let {
+                ty: ty.clone(),
+                bind: Box::new(bind),
+                ret: Box::new(ret),
+            });
+
             self.transform_expr(ret)
         } else {
             Expr::Case {
