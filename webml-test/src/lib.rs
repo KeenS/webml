@@ -66,10 +66,10 @@ impl TestRuntime {
 }
 
 pub fn compile(input: &str) -> Vec<u8> {
-    use webml::{compile_str, Config};
+    use webml::{compile_string, Config};
     let mut prelude = include_str!("../../ml_src/prelude.sml").to_string();
     prelude.push_str(input);
-    compile_str(&prelude, &Config::default()).expect("failed to compile")
+    compile_string(prelude, &Config::default()).expect("failed to compile")
 }
 
 #[test]
