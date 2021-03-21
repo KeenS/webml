@@ -1,5 +1,5 @@
 [package]
-name = "webml-tset"
+name = "webml-test"
 version = "0.0.0"
 authors = ["κeen <3han5chou7@gmail.com>"]
 edition = "2018"
