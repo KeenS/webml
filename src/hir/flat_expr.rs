@@ -42,37 +42,38 @@ impl FlatExpr {
 use crate::hir::Expr::*;
 
 impl Transform for FlatExpr {
-    fn transform_binds(&mut self, ty: HTy, mut binds: Vec<Val>, ret: Box<Expr>) -> Expr {
-        binds = binds
-            .into_iter()
-            .map(|mut val| {
-                val.expr = self.transform_expr(val.expr);
-                val
-            })
-            .collect();
+    fn transform_binds(&mut self, ty: HTy, mut bind: Box<Val>, ret: Box<Expr>) -> Expr {
+        bind = Box::new(self.transform_val(*bind));
         let (ret, retval) = self.flat_make_val(*ret);
-        binds.push(retval);
-        Binds { binds, ret, ty }
+        Let {
+            ty: ty.clone(),
+            bind,
+            ret: Box::new(Let {
+                ty,
+                bind: Box::new(retval),
+                ret,
+            }),
+        }
     }
 
     fn transform_fun(
         &mut self,
         param: (HTy, Symbol),
         body_ty: HTy,
-        mut body: Box<Expr>,
+        body: Box<Expr>,
         captures: Vec<(HTy, Symbol)>,
     ) -> Expr {
-        let (ret, bodyval) = self.flat_make_val(*body);
-        body = Box::new(Binds {
-            ty: body_ty.clone(),
-            binds: vec![bodyval],
-            ret,
-        });
-        Fun {
-            body,
+        let (body, val) = self.flat_make_val(*body);
+
+        Expr::Fun {
             param,
-            body_ty,
+            body_ty: body_ty.clone(),
             captures,
+            body: Box::new(Let {
+                ty: body_ty,
+                bind: Box::new(val),
+                ret: body,
+            }),
         }
     }
 
@@ -83,11 +84,16 @@ impl Transform for FlatExpr {
         body_ty: HTy,
         fname: Symbol,
     ) -> Expr {
-        Expr::Closure {
+        let (expr, val) = self.make_val(Expr::Closure {
             envs,
             param_ty,
-            body_ty,
+            body_ty: body_ty.clone(),
             fname,
+        });
+        Let {
+            ty: body_ty,
+            bind: Box::new(val),
+            ret: expr,
         }
     }
 
@@ -106,11 +112,12 @@ impl Transform for FlatExpr {
         });
 
         vals.push(retval);
-        Binds {
-            ty,
-            binds: vals,
-            ret,
-        }
+
+        vals.into_iter().rev().fold(*ret, |ret, bind| Let {
+            ty: ty.clone(),
+            bind: Box::new(bind),
+            ret: Box::new(ret),
+        })
     }
 
     fn transform_app(&mut self, ty: HTy, fun: Box<Expr>, arg: Box<Expr>) -> Expr {
@@ -121,43 +128,46 @@ impl Transform for FlatExpr {
             arg,
             ty: ty.clone(),
         });
-        Binds {
-            ty,
-            binds: vec![funval, argval, retval],
-            ret,
-        }
+
+        vec![funval, argval, retval]
+            .into_iter()
+            .rev()
+            .fold(*ret, |ret, bind| Let {
+                ty: ty.clone(),
+                bind: Box::new(bind),
+                ret: Box::new(ret),
+            })
     }
 
     fn transform_case(&mut self, ty: HTy, expr: Box<Expr>, arms: Vec<(Pattern, Expr)>) -> Expr {
         let (expr, exprval) = self.flat_make_val(*expr);
-        let arms = {
-            let arm_and_val = arms.into_iter().map(|(pat, expr)| {
+        let arms = arms
+            .into_iter()
+            .map(|(pat, expr)| {
                 let (expr, exprval) = self.flat_make_val(expr);
-                ((pat, expr), exprval)
-            });
-            arm_and_val
-                .map(|((pat, arm), armval)| {
-                    (
-                        pat,
-                        Binds {
-                            ty: ty.clone(),
-                            binds: vec![armval],
-                            ret: arm,
-                        },
-                    )
-                })
-                .collect()
-        };
-        let e = Case {
+                (
+                    pat,
+                    Let {
+                        ty: ty.clone(),
+                        bind: Box::new(exprval),
+                        ret: expr,
+                    },
+                )
+            })
+            .collect();
+        let (case, caseval) = self.make_val(Case {
             ty: ty.clone(),
             expr,
             arms,
-        };
-        let (ret, retval) = self.make_val(e);
-        Binds {
-            ty,
-            binds: vec![exprval, retval],
-            ret,
+        });
+        Let {
+            ty: ty.clone(),
+            bind: Box::new(exprval),
+            ret: Box::new(Let {
+                ty,
+                bind: Box::new(caseval),
+                ret: case,
+            }),
         }
     }
 
@@ -169,25 +179,29 @@ impl Transform for FlatExpr {
     ) -> Expr {
         if let Some(arg) = arg {
             let (arg, exprval) = self.flat_make_val(*arg);
-            let (ret, constval) = self.make_val(Constructor {
+            let (ret, consval) = self.make_val(Constructor {
                 ty: ty.clone(),
                 descriminant,
                 arg: Some(arg),
             });
-            Binds {
-                ty,
-                binds: vec![exprval, constval],
-                ret,
+            Let {
+                ty: ty.clone(),
+                bind: Box::new(exprval),
+                ret: Box::new(Let {
+                    ty,
+                    bind: Box::new(consval),
+                    ret,
+                }),
             }
         } else {
-            let (ret, constval) = self.make_val(Constructor {
+            let (ret, bind) = self.make_val(Constructor {
                 ty: ty.clone(),
                 descriminant,
                 arg,
             });
-            Binds {
+            Let {
                 ty,
-                binds: vec![constval],
+                bind: Box::new(bind),
                 ret,
             }
         }
@@ -206,11 +220,14 @@ impl Transform for FlatExpr {
             tuple,
         });
         vals.push(tupleval);
-        Binds {
-            ty: HTy::Tuple(tys),
-            binds: vals,
-            ret,
-        }
+
+        let ty = HTy::Tuple(tys);
+
+        vals.into_iter().rev().fold(*ret, |ret, bind| Let {
+            ty: ty.clone(),
+            bind: Box::new(bind),
+            ret: Box::new(ret),
+        })
     }
 }
 

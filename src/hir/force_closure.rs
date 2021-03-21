@@ -32,11 +32,9 @@ impl<'a> Trav<'a> {
 }
 
 impl<'a> Traverse for Trav<'a> {
-    fn traverse_binds(&mut self, _ty: &mut HTy, binds: &mut Vec<Val>, ret: &mut Box<Expr>) {
+    fn traverse_binds(&mut self, _ty: &mut HTy, bind: &mut Box<Val>, ret: &mut Box<Expr>) {
         self.with_bound(true, |this| {
-            for bind in binds.iter_mut() {
-                this.traverse_expr(&mut bind.expr);
-            }
+            this.traverse_expr(&mut bind.expr);
         });
         self.traverse_expr(ret);
     }
@@ -45,8 +43,8 @@ impl<'a> Traverse for Trav<'a> {
         use crate::hir::Expr::*;
         let assign;
         match expr {
-            Binds { ty, binds, ret } => {
-                self.traverse_binds(ty, binds, ret);
+            Let { ty, bind, ret } => {
+                self.traverse_binds(ty, bind, ret);
                 return;
             }
             Fun {
@@ -177,14 +175,12 @@ impl<'a> Traverse for Reg<'a> {
         self.traverse_expr(&mut val.expr);
     }
 
-    fn traverse_binds(&mut self, _ty: &mut HTy, binds: &mut Vec<Val>, ret: &mut Box<Expr>) {
-        for bind in binds.iter_mut() {
-            let mut bound_name = None;
-            if bind.rec {
-                bound_name = Some(bind.name.clone());
-            }
-            self.with_bound_name(bound_name, |this| this.traverse_expr(&mut bind.expr));
+    fn traverse_binds(&mut self, _ty: &mut HTy, bind: &mut Box<Val>, ret: &mut Box<Expr>) {
+        let mut bound_name = None;
+        if bind.rec {
+            bound_name = Some(bind.name.clone());
         }
+        self.with_bound_name(bound_name, |this| this.traverse_expr(&mut bind.expr));
         self.with_bound_name(None, |this| {
             this.traverse_expr(ret);
         });

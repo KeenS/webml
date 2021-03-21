@@ -111,26 +111,23 @@ impl<'a> Scope<'a> {
     fn conv_expr(&mut self, expr: Expr, bind_name: Option<Symbol>, is_top: bool) -> Expr {
         use crate::hir::Expr::*;
         match expr {
-            Binds {
+            Let {
                 ty,
-                mut binds,
+                mut bind,
                 mut ret,
             } => {
-                binds = binds
-                    .into_iter()
-                    .map(|mut bind| {
-                        let bind_name = if bind.rec {
-                            Some(bind.name.clone())
-                        } else {
-                            None
-                        };
-                        bind.expr = self.conv_expr(bind.expr, bind_name, false);
-                        bind.rec = false;
-                        bind
-                    })
-                    .collect();
+                bind = {
+                    let bind_name = if bind.rec {
+                        Some(bind.name.clone())
+                    } else {
+                        None
+                    };
+                    bind.expr = self.conv_expr(bind.expr, bind_name, false);
+                    bind.rec = false;
+                    bind
+                };
                 ret = Box::new(self.conv_expr(*ret, None, false));
-                Binds { ty, binds, ret }
+                Let { ty, bind, ret }
             }
             Fun {
                 param,
@@ -280,16 +277,14 @@ impl<'a> Scope<'a> {
     ) {
         use crate::hir::Expr::*;
         match expr {
-            Binds { binds, ret, .. } => {
+            Let { bind, ret, .. } => {
                 let scope = self;
-                for bind in binds.iter() {
-                    if bind.rec {
-                        scope.add_scope(bind.name.clone());
-                        scope.analyze_free_val(frees, bound, bind);
-                    } else {
-                        scope.analyze_free_val(frees, bound, bind);
-                        scope.add_scope(bind.name.clone());
-                    }
+                if bind.rec {
+                    scope.add_scope(bind.name.clone());
+                    scope.analyze_free_val(frees, bound, bind);
+                } else {
+                    scope.analyze_free_val(frees, bound, bind);
+                    scope.add_scope(bind.name.clone());
                 }
                 scope.analyze_free_expr(frees, bound, ret);
             }
@@ -361,10 +356,8 @@ impl<'a> Scope<'a> {
     fn rename(&mut self, expr: &mut Expr, from: &Option<Symbol>, to: &Symbol) {
         use crate::hir::Expr::*;
         match expr {
-            Binds { binds, ret, .. } => {
-                for bind in binds.iter_mut() {
-                    self.rename(&mut bind.expr, from, to)
-                }
+            Let { bind, ret, .. } => {
+                self.rename(&mut bind.expr, from, to);
                 self.rename(ret, from, to);
             }
             Fun { body, .. } => self.rename(body, from, to),

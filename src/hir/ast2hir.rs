@@ -237,14 +237,22 @@ impl AST2HIRPass {
         use crate::ast::ExprKind as E;
         let ty = expr.ty;
         match expr.inner {
-            E::Binds { binds, ret } => Expr::Binds {
-                ty: conv_ty(ty),
-                binds: binds
+            E::Binds { binds, ret } => {
+                let ty = conv_ty(ty);
+                // collecting into vec here to avoid lifetime error
+                let binds = binds
                     .into_iter()
                     .flat_map(|s| self.conv_statement(s))
-                    .collect(),
-                ret: Box::new(self.conv_expr(*ret)),
-            },
+                    .collect::<Vec<_>>();
+                binds
+                    .into_iter()
+                    .rev()
+                    .fold(self.conv_expr(*ret), |ret, bind| Expr::Let {
+                        ty: ty.clone(),
+                        bind: Box::new(bind),
+                        ret: Box::new(ret),
+                    })
+            }
             E::BuiltinCall { fun, args } => Expr::BuiltinCall {
                 ty: conv_ty(ty),
                 fun,

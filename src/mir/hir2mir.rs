@@ -223,7 +223,7 @@ impl HIR2MIRPass {
                 funs.push(function);
                 eb
             }
-            e @ Sym { .. } | e @ Binds { .. } => {
+            e @ Sym { .. } | e @ Let { .. } => {
                 let (mut eb, var) = self.trans_expr_block(fb, eb, ty_.clone(), e);
                 eb.alias(name, self.trans_ty(&ty_), var);
                 eb
@@ -502,20 +502,18 @@ impl HIR2MIRPass {
     ) -> EBB {
         use crate::hir::Expr::*;
         match expr {
-            Binds { ty, binds, ret } => {
+            Let { ty, bind, ret } => {
                 assert_eq!(ty, ty_);
                 let mut funs = Vec::new();
-                for val in binds {
-                    eb = self.trans_val(&mut funs, fb, eb, val);
-                }
+                eb = self.trans_val(&mut funs, fb, eb, *bind);
                 assert_eq!(funs.len(), 0);
-                eb.ret(force_symbol(*ret), self.trans_ty(&ty))
+                self.trans_expr(fb, eb, ty_, *ret)
             }
             Sym { ty, name } => {
                 assert_eq!(ty, ty_);
                 eb.ret(name, self.trans_ty(&ty))
             }
-            _ => panic!("internal error"),
+            e => panic!("internal error: expr should be let or symbol: {:?}", e),
         }
     }
 
@@ -528,20 +526,18 @@ impl HIR2MIRPass {
     ) -> (EBBBuilder, Symbol) {
         use crate::hir::Expr::*;
         match expr {
-            Binds { ty, binds, ret } => {
+            Let { ty, bind, ret } => {
                 assert_eq!(ty, ty_);
                 let mut funs = Vec::new();
-                for val in binds {
-                    eb = self.trans_val(&mut funs, fb, eb, val)
-                }
+                eb = self.trans_val(&mut funs, fb, eb, *bind);
                 assert_eq!(funs.len(), 0);
-                (eb, force_symbol(*ret))
+                self.trans_expr_block(fb, eb, ty_, *ret)
             }
             Sym { ty, name } => {
                 assert_eq!(ty, ty_);
                 (eb, name)
             }
-            _ => panic!("internal error"),
+            e => panic!("internal error: block should be let or symbol: {:?}", e),
         }
     }
 }

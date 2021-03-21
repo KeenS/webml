@@ -14,7 +14,7 @@ pub trait Traverse {
     fn traverse_expr(&mut self, expr: &mut Expr) {
         use crate::hir::Expr::*;
         match expr {
-            Binds { ty, binds, ret } => self.traverse_binds(ty, binds, ret),
+            Let { ty, bind, ret } => self.traverse_binds(ty, bind, ret),
             Fun {
                 param,
                 body_ty,
@@ -47,10 +47,8 @@ pub trait Traverse {
             Lit { ty, value } => self.traverse_lit(ty, value),
         }
     }
-    fn traverse_binds(&mut self, _ty: &mut HTy, binds: &mut Vec<Val>, ret: &mut Box<Expr>) {
-        for val in binds.iter_mut() {
-            self.traverse_val(val)
-        }
+    fn traverse_binds(&mut self, _ty: &mut HTy, bind: &mut Box<Val>, ret: &mut Box<Expr>) {
+        self.traverse_val(&mut *bind);
         self.traverse_expr(ret)
     }
 
@@ -152,7 +150,7 @@ pub trait Transform {
     fn transform_expr(&mut self, expr: Expr) -> Expr {
         use crate::hir::Expr::*;
         match expr {
-            Binds { ty, binds, ret } => self.transform_binds(ty, binds, ret),
+            Let { ty, bind, ret } => self.transform_binds(ty, bind, ret),
             Fun {
                 param,
                 body_ty,
@@ -186,13 +184,10 @@ pub trait Transform {
         }
     }
 
-    fn transform_binds(&mut self, ty: HTy, binds: Vec<Val>, ret: Box<Expr>) -> Expr {
-        Expr::Binds {
+    fn transform_binds(&mut self, ty: HTy, bind: Box<Val>, ret: Box<Expr>) -> Expr {
+        Expr::Let {
             ty,
-            binds: binds
-                .into_iter()
-                .map(|val| self.transform_val(val))
-                .collect(),
+            bind: Box::new(self.transform_val(*bind)),
             ret: Box::new(self.transform_expr(*ret)),
         }
     }

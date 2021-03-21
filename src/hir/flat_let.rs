@@ -5,11 +5,12 @@ use crate::pass::Pass;
 
 pub struct FlatLet;
 
-fn take_binds(mut expr: Expr) -> (Expr, Vec<Val>) {
+fn take_binds(expr: Expr) -> (Expr, Vec<Val>) {
     use crate::hir::Expr::*;
     match expr {
-        Binds { binds, ret, .. } => {
-            expr = *ret;
+        Let { bind, ret, .. } => {
+            let (expr, mut binds) = take_binds(*ret);
+            binds.insert(0, *bind);
             (expr, binds)
         }
         BuiltinCall { args, ty, fun } => {
@@ -96,21 +97,24 @@ fn take_binds(mut expr: Expr) -> (Expr, Vec<Val>) {
 }
 
 impl Transform for FlatLet {
-    fn transform_binds(&mut self, ty: HTy, mut binds: Vec<Val>, mut ret: Box<Expr>) -> Expr {
+    fn transform_binds(&mut self, ty: HTy, bind: Box<Val>, ret: Box<Expr>) -> Expr {
         let mut vec = Vec::new();
-        for mut val in binds.into_iter() {
-            val.expr = self.transform_expr(val.expr);
-            let (expr, mut binds) = take_binds(val.expr);
-            val.expr = expr;
-            vec.append(&mut binds);
-            vec.push(val)
-        }
-        let ret_ = self.transform_expr(*ret);
-        let (expr, mut binds_) = take_binds(ret_);
-        ret = Box::new(expr);
-        vec.append(&mut binds_);
-        binds = vec;
-        Expr::Binds { binds, ret, ty }
+        let mut val = *bind;
+        val.expr = self.transform_expr(val.expr);
+        let (expr, mut binds) = take_binds(val.expr);
+        val.expr = expr;
+        vec.append(&mut binds);
+        vec.push(val);
+
+        let ret = self.transform_expr(*ret);
+        let (ret, mut binds) = take_binds(ret);
+        vec.append(&mut binds);
+
+        vec.into_iter().rev().fold(ret, |ret, bind| Expr::Let {
+            bind: Box::new(bind),
+            ret: Box::new(ret),
+            ty: ty.clone(),
+        })
     }
 }
 
