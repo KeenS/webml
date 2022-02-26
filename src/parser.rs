@@ -742,6 +742,7 @@ impl Parser {
                 "unit" => Type::Tuple(vec![]),
                 "real" => Type::Real,
                 "int" => Type::Int,
+                "char" => Type::Char,
                 _ => Type::Datatype(name),
             })(i)
         }
