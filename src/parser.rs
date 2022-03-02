@@ -531,9 +531,11 @@ impl Parser {
                 count += 1;
                 match c {
                     '\\' => {
-                        count += 1;
                         let c = match chars.next() {
-                            Some(c) => c,
+                            Some(c) => {
+                                count += 1;
+                                c
+                            }
                             None => break,
                         };
                         match c {
