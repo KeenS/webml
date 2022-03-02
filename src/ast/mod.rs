@@ -154,6 +154,9 @@ pub enum DerivedExprKind<Ty> {
         then: Box<Expr<Ty>>,
         else_: Box<Expr<Ty>>,
     },
+    String {
+        value: Vec<u32>,
+    },
 }
 
 pub type UntypedPattern = Pattern<Empty>;

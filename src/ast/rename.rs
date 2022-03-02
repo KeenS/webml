@@ -216,6 +216,17 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
         }
     }
 
+    fn traverse_constructor(&mut self, arg: &mut Option<Box<CoreExpr<Ty>>>, name: &mut Symbol) {
+        if self.is_constructor(name) {
+            self.rename_constructor(name);
+        } else {
+            self.rename(name);
+        }
+
+        if let Some(arg) = arg {
+            self.traverse_expr(arg)
+        }
+    }
     fn traverse_sym(&mut self, name: &mut Symbol) {
         if self.is_constructor(name) {
             self.rename_constructor(name);

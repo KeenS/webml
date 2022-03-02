@@ -124,6 +124,7 @@ pub trait Traverse<Ty> {
     fn traverse_sym(&mut self, _name: &mut Symbol) {}
 
     fn traverse_lit(&mut self, _value: &mut Literal) {}
+    fn traverse_string(&mut self, _value: &mut Vec<u32>) {}
 
     fn traverse_pattern(&mut self, pattern: &mut Pattern<Ty>) {
         use PatternKind::*;

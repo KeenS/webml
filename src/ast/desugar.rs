@@ -155,6 +155,7 @@ impl Desugar {
             Symbol { name } => self.transform_symbol(name),
             Literal { value } => self.transform_literal(value),
             D(DerivedExprKind::If { cond, then, else_ }) => self.transform_if(cond, then, else_),
+            D(DerivedExprKind::String { value }) => self.transform_string(value),
         };
         UntypedCoreExpr { ty: expr.ty, inner }
     }
@@ -289,6 +290,36 @@ impl Desugar {
 
     fn transform_literal(&mut self, value: Literal) -> UntypedCoreExprKind {
         ExprKind::Literal { value }
+    }
+
+    fn transform_string(&mut self, value: Vec<u32>) -> UntypedCoreExprKind {
+        let empty = Expr {
+            ty: Empty {},
+            inner: ExprKind::Constructor {
+                arg: None,
+                name: Symbol::new("Empty"),
+            },
+        };
+        fn cons(s: UntypedCoreExpr, c: u32) -> UntypedCoreExpr {
+            let c = Expr {
+                ty: Empty {},
+                inner: ExprKind::Literal {
+                    value: Literal::Char(c),
+                },
+            };
+            let tuple = Expr {
+                ty: Empty {},
+                inner: ExprKind::Tuple { tuple: vec![c, s] },
+            };
+            Expr {
+                ty: Empty {},
+                inner: ExprKind::Constructor {
+                    arg: Some(Box::new(tuple)),
+                    name: Symbol::new("Char").into(),
+                },
+            }
+        }
+        value.into_iter().rfold(empty, cons).inner
     }
 
     fn transform_pattern(&mut self, pattern: UntypedPattern) -> UntypedPattern {

@@ -443,6 +443,9 @@ impl<Ty: PP> PP for DerivedExprKind<Ty> {
                 write!(w, "\n{}else ", ind)?;
                 else_.pp(w, indent + 4)?;
             }
+            String { value } => {
+                write!(w, "{:?}", value)?;
+            }
         }
         Ok(())
     }
@@ -462,6 +465,9 @@ impl<Ty: fmt::Display> fmt::Display for DerivedExprKind<Ty> {
                 write!(f, "if {:next$}\n", cond, next = next)?;
                 write!(f, "{}then {:next$}\n", ind, then, next = next)?;
                 write!(f, "{}else {:next$}", ind, else_, next = next)?;
+            }
+            String { value } => {
+                write!(f, "{:?}", value)?;
             }
         }
         Ok(())

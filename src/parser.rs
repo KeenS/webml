@@ -251,6 +251,7 @@ impl Parser {
                 self.expr1_float(),
                 self.expr1_int(),
                 self.expr1_char(),
+                self.expr1_string(),
                 self.expr1_bool(),
                 self.expr1_sym(),
                 self.expr1_builtincall(),
@@ -507,6 +508,19 @@ impl Parser {
         }
     }
 
+    fn expr1_string(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
+        move |i| {
+            let (i, s) = self.string_literal()(i)?;
+            Ok((
+                i,
+                Expr {
+                    ty: Empty {},
+                    inner: ExprKind::D(DerivedExprKind::String { value: s }),
+                },
+            ))
+        }
+    }
+
     fn string_literal(&self) -> impl Fn(Input) -> IResult<Input, Vec<u32>> + '_ {
         move |i| {
             let (i, _) = tag("\"")(i)?;
@@ -515,10 +529,38 @@ impl Parser {
             let mut count = 0;
             while let Some(c) = chars.next() {
                 count += 1;
-                if c == '"' {
-                    break;
+                match c {
+                    '\\' => {
+                        count += 1;
+                        let c = match chars.next() {
+                            Some(c) => c,
+                            None => break,
+                        };
+                        match c {
+                            'a' => s.push(7),
+                            'b' => s.push(8),
+                            't' => s.push(9),
+                            'n' => s.push(10),
+                            'v' => s.push(11),
+                            'f' => s.push(12),
+                            'r' => s.push(13),
+                            '"' => s.push('"' as u32),
+                            '\\' => s.push('\\' as u32),
+                            // \^{c}
+                            // \{ddd}
+                            // \u{xxxx}
+                            // \f... f\
+                            _ => {
+                                return Err(nom::Err::Error(nom::error::Error {
+                                    input: i,
+                                    code: nom::error::ErrorKind::Tag,
+                                }))
+                            }
+                        }
+                    }
+                    '"' => break,
+                    c => s.push(c as u32),
                 }
-                s.push(c as u32)
             }
             let (i, _) = i.take_split(count);
             Ok((i, s))
