@@ -13,7 +13,6 @@ pub use self::typing::Typer;
 pub use self::var2constructor::VarToConstructor;
 use crate::ast;
 use crate::prim::*;
-use nom;
 pub use std::collections::HashMap;
 use std::error::Error;
 use std::fmt;
@@ -423,7 +422,7 @@ pub enum TypeError {
     CannotInfer,
     FreeVar,
     NotFunction(ast::Expr<Type>),
-    ParseError(nom::Err<(String, nom::error::ErrorKind)>),
+    ParseError(String),
 }
 
 impl fmt::Display for TypeError {
@@ -442,25 +441,6 @@ impl Error for TypeError {
             &NotFunction(_) => "not a function",
             &ParseError(_) => "parse error",
         }
-    }
-}
-
-impl From<nom::Err<(String, nom::error::ErrorKind)>> for TypeError {
-    fn from(e: nom::Err<(String, nom::error::ErrorKind)>) -> Self {
-        // fn conv<'b>(e: nom::Err<&'b [u8]>) -> nom::Err<&'b str> {
-        //     use std::str::from_utf8;
-        //     use nom::Err::*;
-        //     match e {
-        //         Code(e) => Code(e),
-        //         Node(kind, box_err) => Node(kind, Box::new(conv(*box_err))),
-        //         Position(kind, slice) => Position(kind, from_utf8(slice).unwrap()),
-        //         NodePosition(kind, slice, box_err) => {
-        //             NodePosition(kind, from_utf8(slice).unwrap(), Box::new(conv(*box_err)))
-        //         }
-        //     }
-        // }
-
-        TypeError::ParseError(e)
     }
 }
 

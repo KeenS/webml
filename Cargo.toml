@@ -15,6 +15,7 @@ crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 nom = "7"
+nom_locate = "4"
 petgraph = "0.4.1"
 clap = "2.32.0"
 log = "0.4.8"

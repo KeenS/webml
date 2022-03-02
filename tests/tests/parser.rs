@@ -1,3 +1,4 @@
+use nom_locate::LocatedSpan;
 use webml::ast::{
     Declaration, DerivedDeclaration, DerivedExprKind, Empty, Expr, ExprKind, Pattern, PatternKind,
     Type, UntypedAst, AST,
@@ -5,8 +6,9 @@ use webml::ast::{
 use webml::prim::*;
 use webml::Parser;
 
-fn parse(input: &str) -> Result<UntypedAst, nom::Err<nom::error::Error<&str>>> {
+fn parse(input: &str) -> Result<UntypedAst, nom::Err<nom::error::Error<LocatedSpan<&str>>>> {
     let parser = Parser::new();
+    let input = LocatedSpan::new(input);
     let (_, iresult) = nom::combinator::all_consuming(parser.top())(input)?;
     Ok(iresult)
 }

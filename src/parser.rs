@@ -8,7 +8,8 @@ use nom::combinator::{all_consuming, complete, map, map_res, opt, recognize, val
 use nom::multi::{many0, many1, separated_list0, separated_list1};
 use nom::number::complete::recognize_float;
 use nom::sequence::{preceded, terminated, tuple};
-use nom::IResult;
+use nom::{IResult, InputIter, InputTake};
+use nom_locate::LocatedSpan;
 use std::cell::RefCell;
 use std::collections::{BTreeMap, HashMap};
 
@@ -22,6 +23,8 @@ static RESERVED: &[&str] = &["|", "=", "#"];
 pub struct Parser {
     infixes: RefCell<Vec<BTreeMap<u8, Vec<Symbol>>>>,
 }
+
+type Input<'a> = LocatedSpan<&'a str>;
 
 impl Parser {
     pub fn new() -> Self {
@@ -69,7 +72,7 @@ impl Parser {
 }
 
 impl Parser {
-    pub fn top(&self) -> impl Fn(&str) -> IResult<&str, UntypedAst> + '_ {
+    pub fn top(&self) -> impl Fn(Input) -> IResult<Input, UntypedAst> + '_ {
         move |i| {
             let (i, _) = self.space0()(i)?;
             let (i, tops) = separated_list0(self.space1(), self.decl())(i)?;
@@ -77,7 +80,7 @@ impl Parser {
             Ok((i, AST(tops)))
         }
     }
-    fn decl(&self) -> impl Fn(&str) -> IResult<&str, UntypedDeclaration> + '_ {
+    fn decl(&self) -> impl Fn(Input) -> IResult<Input, UntypedDeclaration> + '_ {
         move |i| {
             alt((
                 self.decl_datatype(),
@@ -88,7 +91,7 @@ impl Parser {
         }
     }
 
-    fn decl_datatype(&self) -> impl Fn(&str) -> IResult<&str, UntypedDeclaration> + '_ {
+    fn decl_datatype(&self) -> impl Fn(Input) -> IResult<Input, UntypedDeclaration> + '_ {
         move |i| {
             let (i, _) = tag("datatype")(i)?;
             let (i, _) = self.space1()(i)?;
@@ -104,7 +107,7 @@ impl Parser {
         }
     }
 
-    fn decl_val(&self) -> impl Fn(&str) -> IResult<&str, UntypedDeclaration> + '_ {
+    fn decl_val(&self) -> impl Fn(Input) -> IResult<Input, UntypedDeclaration> + '_ {
         move |i| {
             let (i, _) = tag("val")(i)?;
             let (i, _) = self.space1()(i)?;
@@ -124,7 +127,7 @@ impl Parser {
         }
     }
 
-    fn decl_fun(&self) -> impl Fn(&str) -> IResult<&str, UntypedDeclaration> + '_ {
+    fn decl_fun(&self) -> impl Fn(Input) -> IResult<Input, UntypedDeclaration> + '_ {
         move |i| {
             let (i, _) = tag("fun")(i)?;
             let (i, _) = self.space1()(i)?;
@@ -157,7 +160,7 @@ impl Parser {
         }
     }
 
-    fn decl_funbind(&self) -> impl Fn(&str) -> IResult<&str, (Symbol, Vec<UntypedPattern>)> + '_ {
+    fn decl_funbind(&self) -> impl Fn(Input) -> IResult<Input, (Symbol, Vec<UntypedPattern>)> + '_ {
         move |i| {
             map(
                 tuple((
@@ -170,7 +173,7 @@ impl Parser {
         }
     }
 
-    fn constructor_def(&self) -> impl Fn(&str) -> IResult<&str, (Symbol, Option<Type>)> + '_ {
+    fn constructor_def(&self) -> impl Fn(Input) -> IResult<Input, (Symbol, Option<Type>)> + '_ {
         move |i| {
             let (i, name) = self.symbol()(i)?;
             let (i, param) = opt(complete(map(
@@ -182,7 +185,7 @@ impl Parser {
         }
     }
 
-    fn decl_infix(&self) -> impl Fn(&str) -> IResult<&str, UntypedDeclaration> + '_ {
+    fn decl_infix(&self) -> impl Fn(Input) -> IResult<Input, UntypedDeclaration> + '_ {
         move |i| {
             let (i, _) = tag("infix")(i)?;
             let (i, _) = self.space1()(i)?;
@@ -201,7 +204,7 @@ impl Parser {
         }
     }
 
-    fn expr(&self) -> impl Fn(&str) -> IResult<&str, UntypedExpr> + '_ {
+    fn expr(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
         move |i| {
             alt((
                 self.expr_bind(),
@@ -213,7 +216,7 @@ impl Parser {
         }
     }
 
-    fn expr1(&self) -> impl Fn(&str) -> IResult<&str, UntypedExpr> + '_ {
+    fn expr1(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
         move |i| {
             alt((
                 self.expr1_tuple(),
@@ -230,7 +233,7 @@ impl Parser {
         }
     }
 
-    fn expr_bind(&self) -> impl Fn(&str) -> IResult<&str, UntypedExpr> + '_ {
+    fn expr_bind(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
         move |i| {
             self.with_scope(|| {
                 let (i, _) = tag("let")(i)?;
@@ -256,7 +259,7 @@ impl Parser {
         }
     }
 
-    fn expr_fun(&self) -> impl Fn(&str) -> IResult<&str, UntypedExpr> + '_ {
+    fn expr_fun(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
         move |i| {
             let (i, _) = tag("fn")(i)?;
             let (i, _) = self.space1()(i)?;
@@ -278,7 +281,7 @@ impl Parser {
         }
     }
 
-    fn expr_if(&self) -> impl Fn(&str) -> IResult<&str, UntypedExpr> + '_ {
+    fn expr_if(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
         move |i| {
             let (i, _) = tag("if")(i)?;
             let (i, _) = self.space1()(i)?;
@@ -305,7 +308,7 @@ impl Parser {
         }
     }
 
-    fn expr_case(&self) -> impl Fn(&str) -> IResult<&str, UntypedExpr> + '_ {
+    fn expr_case(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
         move |i| {
             let (i, _) = tag("case")(i)?;
             let (i, _) = self.space1()(i)?;
@@ -340,7 +343,7 @@ impl Parser {
     }
 
     // treat all of the infix operators and applications, i.e. sequeces of expressions
-    fn expr_infix_and_app(&self) -> impl Fn(&str) -> IResult<&str, UntypedExpr> + '_ {
+    fn expr_infix_and_app(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
         move |i| {
             // TODO: support 1+1
             let (i, mixed) = many1(map(tuple((self.space0(), self.expr1())), |(_, e)| e))(i)?;
@@ -420,21 +423,25 @@ impl Parser {
             Ok((i, e))
         }
     }
-    fn expr1_sym(&self) -> impl Fn(&str) -> IResult<&str, UntypedExpr> + '_ {
+    fn expr1_sym(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
         move |i| {
             // = is allowed to be used in expression exceptionally
-            map(alt((self.symbol(), map(tag("="), Symbol::new))), |name| {
-                Expr {
+            map(
+                alt((
+                    self.symbol(),
+                    map(tag("="), |i: Input| Symbol::new(*i.fragment())),
+                )),
+                |name| Expr {
                     ty: Empty {},
                     inner: ExprKind::Symbol { name },
-                }
-            })(i)
+                },
+            )(i)
         }
     }
 
-    fn expr1_int(&self) -> impl Fn(&str) -> IResult<&str, UntypedExpr> + '_ {
+    fn expr1_int(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
         move |i| {
-            map(digit1, |s: &str| Expr {
+            map(digit1, |s: Input| Expr {
                 ty: Empty {},
                 inner: ExprKind::Literal {
                     value: Literal::Int(s.parse().unwrap()),
@@ -443,11 +450,11 @@ impl Parser {
         }
     }
 
-    fn expr1_float(&self) -> impl Fn(&str) -> IResult<&str, UntypedExpr> + '_ {
+    fn expr1_float(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
         move |i| {
-            let not_int = verify(recognize_float, |s: &&str| s.contains('.'));
+            let not_int = verify(recognize_float, |s: &Input| s.contains('.'));
 
-            map(not_int, |s: &str| Expr {
+            map(not_int, |s: Input| Expr {
                 ty: Empty {},
                 inner: ExprKind::Literal {
                     value: Literal::Real(s.parse().unwrap()),
@@ -456,7 +463,7 @@ impl Parser {
         }
     }
 
-    fn expr1_char(&self) -> impl Fn(&str) -> IResult<&str, UntypedExpr> + '_ {
+    fn expr1_char(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
         move |i| {
             let (i, _) = tag("#")(i)?;
             let (i, s) = self.string_literal()(i)?;
@@ -474,23 +481,25 @@ impl Parser {
         }
     }
 
-    fn string_literal(&self) -> impl Fn(&str) -> IResult<&str, Vec<u32>> + '_ {
+    fn string_literal(&self) -> impl Fn(Input) -> IResult<Input, Vec<u32>> + '_ {
         move |i| {
             let (i, _) = tag("\"")(i)?;
             let mut s = vec![];
-            let mut chars = i.chars();
+            let mut chars = i.iter_elements();
+            let mut count = 0;
             while let Some(c) = chars.next() {
+                count += 1;
                 if c == '"' {
                     break;
                 }
                 s.push(c as u32)
             }
-            let i = chars.as_str();
+            let (i, _) = i.take_split(count);
             Ok((i, s))
         }
     }
 
-    fn expr1_bool(&self) -> impl Fn(&str) -> IResult<&str, UntypedExpr> + '_ {
+    fn expr1_bool(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
         move |i| {
             alt((
                 value(
@@ -517,7 +526,7 @@ impl Parser {
         }
     }
 
-    fn expr1_paren(&self) -> impl Fn(&str) -> IResult<&str, UntypedExpr> + '_ {
+    fn expr1_paren(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
         move |i| {
             let (i, _) = tag("(")(i)?;
             let (i, _) = self.space0()(i)?;
@@ -528,7 +537,7 @@ impl Parser {
         }
     }
 
-    fn expr1_tuple(&self) -> impl Fn(&str) -> IResult<&str, UntypedExpr> + '_ {
+    fn expr1_tuple(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
         move |i| {
             let (i, _) = tag("(")(i)?;
             let (i, _) = self.space0()(i)?;
@@ -550,7 +559,7 @@ impl Parser {
         }
     }
 
-    fn expr1_unit(&self) -> impl Fn(&str) -> IResult<&str, UntypedExpr> + '_ {
+    fn expr1_unit(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
         move |i| {
             value(
                 Expr {
@@ -562,12 +571,12 @@ impl Parser {
         }
     }
 
-    fn expr1_builtincall(&self) -> impl Fn(&str) -> IResult<&str, UntypedExpr> + '_ {
+    fn expr1_builtincall(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
         move |i| {
             let (i, _) = tag("_builtincall")(i)?;
             let (i, _) = self.space0()(i)?;
             let (i, _) = tag("\"")(i)?;
-            let (i, fun) = map_res(alphanumeric1, |name| match name {
+            let (i, fun) = map_res(alphanumeric1, |name: Input| match &name as &str {
                 "add" => Ok(BIF::Add),
                 "sub" => Ok(BIF::Sub),
                 "mul" => Ok(BIF::Mul),
@@ -599,9 +608,9 @@ impl Parser {
     }
 
     /// `_externcall ("module"."fun": (arg, ty) -> retty) (arg, s)`
-    fn expr1_externcall(&self) -> impl Fn(&str) -> IResult<&str, UntypedExpr> + '_ {
+    fn expr1_externcall(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
         move |i| {
-            fn name_parser(i: &str) -> IResult<&str, &str> {
+            fn name_parser(i: Input) -> IResult<Input, Input> {
                 let allowed = recognize(many1(nom::character::complete::none_of("\"")));
                 preceded(tag("\""), terminated(allowed, tag("\"")))(i)
             }
@@ -609,11 +618,11 @@ impl Parser {
             let (i, _) = self.space0()(i)?;
             let (i, _) = tag("(")(i)?;
             let (i, _) = self.space0()(i)?;
-            let (i, module) = map(name_parser, String::from)(i)?;
+            let (i, module) = map(name_parser, |i| i.to_string())(i)?;
             let (i, _) = self.space0()(i)?;
             let (i, _) = tag(".")(i)?;
             let (i, _) = self.space0()(i)?;
-            let (i, fun) = map(name_parser, String::from)(i)?;
+            let (i, fun) = map(name_parser, |i| i.to_string())(i)?;
             let (i, _) = self.space0()(i)?;
             let (i, _) = tag(":")(i)?;
             let (i, _) = self.space0()(i)?;
@@ -650,23 +659,23 @@ impl Parser {
         }
     }
 
-    fn typename(&self) -> impl Fn(&str) -> IResult<&str, Type> + '_ {
+    fn typename(&self) -> impl Fn(Input) -> IResult<Input, Type> + '_ {
         move |i| self.typename0()(i)
     }
 
-    fn typename0(&self) -> impl Fn(&str) -> IResult<&str, Type> + '_ {
+    fn typename0(&self) -> impl Fn(Input) -> IResult<Input, Type> + '_ {
         move |i| alt((complete(self.typename0_fun()), self.typename1()))(i)
     }
 
-    fn typename1(&self) -> impl Fn(&str) -> IResult<&str, Type> + '_ {
+    fn typename1(&self) -> impl Fn(Input) -> IResult<Input, Type> + '_ {
         move |i| alt((self.typename1_tuple(), self.typename2()))(i)
     }
 
-    fn typename2(&self) -> impl Fn(&str) -> IResult<&str, Type> + '_ {
+    fn typename2(&self) -> impl Fn(Input) -> IResult<Input, Type> + '_ {
         move |i| alt((self.typename2_paren(), self.typename2_datatype()))(i)
     }
 
-    fn typename0_fun(&self) -> impl Fn(&str) -> IResult<&str, Type> + '_ {
+    fn typename0_fun(&self) -> impl Fn(Input) -> IResult<Input, Type> + '_ {
         move |i| {
             let (i, arg) = self.typename1()(i)?;
             let (i, _) = self.space0()(i)?;
@@ -677,7 +686,7 @@ impl Parser {
         }
     }
 
-    fn typename1_tuple(&self) -> impl Fn(&str) -> IResult<&str, Type> + '_ {
+    fn typename1_tuple(&self) -> impl Fn(Input) -> IResult<Input, Type> + '_ {
         move |i| {
             let sep = tuple((self.space0(), tag("*"), self.space0()));
 
@@ -690,7 +699,7 @@ impl Parser {
         }
     }
 
-    fn typename2_paren(&self) -> impl Fn(&str) -> IResult<&str, Type> + '_ {
+    fn typename2_paren(&self) -> impl Fn(Input) -> IResult<Input, Type> + '_ {
         move |i| {
             let (i, _) = tag("(")(i)?;
             let (i, _) = self.space0()(i)?;
@@ -701,7 +710,7 @@ impl Parser {
         }
     }
 
-    fn typename2_datatype(&self) -> impl Fn(&str) -> IResult<&str, Type> + '_ {
+    fn typename2_datatype(&self) -> impl Fn(Input) -> IResult<Input, Type> + '_ {
         move |i| {
             map(self.symbol(), |name| match name.0.as_str() {
                 "unit" => Type::Tuple(vec![]),
@@ -712,58 +721,58 @@ impl Parser {
         }
     }
 
-    fn symbol_eq(&self) -> impl Fn(&str) -> IResult<&str, Symbol> + '_ {
+    fn symbol_eq(&self) -> impl Fn(Input) -> IResult<Input, Symbol> + '_ {
         move |i| alt((self.symbol_alphanumeric(), self.symbol_symbolic_eq()))(i)
     }
 
-    fn symbol(&self) -> impl Fn(&str) -> IResult<&str, Symbol> + '_ {
+    fn symbol(&self) -> impl Fn(Input) -> IResult<Input, Symbol> + '_ {
         move |i| alt((self.symbol_alphanumeric(), self.symbol_symbolic()))(i)
     }
 
-    fn op_symbol_eq(&self) -> impl Fn(&str) -> IResult<&str, Symbol> + '_ {
+    fn op_symbol_eq(&self) -> impl Fn(Input) -> IResult<Input, Symbol> + '_ {
         move |i| alt((self.op_symbol_alphanumeric(), self.op_symbol_symbolic_eq()))(i)
     }
 
-    fn op_symbol_alphanumeric(&self) -> impl Fn(&str) -> IResult<&str, Symbol> + '_ {
+    fn op_symbol_alphanumeric(&self) -> impl Fn(Input) -> IResult<Input, Symbol> + '_ {
         move |i| {
             let (i, _) = opt(tuple((tag("op"), self.space1())))(i)?;
             self.symbol_alphanumeric()(i)
         }
     }
 
-    fn op_symbol_symbolic_eq(&self) -> impl Fn(&str) -> IResult<&str, Symbol> + '_ {
+    fn op_symbol_symbolic_eq(&self) -> impl Fn(Input) -> IResult<Input, Symbol> + '_ {
         move |i| {
             let (i, _) = opt(tuple((tag("op"), self.space0())))(i)?;
             alt((self.symbol_symbolic(), value(Symbol::new("="), tag("="))))(i)
         }
     }
 
-    fn symbol_alphanumeric(&self) -> impl Fn(&str) -> IResult<&str, Symbol> + '_ {
+    fn symbol_alphanumeric(&self) -> impl Fn(Input) -> IResult<Input, Symbol> + '_ {
         move |i| {
             // FIXME: collect syntax is [a-zA-Z'_][a-zA-Z'_0-9]*
-            let (i, sym) = verify(alphanumeric1, |s: &str| !KEYWORDS.contains(&s))(i)?;
+            let (i, sym) = verify(alphanumeric1, |s: &Input| !KEYWORDS.contains(&s.fragment()))(i)?;
             Ok((i, Symbol::new(sym.to_string())))
         }
     }
 
-    fn symbol_symbolic_eq(&self) -> impl Fn(&str) -> IResult<&str, Symbol> + '_ {
+    fn symbol_symbolic_eq(&self) -> impl Fn(Input) -> IResult<Input, Symbol> + '_ {
         move |i| alt((self.symbol_symbolic(), value(Symbol::new("="), tag("="))))(i)
     }
 
-    fn symbol_symbolic(&self) -> impl Fn(&str) -> IResult<&str, Symbol> + '_ {
+    fn symbol_symbolic(&self) -> impl Fn(Input) -> IResult<Input, Symbol> + '_ {
         move |i| {
             let symbolic1 = recognize(many1(nom::character::complete::one_of(
                 "!%&$#+-/:<=>?@\\~'^|*",
             )));
 
-            let (i, sym) = verify(symbolic1, |s: &str| {
-                !KEYWORDS.contains(&s) && !RESERVED.contains(&s)
+            let (i, sym) = verify(symbolic1, |s: &Input| {
+                !KEYWORDS.contains(s.fragment()) && !RESERVED.contains(&s)
             })(i)?;
             Ok((i, Symbol::new(sym.to_string())))
         }
     }
 
-    fn space0(&self) -> impl Fn(&str) -> IResult<&str, ()> + '_ {
+    fn space0(&self) -> impl Fn(Input) -> IResult<Input, ()> + '_ {
         move |i| {
             map(
                 many0(alt((map(multispace1, |_| ()), self.comment()))),
@@ -772,7 +781,7 @@ impl Parser {
         }
     }
 
-    fn space1(&self) -> impl Fn(&str) -> IResult<&str, ()> + '_ {
+    fn space1(&self) -> impl Fn(Input) -> IResult<Input, ()> + '_ {
         move |i| {
             map(
                 many1(alt((map(multispace1, |_| ()), self.comment()))),
@@ -781,20 +790,24 @@ impl Parser {
         }
     }
 
-    fn comment(&self) -> impl Fn(&str) -> IResult<&str, ()> + '_ {
+    fn comment(&self) -> impl Fn(Input) -> IResult<Input, ()> + '_ {
         move |i| {
             let (i, _) = tag("(*")(i)?;
             let mut nest = 1;
-            let mut chars = i.chars();
+            let mut chars = i.iter_elements();
+            let mut count = 0;
             while let Some(c) = chars.next() {
+                count += 1;
                 match c {
                     '(' => {
                         if let Some('*') = chars.next() {
+                            count += 1;
                             nest += 1;
                         }
                     }
                     '*' => {
                         if let Some(')') = chars.next() {
+                            count += 1;
                             nest -= 1;
                             if nest == 0 {
                                 break;
@@ -807,16 +820,16 @@ impl Parser {
             if nest != 0 {
                 panic!("parser reached EOF while pasing comment; maybe (* is not closed?");
             }
-            let i = chars.as_str();
+            let (i, _) = i.take_split(count);
             Ok((i, ()))
         }
     }
 
-    fn pattern(&self) -> impl Fn(&str) -> IResult<&str, UntypedPattern> + '_ {
+    fn pattern(&self) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
         move |i| alt((self.pattern_constructor(), self.pattern_atmic()))(i)
     }
 
-    fn pattern_atmic(&self) -> impl Fn(&str) -> IResult<&str, UntypedPattern> + '_ {
+    fn pattern_atmic(&self) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
         move |i| {
             alt((
                 self.pattern_bool(),
@@ -831,7 +844,7 @@ impl Parser {
         }
     }
 
-    fn pattern_bool(&self) -> impl Fn(&str) -> IResult<&str, UntypedPattern> + '_ {
+    fn pattern_bool(&self) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
         move |i| {
             alt((
                 map(tag("true"), |_| Pattern {
@@ -852,9 +865,9 @@ impl Parser {
         }
     }
 
-    fn pattern_int(&self) -> impl Fn(&str) -> IResult<&str, UntypedPattern> + '_ {
+    fn pattern_int(&self) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
         move |i| {
-            map(digit1, |s: &str| Pattern {
+            map(digit1, |s: Input| Pattern {
                 ty: Empty {},
                 inner: PatternKind::Constant {
                     value: s.parse().unwrap(),
@@ -863,7 +876,7 @@ impl Parser {
         }
     }
 
-    fn pattern_char(&self) -> impl Fn(&str) -> IResult<&str, UntypedPattern> + '_ {
+    fn pattern_char(&self) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
         move |i| {
             let (i, _) = tag("#")(i)?;
             let (i, s) = self.string_literal()(i)?;
@@ -879,7 +892,7 @@ impl Parser {
         }
     }
 
-    fn pattern_tuple(&self) -> impl Fn(&str) -> IResult<&str, UntypedPattern> + '_ {
+    fn pattern_tuple(&self) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
         move |i| {
             let (i, _) = tag("(")(i)?;
             let (i, _) = self.space0()(i)?;
@@ -901,7 +914,7 @@ impl Parser {
         }
     }
 
-    fn pattern_unit(&self) -> impl Fn(&str) -> IResult<&str, UntypedPattern> + '_ {
+    fn pattern_unit(&self) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
         move |i| {
             value(
                 Pattern {
@@ -916,7 +929,7 @@ impl Parser {
     // require constructor to have arg for now.
     // constructor withouth arg is parsed as variable and
     //  will be converted in later phases
-    fn pattern_constructor(&self) -> impl Fn(&str) -> IResult<&str, UntypedPattern> + '_ {
+    fn pattern_constructor(&self) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
         move |i| {
             let (i, name) = self.symbol()(i)?;
             let (i, _) = self.space0()(i)?;
@@ -934,7 +947,7 @@ impl Parser {
         }
     }
 
-    fn pattern_var(&self) -> impl Fn(&str) -> IResult<&str, UntypedPattern> + '_ {
+    fn pattern_var(&self) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
         move |i| {
             map(self.symbol(), |name| Pattern {
                 ty: Empty {},
@@ -943,7 +956,7 @@ impl Parser {
         }
     }
 
-    fn pattern_wildcard(&self) -> impl Fn(&str) -> IResult<&str, UntypedPattern> + '_ {
+    fn pattern_wildcard(&self) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
         move |i| {
             value(
                 Pattern {
@@ -955,7 +968,7 @@ impl Parser {
         }
     }
 
-    fn pattern_paren(&self) -> impl Fn(&str) -> IResult<&str, UntypedPattern> + '_ {
+    fn pattern_paren(&self) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
         move |i| {
             let (i, _) = tag("(")(i)?;
             let (i, _) = self.space0()(i)?;
@@ -1046,12 +1059,14 @@ where
 
 #[test]
 fn test_expr_infix_and_app() {
+    use nom::InputTake;
     let input = "true";
-    let ret = Parser::new().expr_infix_and_app()(input).unwrap();
+    let ret = Parser::new().expr_infix_and_app()(Input::new(input)).unwrap();
+    let (input_remaining, _) = Input::new(input).take_split(input.len());
     assert_eq!(
         ret,
         (
-            "",
+            input_remaining,
             Expr {
                 ty: Empty {},
                 inner: ExprKind::Constructor {
@@ -1065,12 +1080,15 @@ fn test_expr_infix_and_app() {
 
 #[test]
 fn test_expr_infix_and_app2() {
+    use nom::InputTake;
+
     let input = "f arg";
-    let ret = Parser::new().expr_infix_and_app()(input).unwrap();
+    let ret = Parser::new().expr_infix_and_app()(Input::new(input)).unwrap();
+    let (input_remaining, _) = Input::new(input).take_split(input.len());
     assert_eq!(
         ret,
         (
-            "",
+            input_remaining,
             Expr {
                 ty: Empty {},
                 inner: ExprKind::App {
@@ -1098,17 +1116,10 @@ impl Pass<String, TypeError> for Parser {
     type Target = UntypedAst;
 
     fn trans(&mut self, input: String, _: &Config) -> std::result::Result<Self::Target, TypeError> {
-        match all_consuming(self.top())(&input) {
+        let input = Input::new(&input);
+        match all_consuming(self.top())(input) {
             Ok((_, iresult)) => Ok(iresult),
-            Err(nom::Err::Incomplete(e)) => Err(nom::Err::Incomplete(e).into()),
-            Err(nom::Err::Error(nom::error::Error {
-                input: s,
-                code: kind,
-            })) => Err(nom::Err::Error((s.into(), kind)).into()),
-            Err(nom::Err::Failure(nom::error::Error {
-                input: s,
-                code: kind,
-            })) => Err(nom::Err::Error((s.into(), kind)).into()),
+            Err(e) => Err(TypeError::ParseError(format!("{e}"))),
         }
     }
 }
