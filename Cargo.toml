@@ -14,7 +14,7 @@ wasm-opt = false
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-nom = "6"
+nom = "7"
 petgraph = "0.4.1"
 clap = "2.32.0"
 log = "0.4.8"
