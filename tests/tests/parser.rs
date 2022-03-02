@@ -5,7 +5,7 @@ use webml::ast::{
 use webml::prim::*;
 use webml::Parser;
 
-fn parse(input: &str) -> Result<UntypedAst, nom::Err<(&str, nom::error::ErrorKind)>> {
+fn parse(input: &str) -> Result<UntypedAst, nom::Err<nom::error::Error<&str>>> {
     let parser = Parser::new();
     let (_, iresult) = nom::combinator::all_consuming(parser.top())(input)?;
     Ok(iresult)

@@ -5,7 +5,7 @@ use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::character::complete::{alphanumeric1, digit1, multispace1};
 use nom::combinator::{all_consuming, complete, map, map_res, opt, recognize, value, verify};
-use nom::multi::{many0, many1, separated_list, separated_nonempty_list};
+use nom::multi::{many0, many1, separated_list0, separated_list1};
 use nom::number::complete::recognize_float;
 use nom::sequence::{preceded, terminated, tuple};
 use nom::IResult;
@@ -72,7 +72,7 @@ impl Parser {
     pub fn top(&self) -> impl Fn(&str) -> IResult<&str, UntypedAst> + '_ {
         move |i| {
             let (i, _) = self.space0()(i)?;
-            let (i, tops) = separated_list(self.space1(), self.decl())(i)?;
+            let (i, tops) = separated_list0(self.space1(), self.decl())(i)?;
             let (i, _) = self.space0()(i)?;
             Ok((i, AST(tops)))
         }
@@ -96,7 +96,7 @@ impl Parser {
             let (i, _) = self.space0()(i)?;
             let (i, _) = tag("=")(i)?;
             let (i, _) = self.space0()(i)?;
-            let (i, constructors) = separated_nonempty_list(
+            let (i, constructors) = separated_list1(
                 tuple((self.space0(), tag("|"), self.space0())),
                 self.constructor_def(),
             )(i)?;
@@ -128,7 +128,7 @@ impl Parser {
         move |i| {
             let (i, _) = tag("fun")(i)?;
             let (i, _) = self.space1()(i)?;
-            let (i, cs) = separated_nonempty_list(
+            let (i, cs) = separated_list0(
                 tuple((self.space0(), tag("|"), self.space0())),
                 map(
                     tuple((
@@ -146,7 +146,10 @@ impl Parser {
             let mut clauses = vec![(params, expr)];
             for (new_name, params, expr) in cs {
                 if name != new_name {
-                    return Err(nom::Err::Error((i, nom::error::ErrorKind::Tag)));
+                    return Err(nom::Err::Error(nom::error::Error {
+                        input: i,
+                        code: nom::error::ErrorKind::Tag,
+                    }));
                 }
                 clauses.push((params, expr))
             }
@@ -160,7 +163,7 @@ impl Parser {
                 tuple((
                     self.op_symbol_eq(),
                     self.space0(),
-                    separated_nonempty_list(self.space1(), self.pattern_atmic()),
+                    separated_list0(self.space1(), self.pattern_atmic()),
                 )),
                 |(name, _, pats)| (name, pats),
             )(i)
@@ -185,7 +188,7 @@ impl Parser {
             let (i, _) = self.space1()(i)?;
             let (i, priority) = opt(digit1)(i)?;
             let (i, _) = self.space1()(i)?;
-            let (i, names) = separated_nonempty_list(self.space1(), self.symbol_eq())(i)?;
+            let (i, names) = separated_list0(self.space1(), self.symbol_eq())(i)?;
             let priority = priority.map(|s| {
                 s.parse()
                     .expect("internal error: falied to parse digits as integer")
@@ -232,7 +235,7 @@ impl Parser {
             self.with_scope(|| {
                 let (i, _) = tag("let")(i)?;
                 let (i, _) = self.space1()(i)?;
-                let (i, binds) = separated_list(self.space1(), self.decl())(i)?;
+                let (i, binds) = separated_list1(self.space1(), self.decl())(i)?;
                 let (i, _) = self.space1()(i)?;
                 let (i, _) = tag("in")(i)?;
                 let (i, _) = self.space1()(i)?;
@@ -310,7 +313,7 @@ impl Parser {
             let (i, _) = self.space1()(i)?;
             let (i, _) = tag("of")(i)?;
             let (i, _) = self.space1()(i)?;
-            let (i, clauses) = separated_nonempty_list(
+            let (i, clauses) = separated_list0(
                 tuple((self.space0(), tag("|"), self.space0())),
                 map(
                     tuple((
@@ -582,10 +585,8 @@ impl Parser {
             let (i, _) = tag("\"")(i)?;
             let (i, _) = self.space0()(i)?;
             let (i, _) = tag("(")(i)?;
-            let (i, args) = separated_nonempty_list(
-                tuple((self.space0(), tag(","), self.space0())),
-                self.expr(),
-            )(i)?;
+            let (i, args) =
+                separated_list1(tuple((self.space0(), tag(","), self.space0())), self.expr())(i)?;
             let (i, _) = tag(")")(i)?;
             Ok((
                 i,
@@ -617,7 +618,7 @@ impl Parser {
             let (i, _) = tag(":")(i)?;
             let (i, _) = self.space0()(i)?;
             let (i, _) = tag("(")(i)?;
-            let (i, argty) = separated_nonempty_list(
+            let (i, argty) = separated_list1(
                 tuple((self.space0(), tag(","), self.space0())),
                 self.typename(),
             )(i)?;
@@ -630,10 +631,8 @@ impl Parser {
             let (i, _) = tag(")")(i)?;
             let (i, _) = self.space0()(i)?;
             let (i, _) = tag("(")(i)?;
-            let (i, args) = separated_nonempty_list(
-                tuple((self.space0(), tag(","), self.space0())),
-                self.expr(),
-            )(i)?;
+            let (i, args) =
+                separated_list1(tuple((self.space0(), tag(","), self.space0())), self.expr())(i)?;
             let (i, _) = tag(")")(i)?;
             Ok((
                 i,
@@ -1102,8 +1101,14 @@ impl Pass<String, TypeError> for Parser {
         match all_consuming(self.top())(&input) {
             Ok((_, iresult)) => Ok(iresult),
             Err(nom::Err::Incomplete(e)) => Err(nom::Err::Incomplete(e).into()),
-            Err(nom::Err::Error((s, kind))) => Err(nom::Err::Error((s.into(), kind)).into()),
-            Err(nom::Err::Failure((s, kind))) => Err(nom::Err::Error((s.into(), kind)).into()),
+            Err(nom::Err::Error(nom::error::Error {
+                input: s,
+                code: kind,
+            })) => Err(nom::Err::Error((s.into(), kind)).into()),
+            Err(nom::Err::Failure(nom::error::Error {
+                input: s,
+                code: kind,
+            })) => Err(nom::Err::Error((s.into(), kind)).into()),
         }
     }
 }
