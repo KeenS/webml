@@ -59,7 +59,7 @@ Compiles only minimal subset of SML codes. The garbage collector is not complete
             - [ ] `123e~456`
         - [ ] word
         - [x] char
-        - [ ] string
+        - [x] string
     + [x] value identifier
     + [ ] `op`
     + [ ] record
@@ -127,7 +127,7 @@ Compiles only minimal subset of SML codes. The garbage collector is not complete
         - [x] `false`
     + [x] `int`
     + [ ] `word`
-    + [ ] `string`
+    + [x] `string`
     + [x] `char`
     + [ ] `list`
         - [ ] `nil`
