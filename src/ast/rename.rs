@@ -336,7 +336,10 @@ impl Transform<Empty> for WrapBIF {
             if let Some(bif) = self.bif_table.get(&name.0).cloned() {
                 use BIF::*;
                 return match bif {
-                    Add | Sub | Mul | Div | Divf | Mod | Eq | Neq | Gt | Ge | Lt | Le => {
+                    Add | Sub | Mul | Div | Divf | Mod | Eq | Neq | Gt | Ge | Lt | Le | AddInt
+                    | AddReal | SubInt | SubReal | MulInt | MulReal | ModInt | EqInt | EqReal
+                    | EqChar | NeqInt | NeqReal | NeqChar | GtInt | GtReal | GtChar | GeInt
+                    | GeReal | GeChar | LtInt | LtReal | LtChar | LeInt | LeReal | LeChar => {
                         let tuple = self.gensym("tuple");
                         let l = self.gensym("x");
                         let r = self.gensym("y");

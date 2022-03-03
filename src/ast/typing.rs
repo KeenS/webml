@@ -398,6 +398,12 @@ impl TyEnv {
                         self.infer_expr(r)?;
                         Ok(())
                     }
+                    AddInt | AddReal | SubInt | SubReal | MulInt | MulReal | ModInt | EqInt
+                    | EqReal | EqChar | NeqInt | NeqReal | NeqChar | GtInt | GtReal | GtChar
+                    | GeInt | GeReal | GeChar | LtInt | LtReal | LtChar | LeInt | LeReal
+                    | LeChar => {
+                        panic!("specified BIF will not be appear before type inference")
+                    }
                 }
             }
             ExternCall {

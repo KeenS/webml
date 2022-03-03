@@ -421,3 +421,87 @@ impl fmt::Display for HTy {
         Ok(())
     }
 }
+
+impl PP for BIF {
+    fn pp<W: io::Write>(&self, w: &mut W, _indent: usize) -> io::Result<()> {
+        use self::BIF::*;
+        match self {
+            AddInt | AddReal => {
+                write!(w, "add")?;
+            }
+            SubInt | SubReal => {
+                write!(w, "sub")?;
+            }
+            MulInt | MulReal => {
+                write!(w, "mul")?;
+            }
+            DivInt | DivReal => {
+                write!(w, "div")?;
+            }
+            ModInt => {
+                write!(w, "mod")?;
+            }
+            EqInt | EqReal | EqChar => {
+                write!(w, "eq")?;
+            }
+            NeqInt | NeqReal | NeqChar => {
+                write!(w, "neq")?;
+            }
+            GtInt | GtReal | GtChar => {
+                write!(w, "gt")?;
+            }
+            GeInt | GeReal | GeChar => {
+                write!(w, "ge")?;
+            }
+            LtInt | LtReal | LtChar => {
+                write!(w, "lt")?;
+            }
+            LeInt | LeReal | LeChar => {
+                write!(w, "le")?;
+            }
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Display for BIF {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use self::BIF::*;
+        match self {
+            AddInt | AddReal => {
+                write!(f, "add")?;
+            }
+            SubInt | SubReal => {
+                write!(f, "sub")?;
+            }
+            MulInt | MulReal => {
+                write!(f, "mul")?;
+            }
+            DivInt | DivReal => {
+                write!(f, "div")?;
+            }
+            ModInt => {
+                write!(f, "mod")?;
+            }
+            EqInt | EqReal | EqChar => {
+                write!(f, "eq")?;
+            }
+            NeqInt | NeqReal | NeqChar => {
+                write!(f, "neq")?;
+            }
+            GtInt | GtReal | GtChar => {
+                write!(f, "gt")?;
+            }
+            GeInt | GeReal | GeChar => {
+                write!(f, "ge")?;
+            }
+            LtInt | LtReal | LtChar => {
+                write!(f, "lt")?;
+            }
+            LeInt | LeReal | LeChar => {
+                write!(f, "le")?;
+            }
+        }
+        Ok(())
+    }
+}

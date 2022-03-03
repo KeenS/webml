@@ -120,153 +120,44 @@ impl MIR2LIRPass {
                                 LTy::FPtr => ops.push(MoveI32(reg!(var), reg!(sym))),
                             }
                         }
-                        &m::Add {
+                        &m::BinOp {
                             ref var,
-                            ref ty,
                             ref l,
                             ref r,
+                            ref binop,
+                            ..
                         } => {
-                            if ty == &mir::EbbTy::Int {
-                                ops.push(AddI32(reg!(var), reg!(l), reg!(r)));
-                            } else {
-                                assert_eq!(ty, &mir::EbbTy::Float);
-                                ops.push(AddF64(reg!(var), reg!(l), reg!(r)));
+                            use mir::BinOp;
+                            match binop {
+                                BinOp::AddInt => ops.push(AddI32(reg!(var), reg!(l), reg!(r))),
+                                BinOp::AddReal => ops.push(AddF64(reg!(var), reg!(l), reg!(r))),
+                                BinOp::SubInt => ops.push(SubI32(reg!(var), reg!(l), reg!(r))),
+                                BinOp::SubReal => ops.push(SubF64(reg!(var), reg!(l), reg!(r))),
+                                BinOp::MulInt => ops.push(MulI32(reg!(var), reg!(l), reg!(r))),
+                                BinOp::MulReal => ops.push(MulF64(reg!(var), reg!(l), reg!(r))),
+                                BinOp::DivInt => ops.push(DivI32(reg!(var), reg!(l), reg!(r))),
+                                BinOp::DivReal => ops.push(DivF64(reg!(var), reg!(l), reg!(r))),
+                                BinOp::ModInt => ops.push(ModI32(reg!(var), reg!(l), reg!(r))),
+                                BinOp::EqInt => ops.push(EqI32(reg!(var), reg!(l), reg!(r))),
+                                BinOp::EqReal => ops.push(EqF64(reg!(var), reg!(l), reg!(r))),
+                                BinOp::EqChar => ops.push(EqU32(reg!(var), reg!(l), reg!(r))),
+                                BinOp::NeqInt => ops.push(NeqI32(reg!(var), reg!(l), reg!(r))),
+                                BinOp::NeqReal => ops.push(NeqF64(reg!(var), reg!(l), reg!(r))),
+                                BinOp::NeqChar => ops.push(NeqU32(reg!(var), reg!(l), reg!(r))),
+                                BinOp::GtInt => ops.push(GtI32(reg!(var), reg!(l), reg!(r))),
+                                BinOp::GtReal => ops.push(GtF64(reg!(var), reg!(l), reg!(r))),
+                                BinOp::GtChar => ops.push(GtU32(reg!(var), reg!(l), reg!(r))),
+                                BinOp::GeInt => ops.push(GeI32(reg!(var), reg!(l), reg!(r))),
+                                BinOp::GeReal => ops.push(GeF64(reg!(var), reg!(l), reg!(r))),
+                                BinOp::GeChar => ops.push(GeU32(reg!(var), reg!(l), reg!(r))),
+                                BinOp::LtInt => ops.push(LtI32(reg!(var), reg!(l), reg!(r))),
+                                BinOp::LtReal => ops.push(LtF64(reg!(var), reg!(l), reg!(r))),
+                                BinOp::LtChar => ops.push(LtU32(reg!(var), reg!(l), reg!(r))),
+                                BinOp::LeInt => ops.push(LeI32(reg!(var), reg!(l), reg!(r))),
+                                BinOp::LeReal => ops.push(LeF64(reg!(var), reg!(l), reg!(r))),
+                                BinOp::LeChar => ops.push(LeU32(reg!(var), reg!(l), reg!(r))),
                             }
                         }
-                        &m::Sub {
-                            ref var,
-                            ref ty,
-                            ref l,
-                            ref r,
-                        } => {
-                            if ty == &mir::EbbTy::Int {
-                                ops.push(SubI32(reg!(var), reg!(l), reg!(r)));
-                            } else {
-                                assert_eq!(ty, &mir::EbbTy::Float);
-                                ops.push(SubF64(reg!(var), reg!(l), reg!(r)));
-                            }
-                        }
-                        &m::Mul {
-                            ref var,
-                            ref ty,
-                            ref l,
-                            ref r,
-                        } => {
-                            if ty == &mir::EbbTy::Int {
-                                ops.push(MulI32(reg!(var), reg!(l), reg!(r)));
-                            } else {
-                                assert_eq!(ty, &mir::EbbTy::Float);
-                                ops.push(MulF64(reg!(var), reg!(l), reg!(r)));
-                            }
-                        }
-                        &m::DivInt {
-                            ref var,
-                            ref l,
-                            ref r,
-                            ..
-                        } => {
-                            ops.push(DivI32(reg!(var), reg!(l), reg!(r)));
-                        }
-                        &m::DivFloat {
-                            ref var,
-                            ref l,
-                            ref r,
-                            ..
-                        } => {
-                            ops.push(DivF64(reg!(var), reg!(l), reg!(r)));
-                        }
-                        &m::Mod {
-                            ref var,
-                            ref l,
-                            ref r,
-                            ..
-                        } => {
-                            ops.push(ModI32(reg!(var), reg!(l), reg!(r)));
-                        }
-                        &m::Eq {
-                            ref var,
-                            ref l,
-                            ref r,
-                            ..
-                        } => match (&symbol_table[l].0, &symbol_table[r].0) {
-                            (&LTy::I32, &LTy::I32) => ops.push(EqI32(reg!(var), reg!(l), reg!(r))),
-                            (&LTy::U32, &LTy::U32) => ops.push(EqU32(reg!(var), reg!(l), reg!(r))),
-                            (&LTy::I64, &LTy::I64) => ops.push(EqI64(reg!(var), reg!(l), reg!(r))),
-                            (&LTy::U64, &LTy::U64) => ops.push(EqU64(reg!(var), reg!(l), reg!(r))),
-                            (&LTy::F32, &LTy::F32) => ops.push(EqF32(reg!(var), reg!(l), reg!(r))),
-                            (&LTy::F64, &LTy::F64) => ops.push(EqF64(reg!(var), reg!(l), reg!(r))),
-                            ty => panic!("unknown overloaded ty {:?} for eq", ty),
-                        },
-                        &m::Neq {
-                            ref var,
-                            ref l,
-                            ref r,
-                            ..
-                        } => match (&symbol_table[l].0, &symbol_table[r].0) {
-                            (&LTy::I32, &LTy::I32) => ops.push(NeqI32(reg!(var), reg!(l), reg!(r))),
-                            (&LTy::U32, &LTy::U32) => ops.push(NeqU32(reg!(var), reg!(l), reg!(r))),
-                            (&LTy::I64, &LTy::I64) => ops.push(NeqI64(reg!(var), reg!(l), reg!(r))),
-                            (&LTy::U64, &LTy::U64) => ops.push(NeqU64(reg!(var), reg!(l), reg!(r))),
-                            (&LTy::F32, &LTy::F32) => ops.push(NeqF32(reg!(var), reg!(l), reg!(r))),
-                            (&LTy::F64, &LTy::F64) => ops.push(NeqF64(reg!(var), reg!(l), reg!(r))),
-                            ty => panic!("unknown overloaded ty {:?} for neq", ty),
-                        },
-                        &m::Gt {
-                            ref var,
-                            ref l,
-                            ref r,
-                            ..
-                        } => match (&symbol_table[l].0, &symbol_table[r].0) {
-                            (&LTy::I32, &LTy::I32) => ops.push(GtI32(reg!(var), reg!(l), reg!(r))),
-                            (&LTy::U32, &LTy::U32) => ops.push(GtU32(reg!(var), reg!(l), reg!(r))),
-                            (&LTy::I64, &LTy::I64) => ops.push(GtI64(reg!(var), reg!(l), reg!(r))),
-                            (&LTy::U64, &LTy::U64) => ops.push(GtU64(reg!(var), reg!(l), reg!(r))),
-                            (&LTy::F32, &LTy::F32) => ops.push(GtF32(reg!(var), reg!(l), reg!(r))),
-                            (&LTy::F64, &LTy::F64) => ops.push(GtF64(reg!(var), reg!(l), reg!(r))),
-                            ty => panic!("unknown overloaded ty {:?} for gt", ty),
-                        },
-                        &m::Ge {
-                            ref var,
-                            ref l,
-                            ref r,
-                            ..
-                        } => match (&symbol_table[l].0, &symbol_table[r].0) {
-                            (&LTy::U32, &LTy::U32) => ops.push(GeU32(reg!(var), reg!(l), reg!(r))),
-                            (&LTy::I32, &LTy::I32) => ops.push(GeI32(reg!(var), reg!(l), reg!(r))),
-                            (&LTy::I64, &LTy::I64) => ops.push(GeI64(reg!(var), reg!(l), reg!(r))),
-                            (&LTy::U64, &LTy::U64) => ops.push(GeU64(reg!(var), reg!(l), reg!(r))),
-                            (&LTy::F32, &LTy::F32) => ops.push(GeF32(reg!(var), reg!(l), reg!(r))),
-                            (&LTy::F64, &LTy::F64) => ops.push(GeF64(reg!(var), reg!(l), reg!(r))),
-                            ty => panic!("unknown overloaded ty {:?} for ge", ty),
-                        },
-                        &m::Lt {
-                            ref var,
-                            ref l,
-                            ref r,
-                            ..
-                        } => match (&symbol_table[l].0, &symbol_table[r].0) {
-                            (&LTy::I32, &LTy::I32) => ops.push(LtI32(reg!(var), reg!(l), reg!(r))),
-                            (&LTy::U32, &LTy::U32) => ops.push(LtU32(reg!(var), reg!(l), reg!(r))),
-                            (&LTy::I64, &LTy::I64) => ops.push(LtI64(reg!(var), reg!(l), reg!(r))),
-                            (&LTy::U64, &LTy::U64) => ops.push(LtU64(reg!(var), reg!(l), reg!(r))),
-                            (&LTy::F32, &LTy::F32) => ops.push(LtF32(reg!(var), reg!(l), reg!(r))),
-                            (&LTy::F64, &LTy::F64) => ops.push(LtF64(reg!(var), reg!(l), reg!(r))),
-                            ty => panic!("unknown overloaded ty {:?} for lt", ty),
-                        },
-                        &m::Le {
-                            ref var,
-                            ref l,
-                            ref r,
-                            ..
-                        } => match (&symbol_table[l].0, &symbol_table[r].0) {
-                            (&LTy::I32, &LTy::I32) => ops.push(LeI32(reg!(var), reg!(l), reg!(r))),
-                            (&LTy::U32, &LTy::U32) => ops.push(LeU32(reg!(var), reg!(l), reg!(r))),
-                            (&LTy::I64, &LTy::I64) => ops.push(LeI64(reg!(var), reg!(l), reg!(r))),
-                            (&LTy::U64, &LTy::U64) => ops.push(LeU64(reg!(var), reg!(l), reg!(r))),
-                            (&LTy::F32, &LTy::F32) => ops.push(LeF32(reg!(var), reg!(l), reg!(r))),
-                            (&LTy::F64, &LTy::F64) => ops.push(LeF64(reg!(var), reg!(l), reg!(r))),
-                            ty => panic!("unknown overloaded ty {:?} for le", ty),
-                        },
                         &m::Tuple {
                             ref var,
                             ref tys,
@@ -653,40 +544,7 @@ impl MIR2LIRPass {
                     | &mir::Op::Alias {
                         ref var, ref ty, ..
                     }
-                    | &mir::Op::Add {
-                        ref var, ref ty, ..
-                    }
-                    | &mir::Op::Sub {
-                        ref var, ref ty, ..
-                    }
-                    | &mir::Op::Mul {
-                        ref var, ref ty, ..
-                    }
-                    | &mir::Op::DivInt {
-                        ref var, ref ty, ..
-                    }
-                    | &mir::Op::DivFloat {
-                        ref var, ref ty, ..
-                    }
-                    | &mir::Op::Mod {
-                        ref var, ref ty, ..
-                    }
-                    | &mir::Op::Eq {
-                        ref var, ref ty, ..
-                    }
-                    | &mir::Op::Neq {
-                        ref var, ref ty, ..
-                    }
-                    | &mir::Op::Gt {
-                        ref var, ref ty, ..
-                    }
-                    | &mir::Op::Ge {
-                        ref var, ref ty, ..
-                    }
-                    | &mir::Op::Lt {
-                        ref var, ref ty, ..
-                    }
-                    | &mir::Op::Le {
+                    | &mir::Op::BinOp {
                         ref var, ref ty, ..
                     }
                     | &mir::Op::Proj {

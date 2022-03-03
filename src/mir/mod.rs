@@ -45,74 +45,9 @@ pub enum Op {
         ty: EbbTy,
         sym: Symbol,
     },
-    Add {
+    BinOp {
         var: Symbol,
-        ty: EbbTy,
-        l: Symbol,
-        r: Symbol,
-    },
-    Sub {
-        var: Symbol,
-        ty: EbbTy,
-        l: Symbol,
-        r: Symbol,
-    },
-    Mul {
-        var: Symbol,
-        ty: EbbTy,
-        l: Symbol,
-        r: Symbol,
-    },
-    DivInt {
-        var: Symbol,
-        ty: EbbTy,
-        l: Symbol,
-        r: Symbol,
-    },
-    DivFloat {
-        var: Symbol,
-        ty: EbbTy,
-        l: Symbol,
-        r: Symbol,
-    },
-    Mod {
-        var: Symbol,
-        ty: EbbTy,
-        l: Symbol,
-        r: Symbol,
-    },
-    Eq {
-        var: Symbol,
-        ty: EbbTy,
-        l: Symbol,
-        r: Symbol,
-    },
-    Neq {
-        var: Symbol,
-        ty: EbbTy,
-        l: Symbol,
-        r: Symbol,
-    },
-    Gt {
-        var: Symbol,
-        ty: EbbTy,
-        l: Symbol,
-        r: Symbol,
-    },
-    Ge {
-        var: Symbol,
-        ty: EbbTy,
-        l: Symbol,
-        r: Symbol,
-    },
-    Lt {
-        var: Symbol,
-        ty: EbbTy,
-        l: Symbol,
-        r: Symbol,
-    },
-    Le {
-        var: Symbol,
+        binop: BinOp,
         ty: EbbTy,
         l: Symbol,
         r: Symbol,
@@ -178,6 +113,38 @@ pub enum Op {
         value: Option<Symbol>,
         ty: EbbTy,
     },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BinOp {
+    // specified versions
+    AddInt,
+    AddReal,
+    SubInt,
+    SubReal,
+    MulInt,
+    MulReal,
+    DivInt,
+    DivReal,
+    ModInt,
+    EqInt,
+    EqReal,
+    EqChar,
+    NeqInt,
+    NeqReal,
+    NeqChar,
+    GtInt,
+    GtReal,
+    GtChar,
+    GeInt,
+    GeReal,
+    GeChar,
+    LtInt,
+    LtReal,
+    LtChar,
+    LeInt,
+    LeReal,
+    LeChar,
 }
 
 #[derive(Debug, Clone, PartialEq)]

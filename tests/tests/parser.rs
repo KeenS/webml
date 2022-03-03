@@ -1,7 +1,7 @@
 use nom_locate::LocatedSpan;
 use webml::ast::{
     Declaration, DerivedDeclaration, DerivedExprKind, Empty, Expr, ExprKind, LangItem, Pattern,
-    PatternKind, Type, UntypedAst, AST,
+    PatternKind, Type, UntypedAst, AST, BIF,
 };
 use webml::prim::*;
 use webml::Parser;

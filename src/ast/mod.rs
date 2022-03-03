@@ -3,6 +3,7 @@ mod collect_langitems;
 mod desugar;
 mod pp;
 mod rename;
+mod resolve_overload;
 mod typing;
 mod util;
 mod var2constructor;
@@ -11,6 +12,7 @@ pub use self::case_simplify::CaseSimplify;
 pub use self::collect_langitems::CollectLangItems;
 pub use self::desugar::Desugar;
 pub use self::rename::Rename;
+pub use self::resolve_overload::ResolveOverload;
 pub use self::typing::Typer;
 pub use self::var2constructor::VarToConstructor;
 use crate::ast;
@@ -236,6 +238,49 @@ pub enum Type {
 #[derive(Debug, Clone, PartialEq)]
 pub struct TypeInfo {
     pub constructors: Vec<(Symbol, Option<Type>)>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BIF {
+    // overloaded versions
+    Add,
+    Sub,
+    Mul,
+    Div,
+    Divf,
+    Mod,
+    Eq,
+    Neq,
+    Gt,
+    Ge,
+    Lt,
+    Le,
+    // specified versions
+    AddInt,
+    AddReal,
+    SubInt,
+    SubReal,
+    MulInt,
+    MulReal,
+    ModInt,
+    EqInt,
+    EqReal,
+    EqChar,
+    NeqInt,
+    NeqReal,
+    NeqChar,
+    GtInt,
+    GtReal,
+    GtChar,
+    GeInt,
+    GeReal,
+    GeChar,
+    LtInt,
+    LtReal,
+    LtChar,
+    LeInt,
+    LeReal,
+    LeChar,
 }
 
 impl<Ty, Inner> Annot<Ty, Inner> {

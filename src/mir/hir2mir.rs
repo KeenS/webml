@@ -230,7 +230,7 @@ impl HIR2MIRPass {
             }
             BuiltinCall { ty, fun, args } => {
                 assert_eq!(ty, ty_);
-                use crate::prim::BIF::*;
+                use crate::hir::BIF::*;
                 let mut args = args
                     .into_iter()
                     .map(|arg| force_symbol(arg))
@@ -241,18 +241,33 @@ impl HIR2MIRPass {
                     };
                 }
                 match fun {
-                    Add => eb.add(name, self.trans_ty(&ty), pop!(), pop!()),
-                    Sub => eb.sub(name, self.trans_ty(&ty), pop!(), pop!()),
-                    Mul => eb.mul(name, self.trans_ty(&ty), pop!(), pop!()),
-                    Div => eb.div_int(name, self.trans_ty(&ty), pop!(), pop!()),
-                    Divf => eb.div_float(name, self.trans_ty(&ty), pop!(), pop!()),
-                    Mod => eb.mod_(name, self.trans_ty(&ty), pop!(), pop!()),
-                    Eq => eb.eq(name, self.trans_ty(&ty), pop!(), pop!()),
-                    Neq => eb.neq(name, self.trans_ty(&ty), pop!(), pop!()),
-                    Gt => eb.gt(name, self.trans_ty(&ty), pop!(), pop!()),
-                    Ge => eb.ge(name, self.trans_ty(&ty), pop!(), pop!()),
-                    Lt => eb.lt(name, self.trans_ty(&ty), pop!(), pop!()),
-                    Le => eb.le(name, self.trans_ty(&ty), pop!(), pop!()),
+                    AddInt => eb.add_int(name, self.trans_ty(&ty), pop!(), pop!()),
+                    AddReal => eb.add_real(name, self.trans_ty(&ty), pop!(), pop!()),
+                    SubInt => eb.sub_int(name, self.trans_ty(&ty), pop!(), pop!()),
+                    SubReal => eb.sub_real(name, self.trans_ty(&ty), pop!(), pop!()),
+                    MulInt => eb.mul_int(name, self.trans_ty(&ty), pop!(), pop!()),
+                    MulReal => eb.mul_real(name, self.trans_ty(&ty), pop!(), pop!()),
+                    DivInt => eb.div_int(name, self.trans_ty(&ty), pop!(), pop!()),
+                    DivReal => eb.div_real(name, self.trans_ty(&ty), pop!(), pop!()),
+                    ModInt => eb.mod_int(name, self.trans_ty(&ty), pop!(), pop!()),
+                    EqInt => eb.eq_int(name, self.trans_ty(&ty), pop!(), pop!()),
+                    EqReal => eb.eq_real(name, self.trans_ty(&ty), pop!(), pop!()),
+                    EqChar => eb.eq_char(name, self.trans_ty(&ty), pop!(), pop!()),
+                    NeqInt => eb.neq_int(name, self.trans_ty(&ty), pop!(), pop!()),
+                    NeqReal => eb.neq_real(name, self.trans_ty(&ty), pop!(), pop!()),
+                    NeqChar => eb.neq_char(name, self.trans_ty(&ty), pop!(), pop!()),
+                    GtInt => eb.gt_int(name, self.trans_ty(&ty), pop!(), pop!()),
+                    GtReal => eb.gt_real(name, self.trans_ty(&ty), pop!(), pop!()),
+                    GtChar => eb.gt_char(name, self.trans_ty(&ty), pop!(), pop!()),
+                    GeInt => eb.ge_int(name, self.trans_ty(&ty), pop!(), pop!()),
+                    GeReal => eb.ge_real(name, self.trans_ty(&ty), pop!(), pop!()),
+                    GeChar => eb.ge_char(name, self.trans_ty(&ty), pop!(), pop!()),
+                    LtInt => eb.lt_int(name, self.trans_ty(&ty), pop!(), pop!()),
+                    LtReal => eb.lt_real(name, self.trans_ty(&ty), pop!(), pop!()),
+                    LtChar => eb.lt_char(name, self.trans_ty(&ty), pop!(), pop!()),
+                    LeInt => eb.le_int(name, self.trans_ty(&ty), pop!(), pop!()),
+                    LeReal => eb.le_real(name, self.trans_ty(&ty), pop!(), pop!()),
+                    LeChar => eb.le_char(name, self.trans_ty(&ty), pop!(), pop!()),
                 };
                 eb
             }
