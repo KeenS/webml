@@ -129,6 +129,12 @@ impl fmt::Display for LangItem {
         match self {
             Bool => write!(f, "bool"),
             String => write!(f, "string"),
+            StringEq => write!(f, "stringEq"),
+            StringNeq => write!(f, "stringNeq"),
+            StringGt => write!(f, "stringGt"),
+            StringGe => write!(f, "stringGe"),
+            StringLt => write!(f, "stringLt"),
+            StringLe => write!(f, "stringLe"),
         }
     }
 }

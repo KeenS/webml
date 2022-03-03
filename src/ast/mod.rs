@@ -92,6 +92,12 @@ pub enum DerivedDeclaration<Ty> {
 pub enum LangItem {
     Bool,
     String,
+    StringEq,
+    StringNeq,
+    StringGt,
+    StringGe,
+    StringLt,
+    StringLe,
 }
 
 #[derive(Debug, Clone, PartialEq)]

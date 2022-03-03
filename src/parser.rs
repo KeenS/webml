@@ -149,8 +149,14 @@ impl Parser {
     fn decl_langitem_name(&self) -> impl Fn(Input) -> IResult<Input, LangItem> + '_ {
         move |i| {
             let (i, name) = alt((
-                map(tag("bool"), |_| LangItem::Bool),
-                map(tag("string"), |_| LangItem::String),
+                map(complete(tag("bool")), |_| LangItem::Bool),
+                map(complete(tag("stringEq")), |_| LangItem::StringEq),
+                map(complete(tag("stringNeq")), |_| LangItem::StringNeq),
+                map(complete(tag("stringGt")), |_| LangItem::StringGt),
+                map(complete(tag("stringGe")), |_| LangItem::StringGe),
+                map(complete(tag("stringLt")), |_| LangItem::StringLt),
+                map(complete(tag("stringLe")), |_| LangItem::StringLe),
+                map(complete(tag("string")), |_| LangItem::String),
             ))(i)?;
             Ok((i, name))
         }
