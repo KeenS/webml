@@ -5,14 +5,14 @@ use std::io;
 
 impl<Ty: PP, DE: PP, DS: PP> PP for Context<Ty, DE, DS> {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
-        self.1.pp(w, indent)
+        self.ast.pp(w, indent)
     }
 }
 
 impl<Ty: fmt::Display, DE: fmt::Display, DS: fmt::Display> fmt::Display for Context<Ty, DE, DS> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let indent = f.width().unwrap_or(0);
-        write!(f, "{:indent$}", self.1, indent = indent)
+        write!(f, "{:indent$}", self.ast, indent = indent)
     }
 }
 
@@ -67,6 +67,10 @@ impl<Ty: PP, DE: PP, DS: PP> PP for Declaration<Ty, DE, DS> {
                 expr.pp(w, indent + 4)?;
                 Ok(())
             }
+            LangItem { name, decl } => {
+                write!(w, "{}__langitem(({}))__\n", Self::nspaces(indent), name)?;
+                decl.pp(w, indent)
+            }
             D(d) => d.pp(w, indent),
         }
     }
@@ -106,7 +110,20 @@ impl<Ty: fmt::Display, DE: fmt::Display, DS: fmt::Display> fmt::Display
                 )?;
                 Ok(())
             }
+            LangItem { name, decl } => {
+                write!(f, "{}__langitem(({}))__\n", nspaces(indent), name)?;
+                write!(f, "{:indent$}", decl, indent = indent)
+            }
             D(d) => write!(f, "{:indent$}", d, indent = indent),
+        }
+    }
+}
+
+impl fmt::Display for LangItem {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use LangItem::*;
+        match self {
+            Bool => write!(f, "bool"),
         }
     }
 }

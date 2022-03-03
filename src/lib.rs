@@ -30,6 +30,7 @@ pub fn compile_string(input: String, config: &Config) -> Result<Vec<u8>, TypeErr
        desugar: ast::Desugar::new(id.clone()),
        rename: ast::Rename::new(id.clone()),
        var_to_constructor: ast::VarToConstructor::new(id.clone()),
+       collect_langitems: ast::CollectLangItems::new(),
        typing: ast::Typer::new(),
        case_simplify: ast::CaseSimplify::new(id.clone()),
        ast_to_hir: hir::AST2HIR::new(id.clone()),

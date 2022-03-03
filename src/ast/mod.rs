@@ -1,4 +1,5 @@
 mod case_simplify;
+mod collect_langitems;
 mod desugar;
 mod pp;
 mod rename;
@@ -7,6 +8,7 @@ mod util;
 mod var2constructor;
 
 pub use self::case_simplify::CaseSimplify;
+pub use self::collect_langitems::CollectLangItems;
 pub use self::desugar::Desugar;
 pub use self::rename::Rename;
 pub use self::typing::Typer;
@@ -27,10 +29,11 @@ pub type UntypedCoreContext = CoreContext<Empty>;
 pub type TypedCoreContext = CoreContext<Type>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Context<Ty, DE = DerivedExprKind<Ty>, DS = DerivedDeclaration<Ty>>(
-    pub SymbolTable,
-    pub AST<Ty, DE, DS>,
-);
+pub struct Context<Ty, DE = DerivedExprKind<Ty>, DS = DerivedDeclaration<Ty>> {
+    pub symbol_table: SymbolTable,
+    pub lang_items: HashMap<LangItem, Symbol>,
+    pub ast: AST<Ty, DE, DS>,
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct AST<Ty, DE = DerivedExprKind<Ty>, DS = DerivedDeclaration<Ty>>(
@@ -53,6 +56,10 @@ pub enum Declaration<Ty, DE = DerivedExprKind<Ty>, DS = DerivedDeclaration<Ty>> 
         pattern: Pattern<Ty>,
         expr: Expr<Ty, DE, DS>,
     },
+    LangItem {
+        name: LangItem,
+        decl: Box<Declaration<Ty, DE, DS>>,
+    },
     D(DS),
 }
 
@@ -66,6 +73,11 @@ pub enum DerivedDeclaration<Ty> {
         priority: Option<u8>,
         names: Vec<Symbol>,
     },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum LangItem {
+    Bool,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -224,6 +236,10 @@ impl<Ty> CoreDeclaration<Ty> {
                 rec,
                 pattern: pattern.map_ty(&mut *f),
                 expr: expr.map_ty(f),
+            },
+            LangItem { name, decl } => LangItem {
+                name,
+                decl: Box::new(decl.map_ty(&mut *f)),
             },
             D(d) => match d {},
         }

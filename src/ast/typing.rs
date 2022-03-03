@@ -18,6 +18,7 @@ struct TyEnv {
 #[derive(Debug)]
 struct TypePool {
     cache: HashMap<Typing, NodeId>,
+    lang_items: HashMap<LangItem, Symbol>,
     pool: UnificationPool<Typing>,
     id: Id,
 }
@@ -102,15 +103,20 @@ impl Typer {
         Typer
     }
 
-    fn generate_pass(&mut self, symbol_table: SymbolTable) -> TyEnv {
-        TyEnv::new(symbol_table)
+    fn generate_pass(
+        &mut self,
+        symbol_table: SymbolTable,
+        lang_items: HashMap<LangItem, Symbol>,
+    ) -> TyEnv {
+        TyEnv::new(symbol_table, lang_items)
     }
 }
 
 impl TypePool {
-    fn new() -> Self {
+    fn new(lang_items: HashMap<LangItem, Symbol>) -> Self {
         let mut ret = Self {
             cache: HashMap::new(),
+            lang_items,
             pool: UnificationPool::new(),
             id: Id::new(),
         };
@@ -147,10 +153,12 @@ impl TypePool {
     }
 
     fn ty_bool(&mut self) -> NodeId {
-        *self
-            .cache
-            .get(&Typing::Datatype(Symbol::new("bool")))
-            .unwrap()
+        let b = self
+            .lang_items
+            .get(&LangItem::Bool)
+            .expect("no lang item bool found")
+            .clone();
+        *self.cache.get(&Typing::Datatype(b)).unwrap()
     }
 
     fn ty_real(&mut self) -> NodeId {
@@ -199,11 +207,11 @@ impl TypePool {
 }
 
 impl TyEnv {
-    pub fn new(symbol_table: SymbolTable) -> Self {
+    pub fn new(symbol_table: SymbolTable, lang_items: HashMap<LangItem, Symbol>) -> Self {
         let mut ret = TyEnv {
             env: HashMap::new(),
             symbol_table: symbol_table,
-            pool: TypePool::new(),
+            pool: TypePool::new(lang_items),
         };
         ret.init();
 
@@ -239,8 +247,8 @@ impl TyEnv {
         &self.symbol_table
     }
 
-    pub fn into_symbol_table(self) -> SymbolTable {
-        self.symbol_table
+    pub fn into_data(self) -> (SymbolTable, HashMap<LangItem, Symbol>) {
+        (self.symbol_table, self.pool.lang_items)
     }
 
     fn get(&self, name: &Symbol) -> Option<NodeId> {
@@ -305,6 +313,7 @@ impl TyEnv {
                 }
                 Ok(())
             }
+            LangItem { decl, .. } => self.infer_statement(decl.as_ref()),
             D(d) => match *d {},
         }
     }
@@ -566,17 +575,20 @@ use crate::pass::Pass;
 impl Pass<UntypedCoreContext, TypeError> for Typer {
     type Target = TypedCoreContext;
 
-    fn trans(
-        &mut self,
-        Context(symbol_table, ast): UntypedCoreContext,
-        _: &Config,
-    ) -> Result<Self::Target> {
-        let mut pass = self.generate_pass(symbol_table);
+    fn trans(&mut self, context: UntypedCoreContext, _: &Config) -> Result<Self::Target> {
+        let symbol_table = context.symbol_table;
+        let ast = context.ast;
+        let lang_items = context.lang_items;
+        let mut pass = self.generate_pass(symbol_table, lang_items);
         let mut typing_ast = pass.pool.typing_ast(ast);
         pass.infer(&mut typing_ast)?;
         let typed_ast = pass.pool.typed_ast(typing_ast);
 
-        let symbol_table = pass.into_symbol_table();
-        Ok(Context(symbol_table, typed_ast))
+        let (symbol_table, lang_items) = pass.into_data();
+        Ok(Context {
+            symbol_table,
+            ast: typed_ast,
+            lang_items,
+        })
     }
 }

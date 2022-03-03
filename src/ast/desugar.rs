@@ -33,6 +33,7 @@ impl Desugar {
         match decl {
             Datatype { name, constructors } => Some(self.transform_datatype(name, constructors)),
             Val { rec, pattern, expr } => Some(self.transform_val(rec, pattern, expr)),
+            LangItem { name, decl } => self.transform_langitem(name, *decl),
             D(DerivedDeclaration::Fun { name, clauses }) => Some(self.transform_fun(name, clauses)),
             D(DerivedDeclaration::Infix { .. }) => None,
         }
@@ -116,6 +117,21 @@ impl Desugar {
                 inner: PatternKind::Variable { name: name },
             },
             expr: fun,
+        }
+    }
+
+    fn transform_langitem(
+        &mut self,
+        name: LangItem,
+        decl: UntypedDeclaration,
+    ) -> Option<UntypedCoreDeclaration> {
+        if let Some(decl) = self.transform_statement(decl) {
+            Some(Declaration::LangItem {
+                name,
+                decl: Box::new(decl),
+            })
+        } else {
+            None
         }
     }
 

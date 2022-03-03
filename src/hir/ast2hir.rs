@@ -229,6 +229,7 @@ impl AST2HIRPass {
                     }
                 }
             }
+            ast::Declaration::LangItem { decl, .. } => self.conv_statement(*decl),
             ast::Declaration::D(d) => match d {},
         }
     }
@@ -368,9 +369,12 @@ impl<E> Pass<ast::TypedCoreContext, E> for AST2HIR {
 
     fn trans(
         &mut self,
-        ast::Context(symbol_table, ast): ast::TypedCoreContext,
+        context: ast::TypedCoreContext,
         _: &Config,
     ) -> ::std::result::Result<Self::Target, E> {
+        let symbol_table = context.symbol_table;
+        let ast = context.ast;
+
         let mut pass = self.generate_pass(symbol_table);
         let ast = pass.conv_ast(ast);
         let symbol_table = conv_symbol_table(pass.symbol_table);

@@ -788,15 +788,18 @@ use crate::pass::Pass;
 impl Pass<TypedCoreContext, TypeError> for CaseSimplify {
     type Target = TypedCoreContext;
 
-    fn trans(
-        &mut self,
-        Context(symbol_table, ast): TypedCoreContext,
-        _: &Config,
-    ) -> Result<Self::Target> {
+    fn trans(&mut self, context: TypedCoreContext, _: &Config) -> Result<Self::Target> {
+        let symbol_table = context.symbol_table;
+        let ast = context.ast;
+        let lang_items = context.lang_items;
         let mut pass = self.generate_pass(symbol_table);
         let ast = pass.wildcard_to_variable(ast);
         let ast = pass.transform_ast(ast);
         let (symbol_table, _) = pass.into_inner();
-        Ok(Context(symbol_table, ast))
+        Ok(Context {
+            symbol_table,
+            ast,
+            lang_items,
+        })
     }
 }

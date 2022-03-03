@@ -83,6 +83,7 @@ impl Parser {
     fn decl(&self) -> impl Fn(Input) -> IResult<Input, UntypedDeclaration> + '_ {
         move |i| {
             alt((
+                self.decl_langitem(),
                 self.decl_datatype(),
                 self.decl_val(),
                 self.decl_fun(),
@@ -124,6 +125,31 @@ impl Parser {
                     expr,
                 },
             ))
+        }
+    }
+    fn decl_langitem(&self) -> impl Fn(Input) -> IResult<Input, UntypedDeclaration> + '_ {
+        move |i| {
+            let (i, _) = tag("__lang_item((")(i)?;
+            let (i, _) = self.space0()(i)?;
+            let (i, _) = tag("")(i)?;
+            let (i, name) = self.decl_langitem_name()(i)?;
+            let (i, _) = self.space0()(i)?;
+            let (i, _) = tag("))__")(i)?;
+            let (i, _) = self.space1()(i)?;
+            let (i, decl) = self.decl()(i)?;
+            Ok((
+                i,
+                Declaration::LangItem {
+                    name,
+                    decl: Box::new(decl),
+                },
+            ))
+        }
+    }
+    fn decl_langitem_name(&self) -> impl Fn(Input) -> IResult<Input, LangItem> + '_ {
+        move |i| {
+            let (i, name) = map(tag("bool"), |_| LangItem::Bool)(i)?;
+            Ok((i, name))
         }
     }
 

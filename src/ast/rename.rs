@@ -224,6 +224,13 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
         }
     }
 
+    fn traverse_constructor(&mut self, arg: &mut Option<Box<CoreExpr<Ty>>>, name: &mut Symbol) {
+        self.rename_constructor(name);
+        if let Some(expr) = arg {
+            self.traverse_expr(&mut *expr);
+        }
+    }
+
     fn traverse_pat_constructor(&mut self, name: &mut Symbol, arg: &mut Option<Box<Pattern<Ty>>>) {
         self.rename_constructor(name);
         if let Some(pat) = arg {
@@ -268,25 +275,13 @@ impl Rename {
             .iter()
             .map(|(s, _)| (Symbol::new(*s), 0))
             .collect();
-        let datatypes = ["bool"].iter().map(|s| (Symbol::new(*s), 0)).collect();
-        let constructors = ["false", "true"]
-            .iter()
-            .map(|s| (Symbol::new(*s), 0))
-            .collect();
 
-        let mut symbol_table = SymbolTable::new();
-        symbol_table.register_type(
-            Symbol::new("bool"),
-            TypeInfo {
-                constructors: vec![(Symbol::new("false"), None), (Symbol::new("true"), None)],
-            },
-        );
-
+        let symbol_table = SymbolTable::new();
         Rename {
             symbol_table: Some(symbol_table),
             variable_tables: vec![functions],
-            type_tables: vec![datatypes],
-            constructor_tables: vec![constructors],
+            type_tables: vec![HashMap::new()],
+            constructor_tables: vec![HashMap::new()],
             pos: 0,
             id,
         }
@@ -409,6 +404,11 @@ impl<E> Pass<UntypedCore, E> for Rename {
         let mut wrap_bif = WrapBIF::new(self.id.clone());
         let ast = wrap_bif.transform_ast(ast);
         let symbol_table = self.generate_symbol_table();
-        Ok(Context(symbol_table, ast))
+        let lang_items = HashMap::new();
+        Ok(Context {
+            symbol_table,
+            ast,
+            lang_items,
+        })
     }
 }

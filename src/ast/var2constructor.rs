@@ -96,12 +96,19 @@ impl<E> Pass<UntypedCoreContext, E> for VarToConstructor {
 
     fn trans(
         &mut self,
-        Context(symbol_table, ast): UntypedCoreContext,
+        context: UntypedCoreContext,
         _: &Config,
     ) -> ::std::result::Result<Self::Target, E> {
+        let symbol_table = context.symbol_table;
+        let ast = context.ast;
+        let lang_items = context.lang_items;
         let mut pass = self.generate_pass(symbol_table);
         let ast = pass.transform_ast(ast);
         let (symbol_table, _) = pass.into_inner();
-        Ok(Context(symbol_table, ast))
+        Ok(Context {
+            symbol_table,
+            ast,
+            lang_items,
+        })
     }
 }

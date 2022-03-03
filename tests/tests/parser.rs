@@ -1,7 +1,7 @@
 use nom_locate::LocatedSpan;
 use webml::ast::{
-    Declaration, DerivedDeclaration, DerivedExprKind, Empty, Expr, ExprKind, Pattern, PatternKind,
-    Type, UntypedAst, AST,
+    Declaration, DerivedDeclaration, DerivedExprKind, Empty, Expr, ExprKind, LangItem, Pattern,
+    PatternKind, Type, UntypedAst, AST,
 };
 use webml::prim::*;
 use webml::Parser;
@@ -1654,4 +1654,20 @@ fn pares_comment() {
     let input = r#"(* comment (* is *) nestable *)"#;
     let ast = parse(input).unwrap();
     assert_eq!(ast, AST(vec![]));
+}
+
+#[test]
+fn test_langitem() {
+    let input = r#"__lang_item((bool))__ datatype bool = false | true"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![Declaration::LangItem {
+            name: LangItem::Bool,
+            decl: Box::new(Declaration::Datatype {
+                name: Symbol::new("bool"),
+                constructors: vec![(Symbol::new("false"), None), (Symbol::new("true"), None),]
+            })
+        }])
+    )
 }

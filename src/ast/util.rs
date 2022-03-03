@@ -12,6 +12,7 @@ pub trait Traverse<Ty> {
         match decl {
             Datatype { name, constructors } => self.traverse_datatype(name, constructors),
             Val { rec, pattern, expr } => self.traverse_val(rec, pattern, expr),
+            LangItem { decl, name } => self.traverse_langitem(name, decl),
             D(_) => (),
         }
     }
@@ -33,6 +34,9 @@ pub trait Traverse<Ty> {
         self.traverse_pattern(pattern)
     }
 
+    fn traverse_langitem(&mut self, _name: &mut LangItem, decl: &mut CoreDeclaration<Ty>) {
+        self.traverse_statement(decl);
+    }
     fn traverse_expr(&mut self, expr: &mut CoreExpr<Ty>) {
         use crate::ast::ExprKind::*;
         match &mut expr.inner {
@@ -160,6 +164,7 @@ pub trait Transform<Ty> {
         match decl {
             Datatype { name, constructors } => self.transform_datatype(name, constructors),
             Val { rec, pattern, expr } => self.transform_val(rec, pattern, expr),
+            LangItem { name, decl } => self.transform_langitem(name, *decl),
             D(d) => match d {},
         }
     }
@@ -182,6 +187,17 @@ pub trait Transform<Ty> {
             rec,
             pattern: self.transform_pattern(pattern),
             expr: self.transform_expr(expr),
+        }
+    }
+
+    fn transform_langitem(
+        &mut self,
+        name: LangItem,
+        decl: CoreDeclaration<Ty>,
+    ) -> CoreDeclaration<Ty> {
+        Declaration::LangItem {
+            name,
+            decl: Box::new(self.transform_statement(decl)),
         }
     }
 
