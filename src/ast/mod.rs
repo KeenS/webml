@@ -69,7 +69,7 @@ pub enum Declaration<
     },
     LangItem {
         name: LangItem,
-        decl: Box<Declaration<Ty, DE, DS>>,
+        decl: Box<Declaration<Ty, DE, DS, DP>>,
     },
     D(DS),
 }

@@ -148,7 +148,10 @@ impl Parser {
     }
     fn decl_langitem_name(&self) -> impl Fn(Input) -> IResult<Input, LangItem> + '_ {
         move |i| {
-            let (i, name) = map(tag("bool"), |_| LangItem::Bool)(i)?;
+            let (i, name) = alt((
+                map(tag("bool"), |_| LangItem::Bool),
+                map(tag("string"), |_| LangItem::String),
+            ))(i)?;
             Ok((i, name))
         }
     }
