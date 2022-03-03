@@ -250,7 +250,7 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
     }
 
     fn traverse_pat_variable(&mut self, name: &mut Symbol) {
-        if self.is_constructor(name) {
+        if self.is_constructor(&name) {
             self.rename_constructor(name)
         } else {
             self.new_variable(name)

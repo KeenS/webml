@@ -124,6 +124,7 @@ impl fmt::Display for LangItem {
         use LangItem::*;
         match self {
             Bool => write!(f, "bool"),
+            String => write!(f, "string"),
         }
     }
 }

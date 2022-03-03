@@ -78,6 +78,7 @@ pub enum DerivedDeclaration<Ty> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum LangItem {
     Bool,
+    String,
 }
 
 #[derive(Debug, Clone, PartialEq)]

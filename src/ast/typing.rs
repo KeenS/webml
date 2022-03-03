@@ -70,6 +70,11 @@ fn try_unify<'b>(pool: &'b mut UnificationPool<Typing>, t1: Typing, t2: Typing) 
         (OverloadedNumText, OverloadedNum) | (OverloadedNum, OverloadedNumText) => {
             Ok(OverloadedNumText)
         }
+        (Datatype(sym), OverloadedNumText) | (OverloadedNumText, Datatype(sym))
+            if sym.0 == "string" && sym.1 == 0 =>
+        {
+            Ok(Datatype(sym))
+        }
         (Variable(_), ty) | (ty, Variable(_)) => Ok(ty),
         (Fun(p1, b1), Fun(p2, b2)) => {
             let p = pool.try_unify_with(p1, p2, try_unify)?;
@@ -150,6 +155,13 @@ impl TypePool {
 
     fn ty_char(&mut self) -> NodeId {
         *self.cache.get(&Typing::Char).unwrap()
+    }
+
+    fn ty_string(&mut self) -> NodeId {
+        *self
+            .cache
+            .get(&Typing::Datatype(Symbol::new("string")))
+            .unwrap()
     }
 
     fn ty_bool(&mut self) -> NodeId {
