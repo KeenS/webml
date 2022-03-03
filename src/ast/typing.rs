@@ -157,12 +157,12 @@ impl TypePool {
         *self.cache.get(&Typing::Char).unwrap()
     }
 
-    fn ty_string(&mut self) -> NodeId {
-        *self
-            .cache
-            .get(&Typing::Datatype(Symbol::new("string")))
-            .unwrap()
-    }
+    // fn ty_string(&mut self) -> NodeId {
+    //     *self
+    //         .cache
+    //         .get(&Typing::Datatype(Symbol::new("string")))
+    //         .unwrap()
+    // }
 
     fn ty_bool(&mut self) -> NodeId {
         let b = self
@@ -507,7 +507,7 @@ impl TyEnv {
         Ok(())
     }
 
-    fn infer_pat(&mut self, pat: &Pattern<NodeId>) -> Result<()> {
+    fn infer_pat(&mut self, pat: &CorePattern<NodeId>) -> Result<()> {
         use self::PatternKind::*;
         let ty = &pat.ty();
         match &pat.inner {
@@ -551,6 +551,7 @@ impl TyEnv {
                 self.unify(*ty, tuple_ty)?;
             }
             Wildcard { .. } | Variable { .. } => (),
+            D(d) => match *d {},
         };
         for (name, ty) in pat.binds() {
             self.insert(name.clone(), *ty);

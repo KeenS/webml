@@ -20,41 +20,52 @@ use std::error::Error;
 use std::fmt;
 
 pub type UntypedAst = AST<Empty>;
-pub type Core<Ty> = AST<Ty, Nothing, Nothing>;
+pub type Core<Ty> = AST<Ty, Nothing, Nothing, Nothing>;
 pub type UntypedCore = Core<Empty>;
 pub type TypedCore = Core<Type>;
 pub type UntypedContext = Context<Empty>;
-pub type CoreContext<Ty> = Context<Ty, Nothing, Nothing>;
+pub type CoreContext<Ty> = Context<Ty, Nothing, Nothing, Nothing>;
 pub type UntypedCoreContext = CoreContext<Empty>;
 pub type TypedCoreContext = CoreContext<Type>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct Context<Ty, DE = DerivedExprKind<Ty>, DS = DerivedDeclaration<Ty>> {
+pub struct Context<
+    Ty,
+    DE = DerivedExprKind<Ty>,
+    DS = DerivedDeclaration<Ty>,
+    DP = DerivedPatternKind,
+> {
     pub symbol_table: SymbolTable,
     pub lang_items: HashMap<LangItem, Symbol>,
-    pub ast: AST<Ty, DE, DS>,
+    pub ast: AST<Ty, DE, DS, DP>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct AST<Ty, DE = DerivedExprKind<Ty>, DS = DerivedDeclaration<Ty>>(
-    pub Vec<Declaration<Ty, DE, DS>>,
+pub struct AST<Ty, DE = DerivedExprKind<Ty>, DS = DerivedDeclaration<Ty>, DP = DerivedPatternKind>(
+    pub Vec<Declaration<Ty, DE, DS, DP>>,
 );
 
-pub type UntypedDeclaration = Declaration<Empty, DerivedExprKind<Empty>, DerivedDeclaration<Empty>>;
-pub type CoreDeclaration<Ty> = Declaration<Ty, Nothing, Nothing>;
+pub type UntypedDeclaration =
+    Declaration<Empty, DerivedExprKind<Empty>, DerivedDeclaration<Empty>, DerivedPatternKind>;
+pub type CoreDeclaration<Ty> = Declaration<Ty, Nothing, Nothing, Nothing>;
 pub type UntypedCoreDeclaration = CoreDeclaration<Empty>;
 pub type TypedCoreDeclaration = CoreDeclaration<Type>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum Declaration<Ty, DE = DerivedExprKind<Ty>, DS = DerivedDeclaration<Ty>> {
+pub enum Declaration<
+    Ty,
+    DE = DerivedExprKind<Ty>,
+    DS = DerivedDeclaration<Ty>,
+    DP = DerivedPatternKind,
+> {
     Datatype {
         name: Symbol,
         constructors: Vec<(Symbol, Option<Type>)>,
     },
     Val {
         rec: bool,
-        pattern: Pattern<Ty>,
-        expr: Expr<Ty, DE, DS>,
+        pattern: Pattern<Ty, DP>,
+        expr: Expr<Ty, DE, DS, DP>,
     },
     LangItem {
         name: LangItem,
@@ -87,8 +98,8 @@ pub enum Nothing {}
 pub struct Empty {}
 
 pub type UntypedExpr = Expr<Empty>;
-pub type CoreExpr<Ty> = Expr<Ty, Nothing, Nothing>;
-pub type CoreExprKind<Ty> = ExprKind<Ty, Nothing, Nothing>;
+pub type CoreExpr<Ty> = Expr<Ty, Nothing, Nothing, Nothing>;
+pub type CoreExprKind<Ty> = ExprKind<Ty, Nothing, Nothing, Nothing>;
 pub type UntypedCoreExpr = CoreExpr<Empty>;
 pub type UntypedCoreExprKind = CoreExprKind<Empty>;
 pub type TypedCoreExpr = CoreExpr<Type>;
@@ -100,46 +111,51 @@ pub struct Annot<Ty, Inner> {
     pub inner: Inner,
 }
 
-pub type Expr<Ty, DE = DerivedExprKind<Ty>, DS = DerivedDeclaration<Ty>> =
-    Annot<Ty, ExprKind<Ty, DE, DS>>;
+pub type Expr<Ty, DE = DerivedExprKind<Ty>, DS = DerivedDeclaration<Ty>, DP = DerivedPatternKind> =
+    Annot<Ty, ExprKind<Ty, DE, DS, DP>>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum ExprKind<Ty, DE = DerivedExprKind<Ty>, DS = DerivedDeclaration<Ty>> {
+pub enum ExprKind<
+    Ty,
+    DE = DerivedExprKind<Ty>,
+    DS = DerivedDeclaration<Ty>,
+    DP = DerivedPatternKind,
+> {
     Binds {
-        binds: Vec<Declaration<Ty, DE, DS>>,
-        ret: Box<Expr<Ty, DE, DS>>,
+        binds: Vec<Declaration<Ty, DE, DS, DP>>,
+        ret: Box<Expr<Ty, DE, DS, DP>>,
     },
     BuiltinCall {
         fun: BIF,
-        args: Vec<Expr<Ty, DE, DS>>,
+        args: Vec<Expr<Ty, DE, DS, DP>>,
     },
     ExternCall {
         module: String,
         fun: String,
-        args: Vec<Expr<Ty, DE, DS>>,
+        args: Vec<Expr<Ty, DE, DS, DP>>,
         argty: Vec<Type>,
         retty: Type,
     },
     Fn {
         param: Symbol,
-        body: Box<Expr<Ty, DE, DS>>,
+        body: Box<Expr<Ty, DE, DS, DP>>,
     },
     App {
-        fun: Box<Expr<Ty, DE, DS>>,
-        arg: Box<Expr<Ty, DE, DS>>,
+        fun: Box<Expr<Ty, DE, DS, DP>>,
+        arg: Box<Expr<Ty, DE, DS, DP>>,
     },
     Case {
-        cond: Box<Expr<Ty, DE, DS>>,
-        clauses: Vec<(Pattern<Ty>, Expr<Ty, DE, DS>)>,
+        cond: Box<Expr<Ty, DE, DS, DP>>,
+        clauses: Vec<(Pattern<Ty, DP>, Expr<Ty, DE, DS, DP>)>,
     },
     Tuple {
-        tuple: Vec<Expr<Ty, DE, DS>>,
+        tuple: Vec<Expr<Ty, DE, DS, DP>>,
     },
     Symbol {
         name: Symbol,
     },
     Constructor {
-        arg: Option<Box<Expr<Ty, DE, DS>>>,
+        arg: Option<Box<Expr<Ty, DE, DS, DP>>>,
         name: Symbol,
     },
     Literal {
@@ -160,15 +176,19 @@ pub enum DerivedExprKind<Ty> {
     },
 }
 
+pub type CorePattern<Ty> = Pattern<Ty, Nothing>;
+pub type CorePatternKind<Ty> = PatternKind<Ty, Nothing>;
 pub type UntypedPattern = Pattern<Empty>;
 pub type UntypedPatternKind = PatternKind<Empty>;
-pub type TypedPattern = Pattern<Type>;
-pub type TypedPatternKind = PatternKind<Type>;
+pub type UntypedCorePattern = CorePattern<Empty>;
+pub type UntypedCorePatternKind = CorePatternKind<Empty>;
+pub type TypedCorePattern = CorePattern<Type>;
+pub type TypedCorePatternKind = CorePatternKind<Type>;
 
-pub type Pattern<Ty> = Annot<Ty, PatternKind<Ty>>;
+pub type Pattern<Ty, DP = DerivedPatternKind> = Annot<Ty, PatternKind<Ty, DP>>;
 
 #[derive(Debug, Clone, PartialEq)]
-pub enum PatternKind<Ty> {
+pub enum PatternKind<Ty, DP = DerivedPatternKind> {
     Constant {
         // same type as Literal::Int
         value: i64,
@@ -179,15 +199,21 @@ pub enum PatternKind<Ty> {
     },
     Constructor {
         name: Symbol,
-        arg: Option<Box<Pattern<Ty>>>,
+        arg: Option<Box<Pattern<Ty, DP>>>,
     },
     Tuple {
-        tuple: Vec<Pattern<Ty>>,
+        tuple: Vec<Pattern<Ty, DP>>,
     },
     Variable {
         name: Symbol,
     },
     Wildcard {},
+    D(DP),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub enum DerivedPatternKind {
+    String { value: Vec<u32> },
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -307,8 +333,8 @@ impl<Ty> CoreExpr<Ty> {
     }
 }
 
-impl<Ty> Pattern<Ty> {
-    fn map_ty<Ty2>(self, f: &mut dyn FnMut(Ty) -> Ty2) -> Pattern<Ty2> {
+impl<Ty, DP> Pattern<Ty, DP> {
+    fn map_ty<Ty2>(self, f: &mut dyn FnMut(Ty) -> Ty2) -> Pattern<Ty2, DP> {
         use PatternKind::*;
         let ty = f(self.ty);
         let inner = match self.inner {
@@ -323,6 +349,7 @@ impl<Ty> Pattern<Ty> {
             },
             Variable { name } => Variable { name },
             Wildcard {} => Wildcard {},
+            D(d) => D(d),
         };
         Pattern { ty, inner }
     }
@@ -334,6 +361,7 @@ impl<Ty> Pattern<Ty> {
             Variable { name } => vec![(name, &self.ty)],
             Tuple { tuple, .. } => tuple.iter().flat_map(|pat| pat.binds()).collect(),
             Constructor { arg, .. } => arg.iter().flat_map(|pat| pat.binds()).collect(),
+            D(_) => vec![],
         }
     }
 

@@ -905,6 +905,7 @@ impl Parser {
             alt((
                 self.pattern_bool(),
                 self.pattern_char(),
+                self.pattern_string(),
                 self.pattern_int(),
                 self.pattern_tuple(),
                 self.pattern_var(),
@@ -958,6 +959,19 @@ impl Parser {
                 Pattern {
                     ty: Empty {},
                     inner: PatternKind::Char { value: c },
+                },
+            ))
+        }
+    }
+
+    fn pattern_string(&self) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
+        move |i| {
+            let (i, s) = self.string_literal()(i)?;
+            Ok((
+                i,
+                Pattern {
+                    ty: Empty {},
+                    inner: PatternKind::D(DerivedPatternKind::String { value: s }),
                 },
             ))
         }

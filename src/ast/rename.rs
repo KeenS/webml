@@ -172,7 +172,7 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
     fn traverse_val<'b, 'c>(
         &'b mut self,
         rec: &mut bool,
-        pattern: &mut Pattern<Ty>,
+        pattern: &mut CorePattern<Ty>,
         expr: &mut CoreExpr<Ty>,
     ) {
         let scope = self;
@@ -206,7 +206,7 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
     fn traverse_case(
         &mut self,
         expr: &mut Box<CoreExpr<Ty>>,
-        arms: &mut Vec<(Pattern<Ty>, CoreExpr<Ty>)>,
+        arms: &mut Vec<(CorePattern<Ty>, CoreExpr<Ty>)>,
     ) {
         self.traverse_expr(expr);
         for &mut (ref mut pat, ref mut arm) in arms.iter_mut() {
@@ -235,14 +235,11 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
         }
     }
 
-    fn traverse_constructor(&mut self, arg: &mut Option<Box<CoreExpr<Ty>>>, name: &mut Symbol) {
-        self.rename_constructor(name);
-        if let Some(expr) = arg {
-            self.traverse_expr(&mut *expr);
-        }
-    }
-
-    fn traverse_pat_constructor(&mut self, name: &mut Symbol, arg: &mut Option<Box<Pattern<Ty>>>) {
+    fn traverse_pat_constructor(
+        &mut self,
+        name: &mut Symbol,
+        arg: &mut Option<Box<CorePattern<Ty>>>,
+    ) {
         self.rename_constructor(name);
         if let Some(pat) = arg {
             self.traverse_pattern(&mut *pat);
@@ -257,7 +254,7 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
         }
     }
 
-    fn traverse_pat_tuple(&mut self, tuple: &mut Vec<Pattern<Ty>>) {
+    fn traverse_pat_tuple(&mut self, tuple: &mut Vec<CorePattern<Ty>>) {
         for pat in tuple {
             self.traverse_pattern(pat)
         }

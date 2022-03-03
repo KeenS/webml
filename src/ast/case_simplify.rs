@@ -52,7 +52,7 @@ impl CaseSimplifyPass {
         WildcardToVariable::new(self.id.clone()).transform_ast(ast)
     }
 
-    fn rename_pattern(&mut self, pattern: &mut TypedPattern) {
+    fn rename_pattern(&mut self, pattern: &mut TypedCorePattern) {
         use PatternKind::*;
         match &mut pattern.inner {
             Constructor { arg, .. } => {
@@ -74,7 +74,7 @@ impl CaseSimplifyPass {
         &mut self,
         cond: Stack<(Type, Symbol)>,
         ty: Type,
-        clauses: Vec<(Stack<TypedPattern>, TypedCoreExpr)>,
+        clauses: Vec<(Stack<TypedCorePattern>, TypedCoreExpr)>,
     ) -> TypedCoreExpr {
         // assuming clauses.any(|(patterns, _)| patterns.len() == cond.len())
         if clauses.len() == 0 {
@@ -96,7 +96,7 @@ impl CaseSimplifyPass {
         &mut self,
         _: Stack<(Type, Symbol)>,
         _: Type,
-        _: Vec<(Stack<TypedPattern>, TypedCoreExpr)>,
+        _: Vec<(Stack<TypedCorePattern>, TypedCoreExpr)>,
     ) -> TypedCoreExpr {
         panic!("non-exhausitive pattern");
     }
@@ -105,7 +105,7 @@ impl CaseSimplifyPass {
         &mut self,
         cond: Stack<(Type, Symbol)>,
         ty: Type,
-        mut clauses: Vec<(Stack<TypedPattern>, TypedCoreExpr)>,
+        mut clauses: Vec<(Stack<TypedCorePattern>, TypedCoreExpr)>,
     ) -> TypedCoreExpr {
         let (patterns, expr) = clauses.remove(0);
         patterns
@@ -132,7 +132,7 @@ impl CaseSimplifyPass {
         &mut self,
         mut cond: Stack<(Type, Symbol)>,
         ty: Type,
-        clauses: Vec<(Stack<TypedPattern>, TypedCoreExpr)>,
+        clauses: Vec<(Stack<TypedCorePattern>, TypedCoreExpr)>,
     ) -> TypedCoreExpr {
         let pos = self.find_tuple(&clauses);
 
@@ -218,7 +218,7 @@ impl CaseSimplifyPass {
         &mut self,
         mut cond: Stack<(Type, Symbol)>,
         ret_ty: Type,
-        clauses: Vec<(Stack<TypedPattern>, TypedCoreExpr)>,
+        clauses: Vec<(Stack<TypedCorePattern>, TypedCoreExpr)>,
     ) -> TypedCoreExpr {
         let pos = self.find_constant(&clauses);
 
@@ -287,7 +287,7 @@ impl CaseSimplifyPass {
         &mut self,
         mut cond: Stack<(Type, Symbol)>,
         ret_ty: Type,
-        clauses: Vec<(Stack<TypedPattern>, TypedCoreExpr)>,
+        clauses: Vec<(Stack<TypedCorePattern>, TypedCoreExpr)>,
     ) -> TypedCoreExpr {
         let pos = self.find_char(&clauses);
 
@@ -356,7 +356,7 @@ impl CaseSimplifyPass {
         &mut self,
         mut cond: Stack<(Type, Symbol)>,
         ret_ty: Type,
-        clauses: Vec<(Stack<TypedPattern>, TypedCoreExpr)>,
+        clauses: Vec<(Stack<TypedCorePattern>, TypedCoreExpr)>,
     ) -> TypedCoreExpr {
         let pos = self.find_constructor(&clauses);
 
@@ -457,19 +457,19 @@ impl CaseSimplifyPass {
         }
     }
 
-    fn find_tuple(&mut self, clauses: &[(Stack<TypedPattern>, TypedCoreExpr)]) -> usize {
+    fn find_tuple(&mut self, clauses: &[(Stack<TypedCorePattern>, TypedCoreExpr)]) -> usize {
         clauses[0].0.iter().rposition(|p| p.is_tuple()).unwrap()
     }
 
-    fn find_constant(&mut self, clauses: &[(Stack<TypedPattern>, TypedCoreExpr)]) -> usize {
+    fn find_constant(&mut self, clauses: &[(Stack<TypedCorePattern>, TypedCoreExpr)]) -> usize {
         clauses[0].0.iter().rposition(|p| p.is_constant()).unwrap()
     }
 
-    fn find_char(&mut self, clauses: &[(Stack<TypedPattern>, TypedCoreExpr)]) -> usize {
+    fn find_char(&mut self, clauses: &[(Stack<TypedCorePattern>, TypedCoreExpr)]) -> usize {
         clauses[0].0.iter().rposition(|p| p.is_char()).unwrap()
     }
 
-    fn find_constructor(&mut self, clauses: &[(Stack<TypedPattern>, TypedCoreExpr)]) -> usize {
+    fn find_constructor(&mut self, clauses: &[(Stack<TypedCorePattern>, TypedCoreExpr)]) -> usize {
         clauses[0]
             .0
             .iter()
@@ -481,11 +481,11 @@ impl CaseSimplifyPass {
         &'a mut self,
         (cty, cond): (Type, Symbol),
         name: &Symbol,
-        arg: &Option<Box<TypedPattern>>,
+        arg: &Option<Box<TypedCorePattern>>,
         clause_with_heads: impl Iterator<
-            Item = &'b (TypedPattern, (Stack<TypedPattern>, TypedCoreExpr)),
+            Item = &'b (TypedCorePattern, (Stack<TypedCorePattern>, TypedCoreExpr)),
         >,
-    ) -> Vec<(Stack<TypedPattern>, TypedCoreExpr)> {
+    ) -> Vec<(Stack<TypedCorePattern>, TypedCoreExpr)> {
         clause_with_heads
             .filter_map(|(head, clause)| match &head.inner {
                 PatternKind::Constructor {
@@ -536,9 +536,9 @@ impl CaseSimplifyPass {
         (cty, cond): (Type, Symbol),
         value: i64,
         clause_with_heads: impl Iterator<
-            Item = &'b (TypedPattern, (Stack<TypedPattern>, TypedCoreExpr)),
+            Item = &'b (TypedCorePattern, (Stack<TypedCorePattern>, TypedCoreExpr)),
         >,
-    ) -> Vec<(Stack<TypedPattern>, TypedCoreExpr)> {
+    ) -> Vec<(Stack<TypedCorePattern>, TypedCoreExpr)> {
         clause_with_heads
             .filter_map(|(head, clause)| match &head.inner {
                 PatternKind::Constant { value: value1, .. } if value == *value1 => {
@@ -575,9 +575,9 @@ impl CaseSimplifyPass {
         (cty, cond): (Type, Symbol),
         value: u32,
         clause_with_heads: impl Iterator<
-            Item = &'b (TypedPattern, (Stack<TypedPattern>, TypedCoreExpr)),
+            Item = &'b (TypedCorePattern, (Stack<TypedCorePattern>, TypedCoreExpr)),
         >,
-    ) -> Vec<(Stack<TypedPattern>, TypedCoreExpr)> {
+    ) -> Vec<(Stack<TypedCorePattern>, TypedCoreExpr)> {
         clause_with_heads
             .filter_map(|(head, clause)| match &head.inner {
                 PatternKind::Char { value: value1, .. } if value == *value1 => Some(clause.clone()),
@@ -613,7 +613,7 @@ impl CaseSimplifyPass {
         cond: Stack<(Type, Symbol)>,
         ty: Type,
         clause_with_heads: impl Iterator<
-            Item = &'b (TypedPattern, (Stack<TypedPattern>, TypedCoreExpr)),
+            Item = &'b (TypedCorePattern, (Stack<TypedCorePattern>, TypedCoreExpr)),
         >,
     ) -> TypedCoreExpr {
         let clauses = clause_with_heads
@@ -673,17 +673,17 @@ impl Transform<Type> for CaseSimplifyPass {
     fn transform_val(
         &mut self,
         rec: bool,
-        pattern: TypedPattern,
+        pattern: TypedCorePattern,
         expr: TypedCoreExpr,
     ) -> TypedCoreDeclaration {
         match pattern {
             // dirty heuristic for simple patterns
-            TypedPattern {
-                inner: TypedPatternKind::Variable { .. },
+            TypedCorePattern {
+                inner: TypedCorePatternKind::Variable { .. },
                 ..
             }
-            | TypedPattern {
-                inner: TypedPatternKind::Wildcard { .. },
+            | TypedCorePattern {
+                inner: TypedCorePatternKind::Wildcard { .. },
                 ..
             } => Declaration::Val {
                 rec,
@@ -734,7 +734,7 @@ impl Transform<Type> for CaseSimplifyPass {
     fn transform_case(
         &mut self,
         cond: Box<TypedCoreExpr>,
-        clauses: Vec<(TypedPattern, TypedCoreExpr)>,
+        clauses: Vec<(TypedCorePattern, TypedCoreExpr)>,
     ) -> TypedCoreExprKind {
         let condsym = self.gensym("cond");
         let condty = cond.ty();
@@ -777,7 +777,7 @@ impl WildcardToVariable {
 }
 
 impl Transform<Type> for WildcardToVariable {
-    fn transform_pat_wildcard(&mut self) -> TypedPatternKind {
+    fn transform_pat_wildcard(&mut self) -> TypedCorePatternKind {
         PatternKind::Variable {
             name: self.gensym("_"),
         }

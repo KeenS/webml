@@ -227,6 +227,7 @@ impl AST2HIRPass {
                         }
                         ret
                     }
+                    ast::PatternKind::D(d) => match d {},
                 }
             }
             ast::Declaration::LangItem { decl, .. } => self.conv_statement(*decl),
@@ -313,7 +314,7 @@ impl AST2HIRPass {
             E::D(d) => match d {},
         }
     }
-    fn conv_pat(&mut self, pat: ast::TypedPattern) -> Pattern {
+    fn conv_pat(&mut self, pat: ast::TypedCorePattern) -> Pattern {
         let ty = pat.ty;
         match pat.inner {
             ast::PatternKind::Constant { value } => Pattern::Constant {
@@ -356,6 +357,7 @@ impl AST2HIRPass {
                 name: Symbol::new("_"),
                 ty: conv_ty(ty),
             },
+            ast::PatternKind::D(d) => match d {},
         }
     }
 
