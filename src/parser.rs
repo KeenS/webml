@@ -536,6 +536,10 @@ impl Parser {
             let mut s = vec![];
             let mut chars = i.iter_elements();
             let mut count = 0;
+            let eof = Err(nom::Err::Error(nom::error::Error {
+                input: i,
+                code: nom::error::ErrorKind::Eof,
+            }));
             while let Some(c) = chars.next() {
                 count += 1;
                 match c {
@@ -545,7 +549,7 @@ impl Parser {
                                 count += 1;
                                 c
                             }
-                            None => break,
+                            None => return eof,
                         };
                         match c {
                             'a' => s.push(7),
@@ -557,7 +561,21 @@ impl Parser {
                             'r' => s.push(13),
                             '"' => s.push('"' as u32),
                             '\\' => s.push('\\' as u32),
-                            // \^{c}
+                            '^' => match chars.next() {
+                                Some(c) => {
+                                    let c = c as u32;
+                                    count += 1;
+                                    if 64 <= c && c <= 95 {
+                                        s.push(c - 64)
+                                    } else {
+                                        return Err(nom::Err::Error(nom::error::Error {
+                                            input: i,
+                                            code: nom::error::ErrorKind::Tag,
+                                        }));
+                                    }
+                                }
+                                None => return eof,
+                            },
                             // \{ddd}
                             // \u{xxxx}
                             // \f... f\
