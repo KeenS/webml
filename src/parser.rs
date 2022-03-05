@@ -536,21 +536,23 @@ impl Parser {
             let mut s = vec![];
             let mut chars = i.iter_elements();
             let mut count = 0;
-            let eof = Err(nom::Err::Error(nom::error::Error {
+            let eeof = Err(nom::Err::Error(nom::error::Error {
                 input: i,
                 code: nom::error::ErrorKind::Eof,
+            }));
+            let etag = Err(nom::Err::Error(nom::error::Error {
+                input: i,
+                code: nom::error::ErrorKind::Tag,
             }));
             while let Some(c) = chars.next() {
                 count += 1;
                 match c {
                     '\\' => {
                         let c = match chars.next() {
-                            Some(c) => {
-                                count += 1;
-                                c
-                            }
-                            None => return eof,
+                            Some(c) => c,
+                            None => return eeof,
                         };
+                        count += 1;
                         match c {
                             'a' => s.push(7),
                             'b' => s.push(8),
@@ -568,15 +570,27 @@ impl Parser {
                                     if 64 <= c && c <= 95 {
                                         s.push(c - 64)
                                     } else {
-                                        return Err(nom::Err::Error(nom::error::Error {
-                                            input: i,
-                                            code: nom::error::ErrorKind::Tag,
-                                        }));
+                                        return etag;
                                     }
                                 }
-                                None => return eof,
+                                None => return eeof,
                             },
-                            // \{ddd}
+                            c1 @ '0'..='9' => {
+                                let c1 = c1 as u32 - '0' as u32;
+                                let c2 = match chars.next() {
+                                    Some(c) if ('0'..='9').contains(&c) => c as u32 - '0' as u32,
+                                    Some(_) => return etag,
+                                    None => return eeof,
+                                };
+                                let c3 = match chars.next() {
+                                    Some(c) if ('0'..='9').contains(&c) => c as u32 - '0' as u32,
+                                    Some(_) => return etag,
+                                    None => return eeof,
+                                };
+                                count += 2;
+                                let d = c1 * 100 + c2 * 10 + c3;
+                                s.push(d);
+                            }
                             // \u{xxxx}
                             // \f... f\
                             _ => {

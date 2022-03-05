@@ -39,7 +39,7 @@ fn parse_char() {
 
 #[test]
 fn parse_string() {
-    let input = r##"val x = "abc\n\\\^J""##;
+    let input = r#"val x = "abc\n\\\^J\097""#;
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
@@ -54,7 +54,7 @@ fn parse_string() {
             expr: Expr {
                 ty: Empty {},
                 inner: ExprKind::D(DerivedExprKind::String {
-                    value: "abc\n\\\n".chars().map(|c| c as u32).collect()
+                    value: "abc\n\\\na".chars().map(|c| c as u32).collect()
                 })
             },
         },])
