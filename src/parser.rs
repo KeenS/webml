@@ -535,7 +535,7 @@ impl Parser {
             let (i, _) = tag("\"")(i)?;
             let mut s = vec![];
             let mut chars = i.iter_elements();
-            let mut count = 0;
+            let mut count = 0usize;
             let eeof = Err(nom::Err::Error(nom::error::Error {
                 input: i,
                 code: nom::error::ErrorKind::Eof,
@@ -563,6 +563,7 @@ impl Parser {
                             'r' => s.push(13),
                             '"' => s.push('"' as u32),
                             '\\' => s.push('\\' as u32),
+                            // \^{Ctrl}
                             '^' => match chars.next() {
                                 Some(c) => {
                                     let c = c as u32;
@@ -575,6 +576,7 @@ impl Parser {
                                 }
                                 None => return eeof,
                             },
+                            // \{ddd}
                             c1 @ '0'..='9' => {
                                 let c1 = c1 as u32 - '0' as u32;
                                 let c2 = match chars.next() {
@@ -591,6 +593,7 @@ impl Parser {
                                 let d = c1 * 100 + c2 * 10 + c3;
                                 s.push(d);
                             }
+                            // \u{xxxx}
                             'u' => {
                                 let hex = "0123456789abcdef";
                                 let c1 = match chars
@@ -626,6 +629,21 @@ impl Parser {
                                 s.push(d);
                             }
                             // \f... f\
+                            c if c.is_whitespace() => {
+                                let mut n = None;
+                                while let Some(c) = chars.next() {
+                                    count += 1;
+                                    if !c.is_whitespace() {
+                                        n = Some(c);
+                                        break;
+                                    }
+                                }
+                                match n {
+                                    Some('\\') => (),
+                                    Some(_) => return etag,
+                                    None => return eeof,
+                                };
+                            }
                             _ => {
                                 return Err(nom::Err::Error(nom::error::Error {
                                     input: i,
