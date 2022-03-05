@@ -95,7 +95,7 @@ fun stringFromIntInner d acc = let
 in
     if rest = 0
     then acc
-    else stringFromIntInner d acc
+    else stringFromIntInner rest acc
 end
 
 
