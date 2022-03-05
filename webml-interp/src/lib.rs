@@ -1,41 +1,45 @@
 use std::path::Path;
 use wasmtime::*;
 
-fn add_ffi_module(linker: &mut Linker) {
+fn add_ffi_module(linker: &mut Linker<()>) {
     linker
-        .func("js-ffi", "print", |x: i32| {
+        .func_wrap("js-ffi", "print", |x: i32| {
             print!("{}", char::from_u32(x as u32).unwrap())
         })
         .expect("failed to add ffi functions");
 }
-fn add_rt_module(linker: &mut Linker) {
+fn add_rt_module(store: &mut Store<()>, linker: &mut Linker<()>) {
     let module_data =
         include_bytes!("../../webml-rt/target/wasm32-unknown-unknown/release/webml_rt.wasm");
     let module =
-        Module::from_binary(linker.store(), module_data).expect("failed to compile webml_rt");
+        Module::from_binary(linker.engine(), module_data).expect("failed to compile webml_rt");
     let instance = linker
-        .instantiate(&module)
+        .instantiate(store.as_context_mut(), &module)
         .expect("failed to instanciate webml_rt");
     linker
-        .instance("webml-rt", &instance)
+        .instance(store.as_context_mut(), "webml-rt", instance)
         .expect("failed to import webml-rt");
 }
 
-pub fn linker() -> Linker {
-    let store = Store::default();
-    let mut linker = Linker::new(&store);
+pub fn linker(store: &mut Store<()>) -> Linker<()> {
+    let mut linker = Linker::new(store.engine());
     add_ffi_module(&mut linker);
-    add_rt_module(&mut linker);
+    add_rt_module(store, &mut linker);
     linker
 }
 
 pub struct WebmlInterp {
-    linker: Linker,
+    linker: Linker<()>,
+    store: Store<()>,
 }
 
 impl WebmlInterp {
     pub fn new() -> Self {
-        Self { linker: linker() }
+        let mut store = Store::default();
+        Self {
+            linker: linker(&mut store),
+            store,
+        }
     }
 
     fn is_wasm(prog: &[u8]) -> bool {
@@ -60,10 +64,10 @@ impl WebmlInterp {
     }
 
     pub fn run_wasm(&mut self, module_data: &[u8]) {
-        let module = Module::from_binary(self.linker.store(), module_data)
+        let module = Module::from_binary(self.linker.engine(), module_data)
             .expect("failed to compile module");
         self.linker
-            .instantiate(&module)
+            .instantiate(&mut self.store, &module)
             .expect("failed to instanciate module");
     }
 
