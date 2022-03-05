@@ -3,7 +3,9 @@ use wasmtime::*;
 
 fn add_ffi_module(linker: &mut Linker) {
     linker
-        .func("js-ffi", "print", |x: i32| println!("{}", x))
+        .func("js-ffi", "print", |x: i32| {
+            print!("{}", char::from_u32(x as u32).unwrap())
+        })
         .expect("failed to add ffi functions");
 }
 fn add_rt_module(linker: &mut Linker) {
