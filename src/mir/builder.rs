@@ -46,63 +46,299 @@ impl EBBBuilder {
         self
     }
 
-    pub fn add(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
-        self.push(Op::Add { var, ty, l, r });
+    pub fn add_int(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
+        self.push(Op::BinOp {
+            var,
+            ty,
+            l,
+            r,
+            binop: BinOp::AddInt,
+        });
         self
     }
 
-    pub fn sub(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
-        self.push(Op::Sub { var, ty, l, r });
+    pub fn add_real(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
+        self.push(Op::BinOp {
+            var,
+            ty,
+            l,
+            r,
+            binop: BinOp::AddReal,
+        });
         self
     }
 
-    pub fn mul(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
-        self.push(Op::Mul { var, ty, l, r });
+    pub fn sub_int(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
+        self.push(Op::BinOp {
+            var,
+            ty,
+            l,
+            r,
+            binop: BinOp::SubInt,
+        });
+        self
+    }
+
+    pub fn sub_real(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
+        self.push(Op::BinOp {
+            var,
+            ty,
+            l,
+            r,
+            binop: BinOp::SubReal,
+        });
+        self
+    }
+
+    pub fn mul_int(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
+        self.push(Op::BinOp {
+            var,
+            ty,
+            l,
+            r,
+            binop: BinOp::MulInt,
+        });
+        self
+    }
+
+    pub fn mul_real(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
+        self.push(Op::BinOp {
+            var,
+            ty,
+            l,
+            r,
+            binop: BinOp::MulReal,
+        });
         self
     }
 
     pub fn div_int(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
-        self.push(Op::DivInt { var, ty, l, r });
+        self.push(Op::BinOp {
+            var,
+            ty,
+            l,
+            r,
+            binop: BinOp::DivInt,
+        });
         self
     }
 
-    pub fn div_float(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
-        self.push(Op::DivFloat { var, ty, l, r });
+    pub fn div_real(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
+        self.push(Op::BinOp {
+            var,
+            ty,
+            l,
+            r,
+            binop: BinOp::DivReal,
+        });
         self
     }
 
-    pub fn mod_(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
-        self.push(Op::Mod { var, ty, l, r });
+    pub fn mod_int(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
+        self.push(Op::BinOp {
+            var,
+            ty,
+            l,
+            r,
+            binop: BinOp::ModInt,
+        });
         self
     }
 
-    pub fn eq(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
-        self.push(Op::Eq { var, ty, l, r });
+    pub fn eq_int(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
+        self.push(Op::BinOp {
+            var,
+            ty,
+            l,
+            r,
+            binop: BinOp::EqInt,
+        });
         self
     }
 
-    pub fn neq(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
-        self.push(Op::Neq { var, ty, l, r });
+    pub fn eq_real(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
+        self.push(Op::BinOp {
+            var,
+            ty,
+            l,
+            r,
+            binop: BinOp::EqReal,
+        });
         self
     }
 
-    pub fn gt(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
-        self.push(Op::Gt { var, ty, l, r });
+    pub fn eq_char(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
+        self.push(Op::BinOp {
+            var,
+            ty,
+            l,
+            r,
+            binop: BinOp::EqChar,
+        });
         self
     }
 
-    pub fn ge(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
-        self.push(Op::Ge { var, ty, l, r });
+    pub fn neq_int(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
+        self.push(Op::BinOp {
+            var,
+            ty,
+            l,
+            r,
+            binop: BinOp::NeqInt,
+        });
         self
     }
 
-    pub fn lt(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
-        self.push(Op::Lt { var, ty, l, r });
+    pub fn neq_real(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
+        self.push(Op::BinOp {
+            var,
+            ty,
+            l,
+            r,
+            binop: BinOp::NeqReal,
+        });
         self
     }
 
-    pub fn le(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
-        self.push(Op::Le { var, ty, l, r });
+    pub fn neq_char(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
+        self.push(Op::BinOp {
+            var,
+            ty,
+            l,
+            r,
+            binop: BinOp::NeqChar,
+        });
+        self
+    }
+
+    pub fn gt_int(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
+        self.push(Op::BinOp {
+            var,
+            ty,
+            l,
+            r,
+            binop: BinOp::GtInt,
+        });
+        self
+    }
+
+    pub fn gt_real(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
+        self.push(Op::BinOp {
+            var,
+            ty,
+            l,
+            r,
+            binop: BinOp::GtReal,
+        });
+        self
+    }
+
+    pub fn gt_char(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
+        self.push(Op::BinOp {
+            var,
+            ty,
+            l,
+            r,
+            binop: BinOp::GtChar,
+        });
+        self
+    }
+
+    pub fn ge_int(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
+        self.push(Op::BinOp {
+            var,
+            ty,
+            l,
+            r,
+            binop: BinOp::GeInt,
+        });
+        self
+    }
+
+    pub fn ge_real(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
+        self.push(Op::BinOp {
+            var,
+            ty,
+            l,
+            r,
+            binop: BinOp::GeReal,
+        });
+        self
+    }
+
+    pub fn ge_char(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
+        self.push(Op::BinOp {
+            var,
+            ty,
+            l,
+            r,
+            binop: BinOp::GeChar,
+        });
+        self
+    }
+    pub fn lt_int(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
+        self.push(Op::BinOp {
+            var,
+            ty,
+            l,
+            r,
+            binop: BinOp::LtInt,
+        });
+        self
+    }
+
+    pub fn lt_real(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
+        self.push(Op::BinOp {
+            var,
+            ty,
+            l,
+            r,
+            binop: BinOp::LtReal,
+        });
+        self
+    }
+
+    pub fn lt_char(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
+        self.push(Op::BinOp {
+            var,
+            ty,
+            l,
+            r,
+            binop: BinOp::LtChar,
+        });
+        self
+    }
+
+    pub fn le_int(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
+        self.push(Op::BinOp {
+            var,
+            ty,
+            l,
+            r,
+            binop: BinOp::LeInt,
+        });
+        self
+    }
+
+    pub fn le_real(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
+        self.push(Op::BinOp {
+            var,
+            ty,
+            l,
+            r,
+            binop: BinOp::LeReal,
+        });
+        self
+    }
+
+    pub fn le_char(&mut self, var: Symbol, ty: EbbTy, l: Symbol, r: Symbol) -> &mut Self {
+        self.push(Op::BinOp {
+            var,
+            ty,
+            l,
+            r,
+            binop: BinOp::LeChar,
+        });
         self
     }
 

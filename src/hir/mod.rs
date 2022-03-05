@@ -144,6 +144,37 @@ pub struct TypeInfo {
     pub constructors: Vec<(u32, Option<HTy>)>,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BIF {
+    // specified versions
+    AddInt,
+    AddReal,
+    SubInt,
+    SubReal,
+    MulInt,
+    MulReal,
+    DivInt,
+    DivReal,
+    ModInt,
+    EqInt,
+    EqReal,
+    EqChar,
+    NeqInt,
+    NeqReal,
+    NeqChar,
+    GtInt,
+    GtReal,
+    GtChar,
+    GeInt,
+    GeReal,
+    GeChar,
+    LtInt,
+    LtReal,
+    LtChar,
+    LeInt,
+    LeReal,
+    LeChar,
+}
 impl Expr {
     fn app1(self, ty: HTy, e: Expr) -> Expr {
         Expr::App {

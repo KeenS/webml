@@ -3,20 +3,22 @@ use crate::util::{nspaces, PP};
 use std::fmt;
 use std::io;
 
-impl<Ty: PP, DE: PP, DS: PP> PP for Context<Ty, DE, DS> {
+impl<Ty: PP, DE: PP, DS: PP, DP: PP> PP for Context<Ty, DE, DS, DP> {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         self.ast.pp(w, indent)
     }
 }
 
-impl<Ty: fmt::Display, DE: fmt::Display, DS: fmt::Display> fmt::Display for Context<Ty, DE, DS> {
+impl<Ty: fmt::Display, DE: fmt::Display, DS: fmt::Display, DP: fmt::Display> fmt::Display
+    for Context<Ty, DE, DS, DP>
+{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let indent = f.width().unwrap_or(0);
         write!(f, "{:indent$}", self.ast, indent = indent)
     }
 }
 
-impl<Ty: PP, DE: PP, DS: PP> PP for AST<Ty, DE, DS> {
+impl<Ty: PP, DE: PP, DS: PP, DP: PP> PP for AST<Ty, DE, DS, DP> {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         for bind in &self.0 {
             bind.pp(w, indent)?;
@@ -26,7 +28,9 @@ impl<Ty: PP, DE: PP, DS: PP> PP for AST<Ty, DE, DS> {
     }
 }
 
-impl<Ty: fmt::Display, DE: fmt::Display, DS: fmt::Display> fmt::Display for AST<Ty, DE, DS> {
+impl<Ty: fmt::Display, DE: fmt::Display, DS: fmt::Display, DP: fmt::Display> fmt::Display
+    for AST<Ty, DE, DS, DP>
+{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let indent = f.width().unwrap_or(0);
         for bind in &self.0 {
@@ -36,7 +40,7 @@ impl<Ty: fmt::Display, DE: fmt::Display, DS: fmt::Display> fmt::Display for AST<
     }
 }
 
-impl<Ty: PP, DE: PP, DS: PP> PP for Declaration<Ty, DE, DS> {
+impl<Ty: PP, DE: PP, DS: PP, DP: PP> PP for Declaration<Ty, DE, DS, DP> {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         use Declaration::*;
         match self {
@@ -76,8 +80,8 @@ impl<Ty: PP, DE: PP, DS: PP> PP for Declaration<Ty, DE, DS> {
     }
 }
 
-impl<Ty: fmt::Display, DE: fmt::Display, DS: fmt::Display> fmt::Display
-    for Declaration<Ty, DE, DS>
+impl<Ty: fmt::Display, DE: fmt::Display, DS: fmt::Display, DP: fmt::Display> fmt::Display
+    for Declaration<Ty, DE, DS, DP>
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use Declaration::*;
@@ -124,6 +128,13 @@ impl fmt::Display for LangItem {
         use LangItem::*;
         match self {
             Bool => write!(f, "bool"),
+            String => write!(f, "string"),
+            StringEq => write!(f, "stringEq"),
+            StringNeq => write!(f, "stringNeq"),
+            StringGt => write!(f, "stringGt"),
+            StringGe => write!(f, "stringGe"),
+            StringLt => write!(f, "stringLt"),
+            StringLe => write!(f, "stringLe"),
         }
     }
 }
@@ -203,7 +214,7 @@ impl<Ty: fmt::Display> fmt::Display for DerivedDeclaration<Ty> {
         }
     }
 }
-impl<Ty: PP, DE: PP, DS: PP> PP for Expr<Ty, DE, DS> {
+impl<Ty: PP, DE: PP, DS: PP, DP: PP> PP for Expr<Ty, DE, DS, DP> {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         use crate::ast::ExprKind::*;
         match &self.inner {
@@ -315,7 +326,9 @@ impl<Ty: PP, DE: PP, DS: PP> PP for Expr<Ty, DE, DS> {
     }
 }
 
-impl<Ty: fmt::Display, DE: fmt::Display, DS: fmt::Display> fmt::Display for Expr<Ty, DE, DS> {
+impl<Ty: fmt::Display, DE: fmt::Display, DS: fmt::Display, DP: fmt::Display> fmt::Display
+    for Expr<Ty, DE, DS, DP>
+{
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use crate::ast::ExprKind::*;
         let indent = f.width().unwrap_or(0);
@@ -443,6 +456,9 @@ impl<Ty: PP> PP for DerivedExprKind<Ty> {
                 write!(w, "\n{}else ", ind)?;
                 else_.pp(w, indent + 4)?;
             }
+            String { value } => {
+                write!(w, "{:?}", value)?;
+            }
         }
         Ok(())
     }
@@ -463,6 +479,9 @@ impl<Ty: fmt::Display> fmt::Display for DerivedExprKind<Ty> {
                 write!(f, "{}then {:next$}\n", ind, then, next = next)?;
                 write!(f, "{}else {:next$}", ind, else_, next = next)?;
             }
+            String { value } => {
+                write!(f, "{:?}", value)?;
+            }
         }
         Ok(())
     }
@@ -480,7 +499,7 @@ impl fmt::Display for Nothing {
     }
 }
 
-impl<Ty> PP for Pattern<Ty> {
+impl<Ty, DP: PP> PP for Pattern<Ty, DP> {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         use PatternKind::*;
         match &self.inner {
@@ -509,11 +528,12 @@ impl<Ty> PP for Pattern<Ty> {
             }
             Variable { name, .. } => name.pp(w, indent),
             Wildcard { .. } => write!(w, "_"),
+            D(d) => d.pp(w, indent),
         }
     }
 }
 
-impl<Ty> fmt::Display for Pattern<Ty> {
+impl<Ty, DP: fmt::Display> fmt::Display for Pattern<Ty, DP> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use PatternKind::*;
         let indent = f.width().unwrap_or(0);
@@ -543,6 +563,37 @@ impl<Ty> fmt::Display for Pattern<Ty> {
             }
             Variable { name, .. } => write!(f, "{:indent$}", name, indent = indent),
             Wildcard { .. } => write!(f, "_"),
+            D(d) => write!(f, "{:indent$}", d, indent = indent),
+        }
+    }
+}
+
+impl PP for DerivedPatternKind {
+    fn pp<W: io::Write>(&self, w: &mut W, _: usize) -> io::Result<()> {
+        match &self {
+            DerivedPatternKind::String { value } => write!(
+                w,
+                "{}",
+                value
+                    .into_iter()
+                    .map(|&u| char::from_u32(u).unwrap())
+                    .collect::<String>()
+            ),
+        }
+    }
+}
+
+impl fmt::Display for DerivedPatternKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match &self {
+            DerivedPatternKind::String { value } => write!(
+                f,
+                "{}",
+                value
+                    .into_iter()
+                    .map(|&u| char::from_u32(u).unwrap())
+                    .collect::<String>()
+            ),
         }
     }
 }
@@ -607,6 +658,96 @@ impl PP for Empty {
 
 impl fmt::Display for Empty {
     fn fmt(&self, _: &mut fmt::Formatter) -> fmt::Result {
+        Ok(())
+    }
+}
+
+impl PP for BIF {
+    fn pp<W: io::Write>(&self, w: &mut W, _indent: usize) -> io::Result<()> {
+        use self::BIF::*;
+        match self {
+            Add | AddInt | AddReal => {
+                write!(w, "add")?;
+            }
+            Sub | SubInt | SubReal => {
+                write!(w, "sub")?;
+            }
+            Mul | MulInt | MulReal => {
+                write!(w, "mul")?;
+            }
+            Div => {
+                write!(w, "div")?;
+            }
+            Divf => {
+                write!(w, "divf")?;
+            }
+            Mod | ModInt => {
+                write!(w, "mod")?;
+            }
+            Eq | EqInt | EqReal | EqChar => {
+                write!(w, "eq")?;
+            }
+            Neq | NeqInt | NeqReal | NeqChar => {
+                write!(w, "neq")?;
+            }
+            Gt | GtInt | GtReal | GtChar => {
+                write!(w, "gt")?;
+            }
+            Ge | GeInt | GeReal | GeChar => {
+                write!(w, "ge")?;
+            }
+            Lt | LtInt | LtReal | LtChar => {
+                write!(w, "lt")?;
+            }
+            Le | LeInt | LeReal | LeChar => {
+                write!(w, "le")?;
+            }
+        }
+        Ok(())
+    }
+}
+
+impl fmt::Display for BIF {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use self::BIF::*;
+        match self {
+            Add | AddInt | AddReal => {
+                write!(f, "add")?;
+            }
+            Sub | SubInt | SubReal => {
+                write!(f, "sub")?;
+            }
+            Mul | MulInt | MulReal => {
+                write!(f, "mul")?;
+            }
+            Div => {
+                write!(f, "div")?;
+            }
+            Divf => {
+                write!(f, "divf")?;
+            }
+            Mod | ModInt => {
+                write!(f, "mod")?;
+            }
+            Eq | EqInt | EqReal | EqChar => {
+                write!(f, "eq")?;
+            }
+            Neq | NeqInt | NeqReal | NeqChar => {
+                write!(f, "neq")?;
+            }
+            Gt | GtInt | GtReal | GtChar => {
+                write!(f, "gt")?;
+            }
+            Ge | GeInt | GeReal | GeChar => {
+                write!(f, "ge")?;
+            }
+            Lt | LtInt | LtReal | LtChar => {
+                write!(f, "lt")?;
+            }
+            Le | LeInt | LeReal | LeChar => {
+                write!(f, "le")?;
+            }
+        }
         Ok(())
     }
 }

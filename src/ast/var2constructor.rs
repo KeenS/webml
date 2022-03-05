@@ -82,7 +82,7 @@ impl Transform<Empty> for VarToConstructorPass {
         }
     }
 
-    fn transform_pat_variable(&mut self, name: Symbol) -> UntypedPatternKind {
+    fn transform_pat_variable(&mut self, name: Symbol) -> UntypedCorePatternKind {
         if self.is_constructor(&name) {
             PatternKind::Constructor { arg: None, name }
         } else {

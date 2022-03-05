@@ -15,8 +15,9 @@ fn with_compile_result(path: impl AsRef<Path>, callback: impl FnOnce(Result<Vec<
     let mut input = include_str!("../../ml_src/prelude.sml").to_string();
     let config = Config::default();
     read_and_append_to_string(&path, &mut input).expect("failed to load file");
+    println!("compiling {}", path.display());
     let result = compile_string(input, &config);
-    println!("{}", path.to_str().unwrap());
+    println!("   done");
     callback(result)
 }
 

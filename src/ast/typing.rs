@@ -58,43 +58,52 @@ fn conv_ty(pool: &UnificationPool<Typing>, ty: Typing) -> Type {
     }
 }
 
-fn try_unify<'b>(pool: &'b mut UnificationPool<Typing>, t1: Typing, t2: Typing) -> Result<Typing> {
-    use Typing::*;
-    match (t1, t2) {
-        (t1, t2) if t1 == t2 => Ok(t1),
-        (Int, OverloadedNum) | (OverloadedNum, Int) => Ok(Int),
-        (Int, OverloadedNumText) | (OverloadedNumText, Int) => Ok(Int),
-        (Char, OverloadedNumText) | (OverloadedNumText, Char) => Ok(Char),
-        (Real, OverloadedNum) | (OverloadedNum, Real) => Ok(Real),
-        (Real, OverloadedNumText) | (OverloadedNumText, Real) => Ok(Real),
-        (OverloadedNumText, OverloadedNum) | (OverloadedNum, OverloadedNumText) => {
-            Ok(OverloadedNumText)
-        }
-        (Variable(_), ty) | (ty, Variable(_)) => Ok(ty),
-        (Fun(p1, b1), Fun(p2, b2)) => {
-            let p = pool.try_unify_with(p1, p2, try_unify)?;
-            let b = pool.try_unify_with(b1, b2, try_unify)?;
-            Ok(Fun(p, b))
-        }
-        (Tuple(tu1), Tuple(tu2)) => {
-            if tu1.len() != tu2.len() {
-                Err(TypeError::MisMatch {
-                    expected: conv_ty(pool, Tuple(tu1)),
-                    actual: conv_ty(pool, Tuple(tu2)),
-                })
-            } else {
-                let tu = tu1
-                    .into_iter()
-                    .zip(tu2)
-                    .map(|(t1, t2)| pool.try_unify_with(t1, t2, try_unify))
-                    .collect::<Result<Vec<_>>>()?;
-                Ok(Tuple(tu))
+fn try_unify(
+    string_ty: Symbol,
+) -> impl FnMut(&mut UnificationPool<Typing>, Typing, Typing) -> Result<Typing> {
+    move |pool: &mut UnificationPool<Typing>, t1: Typing, t2: Typing| {
+        use Typing::*;
+        match (t1, t2) {
+            (t1, t2) if t1 == t2 => Ok(t1),
+            (Int, OverloadedNum) | (OverloadedNum, Int) => Ok(Int),
+            (Int, OverloadedNumText) | (OverloadedNumText, Int) => Ok(Int),
+            (Char, OverloadedNumText) | (OverloadedNumText, Char) => Ok(Char),
+            (Real, OverloadedNum) | (OverloadedNum, Real) => Ok(Real),
+            (Real, OverloadedNumText) | (OverloadedNumText, Real) => Ok(Real),
+            (OverloadedNumText, OverloadedNum) | (OverloadedNum, OverloadedNumText) => {
+                Ok(OverloadedNumText)
             }
+            (Datatype(sym), OverloadedNumText) | (OverloadedNumText, Datatype(sym))
+                if sym == string_ty =>
+            {
+                Ok(Datatype(sym))
+            }
+            (Variable(_), ty) | (ty, Variable(_)) => Ok(ty),
+            (Fun(p1, b1), Fun(p2, b2)) => {
+                let p = pool.try_unify_with(p1, p2, try_unify(string_ty.clone()))?;
+                let b = pool.try_unify_with(b1, b2, try_unify(string_ty.clone()))?;
+                Ok(Fun(p, b))
+            }
+            (Tuple(tu1), Tuple(tu2)) => {
+                if tu1.len() != tu2.len() {
+                    Err(TypeError::MisMatch {
+                        expected: conv_ty(pool, Tuple(tu1)),
+                        actual: conv_ty(pool, Tuple(tu2)),
+                    })
+                } else {
+                    let tu = tu1
+                        .into_iter()
+                        .zip(tu2)
+                        .map(|(t1, t2)| pool.try_unify_with(t1, t2, try_unify(string_ty.clone())))
+                        .collect::<Result<Vec<_>>>()?;
+                    Ok(Tuple(tu))
+                }
+            }
+            (t1, t2) => Err(TypeError::MisMatch {
+                expected: conv_ty(pool, t1),
+                actual: conv_ty(pool, t2),
+            }),
         }
-        (t1, t2) => Err(TypeError::MisMatch {
-            expected: conv_ty(pool, t1),
-            actual: conv_ty(pool, t2),
-        }),
     }
 }
 
@@ -386,6 +395,12 @@ impl TyEnv {
                         self.infer_expr(r)?;
                         Ok(())
                     }
+                    AddInt | AddReal | SubInt | SubReal | MulInt | MulReal | ModInt | EqInt
+                    | EqReal | EqChar | NeqInt | NeqReal | NeqChar | GtInt | GtReal | GtChar
+                    | GeInt | GeReal | GeChar | LtInt | LtReal | LtChar | LeInt | LeReal
+                    | LeChar => {
+                        panic!("specified BIF will not be appear before type inference")
+                    }
                 }
             }
             ExternCall {
@@ -495,7 +510,7 @@ impl TyEnv {
         Ok(())
     }
 
-    fn infer_pat(&mut self, pat: &Pattern<NodeId>) -> Result<()> {
+    fn infer_pat(&mut self, pat: &CorePattern<NodeId>) -> Result<()> {
         use self::PatternKind::*;
         let ty = &pat.ty();
         match &pat.inner {
@@ -539,6 +554,7 @@ impl TyEnv {
                 self.unify(*ty, tuple_ty)?;
             }
             Wildcard { .. } | Variable { .. } => (),
+            D(d) => match *d {},
         };
         for (name, ty) in pat.binds() {
             self.insert(name.clone(), *ty);
@@ -562,7 +578,15 @@ impl TyEnv {
     }
 
     fn unify(&mut self, id1: NodeId, id2: NodeId) -> Result<()> {
-        self.pool.try_unify_with(id1, id2, try_unify).map(|_| ())
+        let string_ty = self
+            .pool
+            .lang_items
+            .get(&LangItem::String)
+            .expect("no lang item string found")
+            .clone();
+        self.pool
+            .try_unify_with(id1, id2, try_unify(string_ty))
+            .map(|_| ())
     }
 
     fn give(&mut self, id1: NodeId, ty: Typing) -> Result<()> {

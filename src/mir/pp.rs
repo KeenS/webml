@@ -250,11 +250,53 @@ impl fmt::Display for EBB {
     }
 }
 
+impl fmt::Display for BinOp {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        use self::BinOp::*;
+        match self {
+            AddInt | AddReal => {
+                write!(f, "add")?;
+            }
+            SubInt | SubReal => {
+                write!(f, "sub")?;
+            }
+            MulInt | MulReal => {
+                write!(f, "mul")?;
+            }
+            DivInt | DivReal => {
+                write!(f, "div")?;
+            }
+            ModInt => {
+                write!(f, "mod")?;
+            }
+            EqInt | EqReal | EqChar => {
+                write!(f, "eq")?;
+            }
+            NeqInt | NeqReal | NeqChar => {
+                write!(f, "neq")?;
+            }
+            GtInt | GtReal | GtChar => {
+                write!(f, "gt")?;
+            }
+            GeInt | GeReal | GeChar => {
+                write!(f, "ge")?;
+            }
+            LtInt | LtReal | LtChar => {
+                write!(f, "lt")?;
+            }
+            LeInt | LeReal | LeChar => {
+                write!(f, "le")?;
+            }
+        }
+        Ok(())
+    }
+}
+
 fn pp_binop<W: io::Write>(
     w: &mut W,
     indent: usize,
     space: &str,
-    name: &str,
+    binop: BinOp,
     var: &Symbol,
     ty: &EbbTy,
     l: &Symbol,
@@ -266,7 +308,7 @@ fn pp_binop<W: io::Write>(
     ty.pp(w, indent)?;
     write!(w, " := ")?;
     l.pp(w, indent)?;
-    write!(w, " {} ", name)?;
+    write!(w, " {} ", binop)?;
     r.pp(w, indent)?;
     Ok(())
 }
@@ -293,42 +335,16 @@ impl PP for Op {
                 write!(w, " := ")?;
                 sym.pp(w, indent)?;
             }
-            Add { var, ty, l, r } => {
-                pp_binop(w, indent, &space, "+", var, ty, l, r)?;
+            BinOp {
+                var,
+                binop,
+                ty,
+                l,
+                r,
+            } => {
+                pp_binop(w, indent, &space, *binop, var, ty, l, r)?;
             }
-            Sub { var, ty, l, r } => {
-                pp_binop(w, indent, &space, "-", var, ty, l, r)?;
-            }
-            Mul { var, ty, l, r } => {
-                pp_binop(w, indent, &space, "*", var, ty, l, r)?;
-            }
-            DivInt { var, ty, l, r } => {
-                pp_binop(w, indent, &space, "div", var, ty, l, r)?;
-            }
-            DivFloat { var, ty, l, r } => {
-                pp_binop(w, indent, &space, "/", var, ty, l, r)?;
-            }
-            Mod { var, ty, l, r } => {
-                pp_binop(w, indent, &space, "mod", var, ty, l, r)?;
-            }
-            Eq { var, ty, l, r } => {
-                pp_binop(w, indent, &space, "=", var, ty, l, r)?;
-            }
-            Neq { var, ty, l, r } => {
-                pp_binop(w, indent, &space, "<>", var, ty, l, r)?;
-            }
-            Gt { var, ty, l, r } => {
-                pp_binop(w, indent, &space, ">", var, ty, l, r)?;
-            }
-            Ge { var, ty, l, r } => {
-                pp_binop(w, indent, &space, ">=", var, ty, l, r)?;
-            }
-            Lt { var, ty, l, r } => {
-                pp_binop(w, indent, &space, "<", var, ty, l, r)?;
-            }
-            Le { var, ty, l, r } => {
-                pp_binop(w, indent, &space, "<=", var, ty, l, r)?;
-            }
+
             Closure {
                 var,
                 param_ty,
@@ -525,13 +541,13 @@ impl PP for Op {
 fn display_binop(
     f: &mut fmt::Formatter,
     space: &str,
-    name: &str,
+    binop: BinOp,
     var: &Symbol,
     ty: &EbbTy,
     l: &Symbol,
     r: &Symbol,
 ) -> fmt::Result {
-    write!(f, "{}{}: {} := {} {} {}", space, var, ty, l, name, r)?;
+    write!(f, "{}{}: {} := {} {} {}", space, var, ty, l, binop, r)?;
     Ok(())
 }
 
@@ -547,41 +563,14 @@ impl fmt::Display for Op {
             Alias { var, ty, sym } => {
                 write!(f, "{}{}:{} := {}", space, var, ty, sym)?;
             }
-            Add { var, ty, l, r } => {
-                display_binop(f, &space, "+", var, ty, l, r)?;
-            }
-            Sub { var, ty, l, r } => {
-                display_binop(f, &space, "-", var, ty, l, r)?;
-            }
-            Mul { var, ty, l, r } => {
-                display_binop(f, &space, "*", var, ty, l, r)?;
-            }
-            DivInt { var, ty, l, r } => {
-                display_binop(f, &space, "div", var, ty, l, r)?;
-            }
-            DivFloat { var, ty, l, r } => {
-                display_binop(f, &space, "/", var, ty, l, r)?;
-            }
-            Mod { var, ty, l, r } => {
-                display_binop(f, &space, "mod", var, ty, l, r)?;
-            }
-            Eq { var, ty, l, r } => {
-                display_binop(f, &space, "=", var, ty, l, r)?;
-            }
-            Neq { var, ty, l, r } => {
-                display_binop(f, &space, "<>", var, ty, l, r)?;
-            }
-            Gt { var, ty, l, r } => {
-                display_binop(f, &space, ">", var, ty, l, r)?;
-            }
-            Ge { var, ty, l, r } => {
-                display_binop(f, &space, ">=", var, ty, l, r)?;
-            }
-            Lt { var, ty, l, r } => {
-                display_binop(f, &space, "<", var, ty, l, r)?;
-            }
-            Le { var, ty, l, r } => {
-                display_binop(f, &space, "<=", var, ty, l, r)?;
+            BinOp {
+                var,
+                ty,
+                l,
+                r,
+                binop,
+            } => {
+                display_binop(f, &space, *binop, var, ty, l, r)?;
             }
             Closure {
                 var,

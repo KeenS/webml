@@ -1,6 +1,6 @@
 use crate::ast;
 use crate::config::Config;
-use crate::hir::{Context, Expr, HTy, Pattern, SymbolTable, TypeInfo, Val, HIR};
+use crate::hir::{Context, Expr, HTy, Pattern, SymbolTable, TypeInfo, Val, BIF, HIR};
 use crate::id::Id;
 use crate::pass::Pass;
 use crate::prim::*;
@@ -227,6 +227,7 @@ impl AST2HIRPass {
                         }
                         ret
                     }
+                    ast::PatternKind::D(d) => match d {},
                 }
             }
             ast::Declaration::LangItem { decl, .. } => self.conv_statement(*decl),
@@ -256,7 +257,7 @@ impl AST2HIRPass {
             }
             E::BuiltinCall { fun, args } => Expr::BuiltinCall {
                 ty: conv_ty(ty),
-                fun,
+                fun: self.conv_bif(fun),
                 args: args.into_iter().map(|arg| self.conv_expr(arg)).collect(),
             },
             E::ExternCall {
@@ -313,7 +314,7 @@ impl AST2HIRPass {
             E::D(d) => match d {},
         }
     }
-    fn conv_pat(&mut self, pat: ast::TypedPattern) -> Pattern {
+    fn conv_pat(&mut self, pat: ast::TypedCorePattern) -> Pattern {
         let ty = pat.ty;
         match pat.inner {
             ast::PatternKind::Constant { value } => Pattern::Constant {
@@ -356,6 +357,43 @@ impl AST2HIRPass {
                 name: Symbol::new("_"),
                 ty: conv_ty(ty),
             },
+            ast::PatternKind::D(d) => match d {},
+        }
+    }
+
+    fn conv_bif(&mut self, bif: ast::BIF) -> BIF {
+        use ast::BIF::*;
+        match bif {
+            AddInt => BIF::AddInt,
+            AddReal => BIF::AddReal,
+            SubInt => BIF::SubInt,
+            SubReal => BIF::SubReal,
+            MulInt => BIF::MulInt,
+            MulReal => BIF::MulReal,
+            Div => BIF::DivInt,
+            Divf => BIF::DivReal,
+            ModInt => BIF::ModInt,
+            EqInt => BIF::EqInt,
+            EqReal => BIF::EqReal,
+            EqChar => BIF::EqChar,
+            NeqInt => BIF::NeqInt,
+            NeqReal => BIF::NeqReal,
+            NeqChar => BIF::NeqChar,
+            GtInt => BIF::GtInt,
+            GtReal => BIF::GtReal,
+            GtChar => BIF::GtChar,
+            GeInt => BIF::GeInt,
+            GeReal => BIF::GeReal,
+            GeChar => BIF::GeChar,
+            LtInt => BIF::LtInt,
+            LtReal => BIF::LtReal,
+            LtChar => BIF::LtChar,
+            LeInt => BIF::LeInt,
+            LeReal => BIF::LeReal,
+            LeChar => BIF::LeChar,
+            op @ (Add | Sub | Mul | Mod | Eq | Neq | Gt | Ge | Lt | Le) => {
+                panic!("unresolved overload found: {}", op)
+            }
         }
     }
 

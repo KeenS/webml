@@ -4,5 +4,5 @@ val x = case true of
                       true => true
                    | _ => false)
 val y = if x
-        then print 1
-        else print 0
+        then print "true\n"
+        else print "false\n"

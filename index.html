@@ -4,15 +4,24 @@
         <meta charset="utf-8">
         <title></title>
         <script>
+         let buffer = "";
+         function printChar(c) {
+             const s = String.fromCharCode(c);
+             buffer += s;
+             if (s === "\n") {
+                 console.log(buffer);
+                 buffer = "";
+             }
+         }
          let importObj = {
-             "js-ffi": {print: (x) => console.log(x)},
+             "js-ffi": {print: printChar},
          };
          let rt;
          let prog;
          fetch('webml-rt/target/wasm32-unknown-unknown/release/webml_rt.wasm').then(response =>
              response.arrayBuffer()
          ).then(buffer =>
-             WebAssembly.instantiate(buffer, {"imports": {print: (x) => console.log(x)}})
+             WebAssembly.instantiate(buffer, {})
          ).then(({module, instance}) => {
              rt = instance;
              importObj["webml-rt"] = {

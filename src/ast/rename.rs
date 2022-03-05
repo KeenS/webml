@@ -172,7 +172,7 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
     fn traverse_val<'b, 'c>(
         &'b mut self,
         rec: &mut bool,
-        pattern: &mut Pattern<Ty>,
+        pattern: &mut CorePattern<Ty>,
         expr: &mut CoreExpr<Ty>,
     ) {
         let scope = self;
@@ -206,7 +206,7 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
     fn traverse_case(
         &mut self,
         expr: &mut Box<CoreExpr<Ty>>,
-        arms: &mut Vec<(Pattern<Ty>, CoreExpr<Ty>)>,
+        arms: &mut Vec<(CorePattern<Ty>, CoreExpr<Ty>)>,
     ) {
         self.traverse_expr(expr);
         for &mut (ref mut pat, ref mut arm) in arms.iter_mut() {
@@ -216,6 +216,17 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
         }
     }
 
+    fn traverse_constructor(&mut self, arg: &mut Option<Box<CoreExpr<Ty>>>, name: &mut Symbol) {
+        if self.is_constructor(name) {
+            self.rename_constructor(name);
+        } else {
+            self.rename(name);
+        }
+
+        if let Some(arg) = arg {
+            self.traverse_expr(arg)
+        }
+    }
     fn traverse_sym(&mut self, name: &mut Symbol) {
         if self.is_constructor(name) {
             self.rename_constructor(name);
@@ -224,14 +235,11 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
         }
     }
 
-    fn traverse_constructor(&mut self, arg: &mut Option<Box<CoreExpr<Ty>>>, name: &mut Symbol) {
-        self.rename_constructor(name);
-        if let Some(expr) = arg {
-            self.traverse_expr(&mut *expr);
-        }
-    }
-
-    fn traverse_pat_constructor(&mut self, name: &mut Symbol, arg: &mut Option<Box<Pattern<Ty>>>) {
+    fn traverse_pat_constructor(
+        &mut self,
+        name: &mut Symbol,
+        arg: &mut Option<Box<CorePattern<Ty>>>,
+    ) {
         self.rename_constructor(name);
         if let Some(pat) = arg {
             self.traverse_pattern(&mut *pat);
@@ -239,14 +247,14 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
     }
 
     fn traverse_pat_variable(&mut self, name: &mut Symbol) {
-        if self.is_constructor(name) {
+        if self.is_constructor(&name) {
             self.rename_constructor(name)
         } else {
             self.new_variable(name)
         }
     }
 
-    fn traverse_pat_tuple(&mut self, tuple: &mut Vec<Pattern<Ty>>) {
+    fn traverse_pat_tuple(&mut self, tuple: &mut Vec<CorePattern<Ty>>) {
         for pat in tuple {
             self.traverse_pattern(pat)
         }
@@ -328,7 +336,10 @@ impl Transform<Empty> for WrapBIF {
             if let Some(bif) = self.bif_table.get(&name.0).cloned() {
                 use BIF::*;
                 return match bif {
-                    Add | Sub | Mul | Div | Divf | Mod | Eq | Neq | Gt | Ge | Lt | Le => {
+                    Add | Sub | Mul | Div | Divf | Mod | Eq | Neq | Gt | Ge | Lt | Le | AddInt
+                    | AddReal | SubInt | SubReal | MulInt | MulReal | ModInt | EqInt | EqReal
+                    | EqChar | NeqInt | NeqReal | NeqChar | GtInt | GtReal | GtChar | GeInt
+                    | GeReal | GeChar | LtInt | LtReal | LtChar | LeInt | LeReal | LeChar => {
                         let tuple = self.gensym("tuple");
                         let l = self.gensym("x");
                         let r = self.gensym("y");

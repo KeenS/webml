@@ -1,7 +1,7 @@
 use nom_locate::LocatedSpan;
 use webml::ast::{
     Declaration, DerivedDeclaration, DerivedExprKind, Empty, Expr, ExprKind, LangItem, Pattern,
-    PatternKind, Type, UntypedAst, AST,
+    PatternKind, Type, UntypedAst, AST, BIF,
 };
 use webml::prim::*;
 use webml::Parser;
@@ -32,6 +32,31 @@ fn parse_char() {
                 inner: ExprKind::Literal {
                     value: Literal::Char('a' as u32),
                 }
+            },
+        },])
+    )
+}
+
+#[test]
+fn parse_string() {
+    let input = r#"val x = "abc\n\\\^J\097\u03BA\
+	\next line""#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![Declaration::Val {
+            rec: false,
+            pattern: Pattern {
+                ty: Empty {},
+                inner: PatternKind::Variable {
+                    name: Symbol::new("x"),
+                }
+            },
+            expr: Expr {
+                ty: Empty {},
+                inner: ExprKind::D(DerivedExprKind::String {
+                    value: "abc\n\\\naκnext line".chars().map(|c| c as u32).collect()
+                })
             },
         },])
     )
@@ -1657,7 +1682,7 @@ fn pares_comment() {
 }
 
 #[test]
-fn test_langitem() {
+fn parse_langitem() {
     let input = r#"__lang_item((bool))__ datatype bool = false | true"#;
     let ast = parse(input).unwrap();
     assert_eq!(

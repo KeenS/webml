@@ -70,10 +70,14 @@ impl Desugar {
         let clauses = clauses
             .into_iter()
             .map(|(pats, expr)| {
+                let tuple = pats
+                    .into_iter()
+                    .map(|p| self.transform_pattern(p))
+                    .collect();
                 (
                     Pattern {
                         ty: Empty {},
-                        inner: PatternKind::Tuple { tuple: pats },
+                        inner: PatternKind::Tuple { tuple },
                     },
                     self.transform_expr(expr),
                 )
@@ -155,6 +159,7 @@ impl Desugar {
             Symbol { name } => self.transform_symbol(name),
             Literal { value } => self.transform_literal(value),
             D(DerivedExprKind::If { cond, then, else_ }) => self.transform_if(cond, then, else_),
+            D(DerivedExprKind::String { value }) => self.transform_string(value),
         };
         UntypedCoreExpr { ty: expr.ty, inner }
     }
@@ -291,8 +296,86 @@ impl Desugar {
         ExprKind::Literal { value }
     }
 
-    fn transform_pattern(&mut self, pattern: UntypedPattern) -> UntypedPattern {
-        pattern
+    fn transform_string(&mut self, value: Vec<u32>) -> UntypedCoreExprKind {
+        let empty = Expr {
+            ty: Empty {},
+            inner: ExprKind::Constructor {
+                arg: None,
+                name: Symbol::new("Empty"),
+            },
+        };
+        fn cons(s: UntypedCoreExpr, c: u32) -> UntypedCoreExpr {
+            let c = Expr {
+                ty: Empty {},
+                inner: ExprKind::Literal {
+                    value: Literal::Char(c),
+                },
+            };
+            let tuple = Expr {
+                ty: Empty {},
+                inner: ExprKind::Tuple { tuple: vec![c, s] },
+            };
+            Expr {
+                ty: Empty {},
+                inner: ExprKind::Constructor {
+                    arg: Some(Box::new(tuple)),
+                    name: Symbol::new("Char").into(),
+                },
+            }
+        }
+        value.into_iter().rfold(empty, cons).inner
+    }
+
+    fn transform_pattern(&mut self, pattern: UntypedPattern) -> UntypedCorePattern {
+        use PatternKind::*;
+        let inner = match pattern.inner {
+            Constant { value } => UntypedCorePatternKind::Constant { value },
+            Char { value } => UntypedCorePatternKind::Char { value },
+            Constructor { name, arg } => {
+                let arg = arg.map(|p| Box::new(self.transform_pattern(*p)));
+                UntypedCorePatternKind::Constructor { name, arg }
+            }
+            Tuple { tuple } => {
+                let tuple = tuple
+                    .into_iter()
+                    .map(|p| self.transform_pattern(p))
+                    .collect();
+                UntypedCorePatternKind::Tuple { tuple }
+            }
+            Variable { name } => UntypedCorePatternKind::Variable { name },
+            Wildcard {} => UntypedCorePatternKind::Wildcard {},
+            D(DerivedPatternKind::String { value }) => {
+                let empty = UntypedCorePattern {
+                    ty: Empty {},
+                    inner: PatternKind::Constructor {
+                        arg: None,
+                        name: Symbol::new("Empty"),
+                    },
+                };
+                fn cons(s: UntypedCorePattern, c: u32) -> UntypedCorePattern {
+                    let c = Pattern {
+                        ty: Empty {},
+                        inner: PatternKind::Char { value: c },
+                    };
+                    let tuple = Pattern {
+                        ty: Empty {},
+                        inner: PatternKind::Tuple { tuple: vec![c, s] },
+                    };
+                    Pattern {
+                        ty: Empty {},
+                        inner: PatternKind::Constructor {
+                            arg: Some(Box::new(tuple)),
+                            name: Symbol::new("Char").into(),
+                        },
+                    }
+                }
+                value.into_iter().rfold(empty, cons).inner
+            }
+        };
+        UntypedCorePattern {
+            ty: Empty {},
+            inner,
+        }
     }
 }
 

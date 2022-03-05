@@ -148,7 +148,16 @@ impl Parser {
     }
     fn decl_langitem_name(&self) -> impl Fn(Input) -> IResult<Input, LangItem> + '_ {
         move |i| {
-            let (i, name) = map(tag("bool"), |_| LangItem::Bool)(i)?;
+            let (i, name) = alt((
+                map(complete(tag("bool")), |_| LangItem::Bool),
+                map(complete(tag("stringEq")), |_| LangItem::StringEq),
+                map(complete(tag("stringNeq")), |_| LangItem::StringNeq),
+                map(complete(tag("stringGt")), |_| LangItem::StringGt),
+                map(complete(tag("stringGe")), |_| LangItem::StringGe),
+                map(complete(tag("stringLt")), |_| LangItem::StringLt),
+                map(complete(tag("stringLe")), |_| LangItem::StringLe),
+                map(complete(tag("string")), |_| LangItem::String),
+            ))(i)?;
             Ok((i, name))
         }
     }
@@ -251,6 +260,7 @@ impl Parser {
                 self.expr1_float(),
                 self.expr1_int(),
                 self.expr1_char(),
+                self.expr1_string(),
                 self.expr1_bool(),
                 self.expr1_sym(),
                 self.expr1_builtincall(),
@@ -507,18 +517,144 @@ impl Parser {
         }
     }
 
+    fn expr1_string(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
+        move |i| {
+            let (i, s) = self.string_literal()(i)?;
+            Ok((
+                i,
+                Expr {
+                    ty: Empty {},
+                    inner: ExprKind::D(DerivedExprKind::String { value: s }),
+                },
+            ))
+        }
+    }
+
     fn string_literal(&self) -> impl Fn(Input) -> IResult<Input, Vec<u32>> + '_ {
         move |i| {
             let (i, _) = tag("\"")(i)?;
             let mut s = vec![];
             let mut chars = i.iter_elements();
-            let mut count = 0;
+            let mut count = 0usize;
+            let eeof = Err(nom::Err::Error(nom::error::Error {
+                input: i,
+                code: nom::error::ErrorKind::Eof,
+            }));
+            let etag = Err(nom::Err::Error(nom::error::Error {
+                input: i,
+                code: nom::error::ErrorKind::Tag,
+            }));
             while let Some(c) = chars.next() {
                 count += 1;
-                if c == '"' {
-                    break;
+                match c {
+                    '\\' => {
+                        let c = match chars.next() {
+                            Some(c) => c,
+                            None => return eeof,
+                        };
+                        count += 1;
+                        match c {
+                            'a' => s.push(7),
+                            'b' => s.push(8),
+                            't' => s.push(9),
+                            'n' => s.push(10),
+                            'v' => s.push(11),
+                            'f' => s.push(12),
+                            'r' => s.push(13),
+                            '"' => s.push('"' as u32),
+                            '\\' => s.push('\\' as u32),
+                            // \^{Ctrl}
+                            '^' => match chars.next() {
+                                Some(c) => {
+                                    let c = c as u32;
+                                    count += 1;
+                                    if 64 <= c && c <= 95 {
+                                        s.push(c - 64)
+                                    } else {
+                                        return etag;
+                                    }
+                                }
+                                None => return eeof,
+                            },
+                            // \{ddd}
+                            c1 @ '0'..='9' => {
+                                let c1 = c1 as u32 - '0' as u32;
+                                let c2 = match chars.next() {
+                                    Some(c) if ('0'..='9').contains(&c) => c as u32 - '0' as u32,
+                                    Some(_) => return etag,
+                                    None => return eeof,
+                                };
+                                let c3 = match chars.next() {
+                                    Some(c) if ('0'..='9').contains(&c) => c as u32 - '0' as u32,
+                                    Some(_) => return etag,
+                                    None => return eeof,
+                                };
+                                count += 2;
+                                let d = c1 * 100 + c2 * 10 + c3;
+                                s.push(d);
+                            }
+                            // \u{xxxx}
+                            'u' => {
+                                let hex = "0123456789abcdef";
+                                let c1 = match chars
+                                    .next()
+                                    .and_then(|c| hex.find(c.to_ascii_lowercase()))
+                                {
+                                    Some(d) => d as u32,
+                                    None => return eeof,
+                                };
+                                let c2 = match chars
+                                    .next()
+                                    .and_then(|c| hex.find(c.to_ascii_lowercase()))
+                                {
+                                    Some(d) => d as u32,
+                                    None => return eeof,
+                                };
+                                let c3 = match chars
+                                    .next()
+                                    .and_then(|c| hex.find(c.to_ascii_lowercase()))
+                                {
+                                    Some(d) => d as u32,
+                                    None => return eeof,
+                                };
+                                let c4 = match chars
+                                    .next()
+                                    .and_then(|c| hex.find(c.to_ascii_lowercase()))
+                                {
+                                    Some(d) => d as u32,
+                                    None => return eeof,
+                                };
+                                count += 4;
+                                let d = c1 * 16 * 16 * 16 + c2 * 16 * 16 + c3 * 16 + c4;
+                                s.push(d);
+                            }
+                            // \f... f\
+                            c if c.is_whitespace() => {
+                                let mut n = None;
+                                while let Some(c) = chars.next() {
+                                    count += 1;
+                                    if !c.is_whitespace() {
+                                        n = Some(c);
+                                        break;
+                                    }
+                                }
+                                match n {
+                                    Some('\\') => (),
+                                    Some(_) => return etag,
+                                    None => return eeof,
+                                };
+                            }
+                            _ => {
+                                return Err(nom::Err::Error(nom::error::Error {
+                                    input: i,
+                                    code: nom::error::ErrorKind::Tag,
+                                }))
+                            }
+                        }
+                    }
+                    '"' => break,
+                    c => s.push(c as u32),
                 }
-                s.push(c as u32)
             }
             let (i, _) = i.take_split(count);
             Ok((i, s))
@@ -742,6 +878,7 @@ impl Parser {
                 "unit" => Type::Tuple(vec![]),
                 "real" => Type::Real,
                 "int" => Type::Int,
+                "char" => Type::Char,
                 _ => Type::Datatype(name),
             })(i)
         }
@@ -860,6 +997,7 @@ impl Parser {
             alt((
                 self.pattern_bool(),
                 self.pattern_char(),
+                self.pattern_string(),
                 self.pattern_int(),
                 self.pattern_tuple(),
                 self.pattern_var(),
@@ -913,6 +1051,19 @@ impl Parser {
                 Pattern {
                     ty: Empty {},
                     inner: PatternKind::Char { value: c },
+                },
+            ))
+        }
+    }
+
+    fn pattern_string(&self) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
+        move |i| {
+            let (i, s) = self.string_literal()(i)?;
+            Ok((
+                i,
+                Pattern {
+                    ty: Empty {},
+                    inner: PatternKind::D(DerivedPatternKind::String { value: s }),
                 },
             ))
         }

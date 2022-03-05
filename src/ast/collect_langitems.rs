@@ -29,7 +29,6 @@ impl Collector {
 impl Traverse<Empty> for Collector {
     fn traverse_langitem(&mut self, name: &mut LangItem, decl: &mut UntypedCoreDeclaration) {
         use Declaration::*;
-        println!("processing {name}");
         let key = *name;
         let value = match decl {
             Val {

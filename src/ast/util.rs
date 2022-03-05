@@ -27,7 +27,7 @@ pub trait Traverse<Ty> {
     fn traverse_val(
         &mut self,
         _rec: &mut bool,
-        pattern: &mut Pattern<Ty>,
+        pattern: &mut CorePattern<Ty>,
         expr: &mut CoreExpr<Ty>,
     ) {
         self.traverse_expr(expr);
@@ -101,7 +101,7 @@ pub trait Traverse<Ty> {
     fn traverse_case(
         &mut self,
         cond: &mut Box<CoreExpr<Ty>>,
-        clauses: &mut Vec<(Pattern<Ty>, CoreExpr<Ty>)>,
+        clauses: &mut Vec<(CorePattern<Ty>, CoreExpr<Ty>)>,
     ) {
         self.traverse_expr(cond);
         for (p, e) in clauses.iter_mut() {
@@ -124,8 +124,9 @@ pub trait Traverse<Ty> {
     fn traverse_sym(&mut self, _name: &mut Symbol) {}
 
     fn traverse_lit(&mut self, _value: &mut Literal) {}
+    fn traverse_string(&mut self, _value: &mut Vec<u32>) {}
 
-    fn traverse_pattern(&mut self, pattern: &mut Pattern<Ty>) {
+    fn traverse_pattern(&mut self, pattern: &mut CorePattern<Ty>) {
         use PatternKind::*;
         match &mut pattern.inner {
             Constant { value } => self.traverse_pat_constant(value),
@@ -134,6 +135,7 @@ pub trait Traverse<Ty> {
             Tuple { tuple } => self.traverse_pat_tuple(tuple),
             Variable { name } => self.traverse_pat_variable(name),
             Wildcard {} => self.traverse_pat_wildcard(),
+            D(d) => match *d {},
         }
     }
 
@@ -142,10 +144,10 @@ pub trait Traverse<Ty> {
     fn traverse_pat_constructor(
         &mut self,
         _name: &mut Symbol,
-        _arg: &mut Option<Box<Pattern<Ty>>>,
+        _arg: &mut Option<Box<CorePattern<Ty>>>,
     ) {
     }
-    fn traverse_pat_tuple(&mut self, _tuple: &mut Vec<Pattern<Ty>>) {}
+    fn traverse_pat_tuple(&mut self, _tuple: &mut Vec<CorePattern<Ty>>) {}
     fn traverse_pat_variable(&mut self, _value: &mut Symbol) {}
     fn traverse_pat_wildcard(&mut self) {}
 }
@@ -180,7 +182,7 @@ pub trait Transform<Ty> {
     fn transform_val(
         &mut self,
         rec: bool,
-        pattern: Pattern<Ty>,
+        pattern: CorePattern<Ty>,
         expr: CoreExpr<Ty>,
     ) -> CoreDeclaration<Ty> {
         Declaration::Val {
@@ -289,7 +291,7 @@ pub trait Transform<Ty> {
     fn transform_case(
         &mut self,
         cond: Box<CoreExpr<Ty>>,
-        clauses: Vec<(Pattern<Ty>, CoreExpr<Ty>)>,
+        clauses: Vec<(CorePattern<Ty>, CoreExpr<Ty>)>,
     ) -> CoreExprKind<Ty> {
         ExprKind::Case {
             cond: self.transform_expr(*cond).boxed(),
@@ -324,7 +326,7 @@ pub trait Transform<Ty> {
         ExprKind::Literal { value }
     }
 
-    fn transform_pattern(&mut self, mut pattern: Pattern<Ty>) -> Pattern<Ty> {
+    fn transform_pattern(&mut self, mut pattern: CorePattern<Ty>) -> CorePattern<Ty> {
         use PatternKind::*;
         pattern.inner = match pattern.inner {
             Constant { value } => self.transform_pat_constant(value),
@@ -333,30 +335,31 @@ pub trait Transform<Ty> {
             Tuple { tuple } => self.transform_pat_tuple(tuple),
             Variable { name } => self.transform_pat_variable(name),
             Wildcard {} => self.transform_pat_wildcard(),
+            D(d) => match d {},
         };
         pattern
     }
 
-    fn transform_pat_constant(&mut self, value: i64) -> PatternKind<Ty> {
-        PatternKind::Constant { value }
+    fn transform_pat_constant(&mut self, value: i64) -> CorePatternKind<Ty> {
+        CorePatternKind::Constant { value }
     }
 
-    fn transform_pat_char(&mut self, value: u32) -> PatternKind<Ty> {
-        PatternKind::Char { value }
+    fn transform_pat_char(&mut self, value: u32) -> CorePatternKind<Ty> {
+        CorePatternKind::Char { value }
     }
 
     fn transform_pat_constructor(
         &mut self,
-        arg: Option<Box<Pattern<Ty>>>,
+        arg: Option<Box<CorePattern<Ty>>>,
         name: Symbol,
-    ) -> PatternKind<Ty> {
+    ) -> CorePatternKind<Ty> {
         PatternKind::Constructor {
             name,
             arg: arg.map(|pat| Box::new(self.transform_pattern(*pat))),
         }
     }
 
-    fn transform_pat_tuple(&mut self, tuple: Vec<Pattern<Ty>>) -> PatternKind<Ty> {
+    fn transform_pat_tuple(&mut self, tuple: Vec<CorePattern<Ty>>) -> CorePatternKind<Ty> {
         PatternKind::Tuple {
             tuple: tuple
                 .into_iter()
@@ -365,11 +368,11 @@ pub trait Transform<Ty> {
         }
     }
 
-    fn transform_pat_variable(&mut self, name: Symbol) -> PatternKind<Ty> {
-        PatternKind::Variable { name }
+    fn transform_pat_variable(&mut self, name: Symbol) -> CorePatternKind<Ty> {
+        CorePatternKind::Variable { name }
     }
 
-    fn transform_pat_wildcard(&mut self) -> PatternKind<Ty> {
-        PatternKind::Wildcard {}
+    fn transform_pat_wildcard(&mut self) -> CorePatternKind<Ty> {
+        CorePatternKind::Wildcard {}
     }
 }
