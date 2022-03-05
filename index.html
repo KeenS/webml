@@ -20,183 +20,201 @@ Compiles only minimal subset of SML codes. The garbage collector is not complete
 <h2>Implemented features</h2>
 <h3>Core</h3>
 <ul>
-<li>Declaration</li>
-<li>[ ] <code>val</code><ul>
-<li>[x] basic (<code>val ident = expr</code>)</li>
-<li>[x] pattern (<code>val pat = expr</code>)</li>
-<li>[ ] tyvar <code>val 'a pat = expr</code></li>
-<li>[ ] typed (<code>val pat : ty = expr</code>)</li>
-<li>[ ] <code>and</code> (<code>val pat = expr and pat = expr</code>)</li>
+<li>Declaration<ul class="task-list">
+<li class="task-list-item"><input type="checkbox" disabled/> <code>val</code><ul class="task-list">
+<li class="task-list-item"><input type="checkbox" disabled checked/> basic (<code>val ident = expr</code>)</li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> pattern (<code>val pat = expr</code>)</li>
+<li class="task-list-item"><input type="checkbox" disabled/> tyvar <code>val 'a pat = expr</code></li>
+<li class="task-list-item"><input type="checkbox" disabled/> typed (<code>val pat : ty = expr</code>)</li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>and</code> (<code>val pat = expr and pat = expr</code>)</li>
 </ul>
 </li>
-<li>[ ] <code>fun</code><ul>
-<li>[x] basic (<code>fun ident ident ... = expr</code>)</li>
-<li>[x] pattern (<code>fun ident pat ... = expr</code>)</li>
-<li>[x] multi-clause (<code>fun ident pat ... = expr | ident pat ... = expr</code>)</li>
-<li>[x] <code>op</code> (<code>fun op ident pat ... = expr</code>)</li>
-<li>[ ] tyvar (<code>fun 'a ident pat ... = expr</code>)</li>
-<li>[ ] typed (<code>fun ident pat ... : ty = expr</code>)</li>
-<li>[ ] <code>and</code> (<code>fun ident pat ... = expr and ident pat ... = expr</code>)</li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>fun</code><ul class="task-list">
+<li class="task-list-item"><input type="checkbox" disabled checked/> basic (<code>fun ident ident ... = expr</code>)</li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> pattern (<code>fun ident pat ... = expr</code>)</li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> multi-clause (<code>fun ident pat ... = expr | ident pat ... = expr</code>)</li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> <code>op</code> (<code>fun op ident pat ... = expr</code>)</li>
+<li class="task-list-item"><input type="checkbox" disabled/> tyvar (<code>fun 'a ident pat ... = expr</code>)</li>
+<li class="task-list-item"><input type="checkbox" disabled/> typed (<code>fun ident pat ... : ty = expr</code>)</li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>and</code> (<code>fun ident pat ... = expr and ident pat ... = expr</code>)</li>
 </ul>
 </li>
-<li>[ ] <code>type</code> (<code>type ident = ty</code>)</li>
-<li>[ ] <code>datatype</code><ul>
-<li>[ ] <code>datatype ident = Con of ty | Con ...</code></li>
-<li>[x] basic (<code>datatype ident = Con of ty | Con ...</code>)</li>
-<li>[ ] tyvar (<code>datatype 'a ident = Con of ty | Con ...</code>)</li>
-<li>[ ] <code>and</code> (<code>datatype ident = Con | ... and ident = Con | ...</code>)</li>
-<li>[ ] <code>withtype</code> (<code>datatype ident = Con ... withtype ..</code>)</li>
-<li>[ ] <code>datatype ident = datatype ident</code></li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>type</code> (<code>type ident = ty</code>)</li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>datatype</code><ul class="task-list">
+<li class="task-list-item"><input type="checkbox" disabled/> <code>datatype ident = Con of ty | Con ...</code><ul class="task-list">
+<li class="task-list-item"><input type="checkbox" disabled checked/> basic (<code>datatype ident = Con of ty | Con ...</code>)</li>
+<li class="task-list-item"><input type="checkbox" disabled/> tyvar (<code>datatype 'a ident = Con of ty | Con ...</code>)</li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>and</code> (<code>datatype ident = Con | ... and ident = Con | ...</code>)</li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>withtype</code> (<code>datatype ident = Con ... withtype ..</code>)</li>
 </ul>
 </li>
-<li>[ ] <code>abstype</code></li>
-<li>[ ] <code>exception</code></li>
-<li>[ ] <code>local ... in ... end</code></li>
-<li>[ ] <code>open ..</code></li>
-<li>[ ] <code>decl ; decl</code><ul>
-<li>[x] <code>decl decl</code></li>
-<li>[ ] <code>decl ; decl</code></li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>datatype ident = datatype ident</code></li>
 </ul>
 </li>
-<li>[x] <code>infix</code></li>
-<li>[ ] <code>infixr</code></li>
-<li>[ ] <code>nofix</code></li>
-<li>Expressions</li>
-<li>[ ] special constant<ul>
-<li>[x] integer</li>
-<li>[ ] real</li>
-<li>[x] <code>123.456</code></li>
-<li>[ ] <code>123e456</code></li>
-<li>[ ] <code>123E456</code></li>
-<li>[ ] <code>123e~456</code></li>
-<li>[ ] word</li>
-<li>[x] char</li>
-<li>[ ] string</li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>abstype</code></li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>exception</code></li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>local ... in ... end</code></li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>open ..</code></li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>decl ; decl</code><ul class="task-list">
+<li class="task-list-item"><input type="checkbox" disabled checked/> <code>decl decl</code></li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>decl ; decl</code></li>
 </ul>
 </li>
-<li>[x] value identifier</li>
-<li>[ ] <code>op</code></li>
-<li>[ ] record<ul>
-<li>[ ] basic (<code>{ label = expr , ...}</code>)</li>
-<li>[x] tuple</li>
-<li>[x] 0-tuple</li>
-<li>[ ] <code>#label</code></li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> <code>infix</code></li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>infixr</code></li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>nofix</code></li>
 </ul>
 </li>
-<li>[ ] list (<code>[expr, ..., expr]</code>)</li>
-<li>[ ] <code>(expr; ...; expr)</code></li>
-<li>[x] paren (<code>(expr)</code>)</li>
-<li>[ ] <code>let .. in .. end</code><ul>
-<li>[x] basic (<code>let decl ... in expr end</code>)</li>
-<li>[ ] derived (<code>let decl ... in expr; ...; expr end</code>)</li>
+<li>Expressions<ul class="task-list">
+<li class="task-list-item"><input type="checkbox" disabled/> special constant<ul class="task-list">
+<li class="task-list-item"><input type="checkbox" disabled checked/> integer</li>
+<li class="task-list-item"><input type="checkbox" disabled/> real<ul class="task-list">
+<li class="task-list-item"><input type="checkbox" disabled checked/> <code>123.456</code></li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>123e456</code></li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>123E456</code></li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>123e~456</code></li>
 </ul>
 </li>
-<li>[x] function application</li>
-<li>[ ] infix operator<ul>
-<li>[x] L</li>
-<li>[ ] R</li>
+<li class="task-list-item"><input type="checkbox" disabled/> word</li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> char</li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> string</li>
 </ul>
 </li>
-<li>[ ] typed (<code>exp : ty</code>)</li>
-<li>[ ] exception<ul>
-<li>[ ] <code>handle</code></li>
-<li>[ ] <code>raise</code></li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> value identifier</li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>op</code></li>
+<li class="task-list-item"><input type="checkbox" disabled/> record<ul class="task-list">
+<li class="task-list-item"><input type="checkbox" disabled/> basic (<code>{ label = expr , ...}</code>)</li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> tuple</li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> 0-tuple</li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>#label</code></li>
 </ul>
 </li>
-<li>[ ] <code>fn</code><ul>
-<li>[x] basic (<code>fn ident =&gt; expr</code>)</li>
-<li>[ ] pattern (<code>fn pat =&gt; expr</code>)</li>
-<li>[ ] multi-clause <code>fn pat =&gt; expr | pat =&gt; expr ...</code></li>
+<li class="task-list-item"><input type="checkbox" disabled/> list (<code>[expr, ..., expr]</code>)</li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>(expr; ...; expr)</code></li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> paren (<code>(expr)</code>)</li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>let .. in .. end</code><ul class="task-list">
+<li class="task-list-item"><input type="checkbox" disabled checked/> basic (<code>let decl ... in expr end</code>)</li>
+<li class="task-list-item"><input type="checkbox" disabled/> derived (<code>let decl ... in expr; ...; expr end</code>)</li>
 </ul>
 </li>
-<li>[ ] <code>andalso</code></li>
-<li>[ ] <code>orelse</code></li>
-<li>[x] <code>if .. then .. else</code></li>
-<li>[ ] <code>while .. do ..</code></li>
-<li>[x] <code>case .. of ..</code></li>
-<li>Pattern</li>
-<li>[x] wildcard</li>
-<li>[ ] special constant<ul>
-<li>[x] integer</li>
-<li>[ ] word</li>
-<li>[x] char</li>
-<li>[ ] string</li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> function application</li>
+<li class="task-list-item"><input type="checkbox" disabled/> infix operator<ul class="task-list">
+<li class="task-list-item"><input type="checkbox" disabled checked/> L</li>
+<li class="task-list-item"><input type="checkbox" disabled/> R</li>
 </ul>
 </li>
-<li>[x]  value identifier</li>
-<li>[ ] <code>op</code></li>
-<li>[ ] record<ul>
-<li>[ ] basic (<code>{ label = pat , ...}</code>)</li>
-<li>[ ] wildcard (<code>...</code>)</li>
-<li>[ ] label as variable (<code>{ var (as pat), ...}</code>)</li>
-<li>[x] tuple</li>
-<li>[x] 0-tuple</li>
+<li class="task-list-item"><input type="checkbox" disabled/> typed (<code>exp : ty</code>)</li>
+<li class="task-list-item"><input type="checkbox" disabled/> exception<ul class="task-list">
+<li class="task-list-item"><input type="checkbox" disabled/> <code>handle</code></li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>raise</code></li>
 </ul>
 </li>
-<li>[ ] list</li>
-<li>[x] paren</li>
-<li>[x] Constructor</li>
-<li>[ ] infix</li>
-<li>[ ] typed (<code>pat : ty</code>)</li>
-<li>[ ] layerd (<code>ident as pat</code>)</li>
-<li>Type</li>
-<li>[ ] type variable</li>
-<li>[ ] record</li>
-<li>[ ] type construction<ul>
-<li>[x] without param (<code>ident</code>)</li>
-<li>[ ] with param (<code>ty ident</code>)</li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>fn</code><ul class="task-list">
+<li class="task-list-item"><input type="checkbox" disabled checked/> basic (<code>fn ident =&gt; expr</code>)</li>
+<li class="task-list-item"><input type="checkbox" disabled/> pattern (<code>fn pat =&gt; expr</code>)</li>
+<li class="task-list-item"><input type="checkbox" disabled/> multi-clause <code>fn pat =&gt; expr | pat =&gt; expr ...</code></li>
 </ul>
 </li>
-<li>[x] tuple</li>
-<li>[x] function</li>
-<li>[x] paren</li>
-<li>Initial Basis</li>
-<li>[x] <code>unit</code></li>
-<li>[x] <code>bool</code><ul>
-<li>[x] <code>true</code></li>
-<li>[x] <code>false</code></li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>andalso</code></li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>orelse</code></li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> <code>if .. then .. else</code></li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>while .. do ..</code></li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> <code>case .. of ..</code></li>
 </ul>
 </li>
-<li>[x] <code>int</code></li>
-<li>[ ] <code>word</code></li>
-<li>[ ] <code>string</code></li>
-<li>[x] <code>char</code></li>
-<li>[ ] <code>list</code><ul>
-<li>[ ] <code>nil</code></li>
-<li>[ ] <code>::</code></li>
+<li>Pattern<ul class="task-list">
+<li class="task-list-item"><input type="checkbox" disabled checked/> wildcard</li>
+<li class="task-list-item"><input type="checkbox" disabled/> special constant<ul class="task-list">
+<li class="task-list-item"><input type="checkbox" disabled checked/> integer</li>
+<li class="task-list-item"><input type="checkbox" disabled/> word</li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> char</li>
+<li class="task-list-item"><input type="checkbox" disabled/> string</li>
 </ul>
 </li>
-<li>[ ] <code>ref</code><ul>
-<li>[ ] <code>ref</code></li>
-<li>[ ] <code>:=</code></li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> value identifier</li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>op</code></li>
+<li class="task-list-item"><input type="checkbox" disabled/> record<ul class="task-list">
+<li class="task-list-item"><input type="checkbox" disabled/> basic (<code>{ label = pat , ...}</code>)</li>
+<li class="task-list-item"><input type="checkbox" disabled/> wildcard (<code>...</code>)</li>
+<li class="task-list-item"><input type="checkbox" disabled/> label as variable (<code>{ var (as pat), ...}</code>)</li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> tuple</li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> 0-tuple</li>
 </ul>
 </li>
-<li>[ ] <code>exn</code></li>
-<li>[x] <code>=</code></li>
-<li>[ ] <code>Match</code></li>
-<li>[ ] <code>Bind</code></li>
-<li>Overloaded</li>
-<li>[x] <code>+</code></li>
-<li>[x] <code>-</code></li>
-<li>[x] <code>*</code></li>
-<li>[x] <code>div</code></li>
-<li>[x] <code>mod</code></li>
-<li>[x] <code>/</code></li>
-<li>[x] <code>&lt;</code></li>
-<li>[x] <code>&gt;</code></li>
-<li>[x] <code>&lt;=</code></li>
-<li>[x] <code>&gt;=</code></li>
-<li>[ ] <code>abs</code></li>
-<li>[ ] <code>~</code></li>
+<li class="task-list-item"><input type="checkbox" disabled/> list</li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> paren</li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> Constructor</li>
+<li class="task-list-item"><input type="checkbox" disabled/> infix</li>
+<li class="task-list-item"><input type="checkbox" disabled/> typed (<code>pat : ty</code>)</li>
+<li class="task-list-item"><input type="checkbox" disabled/> layerd (<code>ident as pat</code>)</li>
+</ul>
+</li>
+<li>Type<ul class="task-list">
+<li class="task-list-item"><input type="checkbox" disabled/> type variable</li>
+<li class="task-list-item"><input type="checkbox" disabled/> record</li>
+<li class="task-list-item"><input type="checkbox" disabled/> type construction<ul class="task-list">
+<li class="task-list-item"><input type="checkbox" disabled checked/> without param (<code>ident</code>)</li>
+<li class="task-list-item"><input type="checkbox" disabled/> with param (<code>ty ident</code>)</li>
+</ul>
+</li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> tuple</li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> function</li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> paren</li>
+</ul>
+</li>
+<li>Initial Basis<ul class="task-list">
+<li class="task-list-item"><input type="checkbox" disabled checked/> <code>unit</code></li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> <code>bool</code><ul class="task-list">
+<li class="task-list-item"><input type="checkbox" disabled checked/> <code>true</code></li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> <code>false</code></li>
+</ul>
+</li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> <code>int</code></li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>word</code></li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> <code>string</code></li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> <code>char</code></li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>list</code><ul class="task-list">
+<li class="task-list-item"><input type="checkbox" disabled/> <code>nil</code></li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>::</code></li>
+</ul>
+</li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>ref</code><ul class="task-list">
+<li class="task-list-item"><input type="checkbox" disabled/> <code>ref</code></li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>:=</code></li>
+</ul>
+</li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>exn</code></li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> <code>=</code></li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>Match</code></li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>Bind</code></li>
+</ul>
+</li>
+<li>Overloaded<ul class="task-list">
+<li class="task-list-item"><input type="checkbox" disabled checked/> <code>+</code></li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> <code>-</code></li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> <code>*</code></li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> <code>div</code></li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> <code>mod</code></li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> <code>/</code></li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> <code>&lt;</code></li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> <code>&gt;</code></li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> <code>&lt;=</code></li>
+<li class="task-list-item"><input type="checkbox" disabled checked/> <code>&gt;=</code></li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>abs</code></li>
+<li class="task-list-item"><input type="checkbox" disabled/> <code>~</code></li>
+</ul>
+</li>
 </ul>
 <h3>Module</h3>
 <p>not yet implemented</p>
 <h3>Program</h3>
 <ul>
-<li>Program</li>
-<li>[x] decl (<code>decl decl ...</code>)</li>
-<li>[ ] expr (<code>expr decl ...</code>)<ul>
+<li>Program<ul class="task-list">
+<li class="task-list-item"><input type="checkbox" disabled checked/> decl (<code>decl decl ...</code>)</li>
+<li class="task-list-item"><input type="checkbox" disabled/> expr (<code>expr decl ...</code>)<ul>
 <li>Note: toplevel expression <code>expr</code> should be treated as <code>val it = expr</code></li>
+</ul>
+</li>
 </ul>
 </li>
 </ul>
