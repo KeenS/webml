@@ -1657,7 +1657,7 @@ fn pares_comment() {
 }
 
 #[test]
-fn test_langitem() {
+fn parse_langitem() {
     let input = r#"__lang_item((bool))__ datatype bool = false | true"#;
     let ast = parse(input).unwrap();
     assert_eq!(
