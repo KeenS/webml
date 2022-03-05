@@ -591,7 +591,40 @@ impl Parser {
                                 let d = c1 * 100 + c2 * 10 + c3;
                                 s.push(d);
                             }
-                            // \u{xxxx}
+                            'u' => {
+                                let hex = "0123456789abcdef";
+                                let c1 = match chars
+                                    .next()
+                                    .and_then(|c| hex.find(c.to_ascii_lowercase()))
+                                {
+                                    Some(d) => d as u32,
+                                    None => return eeof,
+                                };
+                                let c2 = match chars
+                                    .next()
+                                    .and_then(|c| hex.find(c.to_ascii_lowercase()))
+                                {
+                                    Some(d) => d as u32,
+                                    None => return eeof,
+                                };
+                                let c3 = match chars
+                                    .next()
+                                    .and_then(|c| hex.find(c.to_ascii_lowercase()))
+                                {
+                                    Some(d) => d as u32,
+                                    None => return eeof,
+                                };
+                                let c4 = match chars
+                                    .next()
+                                    .and_then(|c| hex.find(c.to_ascii_lowercase()))
+                                {
+                                    Some(d) => d as u32,
+                                    None => return eeof,
+                                };
+                                count += 4;
+                                let d = c1 * 16 * 16 * 16 + c2 * 16 * 16 + c3 * 16 + c4;
+                                s.push(d);
+                            }
                             // \f... f\
                             _ => {
                                 return Err(nom::Err::Error(nom::error::Error {
