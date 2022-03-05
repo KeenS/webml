@@ -38,6 +38,30 @@ fn parse_char() {
 }
 
 #[test]
+fn parse_string() {
+    let input = r##"val x = "abc\n""##;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![Declaration::Val {
+            rec: false,
+            pattern: Pattern {
+                ty: Empty {},
+                inner: PatternKind::Variable {
+                    name: Symbol::new("x"),
+                }
+            },
+            expr: Expr {
+                ty: Empty {},
+                inner: ExprKind::D(DerivedExprKind::String {
+                    value: "abc\n".chars().map(|c| c as u32).collect()
+                })
+            },
+        },])
+    )
+}
+
+#[test]
 fn parse_int() {
     let input = r#"val x = 1"#;
     let ast = parse(input).unwrap();
