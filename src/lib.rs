@@ -57,10 +57,10 @@ pub fn compile_string(input: String, config: &Config) -> Result<Vec<u8>, TypeErr
 
 #[cfg(target_arch = "wasm32")]
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
-pub fn compile_string(input: String) -> Result<Vec<u8>, JsValue> {
+pub fn compile_string_all(input: String) -> Result<Vec<u8>, JsValue> {
     let mut prelude = include_str!("../ml_src/prelude.sml").to_string();
     prelude.push_str(&input);
 
     let config = Config::default();
-    compile_str(&prelude, &config).map_err(|e| format!("Compile failed: {}", e).into())
+    compile_string(prelude, &config).map_err(|e| format!("Compile failed: {}", e).into())
 }

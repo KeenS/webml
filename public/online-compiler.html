@@ -25,7 +25,7 @@
 fun fib 0 = 1
 |   fib 1 = 1
 |   fib n = fib (n - 1) + fib (n - 2)
-val _ = printInt (fib 10)
+val _ = printInt (fib 5)
 </textarea>
                 <button id="button" type="button" disabled>Loading the compiler</button>
             </form>
@@ -41,7 +41,7 @@ val _ = printInt (fib 10)
             </div>
         </div>
         <script type="module">
-         import { default as compilerInit, compile_string } from './compiler/webml.js';
+         import { default as compilerInit, compile_string_all } from './compiler/webml.js';
          import { default as rtInit } from './compiler/webml_rt.js';
 
          const input = document.getElementById("program");
@@ -52,7 +52,7 @@ val _ = printInt (fib 10)
          const button = document.getElementById("button");
 
          function showOutput(char) {
-             outputMessage.innerHTML += String.fromCharCode(char);
+             outputMessage.innerHTML += String.fromCharCode(char).replace("\n", "<br>");
              output.style.display = "inline";
              errorMessage.innerHTML = "";
              error.style.display = "none";
@@ -61,20 +61,9 @@ val _ = printInt (fib 10)
          function showError(str) {
              outputMessage.innerHTML = "";
              output.style.display = "none";
-             errorMessage.innerHTML = str;
+             errorMessage.innerHTML = str.replace("\n", "<br>");
              error.style.display = "inline";
          }
-
-         const importObj = {
-             "js-ffi": {
-                 print: showOutput
-             },
-             "webml-rt": {
-                 alloc: rtObj.alloc,
-                 init: rtObj.init,
-                 memory: rtObj.memory
-             },
-         };
 
 
          async function init() {
@@ -82,11 +71,23 @@ val _ = printInt (fib 10)
                  compilerInit(),
                  rtInit()
              ]);
+             const importObj = {
+                 "js-ffi": {
+                     print: showOutput
+                 },
+                 "webml-rt": {
+                     alloc: rtObj.alloc,
+                     init: rtObj.init,
+                     memory: rtObj.memory
+                 },
+             };
+
              function compileAndRun(str, output) {
                  try {
                      outputMessage.innerHTML = "";
                      errorMessage.innerHTML = "";
-                     let buffer = compile_string(str).buffer;
+                     let buffer = compile_string_all(str).buffer;
+
 
                      WebAssembly.instantiate(buffer, importObj)
                                 .then(inst => console.log("done"));

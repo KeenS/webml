@@ -29,4 +29,6 @@ wasm-bindgen = "0.2"
 
 [dev-dependencies]
 walkdir = "2.2.7"
-# path = "../WebAssembler-rs/"
+
+# [patch.crates-io]
+# web-assembler = { path = "../WebAssembler-rs/" }

@@ -9,3 +9,6 @@ edition = "2018"
 [dependencies]
 wasmtime = "0.16.0"
 webml = { path = "../" }
+
+# [patch.crates-io]
+# web-assembler = { path = "../../WebAssembler-rs/" }
