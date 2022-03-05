@@ -1,1 +1,1 @@
-val out = print version
+val out = printInt version

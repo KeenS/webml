@@ -19,4 +19,4 @@ in
    j
   end) 2
 end
-val k = print a
+val k = printInt a

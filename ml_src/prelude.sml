@@ -65,8 +65,44 @@ fun stringLe (Empty, Empty) = true
 
 
 val version = 100000
-fun print x = _externcall("js-ffi"."print": (int) -> unit)(x)
-
 infix 7 * / div mod
 infix 6 + -
 infix 4 = <> <= < >= >
+
+
+fun printChar x = _externcall("js-ffi"."print": (char) -> unit)(x)
+fun print Empty = ()
+  | print (Char(c, s)) = let val () = printChar c
+                         in print s end
+
+fun digitToChar 0 = #"0"
+  | digitToChar 1 = #"1"
+  | digitToChar 2 = #"2"
+  | digitToChar 3 = #"3"
+  | digitToChar 4 = #"4"
+  | digitToChar 5 = #"5"
+  | digitToChar 6 = #"6"
+  | digitToChar 7 = #"7"
+  | digitToChar 8 = #"8"
+  | digitToChar 9 = #"9"
+  (* unreachable *)
+  | digitToChar _ = #" "
+
+fun stringFromIntInner d acc = let
+    val c = digitToChar(d mod 10)
+    val rest = d div 10
+    val acc = Char(c,acc)
+in
+    if rest = 0
+    then acc
+    else stringFromIntInner d acc
+end
+
+
+fun stringFromInt 0 = "0"
+  | stringFromInt d = stringFromIntInner d Empty
+
+
+fun printInt i = let
+    val () = print (stringFromInt i)
+in print "\n" end

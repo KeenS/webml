@@ -1,7 +1,7 @@
 val () = if #"a" = #"b"
-         then print 1
-         else print 0
+         then print "true\n"
+         else print "false\n"
 val () = case #"b" of
-             #"a" => print 0
-           | #"b" => print 1
-           | _ => print 2
+             #"a" => print "b is a\n"
+           | #"b" => print "b is b\n"
+           | _ => print "other\n"
