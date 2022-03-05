@@ -354,8 +354,9 @@ checksum = "3d958d035c4438e28c70e4321a2911302f10135ce78a9c7834c0cab4123d06a2"
 
 [[package]]
 name = "web-assembler"
-version = "0.1.1"
-source = "git+https://github.com/KeenS/WebAssembler-rs#caed3fd1c14423c9c00ff209dd040af75b057f6f"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2434d006294d0e5a32e7e8928e6ba8eabe59dfd5e0f1c5db76da53f0b022d062"
 
 [[package]]
 name = "webml"
