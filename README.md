@@ -96,7 +96,7 @@ Compiles only minimal subset of SML codes. The garbage collector is not complete
         - [x] integer
         - [ ] word
         - [x] char
-        - [ ] string
+        - [x] string
     + [x]  value identifier
     + [ ] `op`
     + [ ] record
