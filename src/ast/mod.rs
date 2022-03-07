@@ -20,6 +20,7 @@ use crate::prim::*;
 pub use std::collections::HashMap;
 use std::error::Error;
 use std::fmt;
+use std::ops::Range;
 
 pub type UntypedAst = AST<Empty>;
 pub type Core<Ty> = AST<Ty, Nothing, Nothing, Nothing>;
@@ -113,7 +114,15 @@ pub type UntypedCoreExprKind = CoreExprKind<Empty>;
 pub type TypedCoreExpr = CoreExpr<Type>;
 pub type TypedCoreExprKind = CoreExprKind<Type>;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct Location {
+    pub line: usize,
+    pub column: usize,
+}
+
+pub type Span = Range<Location>;
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Annot<Ty, Inner> {
     pub ty: Ty,
     pub inner: Inner,
@@ -121,6 +130,15 @@ pub struct Annot<Ty, Inner> {
 
 pub type Expr<Ty, DE = DerivedExprKind<Ty>, DS = DerivedDeclaration<Ty>, DP = DerivedPatternKind> =
     Annot<Ty, ExprKind<Ty, DE, DS, DP>>;
+
+impl<T> Annot<Empty, T> {
+    pub fn new(inner: T) -> Self {
+        Self {
+            ty: Empty {},
+            inner,
+        }
+    }
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExprKind<

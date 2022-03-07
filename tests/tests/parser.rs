@@ -126,8 +126,7 @@ fn parse_bool_true() {
             },
             expr: Expr {
                 ty: Empty {},
-                inner: ExprKind::Constructor {
-                    arg: None,
+                inner: ExprKind::Symbol {
                     name: Symbol::new("true")
                 }
             },
@@ -151,8 +150,7 @@ fn parse_bool_false() {
             },
             expr: Expr {
                 ty: Empty {},
-                inner: ExprKind::Constructor {
-                    arg: None,
+                inner: ExprKind::Symbol {
                     name: Symbol::new("false")
                 }
             },
@@ -1013,24 +1011,21 @@ fn parse_if() {
                 inner: ExprKind::D(DerivedExprKind::If {
                     cond: Expr {
                         ty: Empty {},
-                        inner: ExprKind::Constructor {
-                            arg: None,
+                        inner: ExprKind::Symbol {
                             name: Symbol::new("true")
                         }
                     }
                     .boxed(),
                     then: Expr {
                         ty: Empty {},
-                        inner: ExprKind::Constructor {
-                            arg: None,
+                        inner: ExprKind::Symbol {
                             name: Symbol::new("false")
                         }
                     }
                     .boxed(),
                     else_: Expr {
                         ty: Empty {},
-                        inner: ExprKind::Constructor {
-                            arg: None,
+                        inner: ExprKind::Symbol {
                             name: Symbol::new("true")
                         }
                     }
@@ -1060,8 +1055,7 @@ fn parse_case_bool() {
                 inner: ExprKind::Case {
                     cond: Expr {
                         ty: Empty {},
-                        inner: ExprKind::Constructor {
-                            arg: None,
+                        inner: ExprKind::Symbol {
                             name: Symbol::new("true")
                         }
                     }
@@ -1070,15 +1064,13 @@ fn parse_case_bool() {
                         (
                             Pattern {
                                 ty: Empty {},
-                                inner: PatternKind::Constructor {
-                                    arg: None,
+                                inner: PatternKind::Variable {
                                     name: Symbol::new("true")
                                 }
                             },
                             Expr {
                                 ty: Empty {},
-                                inner: ExprKind::Constructor {
-                                    arg: None,
+                                inner: ExprKind::Symbol {
                                     name: Symbol::new("false")
                                 }
                             },
@@ -1086,16 +1078,14 @@ fn parse_case_bool() {
                         (
                             Pattern {
                                 ty: Empty {},
-                                inner: PatternKind::Constructor {
-                                    arg: None,
+                                inner: PatternKind::Variable {
                                     name: Symbol::new("false"),
                                 }
                             },
                             Expr {
                                 ty: Empty {},
-                                inner: ExprKind::Constructor {
+                                inner: ExprKind::Symbol {
                                     name: Symbol::new("true"),
-                                    arg: None,
                                 }
                             },
                         ),
@@ -1146,8 +1136,7 @@ fn parse_case_constructor() {
                             },
                             Expr {
                                 ty: Empty {},
-                                inner: ExprKind::Constructor {
-                                    arg: None,
+                                inner: ExprKind::Symbol {
                                     name: Symbol::new("false")
                                 }
                             },
@@ -1161,9 +1150,8 @@ fn parse_case_constructor() {
                             },
                             Expr {
                                 ty: Empty {},
-                                inner: ExprKind::Constructor {
+                                inner: ExprKind::Symbol {
                                     name: Symbol::new("true"),
-                                    arg: None,
                                 }
                             },
                         ),
@@ -1193,8 +1181,7 @@ fn parse_case_var() {
                 inner: ExprKind::Case {
                     cond: Expr {
                         ty: Empty {},
-                        inner: ExprKind::Constructor {
-                            arg: None,
+                        inner: ExprKind::Symbol {
                             name: Symbol::new("true")
                         }
                     }
@@ -1203,15 +1190,13 @@ fn parse_case_var() {
                         (
                             Pattern {
                                 ty: Empty {},
-                                inner: PatternKind::Constructor {
-                                    arg: None,
+                                inner: PatternKind::Variable {
                                     name: Symbol::new("true")
                                 }
                             },
                             Expr {
                                 ty: Empty {},
-                                inner: ExprKind::Constructor {
-                                    arg: None,
+                                inner: ExprKind::Symbol {
                                     name: Symbol::new("false")
                                 }
                             },
@@ -1225,8 +1210,7 @@ fn parse_case_var() {
                             },
                             Expr {
                                 ty: Empty {},
-                                inner: ExprKind::Constructor {
-                                    arg: None,
+                                inner: ExprKind::Symbol {
                                     name: Symbol::new("true")
                                 }
                             },
@@ -1257,8 +1241,7 @@ fn parse_case_wildcard() {
                 inner: ExprKind::Case {
                     cond: Expr {
                         ty: Empty {},
-                        inner: ExprKind::Constructor {
-                            arg: None,
+                        inner: ExprKind::Symbol {
                             name: Symbol::new("true")
                         }
                     }
@@ -1267,15 +1250,13 @@ fn parse_case_wildcard() {
                         (
                             Pattern {
                                 ty: Empty {},
-                                inner: PatternKind::Constructor {
-                                    arg: None,
+                                inner: PatternKind::Variable {
                                     name: Symbol::new("true")
                                 }
                             },
                             Expr {
                                 ty: Empty {},
-                                inner: ExprKind::Constructor {
-                                    arg: None,
+                                inner: ExprKind::Symbol {
                                     name: Symbol::new("false")
                                 }
                             },
@@ -1287,8 +1268,7 @@ fn parse_case_wildcard() {
                             },
                             Expr {
                                 ty: Empty {},
-                                inner: ExprKind::Constructor {
-                                    arg: None,
+                                inner: ExprKind::Symbol {
                                     name: Symbol::new("true")
                                 }
                             },
