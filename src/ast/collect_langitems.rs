@@ -6,14 +6,8 @@ use crate::Config;
 use std::collections::HashMap;
 use util::Traverse;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct CollectLangItems {}
-
-impl CollectLangItems {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
 
 #[derive(Debug)]
 struct Collector {

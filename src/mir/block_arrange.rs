@@ -4,13 +4,10 @@ use crate::pass::Pass;
 use crate::prim::*;
 use std::collections::HashSet;
 
+#[derive(Default)]
 pub struct BlockArrange;
 
 impl BlockArrange {
-    pub fn new() -> Self {
-        BlockArrange
-    }
-
     fn arrange_mir(&mut self, mir: MIR) -> MIR {
         MIR(mir.0.into_iter().map(|f| self.arrange_fun(f)).collect())
     }

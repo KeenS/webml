@@ -40,14 +40,12 @@ impl Function {
 }
 
 impl EBB {
-    pub fn next_ebbs<'a>(&'a self) -> Vec<(&'a Symbol, bool)> {
+    pub fn next_ebbs(&self) -> Vec<(&Symbol, bool)> {
         use crate::mir::Op::*;
         let last = self.body.len() - 1;
         match &self.body[last] {
-            &Branch {
-                ref clauses,
-                ref default,
-                ..
+            Branch {
+                clauses, default, ..
             } => clauses
                 .iter()
                 .map(|&(_, ref lbl, forward)| (lbl, forward))
@@ -58,7 +56,7 @@ impl EBB {
                 forward,
                 ..
             } => vec![(target, forward)],
-            &Ret { .. } => vec![],
+            Ret { .. } => vec![],
             _ => unreachable!(),
         }
     }

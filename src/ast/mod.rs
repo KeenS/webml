@@ -250,7 +250,7 @@ pub enum DerivedPatternKind {
     String { value: Vec<u32> },
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Default)]
 pub struct SymbolTable {
     pub types: HashMap<Symbol, TypeInfo>,
     pub constructors: HashMap<Symbol, Symbol>,
@@ -377,8 +377,8 @@ impl<Ty> CoreExpr<Ty> {
                 module,
                 fun,
                 args: args.into_iter().map(|arg| arg.map_ty(f)).collect(),
-                retty: retty,
-                argty: argty,
+                retty,
+                argty,
             },
             Fn { param, body } => Fn {
                 param,
@@ -445,43 +445,23 @@ impl<Ty, DP> Pattern<Ty, DP> {
     }
 
     pub fn is_variable(&self) -> bool {
-        use self::PatternKind::*;
-        match &self.inner {
-            Variable { .. } => true,
-            _ => false,
-        }
+        matches!(self.inner, PatternKind::Variable { .. })
     }
 
     pub fn is_constructor(&self) -> bool {
-        use self::PatternKind::*;
-        match &self.inner {
-            Constructor { .. } => true,
-            _ => false,
-        }
+        matches!(self.inner, PatternKind::Constructor { .. })
     }
 
     pub fn is_constant(&self) -> bool {
-        use self::PatternKind::*;
-        match &self.inner {
-            Constant { .. } => true,
-            _ => false,
-        }
+        matches!(self.inner, PatternKind::Constant { .. })
     }
 
     pub fn is_char(&self) -> bool {
-        use self::PatternKind::*;
-        match &self.inner {
-            Char { .. } => true,
-            _ => false,
-        }
+        matches!(self.inner, PatternKind::Char { .. })
     }
 
     pub fn is_tuple(&self) -> bool {
-        use self::PatternKind::*;
-        match &self.inner {
-            Tuple { .. } => true,
-            _ => false,
-        }
+        matches!(self.inner, PatternKind::Tuple { .. })
     }
 }
 
@@ -495,13 +475,6 @@ impl Type {
 }
 
 impl SymbolTable {
-    pub fn new() -> Self {
-        Self {
-            types: HashMap::new(),
-            constructors: HashMap::new(),
-        }
-    }
-
     pub fn register_type(&mut self, name: Symbol, info: TypeInfo) {
         for (cname, _) in &info.constructors {
             self.constructors.insert(cname.clone(), name.clone());
@@ -510,7 +483,7 @@ impl SymbolTable {
     }
 
     pub fn get_type(&self, name: &Symbol) -> Option<&TypeInfo> {
-        self.types.get(&name)
+        self.types.get(name)
     }
 
     pub fn get_datatype_of_constructor(&self, name: &Symbol) -> Option<&Symbol> {
@@ -562,11 +535,11 @@ impl Error for TypeError {
     fn description(&self) -> &str {
         use self::TypeError::*;
         match self {
-            &MisMatch { .. } => "type mismatches against expected type",
-            &CannotInfer => "cannot infer the type",
-            &FreeVar => "free variable is found",
-            &NotFunction(_) => "not a function",
-            &ParseError(_) => "parse error",
+            MisMatch { .. } => "type mismatches against expected type",
+            CannotInfer => "cannot infer the type",
+            FreeVar => "free variable is found",
+            NotFunction(_) => "not a function",
+            ParseError(_) => "parse error",
         }
     }
 }

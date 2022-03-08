@@ -4,17 +4,12 @@ use crate::pass::Pass;
 use crate::prim::*;
 use std::collections::HashMap;
 
+#[derive(Default)]
 pub struct UnAlias {
     alias: HashMap<Symbol, Symbol>,
 }
 
 impl UnAlias {
-    pub fn new() -> Self {
-        UnAlias {
-            alias: HashMap::new(),
-        }
-    }
-
     fn conv_mir(&mut self, mir: MIR) -> MIR {
         MIR(mir.0.into_iter().map(|f| self.conv_fun(f)).collect())
     }
@@ -35,75 +30,59 @@ impl UnAlias {
         let mut body = Vec::new();
         for mut op in ebb.body.into_iter() {
             match &mut op {
-                &mut Alias {
-                    ref var, ref sym, ..
-                } => {
+                Alias { var, sym, .. } => {
                     self.alias(var.clone(), sym.clone());
                     continue;
                 }
-                &mut BinOp {
-                    ref mut l,
-                    ref mut r,
-                    ..
-                } => {
+                BinOp { l, r, .. } => {
                     self.resolv_alias(l);
                     self.resolv_alias(r);
                 }
-                &mut Tuple { ref mut tuple, .. } => {
+                Tuple { tuple, .. } => {
                     for v in tuple.iter_mut() {
                         self.resolv_alias(v);
                     }
                 }
-                &mut Proj { ref mut tuple, .. } => {
+                Proj { tuple, .. } => {
                     self.resolv_alias(tuple);
                 }
-                &mut Union {
-                    ref mut variant, ..
-                } => {
+                Union { variant, .. } => {
                     self.resolv_alias(variant);
                 }
-                &mut Select { ref mut union, .. } => {
+                Select { union, .. } => {
                     self.resolv_alias(union);
                 }
 
-                &mut Closure {
-                    ref mut fun,
-                    ref mut env,
-                    ..
-                } => {
+                Closure { fun, env, .. } => {
                     self.resolv_alias(fun);
                     for &mut (_, ref mut var) in env.iter_mut() {
                         self.resolv_alias(var);
                     }
                 }
-                &mut ExternCall { ref mut args, .. } => {
+                ExternCall { args, .. } => {
                     for arg in args.iter_mut() {
                         self.resolv_alias(arg);
                     }
                 }
 
-                &mut Call {
-                    ref mut fun,
-                    ref mut args,
-                    ..
-                } => {
+                Call { fun, args, .. } => {
                     self.resolv_alias(fun);
                     for arg in args.iter_mut() {
                         self.resolv_alias(arg);
                     }
                 }
-                &mut Jump { ref mut args, .. } => {
+                Jump { args, .. } => {
                     for arg in args.iter_mut() {
                         self.resolv_alias(arg);
                     }
                 }
-                &mut Ret { ref mut value, .. } => {
+                Ret { value, .. } => {
                     if let Some(v) = value.as_mut() {
                         self.resolv_alias(v)
                     }
                 }
-                &mut Lit { .. } => (),
-                &mut Branch { ref mut cond, .. } => self.resolv_alias(cond),
+                Lit { .. } => (),
+                Branch { cond, .. } => self.resolv_alias(cond),
             }
             body.push(op)
         }

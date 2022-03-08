@@ -193,8 +193,8 @@ impl<'a> Traverse for Reg<'a> {
         body: &mut Box<Expr>,
         _captures: &mut Vec<(HTy, Symbol)>,
     ) {
-        match self.bound_name {
-            Some(ref name) => {
+        match &self.bound_name {
+            Some(name) => {
                 self.t.functions.insert(name.clone());
             }
             None => (),
@@ -226,16 +226,9 @@ impl<'a> Traverse for Reg<'a> {
     }
 }
 
+#[derive(Default)]
 pub struct ForceClosure {
     functions: HashSet<Symbol>,
-}
-
-impl ForceClosure {
-    pub fn new() -> Self {
-        ForceClosure {
-            functions: HashSet::new(),
-        }
-    }
 }
 
 impl<E> Pass<Context, E> for ForceClosure {

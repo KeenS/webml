@@ -21,13 +21,13 @@ struct Scope<'a>(&'a mut Rename);
 impl<'a> Deref for Scope<'a> {
     type Target = Rename;
     fn deref(&self) -> &Self::Target {
-        &self.0
+        self.0
     }
 }
 
 impl<'a> DerefMut for Scope<'a> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+        self.0
     }
 }
 
@@ -119,7 +119,6 @@ impl<'a> Scope<'a> {
         match ty {
             Variable(_) | Char | Int | Real => {
                 // noop
-                ()
             }
             Fun(arg, body) => {
                 self.rename_type(arg);
@@ -133,12 +132,9 @@ impl<'a> Scope<'a> {
             Datatype(name) => {
                 let pos = self.pos;
                 for table in self.type_tables[0..pos].iter_mut().rev() {
-                    match table.get(name) {
-                        Some(new_id) => {
-                            name.1 = *new_id;
-                            return;
-                        }
-                        None => {}
+                    if let Some(new_id) = table.get(name) {
+                        name.1 = *new_id;
+                        return;
                     }
                 }
             }
@@ -255,7 +251,7 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
     }
 
     fn traverse_pat_variable(&mut self, _: Span, name: &mut Symbol) {
-        if self.is_constructor(&name) {
+        if self.is_constructor(name) {
             self.rename_constructor(name)
         } else {
             self.new_variable(name)
@@ -292,7 +288,7 @@ impl Rename {
             .map(|(s, _)| (Symbol::new(*s), 0))
             .collect();
 
-        let symbol_table = SymbolTable::new();
+        let symbol_table = SymbolTable::default();
         Rename {
             symbol_table: Some(symbol_table),
             variable_tables: vec![functions],
@@ -311,7 +307,7 @@ impl Rename {
         self.symbol_table.take().unwrap()
     }
 
-    fn scope<'a>(&'a mut self) -> Scope<'a> {
+    fn scope(&mut self) -> Scope {
         Scope::new(self)
     }
 }
@@ -384,10 +380,7 @@ impl Transform<Empty> for WrapBIF {
                                                         span.clone(),
                                                         ExprKind::Symbol { name: l },
                                                     ),
-                                                    Expr::new(
-                                                        span.clone(),
-                                                        ExprKind::Symbol { name: r },
-                                                    ),
+                                                    Expr::new(span, ExprKind::Symbol { name: r }),
                                                 ],
                                             },
                                         ),

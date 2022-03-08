@@ -108,16 +108,18 @@ fn try_unify(
 }
 
 impl Typer {
-    pub fn new() -> Self {
-        Typer
-    }
-
     fn generate_pass(
         &mut self,
         symbol_table: SymbolTable,
         lang_items: HashMap<LangItem, Symbol>,
     ) -> TyEnv {
         TyEnv::new(symbol_table, lang_items)
+    }
+}
+
+impl Default for Typer {
+    fn default() -> Self {
+        Typer
     }
 }
 
@@ -219,7 +221,7 @@ impl TyEnv {
     pub fn new(symbol_table: SymbolTable, lang_items: HashMap<LangItem, Symbol>) -> Self {
         let mut ret = TyEnv {
             env: HashMap::new(),
-            symbol_table: symbol_table,
+            symbol_table,
             pool: TypePool::new(lang_items),
         };
         ret.init();
@@ -296,7 +298,7 @@ impl TyEnv {
 impl TyEnv {
     fn infer_ast(&mut self, ast: &Core<NodeId>) -> Result<()> {
         for decl in ast.0.iter() {
-            self.infer_statement(&decl)?;
+            self.infer_statement(decl)?;
         }
         Ok(())
     }
@@ -309,7 +311,7 @@ impl TyEnv {
                 let names = pattern.binds();
                 if *rec {
                     for &(name, ty) in &names {
-                        self.insert(name.clone(), ty.clone());
+                        self.insert(name.clone(), Clone::clone(ty));
                     }
                 }
                 self.infer_expr(expr)?;
@@ -317,7 +319,7 @@ impl TyEnv {
                 self.unify(expr.ty(), pattern.ty())?;
                 if !rec {
                     for &(name, ty) in &names {
-                        self.insert(name.clone(), ty.clone());
+                        self.insert(name.clone(), Clone::clone(ty));
                     }
                 }
                 Ok(())
@@ -406,7 +408,7 @@ impl TyEnv {
             ExternCall {
                 args, argty, retty, ..
             } => {
-                for (arg, argty) in args.into_iter().zip(argty) {
+                for (arg, argty) in args.iter().zip(argty) {
                     self.infer_expr(arg)?;
                     let argty = self.convert(argty.clone());
                     self.give(arg.ty(), argty)?;
@@ -464,7 +466,7 @@ impl TyEnv {
         arg: &Option<Box<CoreExpr<NodeId>>>,
         given: NodeId,
     ) -> Result<()> {
-        match self.get(&sym) {
+        match self.get(sym) {
             Some(ty) => {
                 self.unify(ty, given)?;
                 let arg_ty = self.symbol_table().get_argtype_of_constructor(sym);
@@ -481,7 +483,7 @@ impl TyEnv {
     }
 
     fn infer_symbol(&mut self, sym: &Symbol, given: NodeId) -> Result<()> {
-        match self.get(&sym) {
+        match self.get(sym) {
             Some(t) => self.unify(t, given),
             None => Err(TypeError::FreeVar),
         }

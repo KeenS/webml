@@ -118,7 +118,7 @@ impl Desugar {
         });
         Declaration::Val {
             rec: true,
-            pattern: Pattern::new(span.clone(), PatternKind::Variable { name }),
+            pattern: Pattern::new(span, PatternKind::Variable { name }),
             expr: fun,
         }
     }
@@ -128,13 +128,12 @@ impl Desugar {
         name: LangItem,
         decl: UntypedDeclaration,
     ) -> Option<UntypedCoreDeclaration> {
-        if let Some(decl) = self.transform_statement(decl) {
-            Some(Declaration::LangItem {
+        match self.transform_statement(decl) {
+            Some(decl) => Some(Declaration::LangItem {
                 name,
                 decl: Box::new(decl),
-            })
-        } else {
-            None
+            }),
+            None => None,
         }
     }
 
@@ -266,7 +265,7 @@ impl Desugar {
                 ),
                 (
                     Pattern::new(
-                        span.clone(),
+                        span,
                         PatternKind::Constructor {
                             arg: None,
                             name: Symbol::new("false"),
@@ -338,7 +337,7 @@ impl Desugar {
                 span,
                 ExprKind::Constructor {
                     arg: Some(Box::new(tuple)),
-                    name: Symbol::new("Char").into(),
+                    name: Symbol::new("Char"),
                 },
             )
         }
@@ -383,7 +382,7 @@ impl Desugar {
                         span,
                         PatternKind::Constructor {
                             arg: Some(Box::new(tuple)),
-                            name: Symbol::new("Char").into(),
+                            name: Symbol::new("Char"),
                         },
                     )
                 }

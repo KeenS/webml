@@ -4,14 +4,8 @@ use crate::Config;
 use std::collections::HashMap;
 use util::Transform;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct ResolveOverload {}
-
-impl ResolveOverload {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
 
 #[derive(Debug)]
 struct Resolver {
@@ -52,7 +46,6 @@ impl Transform<Type> for Resolver {
         let str_binop_ty = Type::fun(Type::Tuple(vec![str_ty.clone(), str_ty.clone()]), bool_ty);
         let arg_ty = Type::Tuple(types.clone());
         let args = args
-            .clone()
             .into_iter()
             .map(|arg| self.transform_expr(arg))
             .collect::<Vec<_>>();
@@ -64,7 +57,7 @@ impl Transform<Type> for Resolver {
                 .get(&item)
                 .expect("lang item string not found")
                 .clone();
-            let kind = ExprKind::App {
+            ExprKind::App {
                 fun: Expr {
                     ty: str_binop_ty,
                     span: span.clone(),
@@ -77,8 +70,7 @@ impl Transform<Type> for Resolver {
                     inner: ExprKind::Tuple { tuple: args2 },
                 }
                 .boxed(),
-            };
-            return kind;
+            }
         };
 
         match (fun, &types[0]) {

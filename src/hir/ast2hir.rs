@@ -40,7 +40,7 @@ fn conv_type_info(type_info: ast::TypeInfo) -> TypeInfo {
             .constructors
             .into_iter()
             .enumerate()
-            .map(|(des, (_, arg))| (des as u32, arg.map(|ty| conv_ty(ty))))
+            .map(|(des, (_, arg))| (des as u32, arg.map(conv_ty)))
             .collect(),
     }
 }
@@ -51,7 +51,7 @@ fn conv_ty(ty: ast::Type) -> HTy {
         Char => HTy::Char,
         Int => HTy::Int,
         Real => HTy::Real,
-        Tuple(tys) => HTy::Tuple(tys.into_iter().map(|ty| conv_ty(ty)).collect()),
+        Tuple(tys) => HTy::Tuple(tys.into_iter().map(conv_ty).collect()),
         Fun(arg, ret) => HTy::fun(conv_ty(*arg), conv_ty(*ret)),
         Datatype(name) => HTy::Datatype(name),
         Variable(_) => panic!("polymorphism is not supported yet"),
@@ -74,7 +74,7 @@ impl AST2HIRPass {
     fn force_tuple(&self, ty: ast::Type) -> Vec<HTy> {
         use crate::ast::Type::*;
         match ty {
-            Tuple(tys) => tys.into_iter().map(|ty| conv_ty(ty)).collect(),
+            Tuple(tys) => tys.into_iter().map(conv_ty).collect(),
             _ => panic!(),
         }
     }
@@ -99,7 +99,7 @@ impl AST2HIRPass {
                     ast::PatternKind::Variable { name } => vec![Val {
                         ty: conv_ty(ty),
                         rec,
-                        name: name,
+                        name,
                         expr: self.conv_expr(expr),
                     }],
                     ast::PatternKind::Wildcard {} => vec![Val {

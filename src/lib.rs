@@ -26,26 +26,26 @@ pub fn compile_string(input: String, config: &Config) -> Result<Vec<u8>, TypeErr
     let id = id::Id::new();
 
     let mut passes = compile_pass![
-       parse: parser::Parser::new(),
+       parse: parser::Parser::default(),
        desugar: ast::Desugar::new(id.clone()),
        rename: ast::Rename::new(id.clone()),
        var_to_constructor: ast::VarToConstructor::new(id.clone()),
-       collect_langitems: ast::CollectLangItems::new(),
-       typing: ast::Typer::new(),
-       resolve_overload: ast::ResolveOverload::new(),
+       collect_langitems: ast::CollectLangItems::default(),
+       typing: ast::Typer::default(),
+       resolve_overload: ast::ResolveOverload::default(),
        case_simplify: ast::CaseSimplify::new(id.clone()),
        ast_to_hir: hir::AST2HIR::new(id.clone()),
-       constructor_to_enum: hir::ConstructorToEnum::new(),
+       constructor_to_enum: hir::ConstructorToEnum::default(),
        simplify: hir::Simplify::new(id.clone()),
        flattening_expression: hir::FlatExpr::new(id.clone()),
-       flattening_let: hir::FlatLet::new(),
+       flattening_let: hir::FlatLet::default(),
        unnest_functions: hir::UnnestFunc::new(id.clone()),
-       closure_conversion: hir::ForceClosure::new(),
+       closure_conversion: hir::ForceClosure::default(),
        hir_to_mir: mir::HIR2MIR::new(id),
-       unalias: mir::UnAlias::new(),
-       block_arrange: mir::BlockArrange::new(),
-       mir_to_lir: lir::MIR2LIR::new(),
-       backend: backend::LIR2WASM::new(),
+       unalias: mir::UnAlias::default(),
+       block_arrange: mir::BlockArrange::default(),
+       mir_to_lir: lir::MIR2LIR::default(),
+       backend: backend::LIR2WASM::default(),
     ];
 
     let module: backend::Output = passes.trans(input, config)?;

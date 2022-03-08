@@ -18,13 +18,13 @@ struct Scope<'a>(&'a mut UnnestFunc);
 impl<'a> Deref for Scope<'a> {
     type Target = UnnestFunc;
     fn deref(&self) -> &Self::Target {
-        &self.0
+        self.0
     }
 }
 
 impl<'a> DerefMut for Scope<'a> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+        self.0
     }
 }
 
@@ -147,8 +147,8 @@ impl<'a> Scope<'a> {
                 if !is_closure && is_top {
                     // toplevel function
                     return Fun {
-                        param: (param_ty.clone(), param),
-                        body_ty: body_ty.clone(),
+                        param: (param_ty, param),
+                        body_ty,
                         body,
                         captures,
                     };
@@ -424,7 +424,7 @@ impl UnnestFunc {
         }
     }
 
-    fn scope<'a>(&'a mut self) -> Scope<'a> {
+    fn scope(&mut self) -> Scope {
         Scope::new(self)
     }
 }

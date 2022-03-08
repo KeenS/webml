@@ -39,10 +39,7 @@ fn main() {
         .map(|s| s.to_string())
         .collect::<HashSet<String>>();
 
-    let config = Config {
-        pretty_print_ir,
-        ..Default::default()
-    };
+    let config = Config { pretty_print_ir };
 
     let prelude = include_str!("../ml_src/prelude.sml").to_string();
     let mut input = prelude;

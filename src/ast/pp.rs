@@ -22,7 +22,7 @@ impl<Ty: PP, DE: PP, DS: PP, DP: PP> PP for AST<Ty, DE, DS, DP> {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         for bind in &self.0 {
             bind.pp(w, indent)?;
-            write!(w, "\n")?;
+            writeln!(w)?;
         }
         Ok(())
     }
@@ -34,7 +34,7 @@ impl<Ty: fmt::Display, DE: fmt::Display, DS: fmt::Display, DP: fmt::Display> fmt
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let indent = f.width().unwrap_or(0);
         for bind in &self.0 {
-            write!(f, "{:indent$}\n", bind, indent = indent)?;
+            writeln!(f, "{:indent$}", bind, indent = indent)?;
         }
         Ok(())
     }
@@ -72,7 +72,7 @@ impl<Ty: PP, DE: PP, DS: PP, DP: PP> PP for Declaration<Ty, DE, DS, DP> {
                 Ok(())
             }
             LangItem { name, decl } => {
-                write!(w, "{}__langitem(({}))__\n", Self::nspaces(indent), name)?;
+                writeln!(w, "{}__langitem(({}))__", Self::nspaces(indent), name)?;
                 decl.pp(w, indent)
             }
             D(d) => d.pp(w, indent),
@@ -115,7 +115,7 @@ impl<Ty: fmt::Display, DE: fmt::Display, DS: fmt::Display, DP: fmt::Display> fmt
                 Ok(())
             }
             LangItem { name, decl } => {
-                write!(f, "{}__langitem(({}))__\n", nspaces(indent), name)?;
+                writeln!(f, "{}__langitem(({}))__", nspaces(indent), name)?;
                 write!(f, "{:indent$}", decl, indent = indent)
             }
             D(d) => write!(f, "{:indent$}", d, indent = indent),
@@ -221,10 +221,10 @@ impl<Ty: PP, DE: PP, DS: PP, DP: PP> PP for Expr<Ty, DE, DS, DP> {
             Binds { binds, ret } => {
                 let ind = Self::nspaces(indent);
                 let nextind = Self::nspaces(indent + 4);
-                write!(w, "let\n")?;
+                writeln!(w, "let")?;
                 for val in binds {
                     val.pp(w, indent + 4)?;
-                    write!(w, "\n")?;
+                    writeln!(w)?;
                 }
                 write!(w, "{}in\n{}", ind, nextind)?;
                 ret.pp(w, indent + 4)?;
@@ -235,7 +235,7 @@ impl<Ty: PP, DE: PP, DS: PP, DP: PP> PP for Expr<Ty, DE, DS, DP> {
                 fun.pp(w, indent)?;
                 write!(w, "\"(")?;
                 inter_iter! {
-                    &args,
+                    args,
                     write!(w, ", ")?,
                     |arg| => {
                         arg.pp(w, indent)?
@@ -253,7 +253,7 @@ impl<Ty: PP, DE: PP, DS: PP, DP: PP> PP for Expr<Ty, DE, DS, DP> {
                 write!(w, "_externcall \"{}\".\"{}\"(", module, fun)?;
 
                 inter_iter! {
-                    &args,
+                    args,
                     write!(w, ", ")?,
                     |arg| => {
                         arg.pp(w, indent)?
@@ -261,7 +261,7 @@ impl<Ty: PP, DE: PP, DS: PP, DP: PP> PP for Expr<Ty, DE, DS, DP> {
                 };
                 write!(w, "): (")?;
                 inter_iter! {
-                    &argty,
+                    argty,
                     write!(w, ", ")?,
                     |ty| => {
                         ty.pp(w, indent)?
@@ -338,18 +338,18 @@ impl<Ty: fmt::Display, DE: fmt::Display, DS: fmt::Display, DP: fmt::Display> fmt
             Binds { binds, ret } => {
                 let ind = nspaces(indent);
                 let nextind = nspaces(next);
-                write!(f, "let\n")?;
+                writeln!(f, "let")?;
                 for val in binds {
-                    write!(f, "{:next$}\n", val, next = next)?;
+                    writeln!(f, "{:next$}", val, next = next)?;
                 }
-                write!(f, "{}in\n", ind)?;
+                writeln!(f, "{}in", ind)?;
                 write!(f, "{}{:next$}", nextind, ret, next = next)?;
                 write!(f, "\n{}end", ind)?;
             }
             BuiltinCall { fun, args } => {
                 write!(f, "_builtincall \"{:indent$}\"(", fun, indent = indent)?;
                 inter_iter! {
-                    &args,
+                    args,
                     write!(f, ", ")?,
                     |arg| => {
                         write!(f,"{:indent$}", arg, indent = indent)?;
@@ -367,7 +367,7 @@ impl<Ty: fmt::Display, DE: fmt::Display, DS: fmt::Display, DP: fmt::Display> fmt
                 write!(f, "_externcall \"{}\".\"{}\"(", module, fun)?;
 
                 inter_iter! {
-                    &args,
+                    args,
                     write!(f, ", ")?,
                     |arg| => {
                         write!(f,"{:indent$}", arg, indent = indent)?;
@@ -375,7 +375,7 @@ impl<Ty: fmt::Display, DE: fmt::Display, DS: fmt::Display, DP: fmt::Display> fmt
                 };
                 write!(f, "): (")?;
                 inter_iter! {
-                    &argty,
+                    argty,
                     write!(f, ", ")?,
                     |ty| => {
                         write!(f,"{:indent$}", ty, indent = indent)?;
@@ -475,8 +475,8 @@ impl<Ty: fmt::Display> fmt::Display for DerivedExprKind<Ty> {
                 cond, then, else_, ..
             } => {
                 let ind = nspaces(indent);
-                write!(f, "if {:next$}\n", cond, next = next)?;
-                write!(f, "{}then {:next$}\n", ind, then, next = next)?;
+                writeln!(f, "if {:next$}", cond, next = next)?;
+                writeln!(f, "{}then {:next$}", ind, then, next = next)?;
                 write!(f, "{}else {:next$}", ind, else_, next = next)?;
             }
             String { value } => {
@@ -575,7 +575,7 @@ impl PP for DerivedPatternKind {
                 w,
                 "{}",
                 value
-                    .into_iter()
+                    .iter()
                     .map(|&u| char::from_u32(u).unwrap())
                     .collect::<String>()
             ),
@@ -590,7 +590,7 @@ impl fmt::Display for DerivedPatternKind {
                 f,
                 "{}",
                 value
-                    .into_iter()
+                    .iter()
                     .map(|&u| char::from_u32(u).unwrap())
                     .collect::<String>()
             ),

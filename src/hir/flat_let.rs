@@ -118,9 +118,9 @@ impl Transform for FlatLet {
     }
 }
 
-impl FlatLet {
-    pub fn new() -> Self {
-        FlatLet
+impl Default for FlatLet {
+    fn default() -> Self {
+        Self
     }
 }
 

@@ -50,12 +50,12 @@ impl PP for Function {
         };
         write!(w, ") -> ")?;
         self.ret_ty.pp(w, 0)?;
-        write!(w, " = {{\n")?;
+        writeln!(w, " = {{")?;
         for op in self.body.iter() {
             write!(w, "{}", Self::nspaces(indent))?;
             op.pp(w, indent)?;
         }
-        write!(w, "}}\n")?;
+        writeln!(w, "}}")?;
         Ok(())
     }
 }
@@ -72,11 +72,11 @@ impl fmt::Display for Function {
                 write!(f, "r{}: {}", i, reg)?;
             }
         };
-        write!(f, ") -> {} = {{\n", self.ret_ty)?;
+        writeln!(f, ") -> {} = {{", self.ret_ty)?;
         for op in self.body.iter() {
             write!(f, "{}{:indent$}", nspaces(indent), op, indent = indent)?;
         }
-        write!(f, "}}\n")?;
+        writeln!(f, "}}")?;
         Ok(())
     }
 }
@@ -174,12 +174,12 @@ impl fmt::Display for LTy {
 impl PP for Block {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         self.name.pp(w, indent)?;
-        write!(w, ":\n")?;
+        writeln!(w, ":")?;
         let indent = indent + 4;
         for op in self.body.iter() {
             write!(w, "{}", Self::nspaces(indent))?;
             op.pp(w, indent)?;
-            write!(w, "\n")?;
+            writeln!(w)?;
         }
         Ok(())
     }
@@ -189,9 +189,9 @@ impl fmt::Display for Block {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let indent = f.width().unwrap_or(0);
         let indent = indent + 4;
-        write!(f, "{}:\n", self.name)?;
+        writeln!(f, "{}:", self.name)?;
         for op in self.body.iter() {
-            write!(f, "{}{}\n", nspaces(indent), op)?;
+            writeln!(f, "{}{}", nspaces(indent), op)?;
         }
         Ok(())
     }

@@ -82,7 +82,7 @@ impl HIR2MIRPass {
             Tuple(tys) => match tys.len() {
                 0 => EbbTy::Unit,
                 // TODO: treat 1-tuple as inner type
-                _ => EbbTy::Tuple(tys.into_iter().map(|t| self.trans_ty(t)).collect()),
+                _ => EbbTy::Tuple(tys.iter().map(|t| self.trans_ty(t)).collect()),
             },
             Fun(arg, ret) => EbbTy::Cls {
                 closures: vec![],
@@ -231,10 +231,7 @@ impl HIR2MIRPass {
             BuiltinCall { ty, fun, args } => {
                 assert_eq!(ty, ty_);
                 use crate::hir::BIF::*;
-                let mut args = args
-                    .into_iter()
-                    .map(|arg| force_symbol(arg))
-                    .collect::<Vec<Symbol>>();
+                let mut args = args.into_iter().map(force_symbol).collect::<Vec<Symbol>>();
                 macro_rules! pop {
                     () => {
                         args.remove(0)
@@ -278,7 +275,7 @@ impl HIR2MIRPass {
                 args,
             } => {
                 assert_eq!(ty, ty_);
-                let args = args.into_iter().map(|arg| force_symbol(arg)).collect();
+                let args = args.into_iter().map(force_symbol).collect();
                 eb.extern_call(name, self.trans_ty(&ty), module, fun, args);
                 eb
             }
@@ -365,65 +362,56 @@ impl HIR2MIRPass {
                     }
                 }
                 // an easy optimization of non branching case
-                let ebb;
-                if labels.is_empty() && default_label.is_some() {
+
+                let ebb = if labels.is_empty() && default_label.is_some() {
                     let (label, is_forward) = default_label.clone().unwrap();
-                    ebb = eb.jump(label, is_forward, vec![var.clone()]);
+                    eb.jump(label, is_forward, vec![var])
                 } else {
-                    ebb = eb.branch(descriminant, labels, default_label.clone());
-                }
+                    eb.branch(descriminant, labels, default_label.clone())
+                };
 
                 fb.add_ebb(ebb);
 
                 for (key, binds, label, arm) in arms {
                     let mut eb = EBBBuilder::new(label, Vec::new());
-                    match &exprty {
-                        MatchTy::Datatype(tys) => {
-                            let vararg = match binds {
-                                Some(s) => s,
-                                None => self.gensym("vararg"),
-                            };
-                            let argty = tys[key as usize].clone();
-                            eb.select(vararg, argty, key, arg.clone());
-                        }
-                        _ => {
-                            //noop
-                        }
+                    if let MatchTy::Datatype(tys) = &exprty {
+                        let vararg = match binds {
+                            Some(s) => s,
+                            None => self.gensym("vararg"),
+                        };
+                        let argty = tys[key as usize].clone();
+                        eb.select(vararg, argty, key, arg.clone());
                     }
                     let (eb, var) = self.trans_expr_block(fb, eb, ty.clone(), arm);
                     let ebb = eb.jump(joinlabel.clone(), true, vec![var]);
                     fb.add_ebb(ebb);
                 }
-                match (default, default_label) {
-                    (Some((pat, arm)), Some((label, _))) => {
-                        let eb = match pat {
-                            hir::Pattern::Var { name, ty } => {
-                                let eb = EBBBuilder::new(label, vec![(self.trans_ty(&ty), name)]);
-                                eb
-                            }
-                            hir::Pattern::Tuple { tys, tuple } => {
-                                let ty = hir::HTy::Tuple(tys.clone());
-                                let var = self.gensym("tuple");
-                                let mut eb =
-                                    EBBBuilder::new(label, vec![(self.trans_ty(&ty), var.clone())]);
-                                for (i, (t, ty)) in tuple.into_iter().zip(tys).enumerate() {
-                                    eb.proj(t, self.trans_ty(&ty), i as u32, var.clone());
-                                }
-                                eb
-                            }
-                            hir::Pattern::Constructor { .. }
-                            | hir::Pattern::Constant { .. }
-                            | hir::Pattern::Char { .. } => unreachable!(),
-                        };
 
-                        let (eb, var) = self.trans_expr_block(fb, eb, ty.clone(), arm);
-                        let ebb = eb.jump(joinlabel.clone(), true, vec![var]);
-                        fb.add_ebb(ebb);
-                    }
-                    _ => (),
+                if let (Some((pat, arm)), Some((label, _))) = (default, default_label) {
+                    let eb = match pat {
+                        hir::Pattern::Var { name, ty } => {
+                            EBBBuilder::new(label, vec![(self.trans_ty(&ty), name)])
+                        }
+                        hir::Pattern::Tuple { tys, tuple } => {
+                            let ty = hir::HTy::Tuple(tys.clone());
+                            let var = self.gensym("tuple");
+                            let mut eb =
+                                EBBBuilder::new(label, vec![(self.trans_ty(&ty), var.clone())]);
+                            for (i, (t, ty)) in tuple.into_iter().zip(tys).enumerate() {
+                                eb.proj(t, self.trans_ty(&ty), i as u32, var.clone());
+                            }
+                            eb
+                        }
+                        hir::Pattern::Constructor { .. }
+                        | hir::Pattern::Constant { .. }
+                        | hir::Pattern::Char { .. } => unreachable!(),
+                    };
+
+                    let (eb, var) = self.trans_expr_block(fb, eb, ty.clone(), arm);
+                    let ebb = eb.jump(joinlabel.clone(), true, vec![var]);
+                    fb.add_ebb(ebb);
                 }
-                let eb = EBBBuilder::new(joinlabel, vec![(self.trans_ty(&ty), name)]);
-                eb
+                EBBBuilder::new(joinlabel, vec![(self.trans_ty(&ty), name)])
             }
             Tuple { tys, tuple } => {
                 let tys = tys.into_iter().map(|ty| self.trans_ty(&ty)).collect();

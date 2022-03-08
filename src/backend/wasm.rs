@@ -42,26 +42,17 @@ fn fun_type(f: &lir::Function) -> FuncType {
         ref ret_ty,
         ..
     } = f;
-    let mut tys = regs
-        .iter()
-        .map(|reg| lty_to_valuetype(reg))
-        .collect::<Vec<_>>();
+    let mut tys = regs.iter().map(lty_to_valuetype).collect::<Vec<_>>();
     let _ = tys.split_off(*nparams as usize);
     FuncType {
         params: tys,
-        ret: match ret_ty {
-            ty => lty_to_valuetype_opt(&ty),
-        },
+        ret: lty_to_valuetype_opt(ret_ty),
     }
 }
 
 pub struct LIR2WASM;
 
 impl LIR2WASM {
-    pub fn new() -> Self {
-        Self
-    }
-
     fn generate_pass(&mut self, extern_types: lir::ExternTypes) -> LIR2WASMPass {
         let mut md = ModuleBuilder::new();
         let mut extern_functions = HashMap::new();
@@ -76,10 +67,10 @@ impl LIR2WASM {
             };
             let tyind = if !function_type_table.contains_key(&ftype) {
                 let tyi = md.add_type(ftype.clone());
-                function_type_table.insert(ftype, tyi.clone());
+                function_type_table.insert(ftype, tyi);
                 tyi
             } else {
-                function_type_table[&ftype].clone()
+                function_type_table[&ftype]
             };
 
             let funind = md.import(module.clone(), name.clone(), tyind);
@@ -87,6 +78,12 @@ impl LIR2WASM {
             extern_functions.insert((module, name), fun);
         }
         LIR2WASMPass::new(md, extern_functions, function_type_table)
+    }
+}
+
+impl Default for LIR2WASM {
+    fn default() -> Self {
+        Self
     }
 }
 
@@ -180,7 +177,7 @@ impl LIR2WASMPass {
         let fun_table = self.md.new_table(ElemType::AnyFunc, (nfunctions as u32)..);
         let elems = ElemSegment {
             index: fun_table,
-            offset: InitExpr(CodeBuilder::new().constant(0 as i32).end().build()),
+            offset: InitExpr(CodeBuilder::new().constant(0).end().build()),
             elems: self.dynamic_function_elements.clone(),
         };
 
@@ -215,10 +212,7 @@ impl LIR2WASMPass {
             body,
             ..
         } = f;
-        let mut tys = regs
-            .iter()
-            .map(|reg| lty_to_valuetype(reg))
-            .collect::<Vec<_>>();
+        let mut tys = regs.iter().map(lty_to_valuetype).collect::<Vec<_>>();
         let regtys = tys.split_off(nparams as usize);
         let mut fb = FunctionBuilder::new(ftype.clone());
 
@@ -752,7 +746,7 @@ impl LIR2WASMPass {
                                 StoreFnPtr(addr, value) => {
                                     cb = cb
                                         .get_local(reg!(addr.0))
-                                        .constant(self.intern_fun(&value) as i32)
+                                        .constant(self.intern_fun(value) as i32)
                                         .i32_store(addr.1);
                                 }
 
@@ -788,7 +782,7 @@ impl LIR2WASMPass {
                                         .i32_load(0)
                                         .call_indirect(self.function_type_table[&ftype], false);
 
-                                    if let Some(_) = ret {
+                                    if ret.is_some() {
                                         cb = cb.set_local(reg!(reg));
                                     }
                                 }
@@ -797,9 +791,9 @@ impl LIR2WASMPass {
                                         cb = cb.get_local(reg!(arg))
                                     }
 
-                                    cb = cb.call(self.function_index(&fun));
+                                    cb = cb.call(self.function_index(fun));
                                     let ret = lty_to_valuetype_opt(&reg.0);
-                                    if let Some(_) = ret {
+                                    if ret.is_some() {
                                         cb = cb.set_local(reg!(reg));
                                     }
                                 }
@@ -810,7 +804,7 @@ impl LIR2WASMPass {
                                     let fun = self.extern_functions[&(module.clone(), fun.clone())];
                                     cb = cb.call(fun);
                                     let ret = lty_to_valuetype_opt(&reg.0);
-                                    if let Some(_) = ret {
+                                    if ret.is_some() {
                                         cb = cb.set_local(reg!(reg));
                                     }
                                 }
@@ -848,31 +842,26 @@ impl LIR2WASMPass {
 
         let ret = v.iter().map(Control::Body).collect();
         let ret = self.insert_loop_block(ret);
-        let ret = self.adjust_loop_block(ret);
-        ret
+        self.adjust_loop_block(ret)
     }
 
     fn insert_loop_block<'a>(&mut self, v: Vec<Control<'a>>) -> Vec<Control<'a>> {
         let v = self.insert_loop(v);
-        let v = self.insert_block(v);
-        v
+        self.insert_block(v)
     }
 
     fn insert_loop<'a>(&mut self, v: Vec<Control<'a>>) -> Vec<Control<'a>> {
         let mut loop_targets = HashSet::new();
         let mut labels = HashMap::new();
         for (i, c) in v.iter().enumerate() {
-            match *c {
-                Control::Body(ref block) => {
-                    labels.insert(&block.name, i);
+            if let Control::Body(block) = c {
+                labels.insert(&block.name, i);
 
-                    for label in block.branches().into_iter() {
-                        if labels.contains_key(&label) {
-                            loop_targets.insert(label);
-                        }
+                for label in block.branches().into_iter() {
+                    if labels.contains_key(&label) {
+                        loop_targets.insert(label);
                     }
                 }
-                _ => (),
             }
         }
 
@@ -893,7 +882,7 @@ impl LIR2WASMPass {
                     targets.sort_by_key(|(n, _)| *n);
                     for (_, label) in targets {
                         if loop_targets.contains(&label) && !closed_loops.contains(&label) {
-                            ret.push(Control::LoopEnd(&label));
+                            ret.push(Control::LoopEnd(label));
                             closed_loops.insert(label);
                         }
                     }
@@ -908,25 +897,21 @@ impl LIR2WASMPass {
                 c => ret.push(c),
             }
         }
-        let ret = ret.into_iter().rev().collect();
-        ret
+        ret.into_iter().rev().collect()
     }
 
     fn insert_block<'a>(&mut self, v: Vec<Control<'a>>) -> Vec<Control<'a>> {
         let mut block_targets = HashSet::new();
         let mut labels = HashMap::new();
         for (i, c) in v.iter().enumerate() {
-            match *c {
-                Control::Body(ref block) => {
-                    labels.insert(&block.name, i);
+            if let Control::Body(block) = c {
+                labels.insert(&block.name, i);
 
-                    for label in block.branches().into_iter() {
-                        if !labels.contains_key(&label) {
-                            block_targets.insert(label);
-                        }
+                for label in block.branches().into_iter() {
+                    if !labels.contains_key(&label) {
+                        block_targets.insert(label);
                     }
                 }
-                _ => (),
             }
         }
 
@@ -951,7 +936,7 @@ impl LIR2WASMPass {
                     targets.sort_by_key(|(n, _)| *n);
                     for (_, label) in targets {
                         if block_targets.contains(&label) && !opened_blocks.contains(&label) {
-                            ret.push(Control::Block(&label));
+                            ret.push(Control::Block(label));
                             opened_blocks.insert(label);
                         }
                     }
@@ -967,8 +952,7 @@ impl LIR2WASMPass {
 
     fn adjust_loop_block<'a>(&mut self, v: Vec<Control<'a>>) -> Vec<Control<'a>> {
         let v = self.adjust_loop(v);
-        let v = self.adjust_block(v);
-        v
+        self.adjust_block(v)
     }
 
     fn adjust_loop<'a>(&mut self, v: Vec<Control<'a>>) -> Vec<Control<'a>> {
@@ -1041,9 +1025,8 @@ impl LIR2WASMPass {
         name: &'a lir::Label,
         defers: &mut HashMap<&'a lir::Label, Vec<&'a lir::Label>>,
     ) -> Vec<&'a lir::Label> {
-        let mut ret = Vec::new();
-        ret.push(name);
-        let mut rest = Vec::new();
+        let mut ret = vec![name];
+        let mut rest = vec![];
         rest.extend(defers.remove(&name).iter().flat_map(|v| v.iter()).rev());
         while !rest.is_empty() {
             let mut tmp = Vec::new();

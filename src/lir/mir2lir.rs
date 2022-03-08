@@ -6,6 +6,7 @@ use crate::prim::*;
 use log::debug;
 use std::collections::HashMap;
 
+#[derive(Default)]
 pub struct MIR2LIR {}
 
 pub struct MIR2LIRPass {
@@ -14,10 +15,6 @@ pub struct MIR2LIRPass {
 }
 
 impl MIR2LIR {
-    pub fn new() -> Self {
-        MIR2LIR {}
-    }
-
     fn generate_pass(&mut self, symbol_table: mir::SymbolTable) -> MIR2LIRPass {
         MIR2LIRPass::new(symbol_table)
     }
@@ -31,7 +28,7 @@ impl MIR2LIRPass {
         }
     }
 
-    fn ebbty_to_lty<'a>(&self, ty: &mir::EbbTy) -> LTy {
+    fn ebbty_to_lty(&self, ty: &mir::EbbTy) -> LTy {
         use crate::mir::EbbTy::*;
         match ty {
             Unit => LTy::Unit,
@@ -92,18 +89,12 @@ impl MIR2LIRPass {
                 for op in ebb.body.iter() {
                     debug!(target: "mir_to_lir", "op: {:?}", op);
                     match op {
-                        &m::Lit {
-                            ref var, ref value, ..
-                        } => match value {
-                            &Literal::Char(c) => ops.push(ConstI32(reg!(var), c as u32)),
-                            &Literal::Int(i) => ops.push(ConstI32(reg!(var), i as u32)),
-                            &Literal::Real(f) => ops.push(ConstF64(reg!(var), f as f64)),
+                        m::Lit { var, value, .. } => match value {
+                            Literal::Char(c) => ops.push(ConstI32(reg!(var), *c as u32)),
+                            Literal::Int(i) => ops.push(ConstI32(reg!(var), *i as u32)),
+                            Literal::Real(f) => ops.push(ConstF64(reg!(var), *f as f64)),
                         },
-                        &m::Alias {
-                            ref var,
-                            ref ty,
-                            ref sym,
-                        } => {
+                        m::Alias { var, ty, sym } => {
                             let ty = self.ebbty_to_lty(ty);
                             match ty {
                                 LTy::Unit => {
@@ -120,12 +111,8 @@ impl MIR2LIRPass {
                                 LTy::FPtr => ops.push(MoveI32(reg!(var), reg!(sym))),
                             }
                         }
-                        &m::BinOp {
-                            ref var,
-                            ref l,
-                            ref r,
-                            ref binop,
-                            ..
+                        m::BinOp {
+                            var, l, r, binop, ..
                         } => {
                             use mir::BinOp;
                             match binop {
@@ -158,11 +145,7 @@ impl MIR2LIRPass {
                                 BinOp::LeChar => ops.push(LeU32(reg!(var), reg!(l), reg!(r))),
                             }
                         }
-                        &m::Tuple {
-                            ref var,
-                            ref tys,
-                            ref tuple,
-                        } => {
+                        m::Tuple { var, tys, tuple } => {
                             let reg = reg!(var);
 
                             let tys: Vec<_> = tys.iter().map(|ty| self.ebbty_to_lty(ty)).collect();
@@ -206,11 +189,11 @@ impl MIR2LIRPass {
                                 acc += 8;
                             }
                         }
-                        &m::Proj {
-                            ref var,
-                            ref ty,
-                            ref index,
-                            ref tuple,
+                        m::Proj {
+                            var,
+                            ty,
+                            index,
+                            tuple,
                         } => {
                             #[allow(clippy::never_loop)]
                             loop {
@@ -234,11 +217,11 @@ impl MIR2LIRPass {
                             }
                         }
 
-                        &m::Union {
-                            ref var,
-                            ref tys,
-                            ref variant,
-                            ref index,
+                        m::Union {
+                            var,
+                            tys,
+                            variant,
+                            index,
                         } => {
                             let ty = &tys[*index as usize];
                             #[allow(clippy::never_loop)]
@@ -258,12 +241,7 @@ impl MIR2LIRPass {
                                 break;
                             }
                         }
-                        &m::Select {
-                            ref var,
-                            ref ty,
-                            ref union,
-                            ..
-                        } => {
+                        m::Select { var, ty, union, .. } => {
                             #[allow(clippy::never_loop)]
                             loop {
                                 let ctor = match self.ebbty_to_lty(ty) {
@@ -286,12 +264,7 @@ impl MIR2LIRPass {
                             }
                         }
 
-                        &m::Closure {
-                            ref var,
-                            ref fun,
-                            ref env,
-                            ..
-                        } => {
+                        m::Closure { var, fun, env, .. } => {
                             // closure looks like on memory:
                             //   64      64    ...
                             // +-----------------------
@@ -347,11 +320,11 @@ impl MIR2LIRPass {
                                 acc += 8;
                             }
                         }
-                        &m::ExternCall {
-                            ref var,
-                            ref module,
-                            ref fun,
-                            ref args,
+                        m::ExternCall {
+                            var,
+                            module,
+                            fun,
+                            args,
                             ..
                         } => {
                             let args = args.iter().map(|a| reg!(a)).collect();
@@ -366,22 +339,17 @@ impl MIR2LIRPass {
                                 args,
                             ))
                         }
-                        &m::Call {
-                            ref var,
-                            ref fun,
-                            ref args,
-                            ..
-                        } => {
+                        m::Call { var, fun, args, .. } => {
                             let args = args.iter().map(|a| reg!(a)).collect();
                             match symbol_table.get(fun) {
                                 Some(r) => ops.push(ClosureCall(reg!(var), r.clone(), args)),
                                 None => ops.push(FunCall(reg!(var), fun.clone(), args)),
                             }
                         }
-                        &m::Branch {
-                            ref cond,
-                            ref clauses,
-                            ref default,
+                        m::Branch {
+                            cond,
+                            clauses,
+                            default,
                             ..
                         } => {
                             let mut clauses = clauses.clone();
@@ -462,11 +430,7 @@ impl MIR2LIRPass {
                                 }
                             }
                         }
-                        &m::Jump {
-                            ref target,
-                            ref args,
-                            ..
-                        } => {
+                        m::Jump { target, args, .. } => {
                             let params = &target_table[target];
                             for (p, a) in params.iter().zip(args) {
                                 match p.0 {
@@ -485,7 +449,7 @@ impl MIR2LIRPass {
                             }
                             ops.push(Jump(Label(target.clone())))
                         }
-                        &m::Ret { ref value, ref ty } => match ty {
+                        m::Ret { value, ty } => match ty {
                             mir::EbbTy::Unit => ops.push(Ret(None)),
                             _ => ops.push(Ret(value.as_ref().map(|v| reg!(v)))),
                         },

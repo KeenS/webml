@@ -38,12 +38,12 @@ impl VarToConstructorPass {
 
     fn is_constructor(&self, name: &Symbol) -> bool {
         self.symbol_table()
-            .get_datatype_of_constructor(&name)
+            .get_datatype_of_constructor(name)
             .is_some()
     }
 
     fn arg_type(&self, name: &Symbol) -> Option<&Type> {
-        self.symbol_table().get_argtype_of_constructor(&name)
+        self.symbol_table().get_argtype_of_constructor(name)
     }
 
     fn gensym(&mut self) -> Symbol {
@@ -55,7 +55,7 @@ impl VarToConstructorPass {
 impl Transform<Empty> for VarToConstructorPass {
     fn transform_symbol(&mut self, span: Span, name: Symbol) -> UntypedCoreExprKind {
         if self.is_constructor(&name) {
-            if let Some(_) = self.arg_type(&name) {
+            if self.arg_type(&name).is_some() {
                 let sym = self.gensym();
                 ExprKind::Fn {
                     param: sym.clone(),

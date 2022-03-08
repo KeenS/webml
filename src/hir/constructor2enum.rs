@@ -281,12 +281,8 @@ impl Transform for ConstructorToEnumPass {
     }
 }
 
+#[derive(Default)]
 pub struct ConstructorToEnum {}
-impl ConstructorToEnum {
-    pub fn new() -> Self {
-        Self {}
-    }
-}
 
 impl<E> Pass<Context, E> for ConstructorToEnum {
     type Target = Context;

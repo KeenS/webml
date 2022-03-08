@@ -237,11 +237,7 @@ impl Pattern {
     }
 
     pub fn is_variable(&self) -> bool {
-        use self::Pattern::*;
-        match self {
-            Var { .. } => true,
-            _ => false,
-        }
+        matches!(self, Pattern::Var { .. })
     }
 
     pub fn is_irrefutable(&self) -> bool {

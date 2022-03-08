@@ -55,11 +55,7 @@ impl CaseSimplifyPass {
     fn rename_pattern(&mut self, pattern: &mut TypedCorePattern) {
         use PatternKind::*;
         match &mut pattern.inner {
-            Constructor { arg, .. } => {
-                if let Some(arg) = arg {
-                    self.rename_pattern(arg)
-                }
-            }
+            Constructor { arg: Some(arg), .. } => self.rename_pattern(arg),
             Tuple { tuple, .. } => {
                 for pat in tuple {
                     self.rename_pattern(pat)
@@ -78,7 +74,7 @@ impl CaseSimplifyPass {
         clauses: Vec<(Stack<TypedCorePattern>, TypedCoreExpr)>,
     ) -> TypedCoreExpr {
         // assuming clauses.any(|(patterns, _)| patterns.len() == cond.len())
-        if clauses.len() == 0 {
+        if clauses.is_empty() {
             self.match_compile_empty(span, cond, ty, clauses)
         } else if clauses[0].0.iter().all(|p| p.is_variable()) {
             self.match_compile_variable(span, cond, ty, clauses)
@@ -300,7 +296,7 @@ impl CaseSimplifyPass {
             inner: ExprKind::Case {
                 cond: Expr {
                     ty: cty,
-                    span: span.clone(),
+                    span,
                     inner: ExprKind::Symbol { name: c },
                 }
                 .boxed(),
@@ -380,7 +376,7 @@ impl CaseSimplifyPass {
             inner: ExprKind::Case {
                 cond: Expr {
                     ty: cty,
-                    span: span.clone(),
+                    span,
                     inner: ExprKind::Symbol { name: c },
                 }
                 .boxed(),
@@ -428,8 +424,8 @@ impl CaseSimplifyPass {
             .map(|(name, (ty, pattern_span, arg))| {
                 let clauses = self.specialized_patterns(
                     (cty.clone(), c.clone()),
-                    &name,
-                    &arg,
+                    name,
+                    arg,
                     clause_with_heads.iter(),
                 );
                 let mut new_cond = cond.clone();
@@ -467,8 +463,8 @@ impl CaseSimplifyPass {
                 inner: ExprKind::Case {
                     cond: Expr {
                         ty: cty,
-                        span: span.clone(),
-                        inner: ExprKind::Symbol { name: c.clone() },
+                        span,
+                        inner: ExprKind::Symbol { name: c },
                     }
                     .boxed(),
                     clauses,
@@ -498,7 +494,7 @@ impl CaseSimplifyPass {
                 inner: ExprKind::Case {
                     cond: Expr {
                         ty: cty,
-                        span: span.clone(),
+                        span,
                         inner: ExprKind::Symbol { name: c },
                     }
                     .boxed(),
@@ -784,7 +780,7 @@ impl Transform<Type> for CaseSimplifyPass {
                     .collect();
                 let tuple = Expr {
                     ty: ty.clone(),
-                    span: span.clone(),
+                    span,
                     inner: ExprKind::Tuple { tuple },
                 };
                 let cond = self.transform_expr(expr);

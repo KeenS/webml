@@ -48,11 +48,11 @@ impl PP for Function {
         }
         write!(w, ") -> ")?;
         self.body_ty.pp(w, 0)?;
-        write!(w, " = {{\n")?;
+        writeln!(w, " = {{")?;
         for ebb in self.body.iter() {
             ebb.pp(w, indent)?;
         }
-        write!(w, "}}\n")?;
+        writeln!(w, "}}")?;
         Ok(())
     }
 }
@@ -69,11 +69,11 @@ impl fmt::Display for Function {
                 write!(f, "{}: {}", param, param_ty)?;
             }
         }
-        write!(f, ") -> {} = {{\n", self.body_ty)?;
+        writeln!(f, ") -> {} = {{", self.body_ty)?;
         for ebb in self.body.iter() {
             write!(f, "{:indent$}", ebb, indent = indent)?;
         }
-        write!(f, "}}\n")?;
+        writeln!(f, "}}")?;
         Ok(())
     }
 }
@@ -220,10 +220,10 @@ impl PP for EBB {
                 param_ty.pp(w, indent)?;
             }
         }
-        write!(w, "):\n")?;
+        writeln!(w, "):")?;
         for op in self.body.iter() {
             op.pp(w, indent)?;
-            write!(w, "\n")?;
+            writeln!(w)?;
         }
         Ok(())
     }
@@ -242,9 +242,9 @@ impl fmt::Display for EBB {
                 write!(f, "{}: {}", param, param_ty)?;
             }
         }
-        write!(f, "):\n")?;
+        writeln!(f, "):")?;
         for op in self.body.iter() {
-            write!(f, "{:indent$}\n", op, indent = indent)?;
+            writeln!(f, "{:indent$}", op, indent = indent)?;
         }
         Ok(())
     }
@@ -489,24 +489,24 @@ impl PP for Op {
             } => {
                 write!(w, "{}branch ", space)?;
                 cond.pp(w, indent)?;
-                write!(w, " {{\n")?;
+                writeln!(w, " {{")?;
                 {
                     let indent = indent + 4;
                     let space = Self::nspaces(indent);
                     for (val, arm, _) in clauses.iter() {
                         write!(w, "{}{} => ", space, val)?;
                         arm.pp(w, indent)?;
-                        write!(w, "()\n")?;
+                        writeln!(w, "()")?;
                     }
                     for (arm, _) in default {
                         write!(w, "{}default => ", space)?;
                         arm.pp(w, indent)?;
                         write!(w, "(")?;
                         cond.pp(w, 0)?;
-                        write!(w, ")\n")?;
+                        writeln!(w, ")")?;
                     }
                 }
-                write!(w, "{}}}\n", space)?;
+                writeln!(w, "{}}}", space)?;
             }
             Jump { target, args, .. } => {
                 write!(w, "{}", space)?;
@@ -689,18 +689,18 @@ impl fmt::Display for Op {
                 default,
                 ..
             } => {
-                write!(f, "{}branch {}{{\n", space, cond)?;
+                writeln!(f, "{}branch {}{{", space, cond)?;
                 {
                     let indent = indent + 4;
                     let space = Self::nspaces(indent);
                     for (val, arm, _) in clauses.iter() {
-                        write!(f, "{}{} => {}()\n", space, val, arm)?;
+                        writeln!(f, "{}{} => {}()", space, val, arm)?;
                     }
                     for (arm, _) in default {
                         write!(f, "{}default => {}({}\n)", space, arm, cond)?;
                     }
                 }
-                write!(f, "{}}}\n", space)?;
+                writeln!(f, "{}}}", space)?;
             }
             Jump { target, args, .. } => {
                 write!(f, "{}{}(", space, target)?;

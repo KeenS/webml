@@ -43,16 +43,15 @@ impl Transform for Simplify {
             _ => new_bind = Some(*bind),
         }
 
-        let expr;
-        if let Some(new_bind) = new_bind {
-            expr = Let {
+        let expr = if let Some(new_bind) = new_bind {
+            Let {
                 ty,
                 bind: Box::new(self.transform_val(new_bind)),
                 ret: Box::new(self.transform_expr(*ret)),
             }
         } else {
-            expr = self.transform_expr(*ret)
-        }
+            self.transform_expr(*ret)
+        };
         for name in aliased {
             self.aliases.remove(&name);
         }

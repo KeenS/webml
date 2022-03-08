@@ -46,12 +46,6 @@ where
 }
 
 impl Parser {
-    pub fn new() -> Self {
-        Self {
-            infixes: RefCell::new(vec![BTreeMap::new()]),
-        }
-    }
-
     fn with_scope<R>(&self, f: impl FnOnce() -> R) -> R {
         self.infixes.borrow_mut().push(BTreeMap::default());
         let r = f();
@@ -87,6 +81,14 @@ impl Parser {
                 acc.entry(priority).or_insert(Vec::new()).push(name.clone());
                 acc
             })
+    }
+}
+
+impl Default for Parser {
+    fn default() -> Self {
+        Self {
+            infixes: RefCell::new(vec![BTreeMap::new()]),
+        }
     }
 }
 
@@ -504,7 +506,7 @@ impl Parser {
         with_position(move |i| {
             let (i, _) = tag("#")(i)?;
             let (i, s) = self.string_literal()(i)?;
-            assert_eq!(s.iter().count(), 1);
+            assert_eq!(s.len(), 1);
             let c = s.into_iter().next().unwrap();
             Ok((
                 i,
@@ -560,7 +562,7 @@ impl Parser {
                                 Some(c) => {
                                     let c = c as u32;
                                     count += 1;
-                                    if 64 <= c && c <= 95 {
+                                    if (64..=95).contains(&c) {
                                         s.push(c - 64)
                                     } else {
                                         return etag;
@@ -623,7 +625,7 @@ impl Parser {
                             // \f... f\
                             c if c.is_whitespace() => {
                                 let mut n = None;
-                                while let Some(c) = chars.next() {
+                                for c in chars.by_ref() {
                                     count += 1;
                                     if !c.is_whitespace() {
                                         n = Some(c);
@@ -870,7 +872,7 @@ impl Parser {
         move |i| {
             // FIXME: collect syntax is [a-zA-Z'_][a-zA-Z'_0-9]*
             let start = current_location(&i);
-            let (i, sym) = verify(alphanumeric1, |s: &Input| !KEYWORDS.contains(&s.fragment()))(i)?;
+            let (i, sym) = verify(alphanumeric1, |s: &Input| !KEYWORDS.contains(s.fragment()))(i)?;
             let end = current_location(&i);
             Ok((i, (start..end, Symbol::new(sym.to_string()))))
         }
@@ -895,7 +897,7 @@ impl Parser {
 
             let start = current_location(&i);
             let (i, sym) = verify(symbolic1, |s: &Input| {
-                !KEYWORDS.contains(s.fragment()) && !RESERVED.contains(&s)
+                !KEYWORDS.contains(s.fragment()) && !RESERVED.contains(s)
             })(i)?;
             let end = current_location(&i);
             Ok((i, (start..end, Symbol::new(sym.to_string()))))
@@ -986,7 +988,7 @@ impl Parser {
         with_position(move |i| {
             let (i, _) = tag("#")(i)?;
             let (i, s) = self.string_literal()(i)?;
-            assert_eq!(s.iter().count(), 1);
+            assert_eq!(s.len(), 1);
             let value = s.into_iter().next().unwrap();
             Ok((i, PatternKind::Char { value }))
         })
@@ -1082,7 +1084,7 @@ where
         None => return ret,
     };
 
-    while let Some(e2) = iter.next() {
+    for e2 in iter {
         let (e1, e2) = f(e, e2);
         match e2 {
             Some(e2) => {
@@ -1148,7 +1150,7 @@ where
 fn test_expr_infix_and_app() {
     use nom::InputTake;
     let input = "true";
-    let ret = Parser::new().expr_infix_and_app()(Input::new(input)).unwrap();
+    let ret = Parser::default().expr_infix_and_app()(Input::new(input)).unwrap();
     let (input_remaining, _) = Input::new(input).take_split(input.len());
     assert_eq!(
         ret,
@@ -1170,7 +1172,7 @@ fn test_expr_infix_and_app2() {
     use nom::InputTake;
 
     let input = "f arg";
-    let ret = Parser::new().expr_infix_and_app()(Input::new(input)).unwrap();
+    let ret = Parser::default().expr_infix_and_app()(Input::new(input)).unwrap();
     let (input_remaining, _) = Input::new(input).take_split(input.len());
     assert_eq!(
         ret,

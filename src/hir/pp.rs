@@ -21,7 +21,7 @@ impl PP for HIR {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
         for bind in &self.0 {
             bind.pp(w, indent)?;
-            write!(w, "\n")?;
+            writeln!(w)?;
         }
         Ok(())
     }
@@ -189,7 +189,7 @@ impl fmt::Display for Expr {
         let next = indent + 4;
         match self {
             Let { bind, ret, .. } => {
-                write!(f, "let {} in\n", bind)?;
+                writeln!(f, "let {} in", bind)?;
                 write!(f, "{:next$}", ret, next = next)?;
             }
             Fun {
