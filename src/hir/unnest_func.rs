@@ -397,7 +397,19 @@ impl<'a> Scope<'a> {
                     self.rename(arg, from, to)
                 }
             }
-            Closure { .. } | Lit { .. } => (),
+            Closure { envs, fname, .. } => {
+                if let Some(from) = from {
+                    for (_, env) in envs {
+                        if env == from {
+                            *env = to.clone()
+                        }
+                    }
+                    if fname == from {
+                        *fname = to.clone()
+                    }
+                }
+            }
+            Lit { .. } => (),
         }
     }
 }

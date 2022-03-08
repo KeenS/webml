@@ -53,25 +53,19 @@ impl VarToConstructorPass {
 }
 
 impl Transform<Empty> for VarToConstructorPass {
-    fn transform_symbol(&mut self, name: Symbol) -> UntypedCoreExprKind {
+    fn transform_symbol(&mut self, span: Span, name: Symbol) -> UntypedCoreExprKind {
         if self.is_constructor(&name) {
             if let Some(_) = self.arg_type(&name) {
                 let sym = self.gensym();
                 ExprKind::Fn {
                     param: sym.clone(),
-                    body: Expr {
-                        ty: Empty {},
-                        inner: ExprKind::Constructor {
-                            arg: Some(
-                                Expr {
-                                    ty: Empty {},
-                                    inner: ExprKind::Symbol { name: sym },
-                                }
-                                .boxed(),
-                            ),
+                    body: Expr::new(
+                        span.clone(),
+                        ExprKind::Constructor {
+                            arg: Some(Expr::new(span, ExprKind::Symbol { name: sym }).boxed()),
                             name,
                         },
-                    }
+                    )
                     .boxed(),
                 }
             } else {
@@ -82,7 +76,7 @@ impl Transform<Empty> for VarToConstructorPass {
         }
     }
 
-    fn transform_pat_variable(&mut self, name: Symbol) -> UntypedCorePatternKind {
+    fn transform_pat_variable(&mut self, _: Span, name: Symbol) -> UntypedCorePatternKind {
         if self.is_constructor(&name) {
             PatternKind::Constructor { arg: None, name }
         } else {

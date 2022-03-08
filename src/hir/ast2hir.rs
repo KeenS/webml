@@ -331,6 +331,7 @@ impl AST2HIRPass {
                     ast::Pattern {
                         ty,
                         inner: ast::PatternKind::Variable { name },
+                        ..
                     } => (conv_ty(ty), name),
                     _ => panic!("internal error: pattern"),
                 }),
@@ -343,6 +344,7 @@ impl AST2HIRPass {
                         ast::Pattern {
                             ty,
                             inner: ast::PatternKind::Variable { name },
+                            ..
                         } => (conv_ty(ty), name),
                         _ => panic!("internal error: pattern"),
                     })

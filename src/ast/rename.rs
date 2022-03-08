@@ -187,6 +187,7 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
 
     fn traverse_binds(
         &mut self,
+        _: Span,
         binds: &mut Vec<CoreDeclaration<Ty>>,
         ret: &mut Box<CoreExpr<Ty>>,
     ) {
@@ -197,7 +198,7 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
         scope.traverse_expr(ret);
     }
 
-    fn traverse_fn(&mut self, param: &mut Symbol, body: &mut Box<CoreExpr<Ty>>) {
+    fn traverse_fn(&mut self, _: Span, param: &mut Symbol, body: &mut Box<CoreExpr<Ty>>) {
         let mut scope = self.new_scope();
         scope.new_variable(param);
         scope.traverse_expr(body);
@@ -205,6 +206,7 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
 
     fn traverse_case(
         &mut self,
+        _: Span,
         expr: &mut Box<CoreExpr<Ty>>,
         arms: &mut Vec<(CorePattern<Ty>, CoreExpr<Ty>)>,
     ) {
@@ -216,7 +218,12 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
         }
     }
 
-    fn traverse_constructor(&mut self, arg: &mut Option<Box<CoreExpr<Ty>>>, name: &mut Symbol) {
+    fn traverse_constructor(
+        &mut self,
+        _: Span,
+        arg: &mut Option<Box<CoreExpr<Ty>>>,
+        name: &mut Symbol,
+    ) {
         if self.is_constructor(name) {
             self.rename_constructor(name);
         } else {
@@ -227,7 +234,7 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
             self.traverse_expr(arg)
         }
     }
-    fn traverse_sym(&mut self, name: &mut Symbol) {
+    fn traverse_sym(&mut self, _: Span, name: &mut Symbol) {
         if self.is_constructor(name) {
             self.rename_constructor(name);
         } else {
@@ -237,6 +244,7 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
 
     fn traverse_pat_constructor(
         &mut self,
+        _: Span,
         name: &mut Symbol,
         arg: &mut Option<Box<CorePattern<Ty>>>,
     ) {
@@ -246,7 +254,7 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
         }
     }
 
-    fn traverse_pat_variable(&mut self, name: &mut Symbol) {
+    fn traverse_pat_variable(&mut self, _: Span, name: &mut Symbol) {
         if self.is_constructor(&name) {
             self.rename_constructor(name)
         } else {
@@ -254,7 +262,7 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
         }
     }
 
-    fn traverse_pat_tuple(&mut self, tuple: &mut Vec<CorePattern<Ty>>) {
+    fn traverse_pat_tuple(&mut self, _: Span, tuple: &mut Vec<CorePattern<Ty>>) {
         for pat in tuple {
             self.traverse_pattern(pat)
         }
@@ -331,7 +339,7 @@ impl WrapBIF {
 }
 
 impl Transform<Empty> for WrapBIF {
-    fn transform_symbol(&mut self, name: Symbol) -> UntypedCoreExprKind {
+    fn transform_symbol(&mut self, span: Span, name: Symbol) -> UntypedCoreExprKind {
         if name.1 == 0 {
             if let Some(bif) = self.bif_table.get(&name.0).cloned() {
                 use BIF::*;
@@ -346,53 +354,46 @@ impl Transform<Empty> for WrapBIF {
                         // fn tuple => case tuple of (x, y) => _builtincall "op"(x, y)
                         ExprKind::Fn {
                             param: tuple.clone(),
-                            body: Expr {
-                                ty: Empty {},
-                                inner: ExprKind::Case {
-                                    cond: Expr {
-                                        ty: Empty {},
-                                        inner: ExprKind::Symbol { name: tuple },
-                                    }
-                                    .boxed(),
+                            body: Expr::new(
+                                span.clone(),
+                                ExprKind::Case {
+                                    cond: Expr::new(span.clone(), ExprKind::Symbol { name: tuple })
+                                        .boxed(),
                                     clauses: vec![(
-                                        Pattern {
-                                            ty: Empty {},
-                                            inner: PatternKind::Tuple {
+                                        Pattern::new(
+                                            span.clone(),
+                                            PatternKind::Tuple {
                                                 tuple: vec![
-                                                    Pattern {
-                                                        ty: Empty {},
-                                                        inner: PatternKind::Variable {
-                                                            name: l.clone(),
-                                                        },
-                                                    },
-                                                    Pattern {
-                                                        ty: Empty {},
-                                                        inner: PatternKind::Variable {
-                                                            name: r.clone(),
-                                                        },
-                                                    },
+                                                    Pattern::new(
+                                                        span.clone(),
+                                                        PatternKind::Variable { name: l.clone() },
+                                                    ),
+                                                    Pattern::new(
+                                                        span.clone(),
+                                                        PatternKind::Variable { name: r.clone() },
+                                                    ),
                                                 ],
                                             },
-                                        },
-                                        Expr {
-                                            ty: Empty {},
-                                            inner: ExprKind::BuiltinCall {
+                                        ),
+                                        Expr::new(
+                                            span.clone(),
+                                            ExprKind::BuiltinCall {
                                                 fun: bif,
                                                 args: vec![
-                                                    Expr {
-                                                        ty: Empty {},
-                                                        inner: ExprKind::Symbol { name: l },
-                                                    },
-                                                    Expr {
-                                                        ty: Empty {},
-                                                        inner: ExprKind::Symbol { name: r },
-                                                    },
+                                                    Expr::new(
+                                                        span.clone(),
+                                                        ExprKind::Symbol { name: l },
+                                                    ),
+                                                    Expr::new(
+                                                        span.clone(),
+                                                        ExprKind::Symbol { name: r },
+                                                    ),
                                                 ],
                                             },
-                                        },
+                                        ),
                                     )],
                                 },
-                            }
+                            )
                             .boxed(),
                         }
                     }

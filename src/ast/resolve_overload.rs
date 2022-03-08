@@ -31,6 +31,7 @@ impl Resolver {
 impl Transform<Type> for Resolver {
     fn transform_builtincall(
         &mut self,
+        span: Span,
         mut fun: BIF,
         args: Vec<TypedCoreExpr>,
     ) -> TypedCoreExprKind {
@@ -66,11 +67,13 @@ impl Transform<Type> for Resolver {
             let kind = ExprKind::App {
                 fun: Expr {
                     ty: str_binop_ty,
+                    span: span.clone(),
                     inner: ExprKind::Symbol { name: str_eq },
                 }
                 .boxed(),
                 arg: Expr {
                     ty: arg_ty,
+                    span: span.clone(),
                     inner: ExprKind::Tuple { tuple: args2 },
                 }
                 .boxed(),

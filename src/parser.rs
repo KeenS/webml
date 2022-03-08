@@ -26,10 +26,22 @@ pub struct Parser {
 
 type Input<'a> = LocatedSpan<&'a str>;
 
-pub fn current_location(input: &Input) -> Location {
+fn current_location(input: &Input) -> Location {
     Location {
         line: input.location_line() as usize,
         column: input.get_utf8_column(),
+    }
+}
+
+fn with_position<T, F>(inner_parser: F) -> impl Fn(Input) -> IResult<Input, Annot<Empty, T>>
+where
+    F: Fn(Input) -> IResult<Input, T>,
+{
+    move |i| {
+        let start = current_location(&i);
+        let (i, inner) = inner_parser(i)?;
+        let end = current_location(&i);
+        Ok((i, Annot::new(start..end, inner)))
     }
 }
 
@@ -103,7 +115,7 @@ impl Parser {
         move |i| {
             let (i, _) = tag("datatype")(i)?;
             let (i, _) = self.space1()(i)?;
-            let (i, name) = self.symbol()(i)?;
+            let (i, (_, name)) = self.symbol()(i)?;
             let (i, _) = self.space0()(i)?;
             let (i, _) = tag("=")(i)?;
             let (i, _) = self.space0()(i)?;
@@ -210,14 +222,14 @@ impl Parser {
                     self.space0(),
                     separated_list0(self.space1(), self.pattern_atmic()),
                 )),
-                |(name, _, pats)| (name, pats),
+                |((_, name), _, pats)| (name, pats),
             )(i)
         }
     }
 
     fn constructor_def(&self) -> impl Fn(Input) -> IResult<Input, (Symbol, Option<Type>)> + '_ {
         move |i| {
-            let (i, name) = self.symbol()(i)?;
+            let (i, (_i, name)) = self.symbol()(i)?;
             let (i, param) = opt(complete(map(
                 tuple((self.space1(), tag("of"), self.space1(), self.typename())),
                 |(_, _, _, ty)| ty,
@@ -234,6 +246,7 @@ impl Parser {
             let (i, priority) = opt(digit1)(i)?;
             let (i, _) = self.space1()(i)?;
             let (i, names) = separated_list0(self.space1(), self.symbol_eq())(i)?;
+            let names = names.into_iter().map(|(_, name)| name).collect::<Vec<_>>();
             let priority = priority.map(|s| {
                 s.parse()
                     .expect("internal error: falied to parse digits as integer")
@@ -276,7 +289,7 @@ impl Parser {
     }
 
     fn expr_bind(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
-        move |i| {
+        with_position(move |i| {
             self.with_scope(|| {
                 let (i, _) = tag("let")(i)?;
                 let (i, _) = self.space1()(i)?;
@@ -291,30 +304,31 @@ impl Parser {
                     binds,
                     ret: ret.boxed(),
                 };
-                Ok((i, Expr::new(inner)))
+                Ok((i, inner))
             })
-        }
+        })
     }
 
     fn expr_fun(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
-        move |i| {
+        with_position(move |i| {
             let (i, _) = tag("fn")(i)?;
             let (i, _) = self.space1()(i)?;
-            let (i, param) = self.symbol()(i)?;
+            let (i, (_, param)) = self.symbol()(i)?;
             let (i, _) = self.space0()(i)?;
             let (i, _) = tag("=>")(i)?;
             let (i, _) = self.space1()(i)?;
             let (i, body) = self.expr()(i)?;
+
             let inner = ExprKind::Fn {
                 param,
                 body: body.boxed(),
             };
-            Ok((i, Expr::new(inner)))
-        }
+            Ok((i, inner))
+        })
     }
 
     fn expr_if(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
-        move |i| {
+        with_position(move |i| {
             let (i, _) = tag("if")(i)?;
             let (i, _) = self.space1()(i)?;
             let (i, cond) = self.expr()(i)?;
@@ -326,17 +340,18 @@ impl Parser {
             let (i, _) = tag("else")(i)?;
             let (i, _) = self.space1()(i)?;
             let (i, else_) = self.expr()(i)?;
+
             let inner = ExprKind::D(DerivedExprKind::If {
                 cond: cond.boxed(),
                 then: then.boxed(),
                 else_: else_.boxed(),
             });
-            Ok((i, Expr::new(inner)))
-        }
+            Ok((i, inner))
+        })
     }
 
     fn expr_case(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
-        move |i| {
+        with_position(move |i| {
             let (i, _) = tag("case")(i)?;
             let (i, _) = self.space1()(i)?;
             let (i, cond) = self.expr()(i)?;
@@ -360,8 +375,8 @@ impl Parser {
                 cond: cond.boxed(),
                 clauses,
             };
-            Ok((i, Expr::new(inner)))
-        }
+            Ok((i, inner))
+        })
     }
 
     // treat all of the infix operators and applications, i.e. sequeces of expressions
@@ -372,7 +387,7 @@ impl Parser {
             #[derive(Debug)]
             enum Mixed {
                 E(UntypedExpr),
-                Fix(u8, Symbol),
+                Fix(Span, u8, Symbol),
             }
             use Mixed::*;
             // find infixes
@@ -382,7 +397,7 @@ impl Parser {
                     ExprKind::Symbol { name } => {
                         for (f, table) in self.get_table() {
                             if table.contains(&name) {
-                                return Fix(f, name);
+                                return Fix(e.span, f, name);
                             }
                         }
                         e.inner = ExprKind::Symbol { name };
@@ -396,13 +411,20 @@ impl Parser {
                 .collect::<Vec<_>>();
             // reduce applys
             let rest = map_window2(mixed, |m1, m2| match (m1, m2) {
-                (E(e1), E(e2)) => (
-                    E(Expr::new(ExprKind::App {
-                        fun: e1.boxed(),
-                        arg: e2.boxed(),
-                    })),
-                    None,
-                ),
+                (E(e1), E(e2)) => {
+                    let start = e1.span.start;
+                    let end = e2.span.end;
+                    (
+                        E(Expr::new(
+                            start..end,
+                            ExprKind::App {
+                                fun: e1.boxed(),
+                                arg: e2.boxed(),
+                            },
+                        )),
+                        None,
+                    )
+                }
                 (m1, m2) => (m1, Some(m2)),
             });
 
@@ -410,13 +432,24 @@ impl Parser {
             fn reduce_infixl_n(n: u8, mixed: Vec<Mixed>) -> Vec<Mixed> {
                 use Mixed::*;
                 map_window3(mixed, |m1, m2, m3| match (m1, m2, m3) {
-                    (E(l), Fix(fixty, op), E(r)) if fixty == n => (
-                        E(Expr::new(ExprKind::App {
-                            fun: Expr::new(ExprKind::Symbol { name: op }).boxed(),
-                            arg: Expr::new(ExprKind::Tuple { tuple: vec![l, r] }).boxed(),
-                        })),
-                        None,
-                    ),
+                    (E(l), Fix(op_span, fixty, op), E(r)) if fixty == n => {
+                        let start = l.span.start;
+                        let end = r.span.end;
+                        (
+                            E(Expr::new(
+                                start..end,
+                                ExprKind::App {
+                                    fun: Expr::new(op_span, ExprKind::Symbol { name: op }).boxed(),
+                                    arg: Expr::new(
+                                        start..end,
+                                        ExprKind::Tuple { tuple: vec![l, r] },
+                                    )
+                                    .boxed(),
+                                },
+                            )),
+                            None,
+                        )
+                    }
                     (m1, m2, m3) => (m1, Some((m2, m3))),
                 })
             }
@@ -437,58 +470,56 @@ impl Parser {
             map(
                 alt((
                     self.symbol(),
-                    map(tag("="), |i: Input| Symbol::new(*i.fragment())),
+                    // perhups this is not needed
+                    map(tag("="), |i: Input| {
+                        let cur = current_location(&i);
+                        (cur..cur, Symbol::new(*i.fragment()))
+                    }),
                 )),
-                |name| Expr::new(ExprKind::Symbol { name }),
+                |(span, name)| Expr::new(span, ExprKind::Symbol { name }),
             )(i)
         }
     }
 
     fn expr1_int(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
-        move |i| {
-            map(digit1, |s: Input| {
-                Expr::new(ExprKind::Literal {
-                    value: Literal::Int(s.parse().unwrap()),
-                })
+        with_position(move |i| {
+            map(digit1, |s: Input| ExprKind::Literal {
+                value: Literal::Int(s.parse().unwrap()),
             })(i)
-        }
+        })
     }
 
     fn expr1_float(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
-        move |i| {
-            let not_int = verify(recognize_float, |s: &Input| s.contains('.'));
-
-            map(not_int, |s: Input| {
-                Expr::new(ExprKind::Literal {
+        with_position(move |i| {
+            map(
+                verify(recognize_float, |s: &Input| s.contains('.')),
+                |s: Input| ExprKind::Literal {
                     value: Literal::Real(s.parse().unwrap()),
-                })
-            })(i)
-        }
+                },
+            )(i)
+        })
     }
 
     fn expr1_char(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
-        move |i| {
+        with_position(move |i| {
             let (i, _) = tag("#")(i)?;
             let (i, s) = self.string_literal()(i)?;
             assert_eq!(s.iter().count(), 1);
             let c = s.into_iter().next().unwrap();
             Ok((
                 i,
-                Expr::new(ExprKind::Literal {
+                ExprKind::Literal {
                     value: Literal::Char(c),
-                }),
+                },
             ))
-        }
+        })
     }
 
     fn expr1_string(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
-        move |i| {
+        with_position(move |i| {
             let (i, s) = self.string_literal()(i)?;
-            Ok((
-                i,
-                Expr::new(ExprKind::D(DerivedExprKind::String { value: s })),
-            ))
-        }
+            Ok((i, ExprKind::D(DerivedExprKind::String { value: s })))
+        })
     }
 
     fn string_literal(&self) -> impl Fn(Input) -> IResult<Input, Vec<u32>> + '_ {
@@ -634,7 +665,7 @@ impl Parser {
     }
 
     fn expr1_tuple(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
-        move |i| {
+        with_position(move |i| {
             let (i, _) = tag("(")(i)?;
             let (i, _) = self.space0()(i)?;
             let sep = tuple((self.space0(), tag(","), self.space0()));
@@ -645,21 +676,21 @@ impl Parser {
 
             let mut es = es;
             es.push(e);
-            Ok((i, Expr::new(ExprKind::Tuple { tuple: es })))
-        }
+            Ok((i, ExprKind::Tuple { tuple: es }))
+        })
     }
 
     fn expr1_unit(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
-        move |i| {
+        with_position(move |i| {
             value(
-                Expr::new(ExprKind::Tuple { tuple: vec![] }),
+                ExprKind::Tuple { tuple: vec![] },
                 tuple((tag("("), self.space0(), tag(")"))),
             )(i)
-        }
+        })
     }
 
     fn expr1_builtincall(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
-        move |i| {
+        with_position(move |i| {
             let (i, _) = tag("_builtincall")(i)?;
             let (i, _) = self.space0()(i)?;
             let (i, _) = tag("\"")(i)?;
@@ -684,13 +715,13 @@ impl Parser {
             let (i, args) =
                 separated_list1(tuple((self.space0(), tag(","), self.space0())), self.expr())(i)?;
             let (i, _) = tag(")")(i)?;
-            Ok((i, Expr::new(ExprKind::BuiltinCall { fun, args })))
-        }
+            Ok((i, ExprKind::BuiltinCall { fun, args }))
+        })
     }
 
     /// `_externcall ("module"."fun": (arg, ty) -> retty) (arg, s)`
     fn expr1_externcall(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
-        move |i| {
+        with_position(move |i| {
             fn name_parser(i: Input) -> IResult<Input, Input> {
                 let allowed = recognize(many1(nom::character::complete::none_of("\"")));
                 preceded(tag("\""), terminated(allowed, tag("\"")))(i)
@@ -726,15 +757,15 @@ impl Parser {
             let (i, _) = tag(")")(i)?;
             Ok((
                 i,
-                Expr::new(ExprKind::ExternCall {
+                ExprKind::ExternCall {
                     module,
                     fun,
                     args,
                     argty,
                     retty,
-                }),
+                },
             ))
-        }
+        })
     }
 
     fn typename(&self) -> impl Fn(Input) -> IResult<Input, Type> + '_ {
@@ -790,7 +821,7 @@ impl Parser {
 
     fn typename2_datatype(&self) -> impl Fn(Input) -> IResult<Input, Type> + '_ {
         move |i| {
-            map(self.symbol(), |name| match name.0.as_str() {
+            map(self.symbol(), |(_, name)| match name.0.as_str() {
                 "unit" => Type::Tuple(vec![]),
                 "real" => Type::Real,
                 "int" => Type::Int,
@@ -800,54 +831,74 @@ impl Parser {
         }
     }
 
-    fn symbol_eq(&self) -> impl Fn(Input) -> IResult<Input, Symbol> + '_ {
+    fn symbol_eq(&self) -> impl Fn(Input) -> IResult<Input, (Span, Symbol)> + '_ {
         move |i| alt((self.symbol_alphanumeric(), self.symbol_symbolic_eq()))(i)
     }
 
-    fn symbol(&self) -> impl Fn(Input) -> IResult<Input, Symbol> + '_ {
+    fn symbol(&self) -> impl Fn(Input) -> IResult<Input, (Span, Symbol)> + '_ {
         move |i| alt((self.symbol_alphanumeric(), self.symbol_symbolic()))(i)
     }
 
-    fn op_symbol_eq(&self) -> impl Fn(Input) -> IResult<Input, Symbol> + '_ {
+    fn op_symbol_eq(&self) -> impl Fn(Input) -> IResult<Input, (Span, Symbol)> + '_ {
         move |i| alt((self.op_symbol_alphanumeric(), self.op_symbol_symbolic_eq()))(i)
     }
 
-    fn op_symbol_alphanumeric(&self) -> impl Fn(Input) -> IResult<Input, Symbol> + '_ {
+    fn op_symbol_alphanumeric(&self) -> impl Fn(Input) -> IResult<Input, (Span, Symbol)> + '_ {
         move |i| {
+            let start = current_location(&i);
             let (i, _) = opt(tuple((tag("op"), self.space1())))(i)?;
-            self.symbol_alphanumeric()(i)
+            let (i, (loc, sym)) = self.symbol_alphanumeric()(i)?;
+            Ok((i, (start..loc.end, sym)))
         }
     }
 
-    fn op_symbol_symbolic_eq(&self) -> impl Fn(Input) -> IResult<Input, Symbol> + '_ {
+    fn op_symbol_symbolic_eq(&self) -> impl Fn(Input) -> IResult<Input, (Span, Symbol)> + '_ {
         move |i| {
+            let start = current_location(&i);
             let (i, _) = opt(tuple((tag("op"), self.space0())))(i)?;
-            alt((self.symbol_symbolic(), value(Symbol::new("="), tag("="))))(i)
+            let cur = current_location(&i);
+            let (i, (loc, sym)) = alt((
+                self.symbol_symbolic(),
+                // FIXME: calculate correct span
+                value((cur..cur, Symbol::new("=")), tag("=")),
+            ))(i)?;
+            Ok((i, (start..loc.end, sym)))
         }
     }
 
-    fn symbol_alphanumeric(&self) -> impl Fn(Input) -> IResult<Input, Symbol> + '_ {
+    fn symbol_alphanumeric(&self) -> impl Fn(Input) -> IResult<Input, (Span, Symbol)> + '_ {
         move |i| {
             // FIXME: collect syntax is [a-zA-Z'_][a-zA-Z'_0-9]*
+            let start = current_location(&i);
             let (i, sym) = verify(alphanumeric1, |s: &Input| !KEYWORDS.contains(&s.fragment()))(i)?;
-            Ok((i, Symbol::new(sym.to_string())))
+            let end = current_location(&i);
+            Ok((i, (start..end, Symbol::new(sym.to_string()))))
         }
     }
 
-    fn symbol_symbolic_eq(&self) -> impl Fn(Input) -> IResult<Input, Symbol> + '_ {
-        move |i| alt((self.symbol_symbolic(), value(Symbol::new("="), tag("="))))(i)
+    fn symbol_symbolic_eq(&self) -> impl Fn(Input) -> IResult<Input, (Span, Symbol)> + '_ {
+        move |i| {
+            let cur = current_location(&i);
+            alt((
+                self.symbol_symbolic(),
+                // FIXME: calculate correct span
+                value((cur..cur, Symbol::new("=")), tag("=")),
+            ))(i)
+        }
     }
 
-    fn symbol_symbolic(&self) -> impl Fn(Input) -> IResult<Input, Symbol> + '_ {
+    fn symbol_symbolic(&self) -> impl Fn(Input) -> IResult<Input, (Span, Symbol)> + '_ {
         move |i| {
             let symbolic1 = recognize(many1(nom::character::complete::one_of(
                 "!%&$#+-/:<=>?@\\~'^|*",
             )));
 
+            let start = current_location(&i);
             let (i, sym) = verify(symbolic1, |s: &Input| {
                 !KEYWORDS.contains(s.fragment()) && !RESERVED.contains(&s)
             })(i)?;
-            Ok((i, Symbol::new(sym.to_string())))
+            let end = current_location(&i);
+            Ok((i, (start..end, Symbol::new(sym.to_string()))))
         }
     }
 
@@ -924,37 +975,33 @@ impl Parser {
     }
 
     fn pattern_int(&self) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
-        move |i| {
-            map(digit1, |s: Input| {
-                Pattern::new(PatternKind::Constant {
-                    value: s.parse().unwrap(),
-                })
+        with_position(move |i| {
+            map(digit1, |s: Input| PatternKind::Constant {
+                value: s.parse().unwrap(),
             })(i)
-        }
+        })
     }
 
     fn pattern_char(&self) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
-        move |i| {
+        with_position(move |i| {
             let (i, _) = tag("#")(i)?;
             let (i, s) = self.string_literal()(i)?;
             assert_eq!(s.iter().count(), 1);
             let value = s.into_iter().next().unwrap();
-            Ok((i, Pattern::new(PatternKind::Char { value })))
-        }
+            Ok((i, PatternKind::Char { value }))
+        })
     }
 
     fn pattern_string(&self) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
-        move |i| {
-            let (i, value) = self.string_literal()(i)?;
-            Ok((
-                i,
-                Pattern::new(PatternKind::D(DerivedPatternKind::String { value })),
-            ))
-        }
+        with_position(move |i| {
+            map(self.string_literal(), |value| {
+                PatternKind::D(DerivedPatternKind::String { value })
+            })(i)
+        })
     }
 
     fn pattern_tuple(&self) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
-        move |i| {
+        with_position(move |i| {
             let (i, _) = tag("(")(i)?;
             let (i, _) = self.space0()(i)?;
             let sep = tuple((self.space0(), tag(","), self.space0()));
@@ -965,47 +1012,47 @@ impl Parser {
 
             let mut tuple = es;
             tuple.push(e);
-            Ok((i, Pattern::new(PatternKind::Tuple { tuple })))
-        }
+            Ok((i, PatternKind::Tuple { tuple }))
+        })
     }
 
     fn pattern_unit(&self) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
-        move |i| {
+        with_position(move |i| {
             value(
-                Pattern::new(PatternKind::Tuple { tuple: vec![] }),
+                PatternKind::Tuple { tuple: vec![] },
                 tuple((tag("("), self.space0(), tag(")"))),
             )(i)
-        }
+        })
     }
 
     // require constructor to have arg for now.
     // constructor withouth arg is parsed as variable and
-    //  will be converted in later phases
+    // will be converted in later phases
     fn pattern_constructor(&self) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
-        move |i| {
-            let (i, name) = self.symbol()(i)?;
+        with_position(move |i| {
+            let (i, (_, name)) = self.symbol()(i)?;
             let (i, _) = self.space0()(i)?;
             let (i, arg) = self.pattern_atmic()(i)?;
             Ok((
                 i,
-                Pattern::new(PatternKind::Constructor {
+                PatternKind::Constructor {
                     name,
                     arg: Some(Box::new(arg)),
-                }),
+                },
             ))
-        }
+        })
     }
 
     fn pattern_var(&self) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
         move |i| {
-            map(self.symbol(), |name| {
-                Pattern::new(PatternKind::Variable { name })
+            map(self.symbol(), |(span, name)| {
+                Pattern::new(span, PatternKind::Variable { name })
             })(i)
         }
     }
 
     fn pattern_wildcard(&self) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
-        move |i| value(Pattern::new(PatternKind::Wildcard {}), tag("_"))(i)
+        with_position(move |i| value(PatternKind::Wildcard {}, tag("_"))(i))
     }
 
     fn pattern_paren(&self) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
@@ -1109,6 +1156,7 @@ fn test_expr_infix_and_app() {
             input_remaining,
             Expr {
                 ty: Empty {},
+                span: Location::new(1, 1)..Location::new(1, 5),
                 inner: ExprKind::Symbol {
                     name: Symbol::new("true")
                 }
@@ -1130,9 +1178,11 @@ fn test_expr_infix_and_app2() {
             input_remaining,
             Expr {
                 ty: Empty {},
+                span: Location::new(1, 1)..Location::new(1, 6),
                 inner: ExprKind::App {
                     fun: Expr {
                         ty: Empty {},
+                        span: Location::new(1, 1)..Location::new(1, 2),
                         inner: ExprKind::Symbol {
                             name: Symbol::new("f"),
                         }
@@ -1140,6 +1190,7 @@ fn test_expr_infix_and_app2() {
                     .boxed(),
                     arg: Expr {
                         ty: Empty {},
+                        span: Location::new(1, 3)..Location::new(1, 6),
                         inner: ExprKind::Symbol {
                             name: Symbol::new("arg"),
                         }

@@ -67,6 +67,12 @@ impl Desugar {
     ) -> UntypedCoreDeclaration {
         let arity = clauses[0].0.len();
 
+        let span = {
+            // assuming at least 1 clauses and at least 1 argument
+            let start = clauses[0].0[0].span.start;
+            let end = clauses.last().unwrap().1.span.end;
+            start..end
+        };
         let clauses = clauses
             .into_iter()
             .map(|(pats, expr)| {
@@ -75,10 +81,7 @@ impl Desugar {
                     .map(|p| self.transform_pattern(p))
                     .collect();
                 (
-                    Pattern {
-                        ty: Empty {},
-                        inner: PatternKind::Tuple { tuple },
-                    },
+                    Pattern::new(span.clone(), PatternKind::Tuple { tuple }),
                     self.transform_expr(expr),
                 )
             })
@@ -86,40 +89,36 @@ impl Desugar {
 
         let params = (0..arity).map(|_| self.gensym()).collect::<Vec<_>>();
 
-        let body = Expr {
-            ty: Empty {},
-            inner: ExprKind::Case {
-                cond: Expr {
-                    ty: Empty {},
-                    inner: ExprKind::Tuple {
+        let body = Expr::new(
+            span.clone(),
+            ExprKind::Case {
+                cond: Expr::new(
+                    span.clone(),
+                    ExprKind::Tuple {
                         tuple: params
                             .iter()
                             .cloned()
-                            .map(|name| Expr {
-                                ty: Empty {},
-                                inner: ExprKind::Symbol { name },
-                            })
+                            .map(|name| Expr::new(span.clone(), ExprKind::Symbol { name }))
                             .collect(),
                     },
-                }
+                )
                 .boxed(),
                 clauses,
             },
-        };
+        );
 
-        let fun = params.into_iter().rev().fold(body, |body, param| Expr {
-            ty: Empty {},
-            inner: ExprKind::Fn {
-                param,
-                body: body.boxed(),
-            },
+        let fun = params.into_iter().rev().fold(body, |body, param| {
+            Expr::new(
+                span.clone(),
+                ExprKind::Fn {
+                    param,
+                    body: body.boxed(),
+                },
+            )
         });
         Declaration::Val {
             rec: true,
-            pattern: Pattern {
-                ty: Empty {},
-                inner: PatternKind::Variable { name: name },
-            },
+            pattern: Pattern::new(span.clone(), PatternKind::Variable { name }),
             expr: fun,
         }
     }
@@ -141,30 +140,38 @@ impl Desugar {
 
     fn transform_expr(&mut self, expr: UntypedExpr) -> UntypedCoreExpr {
         use crate::ast::ExprKind::*;
+        let span = expr.span.clone();
         let inner = match expr.inner {
-            Binds { binds, ret } => self.transform_binds(binds, ret),
-            BuiltinCall { fun, args } => self.transform_builtincall(fun, args),
+            Binds { binds, ret } => self.transform_binds(span, binds, ret),
+            BuiltinCall { fun, args } => self.transform_builtincall(span, fun, args),
             ExternCall {
                 module,
                 fun,
                 args,
                 argty,
                 retty,
-            } => self.transform_externcall(module, fun, args, argty, retty),
-            Fn { param, body } => self.transform_fn(param, body),
-            App { fun, arg } => self.transform_app(fun, arg),
-            Case { cond, clauses } => self.transform_case(cond, clauses),
-            Tuple { tuple } => self.transform_tuple(tuple),
-            Constructor { arg, name } => self.transform_constructor(arg, name),
-            Symbol { name } => self.transform_symbol(name),
-            Literal { value } => self.transform_literal(value),
-            D(DerivedExprKind::If { cond, then, else_ }) => self.transform_if(cond, then, else_),
-            D(DerivedExprKind::String { value }) => self.transform_string(value),
+            } => self.transform_externcall(span, module, fun, args, argty, retty),
+            Fn { param, body } => self.transform_fn(span, param, body),
+            App { fun, arg } => self.transform_app(span, fun, arg),
+            Case { cond, clauses } => self.transform_case(span, cond, clauses),
+            Tuple { tuple } => self.transform_tuple(span, tuple),
+            Constructor { arg, name } => self.transform_constructor(span, arg, name),
+            Symbol { name } => self.transform_symbol(span, name),
+            Literal { value } => self.transform_literal(span, value),
+            D(DerivedExprKind::If { cond, then, else_ }) => {
+                self.transform_if(span, cond, then, else_)
+            }
+            D(DerivedExprKind::String { value }) => self.transform_string(span, value),
         };
-        UntypedCoreExpr { ty: expr.ty, inner }
+        UntypedCoreExpr {
+            ty: expr.ty,
+            span: expr.span,
+            inner,
+        }
     }
     fn transform_binds(
         &mut self,
+        _: Span,
         binds: Vec<UntypedDeclaration>,
         ret: Box<UntypedExpr>,
     ) -> UntypedCoreExprKind {
@@ -177,7 +184,12 @@ impl Desugar {
         }
     }
 
-    fn transform_builtincall(&mut self, fun: BIF, args: Vec<UntypedExpr>) -> UntypedCoreExprKind {
+    fn transform_builtincall(
+        &mut self,
+        _: Span,
+        fun: BIF,
+        args: Vec<UntypedExpr>,
+    ) -> UntypedCoreExprKind {
         ExprKind::BuiltinCall {
             fun,
             args: args
@@ -189,6 +201,7 @@ impl Desugar {
 
     fn transform_externcall(
         &mut self,
+        _: Span,
         module: String,
         fun: String,
         args: Vec<UntypedExpr>,
@@ -207,7 +220,12 @@ impl Desugar {
         }
     }
 
-    fn transform_fn(&mut self, param: Symbol, body: Box<UntypedExpr>) -> UntypedCoreExprKind {
+    fn transform_fn(
+        &mut self,
+        _: Span,
+        param: Symbol,
+        body: Box<UntypedExpr>,
+    ) -> UntypedCoreExprKind {
         ExprKind::Fn {
             param,
             body: self.transform_expr(*body).boxed(),
@@ -216,6 +234,7 @@ impl Desugar {
 
     fn transform_app(
         &mut self,
+        _: Span,
         fun: Box<UntypedExpr>,
         arg: Box<UntypedExpr>,
     ) -> UntypedCoreExprKind {
@@ -227,6 +246,7 @@ impl Desugar {
 
     fn transform_if(
         &mut self,
+        span: Span,
         cond: Box<UntypedExpr>,
         then: Box<UntypedExpr>,
         else_: Box<UntypedExpr>,
@@ -235,23 +255,23 @@ impl Desugar {
             cond: self.transform_expr(*cond).boxed(),
             clauses: vec![
                 (
-                    Pattern {
-                        ty: Empty {},
-                        inner: PatternKind::Constructor {
+                    Pattern::new(
+                        span.clone(),
+                        PatternKind::Constructor {
                             arg: None,
                             name: Symbol::new("true"),
                         },
-                    },
+                    ),
                     self.transform_expr(*then),
                 ),
                 (
-                    Pattern {
-                        ty: Empty {},
-                        inner: PatternKind::Constructor {
+                    Pattern::new(
+                        span.clone(),
+                        PatternKind::Constructor {
                             arg: None,
                             name: Symbol::new("false"),
                         },
-                    },
+                    ),
                     self.transform_expr(*else_),
                 ),
             ],
@@ -260,6 +280,7 @@ impl Desugar {
 
     fn transform_case(
         &mut self,
+        _: Span,
         cond: Box<UntypedExpr>,
         clauses: Vec<(UntypedPattern, UntypedExpr)>,
     ) -> UntypedCoreExprKind {
@@ -272,7 +293,7 @@ impl Desugar {
         }
     }
 
-    fn transform_tuple(&mut self, tuple: Vec<UntypedExpr>) -> UntypedCoreExprKind {
+    fn transform_tuple(&mut self, _: Span, tuple: Vec<UntypedExpr>) -> UntypedCoreExprKind {
         ExprKind::Tuple {
             tuple: tuple.into_iter().map(|t| self.transform_expr(t)).collect(),
         }
@@ -280,6 +301,7 @@ impl Desugar {
 
     fn transform_constructor(
         &mut self,
+        _: Span,
         arg: Option<Box<UntypedExpr>>,
         name: Symbol,
     ) -> UntypedCoreExprKind {
@@ -288,46 +310,47 @@ impl Desugar {
             name,
         }
     }
-    fn transform_symbol(&mut self, name: Symbol) -> UntypedCoreExprKind {
+    fn transform_symbol(&mut self, _: Span, name: Symbol) -> UntypedCoreExprKind {
         ExprKind::Symbol { name }
     }
 
-    fn transform_literal(&mut self, value: Literal) -> UntypedCoreExprKind {
+    fn transform_literal(&mut self, _: Span, value: Literal) -> UntypedCoreExprKind {
         ExprKind::Literal { value }
     }
 
-    fn transform_string(&mut self, value: Vec<u32>) -> UntypedCoreExprKind {
-        let empty = Expr {
-            ty: Empty {},
-            inner: ExprKind::Constructor {
+    fn transform_string(&mut self, span: Span, value: Vec<u32>) -> UntypedCoreExprKind {
+        let empty = Expr::new(
+            span.clone(),
+            ExprKind::Constructor {
                 arg: None,
                 name: Symbol::new("Empty"),
             },
-        };
-        fn cons(s: UntypedCoreExpr, c: u32) -> UntypedCoreExpr {
-            let c = Expr {
-                ty: Empty {},
-                inner: ExprKind::Literal {
+        );
+        fn cons(span: Span, s: UntypedCoreExpr, c: u32) -> UntypedCoreExpr {
+            let c = Expr::new(
+                span.clone(),
+                ExprKind::Literal {
                     value: Literal::Char(c),
                 },
-            };
-            let tuple = Expr {
-                ty: Empty {},
-                inner: ExprKind::Tuple { tuple: vec![c, s] },
-            };
-            Expr {
-                ty: Empty {},
-                inner: ExprKind::Constructor {
+            );
+            let tuple = Expr::new(span.clone(), ExprKind::Tuple { tuple: vec![c, s] });
+            Expr::new(
+                span,
+                ExprKind::Constructor {
                     arg: Some(Box::new(tuple)),
                     name: Symbol::new("Char").into(),
                 },
-            }
+            )
         }
-        value.into_iter().rfold(empty, cons).inner
+        value
+            .into_iter()
+            .rfold(empty, |s, c| cons(span.clone(), s, c))
+            .inner
     }
 
     fn transform_pattern(&mut self, pattern: UntypedPattern) -> UntypedCorePattern {
         use PatternKind::*;
+        let span = pattern.span;
         let inner = match pattern.inner {
             Constant { value } => UntypedCorePatternKind::Constant { value },
             Char { value } => UntypedCorePatternKind::Char { value },
@@ -345,37 +368,32 @@ impl Desugar {
             Variable { name } => UntypedCorePatternKind::Variable { name },
             Wildcard {} => UntypedCorePatternKind::Wildcard {},
             D(DerivedPatternKind::String { value }) => {
-                let empty = UntypedCorePattern {
-                    ty: Empty {},
-                    inner: PatternKind::Constructor {
+                let empty = UntypedCorePattern::new(
+                    span.clone(),
+                    PatternKind::Constructor {
                         arg: None,
                         name: Symbol::new("Empty"),
                     },
-                };
-                fn cons(s: UntypedCorePattern, c: u32) -> UntypedCorePattern {
-                    let c = Pattern {
-                        ty: Empty {},
-                        inner: PatternKind::Char { value: c },
-                    };
-                    let tuple = Pattern {
-                        ty: Empty {},
-                        inner: PatternKind::Tuple { tuple: vec![c, s] },
-                    };
-                    Pattern {
-                        ty: Empty {},
-                        inner: PatternKind::Constructor {
+                );
+                fn cons(span: Span, s: UntypedCorePattern, c: u32) -> UntypedCorePattern {
+                    let c = Pattern::new(span.clone(), PatternKind::Char { value: c });
+                    let tuple =
+                        Pattern::new(span.clone(), PatternKind::Tuple { tuple: vec![c, s] });
+                    Pattern::new(
+                        span,
+                        PatternKind::Constructor {
                             arg: Some(Box::new(tuple)),
                             name: Symbol::new("Char").into(),
                         },
-                    }
+                    )
                 }
-                value.into_iter().rfold(empty, cons).inner
+                value
+                    .into_iter()
+                    .rfold(empty, |s, c| cons(span.clone(), s, c))
+                    .inner
             }
         };
-        UntypedCorePattern {
-            ty: Empty {},
-            inner,
-        }
+        UntypedCorePattern::new(span, inner)
     }
 }
 

@@ -1,7 +1,7 @@
 use nom_locate::LocatedSpan;
 use webml::ast::{
-    Declaration, DerivedDeclaration, DerivedExprKind, Empty, Expr, ExprKind, LangItem, Pattern,
-    PatternKind, Type, UntypedAst, AST, BIF,
+    Declaration, DerivedDeclaration, DerivedExprKind, Empty, Expr, ExprKind, LangItem, Location,
+    Pattern, PatternKind, Type, UntypedAst, AST, BIF,
 };
 use webml::prim::*;
 use webml::Parser;
@@ -23,12 +23,14 @@ fn parse_char() {
             rec: false,
             pattern: Pattern {
                 ty: Empty {},
+                span: Location::new(1, 5)..Location::new(1, 6),
                 inner: PatternKind::Variable {
                     name: Symbol::new("x"),
                 }
             },
             expr: Expr {
                 ty: Empty {},
+                span: Location::new(1, 9)..Location::new(1, 13),
                 inner: ExprKind::Literal {
                     value: Literal::Char('a' as u32),
                 }
@@ -48,12 +50,14 @@ fn parse_string() {
             rec: false,
             pattern: Pattern {
                 ty: Empty {},
+                span: Location::new(1, 5)..Location::new(1, 6),
                 inner: PatternKind::Variable {
                     name: Symbol::new("x"),
                 }
             },
             expr: Expr {
                 ty: Empty {},
+                span: Location::new(1, 9)..Location::new(2, 13),
                 inner: ExprKind::D(DerivedExprKind::String {
                     value: "abc\n\\\naκnext line".chars().map(|c| c as u32).collect()
                 })
@@ -72,12 +76,14 @@ fn parse_int() {
             rec: false,
             pattern: Pattern {
                 ty: Empty {},
+                span: Location::new(1, 5)..Location::new(1, 6),
                 inner: PatternKind::Variable {
                     name: Symbol::new("x"),
                 }
             },
             expr: Expr {
                 ty: Empty {},
+                span: Location::new(1, 9)..Location::new(1, 10),
                 inner: ExprKind::Literal {
                     value: Literal::Int(1),
                 }
@@ -96,12 +102,14 @@ fn parse_float() {
             rec: false,
             pattern: Pattern {
                 ty: Empty {},
+                span: Location::new(1, 5)..Location::new(1, 6),
                 inner: PatternKind::Variable {
                     name: Symbol::new("x"),
                 }
             },
             expr: Expr {
                 ty: Empty {},
+                span: Location::new(1, 9)..Location::new(1, 12),
                 inner: ExprKind::Literal {
                     value: Literal::Real(1.0),
                 }
@@ -120,12 +128,14 @@ fn parse_bool_true() {
             rec: false,
             pattern: Pattern {
                 ty: Empty {},
+                span: Location::new(1, 5)..Location::new(1, 6),
                 inner: PatternKind::Variable {
                     name: Symbol::new("x"),
                 }
             },
             expr: Expr {
                 ty: Empty {},
+                span: Location::new(1, 9)..Location::new(1, 13),
                 inner: ExprKind::Symbol {
                     name: Symbol::new("true")
                 }
@@ -144,12 +154,14 @@ fn parse_bool_false() {
             rec: false,
             pattern: Pattern {
                 ty: Empty {},
+                span: Location::new(1, 5)..Location::new(1, 6),
                 inner: PatternKind::Variable {
                     name: Symbol::new("x"),
                 }
             },
             expr: Expr {
                 ty: Empty {},
+                span: Location::new(1, 9)..Location::new(1, 14),
                 inner: ExprKind::Symbol {
                     name: Symbol::new("false")
                 }
@@ -168,12 +180,14 @@ fn parse_unit() {
             rec: false,
             pattern: Pattern {
                 ty: Empty {},
+                span: Location::new(1, 5)..Location::new(1, 6),
                 inner: PatternKind::Variable {
                     name: Symbol::new("x"),
                 }
             },
             expr: Expr {
                 ty: Empty {},
+                span: Location::new(1, 9)..Location::new(1, 11),
                 inner: ExprKind::Tuple { tuple: vec![] }
             }
         }])
@@ -190,15 +204,18 @@ fn parse_apply() {
             rec: false,
             pattern: Pattern {
                 ty: Empty {},
+                span: Location::new(1, 5)..Location::new(1, 6),
                 inner: PatternKind::Variable {
                     name: Symbol::new("x"),
                 }
             },
             expr: Expr {
                 ty: Empty {},
+                span: Location::new(1, 9)..Location::new(1, 12),
                 inner: ExprKind::App {
                     fun: Expr {
                         ty: Empty {},
+                        span: Location::new(1, 9)..Location::new(1, 10),
                         inner: ExprKind::Symbol {
                             name: Symbol::new("f")
                         }
@@ -206,6 +223,7 @@ fn parse_apply() {
                     .boxed(),
                     arg: Expr {
                         ty: Empty {},
+                        span: Location::new(1, 11)..Location::new(1, 12),
                         inner: ExprKind::Symbol {
                             name: Symbol::new("x")
                         }
@@ -227,15 +245,18 @@ fn parse_apply_tuple() {
             rec: false,
             pattern: Pattern {
                 ty: Empty {},
+                span: Location::new(1, 5)..Location::new(1, 6),
                 inner: PatternKind::Variable {
                     name: Symbol::new("x"),
                 }
             },
             expr: Expr {
                 ty: Empty {},
+                span: Location::new(1, 9)..Location::new(1, 16),
                 inner: ExprKind::App {
                     fun: Expr {
                         ty: Empty {},
+                        span: Location::new(1, 9)..Location::new(1, 10),
                         inner: ExprKind::Symbol {
                             name: Symbol::new("f")
                         }
@@ -243,16 +264,19 @@ fn parse_apply_tuple() {
                     .boxed(),
                     arg: Expr {
                         ty: Empty {},
+                        span: Location::new(1, 10)..Location::new(1, 16),
                         inner: ExprKind::Tuple {
                             tuple: vec![
                                 Expr {
                                     ty: Empty {},
+                                    span: Location::new(1, 11)..Location::new(1, 12),
                                     inner: ExprKind::Symbol {
                                         name: Symbol::new("x")
                                     }
                                 },
                                 Expr {
                                     ty: Empty {},
+                                    span: Location::new(1, 14)..Location::new(1, 15),
                                     inner: ExprKind::Symbol {
                                         name: Symbol::new("y")
                                     }
@@ -281,15 +305,18 @@ fn parse_binop() {
                 rec: false,
                 pattern: Pattern {
                     ty: Empty {},
+                    span: Location::new(1, 15)..Location::new(1, 16),
                     inner: PatternKind::Variable {
                         name: Symbol::new("x"),
                     }
                 },
                 expr: Expr {
                     ty: Empty {},
+                    span: Location::new(1, 19)..Location::new(1, 24),
                     inner: ExprKind::App {
                         fun: Expr {
                             ty: Empty {},
+                            span: Location::new(1, 21)..Location::new(1, 22),
                             inner: ExprKind::Symbol {
                                 name: Symbol::new("+")
                             }
@@ -297,16 +324,19 @@ fn parse_binop() {
                         .boxed(),
                         arg: Expr {
                             ty: Empty {},
+                            span: Location::new(1, 19)..Location::new(1, 24),
                             inner: ExprKind::Tuple {
                                 tuple: vec![
                                     Expr {
                                         ty: Empty {},
+                                        span: Location::new(1, 19)..Location::new(1, 20),
                                         inner: ExprKind::Literal {
                                             value: Literal::Int(1),
                                         }
                                     },
                                     Expr {
                                         ty: Empty {},
+                                        span: Location::new(1, 23)..Location::new(1, 24),
                                         inner: ExprKind::Literal {
                                             value: Literal::Int(2),
                                         }
@@ -337,15 +367,18 @@ fn parse_binop_space() {
                 rec: false,
                 pattern: Pattern {
                     ty: Empty {},
+                    span: Location::new(1, 15)..Location::new(1, 16),
                     inner: PatternKind::Variable {
                         name: Symbol::new("x"),
                     }
                 },
                 expr: Expr {
                     ty: Empty {},
+                    span: Location::new(1, 19)..Location::new(1, 22),
                     inner: ExprKind::App {
                         fun: Expr {
                             ty: Empty {},
+                            span: Location::new(1, 20)..Location::new(1, 21),
                             inner: ExprKind::Symbol {
                                 name: Symbol::new("+")
                             }
@@ -353,16 +386,19 @@ fn parse_binop_space() {
                         .boxed(),
                         arg: Expr {
                             ty: Empty {},
+                            span: Location::new(1, 19)..Location::new(1, 22),
                             inner: ExprKind::Tuple {
                                 tuple: vec![
                                     Expr {
                                         ty: Empty {},
+                                        span: Location::new(1, 19)..Location::new(1, 20),
                                         inner: ExprKind::Literal {
                                             value: Literal::Int(1),
                                         }
                                     },
                                     Expr {
                                         ty: Empty {},
+                                        span: Location::new(1, 21)..Location::new(1, 22),
                                         inner: ExprKind::Literal {
                                             value: Literal::Int(2),
                                         }
@@ -393,15 +429,18 @@ fn parse_binop_assoc() {
                 rec: false,
                 pattern: Pattern {
                     ty: Empty {},
+                    span: Location::new(1, 15)..Location::new(1, 16),
                     inner: PatternKind::Variable {
                         name: Symbol::new("x"),
                     }
                 },
                 expr: Expr {
                     ty: Empty {},
+                    span: Location::new(1, 19)..Location::new(1, 28),
                     inner: ExprKind::App {
                         fun: Expr {
                             ty: Empty {},
+                            span: Location::new(1, 25)..Location::new(1, 26),
                             inner: ExprKind::Symbol {
                                 name: Symbol::new("+"),
                             }
@@ -409,13 +448,16 @@ fn parse_binop_assoc() {
                         .boxed(),
                         arg: Expr {
                             ty: Empty {},
+                            span: Location::new(1, 19)..Location::new(1, 28),
                             inner: ExprKind::Tuple {
                                 tuple: vec![
                                     Expr {
                                         ty: Empty {},
+                                        span: Location::new(1, 19)..Location::new(1, 24),
                                         inner: ExprKind::App {
                                             fun: Expr {
                                                 ty: Empty {},
+                                                span: Location::new(1, 21)..Location::new(1, 22),
                                                 inner: ExprKind::Symbol {
                                                     name: Symbol::new("+"),
                                                 }
@@ -423,16 +465,21 @@ fn parse_binop_assoc() {
                                             .boxed(),
                                             arg: Expr {
                                                 ty: Empty {},
+                                                span: Location::new(1, 19)..Location::new(1, 24),
                                                 inner: ExprKind::Tuple {
                                                     tuple: vec![
                                                         Expr {
                                                             ty: Empty {},
+                                                            span: Location::new(1, 19)
+                                                                ..Location::new(1, 20),
                                                             inner: ExprKind::Literal {
                                                                 value: Literal::Int(1),
                                                             }
                                                         },
                                                         Expr {
                                                             ty: Empty {},
+                                                            span: Location::new(1, 23)
+                                                                ..Location::new(1, 24),
                                                             inner: ExprKind::Literal {
                                                                 value: Literal::Int(2),
                                                             }
@@ -445,6 +492,7 @@ fn parse_binop_assoc() {
                                     },
                                     Expr {
                                         ty: Empty {},
+                                        span: Location::new(1, 27)..Location::new(1, 28),
                                         inner: ExprKind::Literal {
                                             value: Literal::Int(3),
                                         }
@@ -470,23 +518,27 @@ fn parse_builtincall() {
             rec: false,
             pattern: Pattern {
                 ty: Empty {},
+                span: Location::new(1, 5)..Location::new(1, 8),
                 inner: PatternKind::Variable {
                     name: Symbol::new("ret"),
                 }
             },
             expr: Expr {
                 ty: Empty {},
+                span: Location::new(1, 11)..Location::new(1, 36),
                 inner: ExprKind::BuiltinCall {
                     fun: BIF::Add,
                     args: vec![
                         Expr {
                             ty: Empty {},
+                            span: Location::new(1, 31)..Location::new(1, 32),
                             inner: ExprKind::Symbol {
                                 name: Symbol::new("x")
                             }
                         },
                         Expr {
                             ty: Empty {},
+                            span: Location::new(1, 34)..Location::new(1, 35),
                             inner: ExprKind::Symbol {
                                 name: Symbol::new("y")
                             }
@@ -508,24 +560,28 @@ fn parse_externcall() {
             rec: false,
             pattern: Pattern {
                 ty: Empty {},
+                span: Location::new(1, 5)..Location::new(1, 8),
                 inner: PatternKind::Variable {
                     name: Symbol::new("ret"),
                 }
             },
             expr: Expr {
                 ty: Empty {},
+                span: Location::new(1, 11)..Location::new(1, 68),
                 inner: ExprKind::ExternCall {
                     module: "module".into(),
                     fun: "add".into(),
                     args: vec![
                         Expr {
                             ty: Empty {},
+                            span: Location::new(1, 63)..Location::new(1, 64),
                             inner: ExprKind::Symbol {
                                 name: Symbol::new("x")
                             }
                         },
                         Expr {
                             ty: Empty {},
+                            span: Location::new(1, 66)..Location::new(1, 67),
                             inner: ExprKind::Symbol {
                                 name: Symbol::new("y")
                             }
@@ -558,15 +614,18 @@ fn parse_binop_pref() {
                 rec: false,
                 pattern: Pattern {
                     ty: Empty {},
+                    span: Location::new(1, 25)..Location::new(1, 26),
                     inner: PatternKind::Variable {
                         name: Symbol::new("x"),
                     }
                 },
                 expr: Expr {
                     ty: Empty {},
+                    span: Location::new(1, 29)..Location::new(1, 38),
                     inner: ExprKind::App {
                         fun: Expr {
                             ty: Empty {},
+                            span: Location::new(1, 31)..Location::new(1, 32),
                             inner: ExprKind::Symbol {
                                 name: Symbol::new("+")
                             }
@@ -574,19 +633,23 @@ fn parse_binop_pref() {
                         .boxed(),
                         arg: Expr {
                             ty: Empty {},
+                            span: Location::new(1, 29)..Location::new(1, 38),
                             inner: ExprKind::Tuple {
                                 tuple: vec![
                                     Expr {
                                         ty: Empty {},
+                                        span: Location::new(1, 29)..Location::new(1, 30),
                                         inner: ExprKind::Literal {
                                             value: Literal::Int(1),
                                         }
                                     },
                                     Expr {
                                         ty: Empty {},
+                                        span: Location::new(1, 33)..Location::new(1, 38),
                                         inner: ExprKind::App {
                                             fun: Expr {
                                                 ty: Empty {},
+                                                span: Location::new(1, 35)..Location::new(1, 36),
                                                 inner: ExprKind::Symbol {
                                                     name: Symbol::new("*"),
                                                 }
@@ -594,16 +657,21 @@ fn parse_binop_pref() {
                                             .boxed(),
                                             arg: Expr {
                                                 ty: Empty {},
+                                                span: Location::new(1, 33)..Location::new(1, 38),
                                                 inner: ExprKind::Tuple {
                                                     tuple: vec![
                                                         Expr {
                                                             ty: Empty {},
+                                                            span: Location::new(1, 33)
+                                                                ..Location::new(1, 34),
                                                             inner: ExprKind::Literal {
                                                                 value: Literal::Int(2),
                                                             }
                                                         },
                                                         Expr {
                                                             ty: Empty {},
+                                                            span: Location::new(1, 37)
+                                                                ..Location::new(1, 38),
                                                             inner: ExprKind::Literal {
                                                                 value: Literal::Int(3),
                                                             }
@@ -635,16 +703,19 @@ fn parse_fn_unary() {
             rec: false,
             pattern: Pattern {
                 ty: Empty {},
+                span: Location::new(1, 5)..Location::new(1, 6),
                 inner: PatternKind::Variable {
                     name: Symbol::new("f"),
                 }
             },
             expr: Expr {
                 ty: Empty {},
+                span: Location::new(1, 9)..Location::new(1, 18),
                 inner: ExprKind::Fn {
                     param: Symbol::new("x"),
                     body: Expr {
                         ty: Empty {},
+                        span: Location::new(1, 17)..Location::new(1, 18),
                         inner: ExprKind::Symbol {
                             name: Symbol::new("x"),
                         }
@@ -804,12 +875,14 @@ fn parse_fun_unary() {
             clauses: vec![(
                 vec![Pattern {
                     ty: Empty {},
+                    span: Location::new(1, 7)..Location::new(1, 8),
                     inner: PatternKind::Variable {
                         name: Symbol::new("x"),
                     }
                 }],
                 Expr {
                     ty: Empty {},
+                    span: Location::new(1, 11)..Location::new(1, 12),
                     inner: ExprKind::Symbol {
                         name: Symbol::new("x"),
                     }
@@ -831,12 +904,14 @@ fn parse_fun_binary() {
                 vec![
                     Pattern {
                         ty: Empty {},
+                        span: Location::new(1, 7)..Location::new(1, 8),
                         inner: PatternKind::Variable {
                             name: Symbol::new("x"),
                         }
                     },
                     Pattern {
                         ty: Empty {},
+                        span: Location::new(1, 9)..Location::new(1, 10),
                         inner: PatternKind::Variable {
                             name: Symbol::new("y"),
                         }
@@ -844,6 +919,7 @@ fn parse_fun_binary() {
                 ],
                 Expr {
                     ty: Empty {},
+                    span: Location::new(1, 13)..Location::new(1, 14),
                     inner: ExprKind::Symbol {
                         name: Symbol::new("x"),
                     }
@@ -864,16 +940,19 @@ fn parse_fun_pattern() {
             clauses: vec![(
                 vec![Pattern {
                     ty: Empty {},
+                    span: Location::new(1, 7)..Location::new(1, 13),
                     inner: PatternKind::Tuple {
                         tuple: vec![
                             Pattern {
                                 ty: Empty {},
+                                span: Location::new(1, 8)..Location::new(1, 9),
                                 inner: PatternKind::Variable {
                                     name: Symbol::new("x"),
                                 }
                             },
                             Pattern {
                                 ty: Empty {},
+                                span: Location::new(1, 11)..Location::new(1, 12),
                                 inner: PatternKind::Variable {
                                     name: Symbol::new("y"),
                                 }
@@ -883,6 +962,7 @@ fn parse_fun_pattern() {
                 }],
                 Expr {
                     ty: Empty {},
+                    span: Location::new(1, 16)..Location::new(1, 17),
                     inner: ExprKind::Symbol {
                         name: Symbol::new("x"),
                     }
@@ -903,16 +983,19 @@ fn parse_fun_op() {
             clauses: vec![(
                 vec![Pattern {
                     ty: Empty {},
+                    span: Location::new(1, 8)..Location::new(1, 14),
                     inner: PatternKind::Tuple {
                         tuple: vec![
                             Pattern {
                                 ty: Empty {},
+                                span: Location::new(1, 9)..Location::new(1, 10),
                                 inner: PatternKind::Variable {
                                     name: Symbol::new("x"),
                                 }
                             },
                             Pattern {
                                 ty: Empty {},
+                                span: Location::new(1, 12)..Location::new(1, 13),
                                 inner: PatternKind::Variable {
                                     name: Symbol::new("y"),
                                 }
@@ -922,6 +1005,7 @@ fn parse_fun_op() {
                 }],
                 Expr {
                     ty: Empty {},
+                    span: Location::new(1, 17)..Location::new(1, 18),
                     inner: ExprKind::Symbol {
                         name: Symbol::new("x"),
                     }
@@ -944,17 +1028,20 @@ fn parse_fun_multiclause() {
                     vec![
                         Pattern {
                             ty: Empty {},
+                            span: Location::new(1, 7)..Location::new(1, 10),
                             inner: PatternKind::Variable {
                                 name: Symbol::new("Nil"),
                             }
                         },
                         Pattern {
                             ty: Empty {},
+                            span: Location::new(1, 11)..Location::new(1, 12),
                             inner: PatternKind::Wildcard {}
                         }
                     ],
                     Expr {
                         ty: Empty {},
+                        span: Location::new(1, 15)..Location::new(1, 18),
                         inner: ExprKind::Symbol {
                             name: Symbol::new("Nil"),
                         }
@@ -964,10 +1051,12 @@ fn parse_fun_multiclause() {
                     vec![
                         Pattern {
                             ty: Empty {},
+                            span: Location::new(1, 23)..Location::new(1, 24),
                             inner: PatternKind::Wildcard {}
                         },
                         Pattern {
                             ty: Empty {},
+                            span: Location::new(1, 25)..Location::new(1, 28),
                             inner: PatternKind::Variable {
                                 name: Symbol::new("Nil"),
                             }
@@ -975,6 +1064,7 @@ fn parse_fun_multiclause() {
                     ],
                     Expr {
                         ty: Empty {},
+                        span: Location::new(1, 31)..Location::new(1, 34),
                         inner: ExprKind::Symbol {
                             name: Symbol::new("Nil"),
                         }
@@ -1002,15 +1092,18 @@ fn parse_if() {
             rec: false,
             pattern: Pattern {
                 ty: Empty {},
+                span: Location::new(1, 5)..Location::new(1, 6),
                 inner: PatternKind::Variable {
                     name: Symbol::new("x"),
                 }
             },
             expr: Expr {
                 ty: Empty {},
+                span: Location::new(1, 9)..Location::new(1, 37),
                 inner: ExprKind::D(DerivedExprKind::If {
                     cond: Expr {
                         ty: Empty {},
+                        span: Location::new(1, 12)..Location::new(1, 16),
                         inner: ExprKind::Symbol {
                             name: Symbol::new("true")
                         }
@@ -1018,6 +1111,7 @@ fn parse_if() {
                     .boxed(),
                     then: Expr {
                         ty: Empty {},
+                        span: Location::new(1, 22)..Location::new(1, 27),
                         inner: ExprKind::Symbol {
                             name: Symbol::new("false")
                         }
@@ -1025,6 +1119,7 @@ fn parse_if() {
                     .boxed(),
                     else_: Expr {
                         ty: Empty {},
+                        span: Location::new(1, 33)..Location::new(1, 37),
                         inner: ExprKind::Symbol {
                             name: Symbol::new("true")
                         }
@@ -1046,15 +1141,18 @@ fn parse_case_bool() {
             rec: false,
             pattern: Pattern {
                 ty: Empty {},
+                span: Location::new(1, 5)..Location::new(1, 6),
                 inner: PatternKind::Variable {
                     name: Symbol::new("x"),
                 }
             },
             expr: Expr {
                 ty: Empty {},
+                span: Location::new(1, 9)..Location::new(1, 51),
                 inner: ExprKind::Case {
                     cond: Expr {
                         ty: Empty {},
+                        span: Location::new(1, 14)..Location::new(1, 18),
                         inner: ExprKind::Symbol {
                             name: Symbol::new("true")
                         }
@@ -1064,12 +1162,14 @@ fn parse_case_bool() {
                         (
                             Pattern {
                                 ty: Empty {},
+                                span: Location::new(1, 22)..Location::new(1, 26),
                                 inner: PatternKind::Variable {
                                     name: Symbol::new("true")
                                 }
                             },
                             Expr {
                                 ty: Empty {},
+                                span: Location::new(1, 30)..Location::new(1, 35),
                                 inner: ExprKind::Symbol {
                                     name: Symbol::new("false")
                                 }
@@ -1078,12 +1178,14 @@ fn parse_case_bool() {
                         (
                             Pattern {
                                 ty: Empty {},
+                                span: Location::new(1, 38)..Location::new(1, 43),
                                 inner: PatternKind::Variable {
                                     name: Symbol::new("false"),
                                 }
                             },
                             Expr {
                                 ty: Empty {},
+                                span: Location::new(1, 47)..Location::new(1, 51),
                                 inner: ExprKind::Symbol {
                                     name: Symbol::new("true"),
                                 }
@@ -1106,15 +1208,18 @@ fn parse_case_constructor() {
             rec: false,
             pattern: Pattern {
                 ty: Empty {},
+                span: Location::new(1, 5)..Location::new(1, 6),
                 inner: PatternKind::Variable {
                     name: Symbol::new("x"),
                 }
             },
             expr: Expr {
                 ty: Empty {},
+                span: Location::new(1, 9)..Location::new(1, 52),
                 inner: ExprKind::Case {
                     cond: Expr {
                         ty: Empty {},
+                        span: Location::new(1, 14)..Location::new(1, 18),
                         inner: ExprKind::Symbol {
                             name: Symbol::new("NONE")
                         }
@@ -1124,10 +1229,12 @@ fn parse_case_constructor() {
                         (
                             Pattern {
                                 ty: Empty {},
+                                span: Location::new(1, 22)..Location::new(1, 28),
                                 inner: PatternKind::Constructor {
                                     name: Symbol::new("SOME"),
                                     arg: Some(Box::new(Pattern {
                                         ty: Empty {},
+                                        span: Location::new(1, 27)..Location::new(1, 28),
                                         inner: PatternKind::Variable {
                                             name: Symbol::new("x"),
                                         }
@@ -1136,6 +1243,7 @@ fn parse_case_constructor() {
                             },
                             Expr {
                                 ty: Empty {},
+                                span: Location::new(1, 32)..Location::new(1, 37),
                                 inner: ExprKind::Symbol {
                                     name: Symbol::new("false")
                                 }
@@ -1144,12 +1252,14 @@ fn parse_case_constructor() {
                         (
                             Pattern {
                                 ty: Empty {},
+                                span: Location::new(1, 40)..Location::new(1, 44),
                                 inner: PatternKind::Variable {
                                     name: Symbol::new("NONE"),
                                 }
                             },
                             Expr {
                                 ty: Empty {},
+                                span: Location::new(1, 48)..Location::new(1, 52),
                                 inner: ExprKind::Symbol {
                                     name: Symbol::new("true"),
                                 }
@@ -1172,15 +1282,18 @@ fn parse_case_var() {
             rec: false,
             pattern: Pattern {
                 ty: Empty {},
+                span: Location::new(1, 5)..Location::new(1, 6),
                 inner: PatternKind::Variable {
                     name: Symbol::new("x"),
                 }
             },
             expr: Expr {
                 ty: Empty {},
+                span: Location::new(1, 9)..Location::new(1, 47),
                 inner: ExprKind::Case {
                     cond: Expr {
                         ty: Empty {},
+                        span: Location::new(1, 14)..Location::new(1, 18),
                         inner: ExprKind::Symbol {
                             name: Symbol::new("true")
                         }
@@ -1190,12 +1303,14 @@ fn parse_case_var() {
                         (
                             Pattern {
                                 ty: Empty {},
+                                span: Location::new(1, 22)..Location::new(1, 26),
                                 inner: PatternKind::Variable {
                                     name: Symbol::new("true")
                                 }
                             },
                             Expr {
                                 ty: Empty {},
+                                span: Location::new(1, 30)..Location::new(1, 35),
                                 inner: ExprKind::Symbol {
                                     name: Symbol::new("false")
                                 }
@@ -1204,12 +1319,14 @@ fn parse_case_var() {
                         (
                             Pattern {
                                 ty: Empty {},
+                                span: Location::new(1, 38)..Location::new(1, 39),
                                 inner: PatternKind::Variable {
                                     name: Symbol::new("x"),
                                 }
                             },
                             Expr {
                                 ty: Empty {},
+                                span: Location::new(1, 43)..Location::new(1, 47),
                                 inner: ExprKind::Symbol {
                                     name: Symbol::new("true")
                                 }
@@ -1232,15 +1349,18 @@ fn parse_case_wildcard() {
             rec: false,
             pattern: Pattern {
                 ty: Empty {},
+                span: Location::new(1, 5)..Location::new(1, 6),
                 inner: PatternKind::Variable {
                     name: Symbol::new("x"),
                 }
             },
             expr: Expr {
                 ty: Empty {},
+                span: Location::new(1, 9)..Location::new(1, 47),
                 inner: ExprKind::Case {
                     cond: Expr {
                         ty: Empty {},
+                        span: Location::new(1, 14)..Location::new(1, 18),
                         inner: ExprKind::Symbol {
                             name: Symbol::new("true")
                         }
@@ -1250,12 +1370,14 @@ fn parse_case_wildcard() {
                         (
                             Pattern {
                                 ty: Empty {},
+                                span: Location::new(1, 22)..Location::new(1, 26),
                                 inner: PatternKind::Variable {
                                     name: Symbol::new("true")
                                 }
                             },
                             Expr {
                                 ty: Empty {},
+                                span: Location::new(1, 30)..Location::new(1, 35),
                                 inner: ExprKind::Symbol {
                                     name: Symbol::new("false")
                                 }
@@ -1264,10 +1386,12 @@ fn parse_case_wildcard() {
                         (
                             Pattern {
                                 ty: Empty {},
+                                span: Location::new(1, 38)..Location::new(1, 39),
                                 inner: PatternKind::Wildcard {}
                             },
                             Expr {
                                 ty: Empty {},
+                                span: Location::new(1, 43)..Location::new(1, 47),
                                 inner: ExprKind::Symbol {
                                     name: Symbol::new("true")
                                 }
@@ -1290,15 +1414,18 @@ fn parse_case_int() {
             rec: false,
             pattern: Pattern {
                 ty: Empty {},
+                span: Location::new(1, 5)..Location::new(1, 6),
                 inner: PatternKind::Variable {
                     name: Symbol::new("x"),
                 }
             },
             expr: Expr {
                 ty: Empty {},
+                span: Location::new(1, 9)..Location::new(1, 44),
                 inner: ExprKind::Case {
                     cond: Expr {
                         ty: Empty {},
+                        span: Location::new(1, 14)..Location::new(1, 15),
                         inner: ExprKind::Literal {
                             value: Literal::Int(3),
                         }
@@ -1308,10 +1435,12 @@ fn parse_case_int() {
                         (
                             Pattern {
                                 ty: Empty {},
+                                span: Location::new(1, 19)..Location::new(1, 20),
                                 inner: PatternKind::Constant { value: 1 }
                             },
                             Expr {
                                 ty: Empty {},
+                                span: Location::new(1, 24)..Location::new(1, 25),
                                 inner: ExprKind::Literal {
                                     value: Literal::Int(1),
                                 }
@@ -1320,10 +1449,12 @@ fn parse_case_int() {
                         (
                             Pattern {
                                 ty: Empty {},
+                                span: Location::new(1, 28)..Location::new(1, 29),
                                 inner: PatternKind::Constant { value: 2 }
                             },
                             Expr {
                                 ty: Empty {},
+                                span: Location::new(1, 33)..Location::new(1, 34),
                                 inner: ExprKind::Literal {
                                     value: Literal::Int(2),
                                 }
@@ -1332,10 +1463,12 @@ fn parse_case_int() {
                         (
                             Pattern {
                                 ty: Empty {},
+                                span: Location::new(1, 37)..Location::new(1, 38),
                                 inner: PatternKind::Wildcard {}
                             },
                             Expr {
                                 ty: Empty {},
+                                span: Location::new(1, 42)..Location::new(1, 44),
                                 inner: ExprKind::Literal {
                                     value: Literal::Int(10),
                                 }
@@ -1358,31 +1491,37 @@ fn parse_case_tuple() {
             rec: false,
             pattern: Pattern {
                 ty: Empty {},
+                span: Location::new(1, 5)..Location::new(1, 6),
                 inner: PatternKind::Variable {
                     name: Symbol::new("x"),
                 }
             },
             expr: Expr {
                 ty: Empty {},
+                span: Location::new(1, 9)..Location::new(1, 41),
                 inner: ExprKind::Case {
                     cond: Expr {
                         ty: Empty {},
+                        span: Location::new(1, 14)..Location::new(1, 23),
                         inner: ExprKind::Tuple {
                             tuple: vec![
                                 Expr {
                                     ty: Empty {},
+                                    span: Location::new(1, 15)..Location::new(1, 16),
                                     inner: ExprKind::Literal {
                                         value: Literal::Int(1),
                                     }
                                 },
                                 Expr {
                                     ty: Empty {},
+                                    span: Location::new(1, 18)..Location::new(1, 19),
                                     inner: ExprKind::Literal {
                                         value: Literal::Int(2),
                                     }
                                 },
                                 Expr {
                                     ty: Empty {},
+                                    span: Location::new(1, 21)..Location::new(1, 22),
                                     inner: ExprKind::Literal {
                                         value: Literal::Int(3),
                                     }
@@ -1394,22 +1533,26 @@ fn parse_case_tuple() {
                     clauses: vec![(
                         Pattern {
                             ty: Empty {},
+                            span: Location::new(1, 27)..Location::new(1, 36),
                             inner: PatternKind::Tuple {
                                 tuple: vec![
                                     Pattern {
                                         ty: Empty {},
+                                        span: Location::new(1, 28)..Location::new(1, 29),
                                         inner: PatternKind::Variable {
                                             name: Symbol::new("x"),
                                         }
                                     },
                                     Pattern {
                                         ty: Empty {},
+                                        span: Location::new(1, 31)..Location::new(1, 32),
                                         inner: PatternKind::Variable {
                                             name: Symbol::new("y"),
                                         }
                                     },
                                     Pattern {
                                         ty: Empty {},
+                                        span: Location::new(1, 34)..Location::new(1, 35),
                                         inner: PatternKind::Variable {
                                             name: Symbol::new("z"),
                                         }
@@ -1419,6 +1562,7 @@ fn parse_case_tuple() {
                         },
                         Expr {
                             ty: Empty {},
+                            span: Location::new(1, 40)..Location::new(1, 41),
                             inner: ExprKind::Symbol {
                                 name: Symbol::new("z"),
                             }
@@ -1440,10 +1584,12 @@ fn parse_pattern_unit() {
             rec: false,
             pattern: Pattern {
                 ty: Empty {},
+                span: Location::new(1, 5)..Location::new(1, 7),
                 inner: PatternKind::Tuple { tuple: vec![] }
             },
             expr: Expr {
                 ty: Empty {},
+                span: Location::new(1, 10)..Location::new(1, 12),
                 inner: ExprKind::Tuple { tuple: vec![] }
             }
         }])
@@ -1460,10 +1606,12 @@ fn parse_case_val_pattern_wildcard() {
             rec: false,
             pattern: Pattern {
                 ty: Empty {},
+                span: Location::new(1, 5)..Location::new(1, 6),
                 inner: PatternKind::Wildcard {}
             },
             expr: Expr {
                 ty: Empty {},
+                span: Location::new(1, 9)..Location::new(1, 10),
                 inner: ExprKind::Literal {
                     value: Literal::Int(1),
                 }
@@ -1485,20 +1633,24 @@ fn parse_funarg_pattern() {
                     vec![
                         Pattern {
                             ty: Empty {},
+                            span: Location::new(1, 10)..Location::new(1, 16),
                             inner: PatternKind::Constructor {
                                 name: Symbol::new("SOME"),
                                 arg: Some(Box::new(Pattern {
                                     ty: Empty {},
+                                    span: Location::new(1, 15)..Location::new(1, 16),
                                     inner: PatternKind::Wildcard {}
                                 }))
                             }
                         },
                         Pattern {
                             ty: Empty {},
+                            span: Location::new(1, 19)..Location::new(1, 25),
                             inner: PatternKind::Constructor {
                                 name: Symbol::new("SOME"),
                                 arg: Some(Box::new(Pattern {
                                     ty: Empty {},
+                                    span: Location::new(1, 24)..Location::new(1, 25),
                                     inner: PatternKind::Wildcard {}
                                 }))
                             }
@@ -1506,6 +1658,7 @@ fn parse_funarg_pattern() {
                     ],
                     Expr {
                         ty: Empty {},
+                        span: Location::new(1, 29)..Location::new(1, 33),
                         inner: ExprKind::Symbol {
                             name: Symbol::new("NONE"),
                         }
@@ -1515,16 +1668,19 @@ fn parse_funarg_pattern() {
                     vec![
                         Pattern {
                             ty: Empty {},
+                            span: Location::new(1, 40)..Location::new(1, 44),
                             inner: PatternKind::Variable {
                                 name: Symbol::new("NONE"),
                             }
                         },
                         Pattern {
                             ty: Empty {},
+                            span: Location::new(1, 46)..Location::new(1, 52),
                             inner: PatternKind::Constructor {
                                 name: Symbol::new("SOME"),
                                 arg: Some(Box::new(Pattern {
                                     ty: Empty {},
+                                    span: Location::new(1, 51)..Location::new(1, 52),
                                     inner: PatternKind::Variable {
                                         name: Symbol::new("x")
                                     }
@@ -1534,9 +1690,11 @@ fn parse_funarg_pattern() {
                     ],
                     Expr {
                         ty: Empty {},
+                        span: Location::new(1, 56)..Location::new(1, 62),
                         inner: ExprKind::App {
                             fun: Expr {
                                 ty: Empty {},
+                                span: Location::new(1, 56)..Location::new(1, 60),
                                 inner: ExprKind::Symbol {
                                     name: Symbol::new("SOME")
                                 }
@@ -1544,6 +1702,7 @@ fn parse_funarg_pattern() {
                             .boxed(),
                             arg: Expr {
                                 ty: Empty {},
+                                span: Location::new(1, 61)..Location::new(1, 62),
                                 inner: ExprKind::Symbol {
                                     name: Symbol::new("x")
                                 }
@@ -1556,10 +1715,12 @@ fn parse_funarg_pattern() {
                     vec![
                         Pattern {
                             ty: Empty {},
+                            span: Location::new(1, 70)..Location::new(1, 76),
                             inner: PatternKind::Constructor {
                                 name: Symbol::new("SOME"),
                                 arg: Some(Box::new(Pattern {
                                     ty: Empty {},
+                                    span: Location::new(1, 75)..Location::new(1, 76),
                                     inner: PatternKind::Variable {
                                         name: Symbol::new("x")
                                     }
@@ -1568,6 +1729,7 @@ fn parse_funarg_pattern() {
                         },
                         Pattern {
                             ty: Empty {},
+                            span: Location::new(1, 78)..Location::new(1, 82),
                             inner: PatternKind::Variable {
                                 name: Symbol::new("NONE"),
                             }
@@ -1575,9 +1737,11 @@ fn parse_funarg_pattern() {
                     ],
                     Expr {
                         ty: Empty {},
+                        span: Location::new(1, 85)..Location::new(1, 91),
                         inner: ExprKind::App {
                             fun: Expr {
                                 ty: Empty {},
+                                span: Location::new(1, 85)..Location::new(1, 89),
                                 inner: ExprKind::Symbol {
                                     name: Symbol::new("SOME")
                                 }
@@ -1585,6 +1749,7 @@ fn parse_funarg_pattern() {
                             .boxed(),
                             arg: Expr {
                                 ty: Empty {},
+                                span: Location::new(1, 90)..Location::new(1, 91),
                                 inner: ExprKind::Symbol {
                                     name: Symbol::new("x")
                                 }
@@ -1597,12 +1762,14 @@ fn parse_funarg_pattern() {
                     vec![
                         Pattern {
                             ty: Empty {},
+                            span: Location::new(1, 98)..Location::new(1, 102),
                             inner: PatternKind::Variable {
                                 name: Symbol::new("NONE"),
                             }
                         },
                         Pattern {
                             ty: Empty {},
+                            span: Location::new(1, 103)..Location::new(1, 107),
                             inner: PatternKind::Variable {
                                 name: Symbol::new("NONE"),
                             }
@@ -1610,6 +1777,7 @@ fn parse_funarg_pattern() {
                     ],
                     Expr {
                         ty: Empty {},
+                        span: Location::new(1, 110)..Location::new(1, 114),
                         inner: ExprKind::Symbol {
                             name: Symbol::new("NONE"),
                         }
@@ -1631,12 +1799,14 @@ fn parse_multistatement_val_datatype() {
                 rec: false,
                 pattern: Pattern {
                     ty: Empty {},
+                    span: Location::new(1, 5)..Location::new(1, 12),
                     inner: PatternKind::Variable {
                         name: Symbol::new("version")
                     }
                 },
                 expr: Expr {
                     ty: Empty {},
+                    span: Location::new(1, 15)..Location::new(1, 16),
                     inner: ExprKind::Literal {
                         value: Literal::Int(1)
                     }

@@ -39,28 +39,30 @@ pub trait Traverse<Ty> {
     }
     fn traverse_expr(&mut self, expr: &mut CoreExpr<Ty>) {
         use crate::ast::ExprKind::*;
+        let span = expr.span.clone();
         match &mut expr.inner {
-            Binds { binds, ret } => self.traverse_binds(binds, ret),
-            BuiltinCall { fun, args } => self.traverse_builtincall(fun, args),
+            Binds { binds, ret } => self.traverse_binds(span, binds, ret),
+            BuiltinCall { fun, args } => self.traverse_builtincall(span, fun, args),
             ExternCall {
                 module,
                 fun,
                 args,
                 argty,
                 retty,
-            } => self.traverse_externcall(module, fun, args, argty, retty),
-            Fn { param, body } => self.traverse_fn(param, body),
-            App { fun, arg } => self.traverse_app(fun, arg),
-            Case { cond, clauses } => self.traverse_case(cond, clauses),
-            Tuple { tuple } => self.traverse_tuple(tuple),
-            Constructor { arg, name } => self.traverse_constructor(arg, name),
-            Symbol { name } => self.traverse_sym(name),
-            Literal { value } => self.traverse_lit(value),
+            } => self.traverse_externcall(span, module, fun, args, argty, retty),
+            Fn { param, body } => self.traverse_fn(span, param, body),
+            App { fun, arg } => self.traverse_app(span, fun, arg),
+            Case { cond, clauses } => self.traverse_case(span, cond, clauses),
+            Tuple { tuple } => self.traverse_tuple(span, tuple),
+            Constructor { arg, name } => self.traverse_constructor(span, arg, name),
+            Symbol { name } => self.traverse_sym(span, name),
+            Literal { value } => self.traverse_lit(span, value),
             D(_) => (),
         }
     }
     fn traverse_binds(
         &mut self,
+        _: Span,
         binds: &mut Vec<CoreDeclaration<Ty>>,
         ret: &mut Box<CoreExpr<Ty>>,
     ) {
@@ -70,7 +72,7 @@ pub trait Traverse<Ty> {
         self.traverse_expr(ret)
     }
 
-    fn traverse_builtincall(&mut self, _: &mut BIF, args: &mut Vec<CoreExpr<Ty>>) {
+    fn traverse_builtincall(&mut self, _: Span, _: &mut BIF, args: &mut Vec<CoreExpr<Ty>>) {
         for arg in args {
             self.traverse_expr(arg)
         }
@@ -78,6 +80,7 @@ pub trait Traverse<Ty> {
 
     fn traverse_externcall(
         &mut self,
+        _: Span,
         _module: &mut String,
         _fun: &mut String,
         args: &mut Vec<CoreExpr<Ty>>,
@@ -89,17 +92,18 @@ pub trait Traverse<Ty> {
         }
     }
 
-    fn traverse_fn(&mut self, _param: &mut Symbol, body: &mut Box<CoreExpr<Ty>>) {
+    fn traverse_fn(&mut self, _: Span, _param: &mut Symbol, body: &mut Box<CoreExpr<Ty>>) {
         self.traverse_expr(body)
     }
 
-    fn traverse_app(&mut self, fun: &mut Box<CoreExpr<Ty>>, arg: &mut Box<CoreExpr<Ty>>) {
+    fn traverse_app(&mut self, _: Span, fun: &mut Box<CoreExpr<Ty>>, arg: &mut Box<CoreExpr<Ty>>) {
         self.traverse_expr(fun);
         self.traverse_expr(arg);
     }
 
     fn traverse_case(
         &mut self,
+        _: Span,
         cond: &mut Box<CoreExpr<Ty>>,
         clauses: &mut Vec<(CorePattern<Ty>, CoreExpr<Ty>)>,
     ) {
@@ -110,46 +114,53 @@ pub trait Traverse<Ty> {
         }
     }
 
-    fn traverse_tuple(&mut self, tuple: &mut Vec<CoreExpr<Ty>>) {
+    fn traverse_tuple(&mut self, _: Span, tuple: &mut Vec<CoreExpr<Ty>>) {
         for t in tuple.iter_mut() {
             self.traverse_expr(t)
         }
     }
 
-    fn traverse_constructor(&mut self, arg: &mut Option<Box<CoreExpr<Ty>>>, _name: &mut Symbol) {
+    fn traverse_constructor(
+        &mut self,
+        _: Span,
+        arg: &mut Option<Box<CoreExpr<Ty>>>,
+        _name: &mut Symbol,
+    ) {
         if let Some(arg) = arg {
             self.traverse_expr(arg)
         }
     }
-    fn traverse_sym(&mut self, _name: &mut Symbol) {}
+    fn traverse_sym(&mut self, _: Span, _name: &mut Symbol) {}
 
-    fn traverse_lit(&mut self, _value: &mut Literal) {}
-    fn traverse_string(&mut self, _value: &mut Vec<u32>) {}
+    fn traverse_lit(&mut self, _: Span, _value: &mut Literal) {}
+    fn traverse_string(&mut self, _: Span, _value: &mut Vec<u32>) {}
 
     fn traverse_pattern(&mut self, pattern: &mut CorePattern<Ty>) {
         use PatternKind::*;
+        let span = pattern.span.clone();
         match &mut pattern.inner {
-            Constant { value } => self.traverse_pat_constant(value),
-            Char { value } => self.traverse_pat_char(value),
-            Constructor { name, arg } => self.traverse_pat_constructor(name, arg),
-            Tuple { tuple } => self.traverse_pat_tuple(tuple),
-            Variable { name } => self.traverse_pat_variable(name),
-            Wildcard {} => self.traverse_pat_wildcard(),
+            Constant { value } => self.traverse_pat_constant(span, value),
+            Char { value } => self.traverse_pat_char(span, value),
+            Constructor { name, arg } => self.traverse_pat_constructor(span, name, arg),
+            Tuple { tuple } => self.traverse_pat_tuple(span, tuple),
+            Variable { name } => self.traverse_pat_variable(span, name),
+            Wildcard {} => self.traverse_pat_wildcard(span),
             D(d) => match *d {},
         }
     }
 
-    fn traverse_pat_constant(&mut self, _value: &mut i64) {}
-    fn traverse_pat_char(&mut self, _value: &mut u32) {}
+    fn traverse_pat_constant(&mut self, _: Span, _value: &mut i64) {}
+    fn traverse_pat_char(&mut self, _: Span, _value: &mut u32) {}
     fn traverse_pat_constructor(
         &mut self,
+        _: Span,
         _name: &mut Symbol,
         _arg: &mut Option<Box<CorePattern<Ty>>>,
     ) {
     }
-    fn traverse_pat_tuple(&mut self, _tuple: &mut Vec<CorePattern<Ty>>) {}
-    fn traverse_pat_variable(&mut self, _value: &mut Symbol) {}
-    fn traverse_pat_wildcard(&mut self) {}
+    fn traverse_pat_tuple(&mut self, _: Span, _tuple: &mut Vec<CorePattern<Ty>>) {}
+    fn traverse_pat_variable(&mut self, _: Span, _value: &mut Symbol) {}
+    fn traverse_pat_wildcard(&mut self, _: Span) {}
 }
 
 pub trait Transform<Ty> {
@@ -205,29 +216,31 @@ pub trait Transform<Ty> {
 
     fn transform_expr(&mut self, mut expr: CoreExpr<Ty>) -> CoreExpr<Ty> {
         use crate::ast::ExprKind::*;
+        let span = expr.span.clone();
         expr.inner = match expr.inner {
-            Binds { binds, ret } => self.transform_binds(binds, ret),
-            BuiltinCall { fun, args } => self.transform_builtincall(fun, args),
+            Binds { binds, ret } => self.transform_binds(span, binds, ret),
+            BuiltinCall { fun, args } => self.transform_builtincall(span, fun, args),
             ExternCall {
                 module,
                 fun,
                 args,
                 argty,
                 retty,
-            } => self.transform_externcall(module, fun, args, argty, retty),
-            Fn { param, body } => self.transform_fn(param, body),
-            App { fun, arg } => self.transform_app(fun, arg),
-            Case { cond, clauses } => self.transform_case(cond, clauses),
-            Tuple { tuple } => self.transform_tuple(tuple),
-            Constructor { arg, name } => self.transform_constructor(arg, name),
-            Symbol { name } => self.transform_symbol(name),
-            Literal { value } => self.transform_literal(value),
+            } => self.transform_externcall(span, module, fun, args, argty, retty),
+            Fn { param, body } => self.transform_fn(span, param, body),
+            App { fun, arg } => self.transform_app(span, fun, arg),
+            Case { cond, clauses } => self.transform_case(span, cond, clauses),
+            Tuple { tuple } => self.transform_tuple(span, tuple),
+            Constructor { arg, name } => self.transform_constructor(span, arg, name),
+            Symbol { name } => self.transform_symbol(span, name),
+            Literal { value } => self.transform_literal(span, value),
             D(d) => match d {},
         };
         expr
     }
     fn transform_binds(
         &mut self,
+        _: Span,
         binds: Vec<CoreDeclaration<Ty>>,
         ret: Box<CoreExpr<Ty>>,
     ) -> CoreExprKind<Ty> {
@@ -240,7 +253,12 @@ pub trait Transform<Ty> {
         }
     }
 
-    fn transform_builtincall(&mut self, fun: BIF, args: Vec<CoreExpr<Ty>>) -> CoreExprKind<Ty> {
+    fn transform_builtincall(
+        &mut self,
+        _: Span,
+        fun: BIF,
+        args: Vec<CoreExpr<Ty>>,
+    ) -> CoreExprKind<Ty> {
         ExprKind::BuiltinCall {
             fun,
             args: args
@@ -252,6 +270,7 @@ pub trait Transform<Ty> {
 
     fn transform_externcall(
         &mut self,
+        _: Span,
         module: String,
         fun: String,
         args: Vec<CoreExpr<Ty>>,
@@ -270,7 +289,12 @@ pub trait Transform<Ty> {
         }
     }
 
-    fn transform_fn(&mut self, param: Symbol, body: Box<CoreExpr<Ty>>) -> CoreExprKind<Ty> {
+    fn transform_fn(
+        &mut self,
+        _: Span,
+        param: Symbol,
+        body: Box<CoreExpr<Ty>>,
+    ) -> CoreExprKind<Ty> {
         ExprKind::Fn {
             param,
             body: self.transform_expr(*body).boxed(),
@@ -279,6 +303,7 @@ pub trait Transform<Ty> {
 
     fn transform_app(
         &mut self,
+        _: Span,
         fun: Box<CoreExpr<Ty>>,
         arg: Box<CoreExpr<Ty>>,
     ) -> CoreExprKind<Ty> {
@@ -290,6 +315,7 @@ pub trait Transform<Ty> {
 
     fn transform_case(
         &mut self,
+        _: Span,
         cond: Box<CoreExpr<Ty>>,
         clauses: Vec<(CorePattern<Ty>, CoreExpr<Ty>)>,
     ) -> CoreExprKind<Ty> {
@@ -302,7 +328,7 @@ pub trait Transform<Ty> {
         }
     }
 
-    fn transform_tuple(&mut self, tuple: Vec<CoreExpr<Ty>>) -> CoreExprKind<Ty> {
+    fn transform_tuple(&mut self, _: Span, tuple: Vec<CoreExpr<Ty>>) -> CoreExprKind<Ty> {
         ExprKind::Tuple {
             tuple: tuple.into_iter().map(|t| self.transform_expr(t)).collect(),
         }
@@ -310,6 +336,7 @@ pub trait Transform<Ty> {
 
     fn transform_constructor(
         &mut self,
+        _: Span,
         arg: Option<Box<CoreExpr<Ty>>>,
         name: Symbol,
     ) -> CoreExprKind<Ty> {
@@ -318,38 +345,40 @@ pub trait Transform<Ty> {
             name,
         }
     }
-    fn transform_symbol(&mut self, name: Symbol) -> CoreExprKind<Ty> {
+    fn transform_symbol(&mut self, _: Span, name: Symbol) -> CoreExprKind<Ty> {
         ExprKind::Symbol { name }
     }
 
-    fn transform_literal(&mut self, value: Literal) -> CoreExprKind<Ty> {
+    fn transform_literal(&mut self, _: Span, value: Literal) -> CoreExprKind<Ty> {
         ExprKind::Literal { value }
     }
 
     fn transform_pattern(&mut self, mut pattern: CorePattern<Ty>) -> CorePattern<Ty> {
         use PatternKind::*;
+        let span = pattern.span.clone();
         pattern.inner = match pattern.inner {
-            Constant { value } => self.transform_pat_constant(value),
-            Char { value } => self.transform_pat_char(value),
-            Constructor { arg, name } => self.transform_pat_constructor(arg, name),
-            Tuple { tuple } => self.transform_pat_tuple(tuple),
-            Variable { name } => self.transform_pat_variable(name),
-            Wildcard {} => self.transform_pat_wildcard(),
+            Constant { value } => self.transform_pat_constant(span, value),
+            Char { value } => self.transform_pat_char(span, value),
+            Constructor { arg, name } => self.transform_pat_constructor(span, arg, name),
+            Tuple { tuple } => self.transform_pat_tuple(span, tuple),
+            Variable { name } => self.transform_pat_variable(span, name),
+            Wildcard {} => self.transform_pat_wildcard(span),
             D(d) => match d {},
         };
         pattern
     }
 
-    fn transform_pat_constant(&mut self, value: i64) -> CorePatternKind<Ty> {
+    fn transform_pat_constant(&mut self, _: Span, value: i64) -> CorePatternKind<Ty> {
         CorePatternKind::Constant { value }
     }
 
-    fn transform_pat_char(&mut self, value: u32) -> CorePatternKind<Ty> {
+    fn transform_pat_char(&mut self, _: Span, value: u32) -> CorePatternKind<Ty> {
         CorePatternKind::Char { value }
     }
 
     fn transform_pat_constructor(
         &mut self,
+        _: Span,
         arg: Option<Box<CorePattern<Ty>>>,
         name: Symbol,
     ) -> CorePatternKind<Ty> {
@@ -359,7 +388,7 @@ pub trait Transform<Ty> {
         }
     }
 
-    fn transform_pat_tuple(&mut self, tuple: Vec<CorePattern<Ty>>) -> CorePatternKind<Ty> {
+    fn transform_pat_tuple(&mut self, _: Span, tuple: Vec<CorePattern<Ty>>) -> CorePatternKind<Ty> {
         PatternKind::Tuple {
             tuple: tuple
                 .into_iter()
@@ -368,11 +397,11 @@ pub trait Transform<Ty> {
         }
     }
 
-    fn transform_pat_variable(&mut self, name: Symbol) -> CorePatternKind<Ty> {
+    fn transform_pat_variable(&mut self, _: Span, name: Symbol) -> CorePatternKind<Ty> {
         CorePatternKind::Variable { name }
     }
 
-    fn transform_pat_wildcard(&mut self) -> CorePatternKind<Ty> {
+    fn transform_pat_wildcard(&mut self, _: Span) -> CorePatternKind<Ty> {
         CorePatternKind::Wildcard {}
     }
 }

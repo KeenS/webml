@@ -72,28 +72,30 @@ impl CaseSimplifyPass {
 
     fn match_compile(
         &mut self,
+        span: Span,
         cond: Stack<(Type, Symbol)>,
         ty: Type,
         clauses: Vec<(Stack<TypedCorePattern>, TypedCoreExpr)>,
     ) -> TypedCoreExpr {
         // assuming clauses.any(|(patterns, _)| patterns.len() == cond.len())
         if clauses.len() == 0 {
-            self.match_compile_empty(cond, ty, clauses)
+            self.match_compile_empty(span, cond, ty, clauses)
         } else if clauses[0].0.iter().all(|p| p.is_variable()) {
-            self.match_compile_variable(cond, ty, clauses)
+            self.match_compile_variable(span, cond, ty, clauses)
         } else if clauses[0].0.iter().any(|p| p.is_tuple()) {
-            self.match_compile_tuple(cond, ty, clauses)
+            self.match_compile_tuple(span, cond, ty, clauses)
         } else if clauses[0].0.iter().any(|p| p.is_constant()) {
-            self.match_compile_constant(cond, ty, clauses)
+            self.match_compile_constant(span, cond, ty, clauses)
         } else if clauses[0].0.iter().any(|p| p.is_char()) {
-            self.match_compile_char(cond, ty, clauses)
+            self.match_compile_char(span, cond, ty, clauses)
         } else {
-            self.match_compile_mixture(cond, ty, clauses)
+            self.match_compile_mixture(span, cond, ty, clauses)
         }
     }
 
     fn match_compile_empty(
         &mut self,
+        _: Span,
         _: Stack<(Type, Symbol)>,
         _: Type,
         _: Vec<(Stack<TypedCorePattern>, TypedCoreExpr)>,
@@ -103,6 +105,7 @@ impl CaseSimplifyPass {
 
     fn match_compile_variable(
         &mut self,
+        span: Span,
         cond: Stack<(Type, Symbol)>,
         ty: Type,
         mut clauses: Vec<(Stack<TypedCorePattern>, TypedCoreExpr)>,
@@ -113,11 +116,13 @@ impl CaseSimplifyPass {
             .zip(cond.iter().cloned())
             .fold(expr, |acc, (pattern, (cty, name))| Expr {
                 ty: ty.clone(),
+                span: span.clone(),
                 inner: ExprKind::Binds {
                     binds: vec![Declaration::Val {
                         rec: false,
                         expr: Expr {
                             ty: cty,
+                            span: acc.span.clone(),
                             inner: ExprKind::Symbol { name },
                         },
                         // believing pattern is variable
@@ -130,6 +135,7 @@ impl CaseSimplifyPass {
 
     fn match_compile_tuple(
         &mut self,
+        span: Span,
         mut cond: Stack<(Type, Symbol)>,
         ty: Type,
         clauses: Vec<(Stack<TypedCorePattern>, TypedCoreExpr)>,
@@ -145,6 +151,7 @@ impl CaseSimplifyPass {
             .into_iter()
             .map(|(mut patterns, mut arm)| {
                 let removed_pattern = patterns.swap_remove(pos);
+                let span = removed_pattern.span.clone();
                 let tuple = match removed_pattern.inner {
                     PatternKind::Tuple { tuple, .. } => tuple,
                     var @ PatternKind::Variable { .. } => {
@@ -152,21 +159,25 @@ impl CaseSimplifyPass {
                             .zip(param_tys.clone())
                             .map(|(name, ty)| Pattern {
                                 ty,
+                                span: span.clone(),
                                 inner: PatternKind::Variable { name },
                             })
                             .take(param_tys.len())
                             .collect();
                         arm = Expr {
                             ty: arm.ty(),
+                            span: arm.span.clone(),
                             inner: ExprKind::Binds {
                                 binds: vec![Declaration::Val {
                                     rec: false,
                                     pattern: Pattern {
                                         ty: removed_pattern.ty,
+                                        span: removed_pattern.span,
                                         inner: var,
                                     },
                                     expr: Expr {
                                         ty: cty.clone(),
+                                        span: arm.span.clone(),
                                         inner: ExprKind::Symbol { name: c.clone() },
                                     },
                                 }],
@@ -188,27 +199,31 @@ impl CaseSimplifyPass {
         cond.extend(param_tys.clone().into_iter().zip(tmp_vars.clone()).rev());
         Expr {
             ty: ty.clone(),
+            span: span.clone(),
             inner: ExprKind::Case {
                 cond: Expr {
                     ty: cty.clone(),
+                    span: span.clone(),
                     inner: ExprKind::Symbol { name: c },
                 }
                 .boxed(),
                 clauses: vec![(
                     Pattern {
                         ty: cty,
+                        span: span.clone(),
                         inner: PatternKind::Tuple {
                             tuple: tmp_vars
                                 .into_iter()
                                 .zip(param_tys)
                                 .map(|(name, ty)| Pattern {
                                     ty,
+                                    span: span.clone(),
                                     inner: PatternKind::Variable { name },
                                 })
                                 .collect(),
                         },
                     },
-                    self.match_compile(cond, ty, clauses),
+                    self.match_compile(span, cond, ty, clauses),
                 )],
             },
         }
@@ -216,6 +231,7 @@ impl CaseSimplifyPass {
 
     fn match_compile_constant(
         &mut self,
+        span: Span,
         mut cond: Stack<(Type, Symbol)>,
         ret_ty: Type,
         clauses: Vec<(Stack<TypedCorePattern>, TypedCoreExpr)>,
@@ -235,14 +251,15 @@ impl CaseSimplifyPass {
             .filter_map(|(head, _)| match head {
                 Pattern {
                     ty,
+                    span,
                     inner: PatternKind::Constant { value },
-                } => Some((*value, ty.clone())),
+                } => Some((*value, (ty.clone(), span))),
                 _ => None,
             })
             .collect::<HashMap<_, _>>();
         let mut clauses = constants
             .iter()
-            .map(|(value, ty)| {
+            .map(|(value, (ty, pattern_span))| {
                 let clauses = self.specialized_patterns_for_constant(
                     (cty.clone(), c.clone()),
                     *value,
@@ -251,19 +268,26 @@ impl CaseSimplifyPass {
                 (
                     Pattern {
                         ty: ty.clone(),
+                        span: Clone::clone(pattern_span),
                         inner: PatternKind::Constant { value: *value },
                     },
-                    self.match_compile(cond.clone(), ret_ty.clone(), clauses),
+                    self.match_compile(span.clone(), cond.clone(), ret_ty.clone(), clauses),
                 )
             })
             .collect::<Vec<_>>();
 
         // no check for exhausitiveness
-        let default =
-            self.default_patterns(c.clone(), cond, ret_ty.clone(), clause_with_heads.iter());
+        let default = self.default_patterns(
+            span.clone(),
+            c.clone(),
+            cond,
+            ret_ty.clone(),
+            clause_with_heads.iter(),
+        );
         clauses.push((
             Pattern {
                 ty: cty.clone(),
+                span: span.clone(),
                 inner: PatternKind::Variable {
                     name: self.gensym("_"),
                 },
@@ -272,19 +296,22 @@ impl CaseSimplifyPass {
         ));
         Expr {
             ty: ret_ty,
+            span: span.clone(),
             inner: ExprKind::Case {
                 cond: Expr {
                     ty: cty,
+                    span: span.clone(),
                     inner: ExprKind::Symbol { name: c },
                 }
                 .boxed(),
-                clauses: clauses,
+                clauses,
             },
         }
     }
 
     fn match_compile_char(
         &mut self,
+        span: Span,
         mut cond: Stack<(Type, Symbol)>,
         ret_ty: Type,
         clauses: Vec<(Stack<TypedCorePattern>, TypedCoreExpr)>,
@@ -304,14 +331,15 @@ impl CaseSimplifyPass {
             .filter_map(|(head, _)| match head {
                 Pattern {
                     ty,
+                    span,
                     inner: PatternKind::Char { value },
-                } => Some((*value, ty.clone())),
+                } => Some((*value, (ty.clone(), span))),
                 _ => None,
             })
             .collect::<HashMap<_, _>>();
         let mut clauses = chars
             .iter()
-            .map(|(value, ty)| {
+            .map(|(value, (ty, pattern_span))| {
                 let clauses = self.specialized_patterns_for_char(
                     (cty.clone(), c.clone()),
                     *value,
@@ -320,19 +348,26 @@ impl CaseSimplifyPass {
                 (
                     Pattern {
                         ty: ty.clone(),
+                        span: Clone::clone(pattern_span),
                         inner: PatternKind::Char { value: *value },
                     },
-                    self.match_compile(cond.clone(), ret_ty.clone(), clauses),
+                    self.match_compile(span.clone(), cond.clone(), ret_ty.clone(), clauses),
                 )
             })
             .collect::<Vec<_>>();
 
         // no check for exhausitiveness
-        let default =
-            self.default_patterns(c.clone(), cond, ret_ty.clone(), clause_with_heads.iter());
+        let default = self.default_patterns(
+            span.clone(),
+            c.clone(),
+            cond,
+            ret_ty.clone(),
+            clause_with_heads.iter(),
+        );
         clauses.push((
             Pattern {
                 ty: cty.clone(),
+                span: span.clone(),
                 inner: PatternKind::Variable {
                     name: self.gensym("_"),
                 },
@@ -341,19 +376,22 @@ impl CaseSimplifyPass {
         ));
         Expr {
             ty: ret_ty,
+            span: span.clone(),
             inner: ExprKind::Case {
                 cond: Expr {
                     ty: cty,
+                    span: span.clone(),
                     inner: ExprKind::Symbol { name: c },
                 }
                 .boxed(),
-                clauses: clauses,
+                clauses,
             },
         }
     }
 
     fn match_compile_mixture(
         &mut self,
+        span: Span,
         mut cond: Stack<(Type, Symbol)>,
         ret_ty: Type,
         clauses: Vec<(Stack<TypedCorePattern>, TypedCoreExpr)>,
@@ -378,15 +416,16 @@ impl CaseSimplifyPass {
             .filter_map(|(head, _)| match head {
                 Pattern {
                     ty,
+                    span,
                     inner: PatternKind::Constructor { name, arg },
-                } => Some((name.clone(), (ty.clone(), arg.clone()))),
+                } => Some((name.clone(), (ty.clone(), span, arg.clone()))),
                 _ => None,
             })
             .collect::<HashMap<_, _>>();
         let constructor_names = constructors.keys().collect::<HashSet<_>>();
         let mut clauses = constructors
             .iter()
-            .map(|(name, (ty, arg))| {
+            .map(|(name, (ty, pattern_span, arg))| {
                 let clauses = self.specialized_patterns(
                     (cty.clone(), c.clone()),
                     &name,
@@ -401,6 +440,7 @@ impl CaseSimplifyPass {
                         new_cond.push((argty.clone(), tmp_var.clone()));
                         Some(Box::new(Pattern {
                             ty: argty,
+                            span: span.clone(),
                             inner: PatternKind::Variable { name: tmp_var },
                         }))
                     }
@@ -409,12 +449,13 @@ impl CaseSimplifyPass {
                 (
                     Pattern {
                         ty: ty.clone(),
+                        span: Clone::clone(pattern_span),
                         inner: PatternKind::Constructor {
                             name: name.clone(),
                             arg,
                         },
                     },
-                    self.match_compile(new_cond, ret_ty.clone(), clauses),
+                    self.match_compile(span.clone(), new_cond, ret_ty.clone(), clauses),
                 )
             })
             .collect();
@@ -422,9 +463,11 @@ impl CaseSimplifyPass {
         if self.is_exhausitive(&type_id, constructor_names) {
             Expr {
                 ty: ret_ty,
+                span: span.clone(),
                 inner: ExprKind::Case {
                     cond: Expr {
                         ty: cty,
+                        span: span.clone(),
                         inner: ExprKind::Symbol { name: c.clone() },
                     }
                     .boxed(),
@@ -432,11 +475,17 @@ impl CaseSimplifyPass {
                 },
             }
         } else {
-            let default =
-                self.default_patterns(c.clone(), cond, ret_ty.clone(), clause_with_heads.iter());
+            let default = self.default_patterns(
+                span.clone(),
+                c.clone(),
+                cond,
+                ret_ty.clone(),
+                clause_with_heads.iter(),
+            );
             clauses.push((
                 Pattern {
                     ty: cty.clone(),
+                    span: span.clone(),
                     inner: PatternKind::Variable {
                         name: self.gensym("_"),
                     },
@@ -445,13 +494,15 @@ impl CaseSimplifyPass {
             ));
             Expr {
                 ty: ret_ty,
+                span: span.clone(),
                 inner: ExprKind::Case {
                     cond: Expr {
                         ty: cty,
+                        span: span.clone(),
                         inner: ExprKind::Symbol { name: c },
                     }
                     .boxed(),
-                    clauses: clauses,
+                    clauses,
                 },
             }
         }
@@ -496,6 +547,7 @@ impl CaseSimplifyPass {
                     let pattern = match arg {
                         Some(arg) => Some(Pattern {
                             ty: arg.ty(),
+                            span: head.span.clone(),
                             inner: PatternKind::Variable {
                                 name: self.gensym("_"),
                             },
@@ -505,15 +557,18 @@ impl CaseSimplifyPass {
                     let (pat, arm) = clause.clone();
                     let arm = Expr {
                         ty: arm.ty(),
+                        span: arm.span.clone(),
                         inner: ExprKind::Binds {
                             binds: vec![Declaration::Val {
                                 rec: false,
                                 pattern: Pattern {
                                     ty: head.ty.clone(),
+                                    span: arm.span.clone(),
                                     inner: v.clone(),
                                 },
                                 expr: Expr {
                                     ty: cty.clone(),
+                                    span: arm.span.clone(),
                                     inner: ExprKind::Symbol { name: cond.clone() },
                                 },
                             }],
@@ -548,15 +603,18 @@ impl CaseSimplifyPass {
                     let (pat, arm) = clause.clone();
                     let arm = Expr {
                         ty: arm.ty(),
+                        span: arm.span.clone(),
                         inner: ExprKind::Binds {
                             binds: vec![Declaration::Val {
                                 rec: false,
                                 pattern: Pattern {
                                     ty: head.ty.clone(),
+                                    span: arm.span.clone(),
                                     inner: v.clone(),
                                 },
                                 expr: Expr {
                                     ty: cty.clone(),
+                                    span: arm.span.clone(),
                                     inner: ExprKind::Symbol { name: cond.clone() },
                                 },
                             }],
@@ -585,15 +643,18 @@ impl CaseSimplifyPass {
                     let (pat, arm) = clause.clone();
                     let arm = Expr {
                         ty: arm.ty(),
+                        span: arm.span.clone(),
                         inner: ExprKind::Binds {
                             binds: vec![Declaration::Val {
                                 rec: false,
                                 pattern: Pattern {
                                     ty: head.ty.clone(),
+                                    span: arm.span.clone(),
                                     inner: v.clone(),
                                 },
                                 expr: Expr {
                                     ty: cty.clone(),
+                                    span: arm.span.clone(),
                                     inner: ExprKind::Symbol { name: cond.clone() },
                                 },
                             }],
@@ -609,6 +670,7 @@ impl CaseSimplifyPass {
 
     fn default_patterns<'a, 'b>(
         &'a mut self,
+        span: Span,
         c: Symbol,
         cond: Stack<(Type, Symbol)>,
         ty: Type,
@@ -622,11 +684,13 @@ impl CaseSimplifyPass {
                 PatternKind::Variable { .. } => {
                     let arm = Expr {
                         ty: arm.ty(),
+                        span: arm.span.clone(),
                         inner: ExprKind::Binds {
                             binds: vec![Declaration::Val {
                                 rec: false,
                                 expr: Expr {
                                     ty: p.ty.clone(),
+                                    span: arm.span.clone(),
                                     inner: ExprKind::Symbol { name: c.clone() },
                                 },
                                 pattern: p,
@@ -639,7 +703,7 @@ impl CaseSimplifyPass {
                 _ => None,
             })
             .collect();
-        self.match_compile(cond, ty, clauses)
+        self.match_compile(span, cond, ty, clauses)
     }
 
     fn is_exhausitive<'a, 'b>(
@@ -691,17 +755,20 @@ impl Transform<Type> for CaseSimplifyPass {
                 expr: self.transform_expr(expr),
             },
             pattern => {
+                let span = pattern.span.clone();
                 let binds = pattern.binds();
                 let ty = Type::Tuple(binds.iter().map(|&(_, ty)| ty.clone()).collect());
                 let tuple_pat = binds
                     .into_iter()
                     .map(|(name, ty)| Pattern {
                         ty: ty.clone(),
+                        span: span.clone(),
                         inner: PatternKind::Variable { name: name.clone() },
                     })
                     .collect();
                 let tuple_pat = Pattern {
                     ty: ty.clone(),
+                    span: span.clone(),
                     inner: PatternKind::Tuple { tuple: tuple_pat },
                 };
                 let mut pattern = self.transform_pattern(pattern);
@@ -711,11 +778,13 @@ impl Transform<Type> for CaseSimplifyPass {
                     .into_iter()
                     .map(|(name, ty)| Expr {
                         ty: ty.clone(),
+                        span: span.clone(),
                         inner: ExprKind::Symbol { name: name.clone() },
                     })
                     .collect();
                 let tuple = Expr {
                     ty: ty.clone(),
+                    span: span.clone(),
                     inner: ExprKind::Tuple { tuple },
                 };
                 let cond = self.transform_expr(expr);
@@ -724,7 +793,12 @@ impl Transform<Type> for CaseSimplifyPass {
                     pattern: tuple_pat,
                     expr: Expr {
                         ty,
-                        inner: self.transform_case(cond.boxed(), vec![(pattern, tuple)]),
+                        span: cond.span.clone(),
+                        inner: self.transform_case(
+                            cond.span.clone(),
+                            cond.boxed(),
+                            vec![(pattern, tuple)],
+                        ),
                     },
                 }
             }
@@ -733,6 +807,7 @@ impl Transform<Type> for CaseSimplifyPass {
 
     fn transform_case(
         &mut self,
+        span: Span,
         cond: Box<TypedCoreExpr>,
         clauses: Vec<(TypedCorePattern, TypedCoreExpr)>,
     ) -> TypedCoreExprKind {
@@ -751,6 +826,7 @@ impl Transform<Type> for CaseSimplifyPass {
             binds: vec![Declaration::Val {
                 pattern: Pattern {
                     ty: condty.clone(),
+                    span: span.clone(),
                     inner: PatternKind::Variable {
                         name: condsym.clone(),
                     },
@@ -759,7 +835,7 @@ impl Transform<Type> for CaseSimplifyPass {
                 expr: *cond,
             }],
             ret: self
-                .match_compile(vec![(condty, condsym)], ty, clauses)
+                .match_compile(span, vec![(condty, condsym)], ty, clauses)
                 .boxed(),
         }
     }
@@ -777,7 +853,7 @@ impl WildcardToVariable {
 }
 
 impl Transform<Type> for WildcardToVariable {
-    fn transform_pat_wildcard(&mut self) -> TypedCorePatternKind {
+    fn transform_pat_wildcard(&mut self, _: Span) -> TypedCorePatternKind {
         PatternKind::Variable {
             name: self.gensym("_"),
         }

@@ -114,10 +114,16 @@ pub type UntypedCoreExprKind = CoreExprKind<Empty>;
 pub type TypedCoreExpr = CoreExpr<Type>;
 pub type TypedCoreExprKind = CoreExprKind<Type>;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Location {
     pub line: usize,
     pub column: usize,
+}
+
+impl Location {
+    pub fn new(line: usize, column: usize) -> Self {
+        Self { line, column }
+    }
 }
 
 pub type Span = Range<Location>;
@@ -125,6 +131,7 @@ pub type Span = Range<Location>;
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Annot<Ty, Inner> {
     pub ty: Ty,
+    pub span: Span,
     pub inner: Inner,
 }
 
@@ -132,9 +139,10 @@ pub type Expr<Ty, DE = DerivedExprKind<Ty>, DS = DerivedDeclaration<Ty>, DP = De
     Annot<Ty, ExprKind<Ty, DE, DS, DP>>;
 
 impl<T> Annot<Empty, T> {
-    pub fn new(inner: T) -> Self {
+    pub fn new(span: Span, inner: T) -> Self {
         Self {
             ty: Empty {},
+            span,
             inner,
         }
     }
@@ -349,6 +357,7 @@ impl<Ty> CoreExpr<Ty> {
     fn map_ty<Ty2>(self, f: &mut dyn FnMut(Ty) -> Ty2) -> CoreExpr<Ty2> {
         use crate::ast::ExprKind::*;
         let ty = f(self.ty);
+        let span = self.span;
         let inner = match self.inner {
             Binds { binds, ret } => Binds {
                 binds: binds.into_iter().map(|val| val.map_ty(f)).collect(),
@@ -398,7 +407,7 @@ impl<Ty> CoreExpr<Ty> {
             Literal { value } => Literal { value },
             D(d) => match d {},
         };
-        Expr { ty, inner }
+        Expr { ty, span, inner }
     }
 }
 
@@ -406,6 +415,7 @@ impl<Ty, DP> Pattern<Ty, DP> {
     fn map_ty<Ty2>(self, f: &mut dyn FnMut(Ty) -> Ty2) -> Pattern<Ty2, DP> {
         use PatternKind::*;
         let ty = f(self.ty);
+        let span = self.span;
         let inner = match self.inner {
             Constant { value } => Constant { value },
             Char { value } => Char { value },
@@ -420,7 +430,7 @@ impl<Ty, DP> Pattern<Ty, DP> {
             Wildcard {} => Wildcard {},
             D(d) => D(d),
         };
-        Pattern { ty, inner }
+        Pattern { ty, span, inner }
     }
 
     pub fn binds(&self) -> Vec<(&Symbol, &Ty)> {
