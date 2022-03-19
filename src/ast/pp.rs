@@ -174,6 +174,10 @@ impl<Ty: PP> PP for DerivedDeclaration<Ty> {
                 }
                 Ok(())
             }
+            Expr { expr } => {
+                expr.pp(w, indent)?;
+                Ok(())
+            }
         }
     }
 }
@@ -210,6 +214,9 @@ impl<Ty: fmt::Display> fmt::Display for DerivedDeclaration<Ty> {
                     write!(f, " {}", name)?;
                 }
                 Ok(())
+            }
+            Expr { expr } => {
+                write!(f, "{}", expr)
             }
         }
     }

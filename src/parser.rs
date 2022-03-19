@@ -122,6 +122,7 @@ impl Parser {
                 self.decl_val(),
                 self.decl_fun(),
                 self.decl_infix(),
+                self.decl_expr(),
             ))(i)
         }
     }
@@ -271,6 +272,13 @@ impl Parser {
                 i,
                 Declaration::D(DerivedDeclaration::Infix { priority, names }),
             ))
+        }
+    }
+
+    fn decl_expr(&self) -> impl Fn(Input) -> IResult<Input, UntypedDeclaration> + '_ {
+        move |i| {
+            let (i, expr) = self.expr()(i)?;
+            Ok((i, UntypedDeclaration::D(DerivedDeclaration::Expr { expr })))
         }
     }
 

@@ -161,5 +161,5 @@ not yet implemented
 
 * Program
     + [x] decl (`decl decl ...`)
-    + [ ] expr (`expr decl ...`)
+    + [x] expr (`expr decl ...`)
         - Note: toplevel expression `expr` should be treated as `val it = expr`

@@ -87,6 +87,9 @@ pub enum DerivedDeclaration<Ty> {
         priority: Option<u8>,
         names: Vec<Symbol>,
     },
+    Expr {
+        expr: Expr<Ty>,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

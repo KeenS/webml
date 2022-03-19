@@ -36,6 +36,7 @@ impl Desugar {
             LangItem { name, decl } => self.transform_langitem(name, *decl),
             D(DerivedDeclaration::Fun { name, clauses }) => Some(self.transform_fun(name, clauses)),
             D(DerivedDeclaration::Infix { .. }) => None,
+            D(DerivedDeclaration::Expr { expr }) => Some(self.transform_decl_expr(expr)),
         }
     }
 
@@ -120,6 +121,19 @@ impl Desugar {
             rec: true,
             pattern: Pattern::new(span, PatternKind::Variable { name }),
             expr: fun,
+        }
+    }
+
+    fn transform_decl_expr(&mut self, expr: UntypedExpr) -> UntypedCoreDeclaration {
+        Declaration::Val {
+            rec: false,
+            pattern: Pattern::new(
+                expr.span.clone(),
+                PatternKind::Variable {
+                    name: Symbol::new("it"),
+                },
+            ),
+            expr: self.transform_expr(expr),
         }
     }
 

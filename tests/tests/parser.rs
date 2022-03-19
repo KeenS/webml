@@ -2314,3 +2314,21 @@ fn parse_let_seq() {
         }])
     )
 }
+
+#[test]
+fn parse_toplevel_expr() {
+    let input = r#"x"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![Declaration::D(DerivedDeclaration::Expr {
+            expr: Expr {
+                ty: Empty {},
+                span: Location::new(1, 1)..Location::new(1, 2),
+                inner: ExprKind::Symbol {
+                    name: Symbol::new("x")
+                }
+            }
+        })])
+    )
+}
