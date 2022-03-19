@@ -96,11 +96,24 @@ impl Parser {
     pub fn top(&self) -> impl Fn(Input) -> IResult<Input, UntypedAst> + '_ {
         move |i| {
             let (i, _) = self.space0()(i)?;
-            let (i, tops) = separated_list0(self.space1(), self.decl())(i)?;
+            let (i, tops) = separated_list0(self.top_sep(), self.decl())(i)?;
             let (i, _) = self.space0()(i)?;
             Ok((i, AST(tops)))
         }
     }
+
+    fn top_sep(&self) -> impl Fn(Input) -> IResult<Input, ()> + '_ {
+        move |i| alt((self.top_sep_semi(), self.space1()))(i)
+    }
+    fn top_sep_semi(&self) -> impl Fn(Input) -> IResult<Input, ()> + '_ {
+        move |i| {
+            let (i, _) = self.space0()(i)?;
+            let (i, _) = tag(";")(i)?;
+            let (i, _) = self.space0()(i)?;
+            Ok((i, ()))
+        }
+    }
+
     fn decl(&self) -> impl Fn(Input) -> IResult<Input, UntypedDeclaration> + '_ {
         move |i| {
             alt((

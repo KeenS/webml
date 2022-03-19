@@ -890,6 +890,122 @@ fn parse_andalso_orelse() {
 }
 
 #[test]
+fn parse_val() {
+    let input = r#"val x = 1"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![Declaration::Val {
+            rec: false,
+            pattern: Pattern {
+                ty: Empty {},
+                span: Location::new(1, 5)..Location::new(1, 6),
+                inner: PatternKind::Variable {
+                    name: Symbol::new("x")
+                }
+            },
+            expr: Expr {
+                ty: Empty {},
+                span: Location::new(1, 9)..Location::new(1, 10),
+                inner: ExprKind::Literal {
+                    value: Literal::Int(1)
+                }
+            }
+        }])
+    )
+}
+
+#[test]
+fn parse_val_seq() {
+    let input = r#"val x = 1 val y = 2"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![
+            Declaration::Val {
+                rec: false,
+                pattern: Pattern {
+                    ty: Empty {},
+                    span: Location::new(1, 5)..Location::new(1, 6),
+                    inner: PatternKind::Variable {
+                        name: Symbol::new("x")
+                    }
+                },
+                expr: Expr {
+                    ty: Empty {},
+                    span: Location::new(1, 9)..Location::new(1, 10),
+                    inner: ExprKind::Literal {
+                        value: Literal::Int(1)
+                    }
+                }
+            },
+            Declaration::Val {
+                rec: false,
+                pattern: Pattern {
+                    ty: Empty {},
+                    span: Location::new(1, 15)..Location::new(1, 16),
+                    inner: PatternKind::Variable {
+                        name: Symbol::new("y")
+                    }
+                },
+                expr: Expr {
+                    ty: Empty {},
+                    span: Location::new(1, 19)..Location::new(1, 20),
+                    inner: ExprKind::Literal {
+                        value: Literal::Int(2)
+                    }
+                }
+            }
+        ])
+    )
+}
+
+#[test]
+fn parse_val_seq_semi() {
+    let input = r#"val x = 1;val y = 2"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![
+            Declaration::Val {
+                rec: false,
+                pattern: Pattern {
+                    ty: Empty {},
+                    span: Location::new(1, 5)..Location::new(1, 6),
+                    inner: PatternKind::Variable {
+                        name: Symbol::new("x")
+                    }
+                },
+                expr: Expr {
+                    ty: Empty {},
+                    span: Location::new(1, 9)..Location::new(1, 10),
+                    inner: ExprKind::Literal {
+                        value: Literal::Int(1)
+                    }
+                }
+            },
+            Declaration::Val {
+                rec: false,
+                pattern: Pattern {
+                    ty: Empty {},
+                    span: Location::new(1, 15)..Location::new(1, 16),
+                    inner: PatternKind::Variable {
+                        name: Symbol::new("y")
+                    }
+                },
+                expr: Expr {
+                    ty: Empty {},
+                    span: Location::new(1, 19)..Location::new(1, 20),
+                    inner: ExprKind::Literal {
+                        value: Literal::Int(2)
+                    }
+                }
+            }
+        ])
+    )
+}
+
+#[test]
 fn parse_datatype_single() {
     let input = r#"datatype hoge = Hoge"#;
     let ast = parse(input).unwrap();

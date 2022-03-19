@@ -43,9 +43,9 @@ Compiles only minimal subset of SML codes. The garbage collector is not complete
     + [ ] `exception`
     + [ ] `local ... in ... end`
     + [ ] `open ..`
-    + [ ] `decl ; decl`
+    + [x] `decl ; decl`
         - [x] `decl decl`
-        - [ ] `decl ; decl`
+        - [x] `decl ; decl`
     + [x] `infix`
     + [ ] `infixr`
     + [ ] `nofix`
