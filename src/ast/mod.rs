@@ -205,6 +205,14 @@ pub enum DerivedExprKind<Ty> {
         then: Box<Expr<Ty>>,
         else_: Box<Expr<Ty>>,
     },
+    AndAlso {
+        l: Box<Expr<Ty>>,
+        r: Box<Expr<Ty>>,
+    },
+    OrElse {
+        l: Box<Expr<Ty>>,
+        r: Box<Expr<Ty>>,
+    },
     String {
         value: Vec<u32>,
     },

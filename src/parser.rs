@@ -15,7 +15,7 @@ use std::collections::{BTreeMap, HashMap};
 
 static KEYWORDS: &[&str] = &[
     "val", "fun", "fn", "let", "in", "end", "if", "then", "else", "case", "of", "_", "datatype",
-    "op", "=>", "infix", "infixr",
+    "op", "=>", "infix", "infixr", "andalso", "orelse",
 ];
 
 static RESERVED: &[&str] = &["|", "=", "#"];
@@ -262,6 +262,40 @@ impl Parser {
     }
 
     fn expr(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
+        move |i| alt((self.expr_logicalbin(),))(i)
+    }
+
+    fn expr_logicalbin(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
+        move |i| {
+            let start = current_location(&i);
+            let (i, l) = self.expr0()(i)?;
+            let (i, (_, t)) = match tuple((self.space1(), alt((tag("andalso"), tag("orelse")))))(i)
+                as IResult<_, ((), Input)>
+            {
+                Ok(r) => r,
+                Err(_) => return Ok((i, l)),
+            };
+            let (i, _) = self.space1()(i)?;
+            let (i, r) = self.expr()(i)?;
+            let end = current_location(&i);
+            let kind = if *t == "andalso" {
+                DerivedExprKind::AndAlso {
+                    l: l.boxed(),
+                    r: r.boxed(),
+                }
+            } else {
+                DerivedExprKind::OrElse {
+                    l: l.boxed(),
+                    r: r.boxed(),
+                }
+            };
+
+            let inner = ExprKind::D(kind);
+            Ok((i, Expr::new(start..end, inner)))
+        }
+    }
+
+    fn expr0(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
         move |i| {
             alt((
                 self.expr_bind(),

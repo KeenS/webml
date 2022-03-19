@@ -160,6 +160,8 @@ impl Desugar {
             D(DerivedExprKind::If { cond, then, else_ }) => {
                 self.transform_if(span, cond, then, else_)
             }
+            D(DerivedExprKind::AndAlso { l, r }) => self.transform_andalso(span, l, r),
+            D(DerivedExprKind::OrElse { l, r }) => self.transform_orelse(span, l, r),
             D(DerivedExprKind::String { value }) => self.transform_string(span, value),
         };
         UntypedCoreExpr {
@@ -275,6 +277,46 @@ impl Desugar {
                 ),
             ],
         }
+    }
+
+    fn transform_andalso(
+        &mut self,
+        span: Span,
+        l: Box<UntypedExpr>,
+        r: Box<UntypedExpr>,
+    ) -> UntypedCoreExprKind {
+        self.transform_if(
+            span.clone(),
+            l,
+            r,
+            Box::new(Expr::new(
+                span,
+                ExprKind::Constructor {
+                    arg: None,
+                    name: Symbol::new("false"),
+                },
+            )),
+        )
+    }
+
+    fn transform_orelse(
+        &mut self,
+        span: Span,
+        l: Box<UntypedExpr>,
+        r: Box<UntypedExpr>,
+    ) -> UntypedCoreExprKind {
+        self.transform_if(
+            span.clone(),
+            l,
+            Box::new(Expr::new(
+                span,
+                ExprKind::Constructor {
+                    arg: None,
+                    name: Symbol::new("true"),
+                },
+            )),
+            r,
+        )
     }
 
     fn transform_case(

@@ -456,6 +456,16 @@ impl<Ty: PP> PP for DerivedExprKind<Ty> {
                 write!(w, "\n{}else ", ind)?;
                 else_.pp(w, indent + 4)?;
             }
+            AndAlso { l, r } => {
+                l.pp(w, indent)?;
+                write!(w, " andalso ")?;
+                r.pp(w, indent + 4)?;
+            }
+            OrElse { l, r } => {
+                l.pp(w, indent)?;
+                write!(w, " orelse ")?;
+                r.pp(w, indent + 4)?;
+            }
             String { value } => {
                 write!(w, "{:?}", value)?;
             }
@@ -478,6 +488,26 @@ impl<Ty: fmt::Display> fmt::Display for DerivedExprKind<Ty> {
                 writeln!(f, "if {:next$}", cond, next = next)?;
                 writeln!(f, "{}then {:next$}", ind, then, next = next)?;
                 write!(f, "{}else {:next$}", ind, else_, next = next)?;
+            }
+            AndAlso { l, r } => {
+                writeln!(
+                    f,
+                    "{:indent$} andalso {:next$}",
+                    l,
+                    r,
+                    indent = indent,
+                    next = next
+                )?;
+            }
+            OrElse { l, r } => {
+                writeln!(
+                    f,
+                    "{:indent$} orelse {:next$}",
+                    l,
+                    r,
+                    indent = indent,
+                    next = next
+                )?;
             }
             String { value } => {
                 write!(f, "{:?}", value)?;

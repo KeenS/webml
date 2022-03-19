@@ -728,6 +728,168 @@ fn parse_fn_unary() {
 }
 
 #[test]
+fn parse_andalso() {
+    let input = r#"val x = true andalso false"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![Declaration::Val {
+            rec: false,
+            pattern: Pattern {
+                ty: Empty {},
+                span: Location::new(1, 5)..Location::new(1, 6),
+                inner: PatternKind::Variable {
+                    name: Symbol::new("x"),
+                }
+            },
+            expr: Expr {
+                ty: Empty {},
+                span: Location::new(1, 9)..Location::new(1, 27),
+                inner: ExprKind::D(DerivedExprKind::AndAlso {
+                    l: Expr {
+                        ty: Empty {},
+                        span: Location::new(1, 9)..Location::new(1, 13),
+                        inner: ExprKind::Symbol {
+                            name: Symbol::new("true"),
+                        }
+                    }
+                    .boxed(),
+                    r: Expr {
+                        ty: Empty {},
+                        span: Location::new(1, 22)..Location::new(1, 27),
+                        inner: ExprKind::Symbol {
+                            name: Symbol::new("false"),
+                        }
+                    }
+                    .boxed()
+                })
+            }
+        }])
+    )
+}
+
+#[test]
+fn parse_orelse() {
+    let input = r#"val x = input orelse let val y = false in y end"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![Declaration::Val {
+            rec: false,
+            pattern: Pattern {
+                ty: Empty {},
+                span: Location::new(1, 5)..Location::new(1, 6),
+                inner: PatternKind::Variable {
+                    name: Symbol::new("x"),
+                }
+            },
+            expr: Expr {
+                ty: Empty {},
+                span: Location::new(1, 9)..Location::new(1, 48),
+                inner: ExprKind::D(DerivedExprKind::OrElse {
+                    l: Expr {
+                        ty: Empty {},
+                        span: Location::new(1, 9)..Location::new(1, 14),
+                        inner: ExprKind::Symbol {
+                            name: Symbol::new("input")
+                        }
+                    }
+                    .boxed(),
+                    r: Expr {
+                        ty: Empty {},
+                        span: Location::new(1, 22)..Location::new(1, 48),
+                        inner: ExprKind::Binds {
+                            binds: vec![Declaration::Val {
+                                rec: false,
+                                pattern: Pattern {
+                                    ty: Empty {},
+                                    span: Location::new(1, 30)..Location::new(1, 31),
+                                    inner: PatternKind::Variable {
+                                        name: Symbol::new("y")
+                                    }
+                                },
+                                expr: Expr {
+                                    ty: Empty {},
+                                    span: Location::new(1, 34)..Location::new(1, 39),
+                                    inner: ExprKind::Symbol {
+                                        name: Symbol::new("false")
+                                    }
+                                }
+                            }],
+                            ret: Expr {
+                                ty: Empty {},
+                                span: Location::new(1, 43)..Location::new(1, 44),
+                                inner: ExprKind::Symbol {
+                                    name: Symbol::new("y")
+                                }
+                            }
+                            .boxed()
+                        }
+                    }
+                    .boxed()
+                })
+            }
+        }])
+    )
+}
+
+#[test]
+fn parse_andalso_orelse() {
+    let input = r#"val x = true andalso false orelse true"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![Declaration::Val {
+            rec: false,
+            pattern: Pattern {
+                ty: Empty {},
+                span: Location::new(1, 5)..Location::new(1, 6),
+                inner: PatternKind::Variable {
+                    name: Symbol::new("x"),
+                }
+            },
+            expr: Expr {
+                ty: Empty {},
+                span: Location::new(1, 9)..Location::new(1, 39),
+                inner: ExprKind::D(DerivedExprKind::AndAlso {
+                    l: Expr {
+                        ty: Empty {},
+                        span: Location::new(1, 9)..Location::new(1, 13),
+                        inner: ExprKind::Symbol {
+                            name: Symbol::new("true"),
+                        }
+                    }
+                    .boxed(),
+                    r: Expr {
+                        ty: Empty {},
+                        span: Location::new(1, 22)..Location::new(1, 39),
+                        inner: ExprKind::D(DerivedExprKind::OrElse {
+                            l: Expr {
+                                ty: Empty {},
+                                span: Location::new(1, 22)..Location::new(1, 27),
+                                inner: ExprKind::Symbol {
+                                    name: Symbol::new("false"),
+                                }
+                            }
+                            .boxed(),
+                            r: Expr {
+                                ty: Empty {},
+                                span: Location::new(1, 35)..Location::new(1, 39),
+                                inner: ExprKind::Symbol {
+                                    name: Symbol::new("true"),
+                                }
+                            }
+                            .boxed()
+                        })
+                    }
+                    .boxed()
+                })
+            }
+        }])
+    )
+}
+
+#[test]
 fn parse_datatype_single() {
     let input = r#"datatype hoge = Hoge"#;
     let ast = parse(input).unwrap();

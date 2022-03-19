@@ -85,8 +85,8 @@ Compiles only minimal subset of SML codes. The garbage collector is not complete
         - [x] basic (`fn ident => expr`)
         - [ ] pattern (`fn pat => expr`)
         - [ ] multi-clause `fn pat => expr | pat => expr ...`
-    + [ ] `andalso`
-    + [ ] `orelse`
+    + [x] `andalso`
+    + [x] `orelse`
     + [x] `if .. then .. else`
     + [ ] `while .. do ..`
     + [x] `case .. of ..`
