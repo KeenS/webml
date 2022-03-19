@@ -466,6 +466,37 @@ impl<Ty: PP> PP for DerivedExprKind<Ty> {
                 write!(w, " orelse ")?;
                 r.pp(w, indent + 4)?;
             }
+            Seq { seq } => {
+                write!(w, "(")?;
+                inter_iter! {
+                    seq.iter(),
+                    write!(w, "; ")?,
+                    |e| => {
+                        e.pp(w, indent)?
+                    }
+                }
+                write!(w, ")")?;
+            }
+            BindSeq { binds, ret } => {
+                let ind = Self::nspaces(indent);
+                let nextind = Self::nspaces(indent + 4);
+                writeln!(w, "let")?;
+                for val in binds {
+                    val.pp(w, indent + 4)?;
+                    writeln!(w)?;
+                }
+                write!(w, "{}in\n{}", ind, nextind)?;
+                inter_iter! {
+                    ret.iter(),
+                    write!(w, ";\n")?,
+                    |e| => {
+                        write!(w, "{}", nextind)?;
+                        e.pp(w, indent)?;
+                        writeln!(w)?;
+                    }
+                }
+                write!(w, "\n{}end", ind)?;
+            }
             String { value } => {
                 write!(w, "{:?}", value)?;
             }
@@ -508,6 +539,34 @@ impl<Ty: fmt::Display> fmt::Display for DerivedExprKind<Ty> {
                     indent = indent,
                     next = next
                 )?;
+            }
+            Seq { seq } => {
+                write!(f, "(")?;
+                inter_iter! {
+                    seq.iter(),
+                    write!(f, "; ")?,
+                    |e| => {
+                        write!(f,"{:indent$}", e, indent = indent)?;
+                    }
+                }
+                write!(f, ")")?;
+            }
+            BindSeq { binds, ret } => {
+                let ind = nspaces(indent);
+                let nextind = nspaces(next);
+                writeln!(f, "let")?;
+                for val in binds {
+                    writeln!(f, "{:next$}", val, next = next)?;
+                }
+                writeln!(f, "{}in\n", ind)?;
+                inter_iter! {
+                    ret.iter(),
+                    write!(f, ";\n")?,
+                    |e| => {
+                        write!(f,"{}{:indent$}", nextind, e, indent = next)?;
+                    }
+                }
+                write!(f, "\n{}end", ind)?;
             }
             String { value } => {
                 write!(f, "{:?}", value)?;

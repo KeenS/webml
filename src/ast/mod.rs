@@ -213,6 +213,13 @@ pub enum DerivedExprKind<Ty> {
         l: Box<Expr<Ty>>,
         r: Box<Expr<Ty>>,
     },
+    Seq {
+        seq: Vec<Expr<Ty>>,
+    },
+    BindSeq {
+        binds: Vec<Declaration<Ty>>,
+        ret: Vec<Expr<Ty>>,
+    },
     String {
         value: Vec<u32>,
     },

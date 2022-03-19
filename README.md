@@ -68,11 +68,11 @@ Compiles only minimal subset of SML codes. The garbage collector is not complete
         - [x] 0-tuple
         - [ ] `#label`
     + [ ] list (`[expr, ..., expr]`)
-    + [ ] `(expr; ...; expr)`
+    + [x] `(expr; ...; expr)`
     + [x] paren (`(expr)`)
-    + [ ] `let .. in .. end`
+    + [x] `let .. in .. end`
         - [x] basic (`let decl ... in expr end`)
-        - [ ] derived (`let decl ... in expr; ...; expr end`)
+        - [x] derived (`let decl ... in expr; ...; expr end`)
     + [x] function application
     + [ ] infix operator
         - [x] L

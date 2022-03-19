@@ -324,6 +324,7 @@ impl Parser {
         move |i| {
             alt((
                 self.expr1_tuple(),
+                self.expr1_seq(),
                 self.expr1_unit(),
                 self.expr1_paren(),
                 self.expr1_float(),
@@ -347,13 +348,29 @@ impl Parser {
                 let (i, _) = tag("in")(i)?;
                 let (i, _) = self.space1()(i)?;
                 let (i, ret) = self.expr()(i)?;
-                let (i, _) = self.space1()(i)?;
-                let (i, _) = tag("end")(i)?;
-                let inner = ExprKind::Binds {
-                    binds,
-                    ret: ret.boxed(),
-                };
-                Ok((i, inner))
+                let mut separator = tuple((self.space0(), tag(";"), self.space0()));
+                match separator(i) {
+                    // let .. in e end
+                    Err(_) => {
+                        let (i, _) = self.space1()(i)?;
+                        let (i, _) = tag("end")(i)?;
+                        let inner = ExprKind::Binds {
+                            binds,
+                            ret: ret.boxed(),
+                        };
+                        Ok((i, inner))
+                    }
+                    // let .. in e1; ..; en end
+                    Ok((i, _)) => {
+                        let (i, es) = separated_list0(separator, self.expr())(i)?;
+                        let (i, _) = self.space1()(i)?;
+                        let (i, _) = tag("end")(i)?;
+                        let mut ret = vec![ret];
+                        ret.extend(es);
+                        let inner = ExprKind::D(DerivedExprKind::BindSeq { binds, ret });
+                        Ok((i, inner))
+                    }
+                }
             })
         })
     }
@@ -726,6 +743,22 @@ impl Parser {
             let mut es = es;
             es.push(e);
             Ok((i, ExprKind::Tuple { tuple: es }))
+        })
+    }
+
+    fn expr1_seq(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
+        with_position(move |i| {
+            let (i, _) = tag("(")(i)?;
+            let (i, _) = self.space0()(i)?;
+            let sep = tuple((self.space0(), tag(";"), self.space0()));
+            let (i, es) = many1(map(tuple((self.expr(), sep)), |(e, _)| e))(i)?;
+            let (i, e) = self.expr()(i)?;
+            let (i, _) = self.space0()(i)?;
+            let (i, _) = tag(")")(i)?;
+
+            let mut es = es;
+            es.push(e);
+            Ok((i, ExprKind::D(DerivedExprKind::Seq { seq: es })))
         })
     }
 

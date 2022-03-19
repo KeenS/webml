@@ -195,6 +195,88 @@ fn parse_unit() {
 }
 
 #[test]
+fn parse_tuple() {
+    let input = r#"val x = (x, y)"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![Declaration::Val {
+            rec: false,
+            pattern: Pattern {
+                ty: Empty {},
+                span: Location::new(1, 5)..Location::new(1, 6),
+                inner: PatternKind::Variable {
+                    name: Symbol::new("x"),
+                }
+            },
+            expr: Expr {
+                ty: Empty {},
+                span: Location::new(1, 9)..Location::new(1, 15),
+                inner: ExprKind::Tuple {
+                    tuple: vec![
+                        Expr {
+                            ty: Empty {},
+                            span: Location::new(1, 10)..Location::new(1, 11),
+                            inner: ExprKind::Symbol {
+                                name: Symbol::new("x")
+                            }
+                        },
+                        Expr {
+                            ty: Empty {},
+                            span: Location::new(1, 13)..Location::new(1, 14),
+                            inner: ExprKind::Symbol {
+                                name: Symbol::new("y")
+                            }
+                        }
+                    ]
+                }
+            }
+        }])
+    )
+}
+
+#[test]
+fn parse_seq() {
+    let input = r#"val x = (x; y)"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![Declaration::Val {
+            rec: false,
+            pattern: Pattern {
+                ty: Empty {},
+                span: Location::new(1, 5)..Location::new(1, 6),
+                inner: PatternKind::Variable {
+                    name: Symbol::new("x"),
+                }
+            },
+            expr: Expr {
+                ty: Empty {},
+                span: Location::new(1, 9)..Location::new(1, 15),
+                inner: ExprKind::D(DerivedExprKind::Seq {
+                    seq: vec![
+                        Expr {
+                            ty: Empty {},
+                            span: Location::new(1, 10)..Location::new(1, 11),
+                            inner: ExprKind::Symbol {
+                                name: Symbol::new("x")
+                            }
+                        },
+                        Expr {
+                            ty: Empty {},
+                            span: Location::new(1, 13)..Location::new(1, 14),
+                            inner: ExprKind::Symbol {
+                                name: Symbol::new("y")
+                            }
+                        }
+                    ]
+                })
+            }
+        }])
+    )
+}
+
+#[test]
 fn parse_apply() {
     let input = r#"val x = f x"#;
     let ast = parse(input).unwrap();
@@ -2121,6 +2203,114 @@ fn parse_langitem() {
                 name: Symbol::new("bool"),
                 constructors: vec![(Symbol::new("false"), None), (Symbol::new("true"), None),]
             })
+        }])
+    )
+}
+
+#[test]
+fn parse_let() {
+    let input = r#"val x = let val y = 1 in y end"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![Declaration::Val {
+            rec: false,
+            pattern: Pattern {
+                ty: Empty {},
+                span: Location::new(1, 5)..Location::new(1, 6),
+                inner: PatternKind::Variable {
+                    name: Symbol::new("x"),
+                }
+            },
+            expr: Expr {
+                ty: Empty {},
+                span: Location::new(1, 9)..Location::new(1, 31),
+                inner: ExprKind::Binds {
+                    binds: vec![Declaration::Val {
+                        rec: false,
+                        pattern: Pattern {
+                            ty: Empty {},
+                            span: Location::new(1, 17)..Location::new(1, 18),
+                            inner: PatternKind::Variable {
+                                name: Symbol::new("y")
+                            }
+                        },
+                        expr: Expr {
+                            ty: Empty {},
+                            span: Location::new(1, 21)..Location::new(1, 22),
+                            inner: ExprKind::Literal {
+                                value: Literal::Int(1)
+                            }
+                        }
+                    }],
+                    ret: Expr {
+                        ty: Empty {},
+                        span: Location::new(1, 26)..Location::new(1, 27),
+                        inner: ExprKind::Symbol {
+                            name: Symbol::new("y")
+                        }
+                    }
+                    .boxed()
+                }
+            }
+        }])
+    )
+}
+
+#[test]
+fn parse_let_seq() {
+    let input = r#"val x = let val y = 1 in y; y end"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![Declaration::Val {
+            rec: false,
+            pattern: Pattern {
+                ty: Empty {},
+                span: Location::new(1, 5)..Location::new(1, 6),
+                inner: PatternKind::Variable {
+                    name: Symbol::new("x"),
+                }
+            },
+            expr: Expr {
+                ty: Empty {},
+                span: Location::new(1, 9)..Location::new(1, 34),
+                inner: ExprKind::D(DerivedExprKind::BindSeq {
+                    binds: vec![Declaration::Val {
+                        rec: false,
+                        pattern: Pattern {
+                            ty: Empty {},
+                            span: Location::new(1, 17)..Location::new(1, 18),
+                            inner: PatternKind::Variable {
+                                name: Symbol::new("y")
+                            }
+                        },
+                        expr: Expr {
+                            ty: Empty {},
+                            span: Location::new(1, 21)..Location::new(1, 22),
+                            inner: ExprKind::Literal {
+                                value: Literal::Int(1)
+                            }
+                        }
+                    }],
+                    ret: vec![
+                        Expr {
+                            ty: Empty {},
+                            span: Location::new(1, 26)..Location::new(1, 27),
+                            inner: ExprKind::Symbol {
+                                name: Symbol::new("y")
+                            }
+                        },
+                        Expr {
+                            ty: Empty {},
+                            span: Location::new(1, 29)..Location::new(1, 30),
+                            inner: ExprKind::Symbol {
+                                name: Symbol::new("y")
+                            }
+                        }
+                    ]
+                })
+            }
         }])
     )
 }

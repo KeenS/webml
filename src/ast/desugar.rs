@@ -162,6 +162,8 @@ impl Desugar {
             }
             D(DerivedExprKind::AndAlso { l, r }) => self.transform_andalso(span, l, r),
             D(DerivedExprKind::OrElse { l, r }) => self.transform_orelse(span, l, r),
+            D(DerivedExprKind::Seq { seq }) => self.transform_seq(span, seq),
+            D(DerivedExprKind::BindSeq { binds, ret }) => self.transform_bind_seq(span, binds, ret),
             D(DerivedExprKind::String { value }) => self.transform_string(span, value),
         };
         UntypedCoreExpr {
@@ -317,6 +319,49 @@ impl Desugar {
             )),
             r,
         )
+    }
+
+    fn transform_seq(&mut self, _: Span, mut seq: Vec<UntypedExpr>) -> UntypedCoreExprKind {
+        assert!(!seq.is_empty());
+        let tail = seq.pop().expect("seq is not empty");
+        let tail = self.transform_expr(tail);
+        let seq = seq.into_iter().map(|e| self.transform_expr(e));
+        seq.rfold(tail, |acc, e| {
+            let span = e.span.start..acc.span.end;
+            Expr::new(
+                span.clone(),
+                ExprKind::Case {
+                    cond: e.boxed(),
+                    clauses: vec![(Pattern::new(span, PatternKind::Wildcard {}), acc)],
+                },
+            )
+        })
+        .inner
+    }
+
+    fn transform_bind_seq(
+        &mut self,
+        span: Span,
+        binds: Vec<UntypedDeclaration>,
+        seq: Vec<UntypedExpr>,
+    ) -> UntypedCoreExprKind {
+        assert!(!seq.is_empty());
+        let seq_start = seq[0].span.start;
+        let seq_end = seq[seq.len() - 1].span.end;
+
+        let expr = Expr {
+            ty: Empty {},
+            span,
+            inner: ExprKind::Binds {
+                binds,
+                ret: Box::new(Expr {
+                    ty: Empty {},
+                    span: seq_start..seq_end,
+                    inner: ExprKind::D(DerivedExprKind::Seq { seq }),
+                }),
+            },
+        };
+        self.transform_expr(expr).inner
     }
 
     fn transform_case(
