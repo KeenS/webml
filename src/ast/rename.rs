@@ -78,6 +78,29 @@ impl<'a> Scope<'a> {
         self.constructor_tables[pos].insert(symbol.clone(), new_id);
         symbol.1 = new_id;
     }
+    fn register_new_variable(&mut self, symbol: &Symbol) {
+        let pos = self.pos - 1;
+        let id = symbol.1;
+        let mut key = symbol.clone();
+        key.1 = 0;
+        self.variable_tables[pos].insert(key, id);
+    }
+
+    fn register_new_type(&mut self, symbol: &Symbol) {
+        let pos = self.pos - 1;
+        let id = symbol.1;
+        let mut key = symbol.clone();
+        key.1 = 0;
+        self.type_tables[pos].insert(key, id);
+    }
+
+    fn register_new_constructor(&mut self, symbol: &Symbol) {
+        let pos = self.pos - 1;
+        let id = symbol.1;
+        let mut key = symbol.clone();
+        key.1 = 0;
+        self.constructor_tables[pos].insert(key, id);
+    }
 
     fn is_constructor(&mut self, symbol: &Symbol) -> bool {
         let pos = self.pos;
@@ -178,6 +201,28 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
         } else {
             scope.traverse_expr(expr);
             scope.traverse_pattern(pattern);
+        }
+    }
+    fn traverse_local(
+        &mut self,
+        binds: &mut Vec<CoreDeclaration<Ty>>,
+        body: &mut Vec<CoreDeclaration<Ty>>,
+    ) {
+        let mut scope = self.new_scope();
+        for bind in binds {
+            scope.traverse_statement(bind);
+        }
+        for b in body {
+            scope.traverse_statement(b);
+            for sym in b.binds() {
+                self.register_new_variable(sym);
+            }
+            for ty in b.newtypes() {
+                self.register_new_type(ty);
+            }
+            for con in b.constructors() {
+                self.register_new_constructor(con);
+            }
         }
     }
 

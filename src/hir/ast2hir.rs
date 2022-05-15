@@ -231,6 +231,15 @@ impl AST2HIRPass {
                 }
             }
             ast::Declaration::LangItem { decl, .. } => self.conv_statement(*decl),
+            ast::Declaration::Local { binds, body } => {
+                let mut binds = binds
+                    .into_iter()
+                    .flat_map(|b| self.conv_statement(b))
+                    .collect::<Vec<_>>();
+                let body = body.into_iter().flat_map(|b| self.conv_statement(b));
+                binds.extend(body);
+                binds
+            }
             ast::Declaration::D(d) => match d {},
         }
     }

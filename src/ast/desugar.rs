@@ -34,6 +34,7 @@ impl Desugar {
             Datatype { name, constructors } => Some(self.transform_datatype(name, constructors)),
             Val { rec, pattern, expr } => Some(self.transform_val(rec, pattern, expr)),
             LangItem { name, decl } => self.transform_langitem(name, *decl),
+            Local { binds, body } => Some(self.transform_local(binds, body)),
             D(DerivedDeclaration::Fun { name, clauses }) => Some(self.transform_fun(name, clauses)),
             D(DerivedDeclaration::Infix { .. }) => None,
             D(DerivedDeclaration::Expr { expr }) => Some(self.transform_decl_expr(expr)),
@@ -149,6 +150,22 @@ impl Desugar {
             }),
             None => None,
         }
+    }
+
+    fn transform_local(
+        &mut self,
+        binds: Vec<UntypedDeclaration>,
+        body: Vec<UntypedDeclaration>,
+    ) -> UntypedCoreDeclaration {
+        let binds = binds
+            .into_iter()
+            .flat_map(|b| self.transform_statement(b))
+            .collect();
+        let body = body
+            .into_iter()
+            .flat_map(|b| self.transform_statement(b))
+            .collect();
+        Declaration::Local { binds, body }
     }
 
     fn transform_expr(&mut self, expr: UntypedExpr) -> UntypedCoreExpr {

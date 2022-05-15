@@ -325,6 +325,15 @@ impl TyEnv {
                 Ok(())
             }
             LangItem { decl, .. } => self.infer_statement(decl.as_ref()),
+            Local { binds, body } => {
+                for b in binds {
+                    self.infer_statement(b)?
+                }
+                for b in body {
+                    self.infer_statement(b)?
+                }
+                Ok(())
+            }
             D(d) => match *d {},
         }
     }

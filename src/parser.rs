@@ -122,6 +122,7 @@ impl Parser {
                 self.decl_val(),
                 self.decl_fun(),
                 self.decl_infix(),
+                self.decl_local(),
                 self.decl_expr(),
             ))(i)
         }
@@ -272,6 +273,24 @@ impl Parser {
                 i,
                 Declaration::D(DerivedDeclaration::Infix { priority, names }),
             ))
+        }
+    }
+
+    fn decl_local(&self) -> impl Fn(Input) -> IResult<Input, UntypedDeclaration> + '_ {
+        move |i| {
+            self.with_scope(|| {
+                let (i, _) = tag("let")(i)?;
+                let (i, _) = self.space1()(i)?;
+                let (i, binds) = separated_list0(self.top_sep(), self.decl())(i)?;
+                let (i, _) = self.space1()(i)?;
+                let (i, _) = tag("in")(i)?;
+                let (i, _) = self.space1()(i)?;
+                let (i, body) = separated_list0(self.top_sep(), self.decl())(i)?;
+                let (i, _) = self.space1()(i)?;
+                let (i, _) = tag("end")(i)?;
+                let inner = Declaration::Local { binds, body };
+                Ok((i, inner))
+            })
         }
     }
 
