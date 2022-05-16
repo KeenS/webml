@@ -208,12 +208,16 @@ impl<'a, Ty: Clone> util::Traverse<Ty> for Scope<'a> {
         binds: &mut Vec<CoreDeclaration<Ty>>,
         body: &mut Vec<CoreDeclaration<Ty>>,
     ) {
-        let mut scope = self.new_scope();
-        for bind in binds {
-            scope.traverse_statement(bind);
+        {
+            let mut scope = self.new_scope();
+            for bind in binds {
+                scope.traverse_statement(bind);
+            }
+            for b in body.iter_mut() {
+                scope.traverse_statement(b);
+            }
         }
         for b in body {
-            scope.traverse_statement(b);
             for sym in b.binds() {
                 self.register_new_variable(sym);
             }
