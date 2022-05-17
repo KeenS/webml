@@ -14,8 +14,8 @@ use std::cell::RefCell;
 use std::collections::{BTreeMap, HashMap};
 
 static KEYWORDS: &[&str] = &[
-    "val", "fun", "fn", "let", "in", "end", "if", "then", "else", "case", "of", "_", "datatype",
-    "op", "=>", "infix", "infixr", "andalso", "orelse",
+    "val", "fun", "local", "fn", "let", "in", "end", "if", "then", "else", "case", "of", "_",
+    "datatype", "op", "=>", "infix", "infixr", "andalso", "orelse",
 ];
 
 static RESERVED: &[&str] = &["|", "=", "#"];
@@ -279,13 +279,16 @@ impl Parser {
     fn decl_local(&self) -> impl Fn(Input) -> IResult<Input, UntypedDeclaration> + '_ {
         move |i| {
             self.with_scope(|| {
-                let (i, _) = tag("let")(i)?;
+                let (i, _) = tag("local")(i)?;
                 let (i, _) = self.space1()(i)?;
-                let (i, binds) = separated_list0(self.top_sep(), self.decl())(i)?;
+                let (i, binds) = separated_list1(self.space1(), self.decl())(i)?;
                 let (i, _) = self.space1()(i)?;
                 let (i, _) = tag("in")(i)?;
+                // FIXME: register infixes in outer scope
                 let (i, _) = self.space1()(i)?;
-                let (i, body) = separated_list0(self.top_sep(), self.decl())(i)?;
+                let (i, body) = self.decl()(i)?;
+                let body = vec![body];
+                // let (i, body) = separated_list1(self.space1(), self.decl())(i)?;
                 let (i, _) = self.space1()(i)?;
                 let (i, _) = tag("end")(i)?;
                 let inner = Declaration::Local { binds, body };

@@ -2332,3 +2332,48 @@ fn parse_toplevel_expr() {
         })])
     )
 }
+
+#[test]
+fn parse_local() {
+    let input = r#"local val x = 2 in val y = x end "#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![Declaration::Local {
+            binds: vec![Declaration::Val {
+                rec: false,
+                pattern: Pattern {
+                    ty: Empty {},
+                    span: Location::new(1, 11)..Location::new(1, 12),
+                    inner: PatternKind::Variable {
+                        name: Symbol::new("x")
+                    }
+                },
+                expr: Expr {
+                    ty: Empty {},
+                    span: Location::new(1, 15)..Location::new(1, 16),
+                    inner: ExprKind::Literal {
+                        value: Literal::Int(2)
+                    }
+                }
+            }],
+            body: vec![Declaration::Val {
+                rec: false,
+                pattern: Pattern {
+                    ty: Empty {},
+                    span: Location::new(1, 24)..Location::new(1, 25),
+                    inner: PatternKind::Variable {
+                        name: Symbol::new("y")
+                    }
+                },
+                expr: Expr {
+                    ty: Empty {},
+                    span: Location::new(1, 28)..Location::new(1, 29),
+                    inner: ExprKind::Symbol {
+                        name: Symbol::new("x")
+                    }
+                }
+            }]
+        }])
+    )
+}
