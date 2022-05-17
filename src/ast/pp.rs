@@ -75,6 +75,22 @@ impl<Ty: PP, DE: PP, DS: PP, DP: PP> PP for Declaration<Ty, DE, DS, DP> {
                 writeln!(w, "{}__langitem(({}))__", Self::nspaces(indent), name)?;
                 decl.pp(w, indent)
             }
+            Local { binds, body } => {
+                let ind = Self::nspaces(indent);
+                let nextind = Self::nspaces(indent + 4);
+                writeln!(w, "local")?;
+                for val in binds {
+                    val.pp(w, indent + 4)?;
+                    writeln!(w)?;
+                }
+                write!(w, "{}in\n{}", ind, nextind)?;
+                for val in body {
+                    val.pp(w, indent + 4)?;
+                    writeln!(w)?;
+                }
+                write!(w, "\n{}end", ind)?;
+                Ok(())
+            }
             D(d) => d.pp(w, indent),
         }
     }
@@ -117,6 +133,19 @@ impl<Ty: fmt::Display, DE: fmt::Display, DS: fmt::Display, DP: fmt::Display> fmt
             LangItem { name, decl } => {
                 writeln!(f, "{}__langitem(({}))__", nspaces(indent), name)?;
                 write!(f, "{:indent$}", decl, indent = indent)
+            }
+            Local { binds, body } => {
+                let ind = nspaces(indent);
+                writeln!(f, "local")?;
+                for val in binds {
+                    writeln!(f, "{:next$}", val, next = next)?;
+                }
+                writeln!(f, "{}in", ind)?;
+                for val in body {
+                    writeln!(f, "{:next$}", val, next = next)?;
+                }
+                write!(f, "\n{}end", ind)?;
+                Ok(())
             }
             D(d) => write!(f, "{:indent$}", d, indent = indent),
         }

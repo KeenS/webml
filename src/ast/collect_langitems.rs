@@ -42,6 +42,10 @@ impl Traverse<Empty> for Collector {
                 debug!("lang item annotated to useless decl");
                 return;
             }
+            Local { .. } => {
+                warn!("lang item annotated to local, which is invalid");
+                return;
+            }
             D(d) => match *d {},
         };
         if self.lang_items.insert(key, value).is_some() {

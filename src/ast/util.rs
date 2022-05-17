@@ -13,6 +13,7 @@ pub trait Traverse<Ty> {
             Datatype { name, constructors } => self.traverse_datatype(name, constructors),
             Val { rec, pattern, expr } => self.traverse_val(rec, pattern, expr),
             LangItem { decl, name } => self.traverse_langitem(name, decl),
+            Local { binds, body } => self.traverse_local(binds, body),
             D(_) => (),
         }
     }
@@ -37,6 +38,20 @@ pub trait Traverse<Ty> {
     fn traverse_langitem(&mut self, _name: &mut LangItem, decl: &mut CoreDeclaration<Ty>) {
         self.traverse_statement(decl);
     }
+
+    fn traverse_local(
+        &mut self,
+        binds: &mut Vec<CoreDeclaration<Ty>>,
+        body: &mut Vec<CoreDeclaration<Ty>>,
+    ) {
+        for decl in binds.iter_mut() {
+            self.traverse_statement(decl)
+        }
+        for decl in body.iter_mut() {
+            self.traverse_statement(decl)
+        }
+    }
+
     fn traverse_expr(&mut self, expr: &mut CoreExpr<Ty>) {
         use crate::ast::ExprKind::*;
         let span = expr.span.clone();
@@ -178,6 +193,7 @@ pub trait Transform<Ty> {
             Datatype { name, constructors } => self.transform_datatype(name, constructors),
             Val { rec, pattern, expr } => self.transform_val(rec, pattern, expr),
             LangItem { name, decl } => self.transform_langitem(name, *decl),
+            Local { binds, body } => self.transform_local(binds, body),
             D(d) => match d {},
         }
     }
@@ -214,6 +230,21 @@ pub trait Transform<Ty> {
         }
     }
 
+    fn transform_local(
+        &mut self,
+        binds: Vec<CoreDeclaration<Ty>>,
+        body: Vec<CoreDeclaration<Ty>>,
+    ) -> CoreDeclaration<Ty> {
+        let binds = binds
+            .into_iter()
+            .map(|b| self.transform_statement(b))
+            .collect();
+        let body = body
+            .into_iter()
+            .map(|b| self.transform_statement(b))
+            .collect();
+        CoreDeclaration::Local { binds, body }
+    }
     fn transform_expr(&mut self, mut expr: CoreExpr<Ty>) -> CoreExpr<Ty> {
         use crate::ast::ExprKind::*;
         let span = expr.span.clone();

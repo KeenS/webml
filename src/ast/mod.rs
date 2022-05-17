@@ -74,6 +74,10 @@ pub enum Declaration<
         name: LangItem,
         decl: Box<Declaration<Ty, DE, DS, DP>>,
     },
+    Local {
+        binds: Vec<Declaration<Ty, DE, DS, DP>>,
+        body: Vec<Declaration<Ty, DE, DS, DP>>,
+    },
     D(DS),
 }
 
@@ -366,7 +370,40 @@ impl<Ty> CoreDeclaration<Ty> {
                 name,
                 decl: Box::new(decl.map_ty(&mut *f)),
             },
+            Local { binds, body } => {
+                let binds = binds.into_iter().map(|b| b.map_ty(f)).collect();
+                let body = body.into_iter().map(|b| b.map_ty(f)).collect();
+                Local { binds, body }
+            }
             D(d) => match d {},
+        }
+    }
+
+    fn binds(&self) -> Vec<&Symbol> {
+        use Declaration::*;
+        match self {
+            Val { pattern, .. } => pattern.binds().into_iter().map(|(sym, _)| sym).collect(),
+            Local { body, .. } => body.into_iter().flat_map(|b| b.binds()).collect(),
+            Datatype { .. } | LangItem { .. } => Vec::new(),
+            D(d) => match *d {},
+        }
+    }
+    fn newtypes(&self) -> Vec<&Symbol> {
+        use Declaration::*;
+        match self {
+            Datatype { name, .. } => vec![name],
+            Local { body, .. } => body.into_iter().flat_map(|b| b.binds()).collect(),
+            Val { .. } | LangItem { .. } => Vec::new(),
+            D(d) => match *d {},
+        }
+    }
+    fn constructors(&self) -> Vec<&Symbol> {
+        use Declaration::*;
+        match self {
+            Datatype { constructors, .. } => constructors.iter().map(|(sym, _)| sym).collect(),
+            Local { body, .. } => body.into_iter().flat_map(|b| b.binds()).collect(),
+            Val { .. } | LangItem { .. } => Vec::new(),
+            D(d) => match *d {},
         }
     }
 }
