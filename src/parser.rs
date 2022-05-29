@@ -1157,22 +1157,7 @@ impl Parser {
     // require constructor to have arg for now.
     // constructor without arg is parsed as variable and
     // will be converted in later phases
-    fn pattern_constructor(&self) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
-        with_position(move |i| {
-            let (i, (_, name)) = self.symbol()(i)?;
-            let (i, _) = self.space0()(i)?;
-            let (i, arg) = self.pattern_atmic()(i)?;
-            Ok((
-                i,
-                PatternKind::Constructor {
-                    name,
-                    arg: Some(Box::new(arg)),
-                },
-            ))
-        })
-    }
-
-    // treat all of the infix operators and applications, i.e. sequeces of expressions
+    // treat all of the infix patterns and Constructors, i.e. sequeces of patterns
     fn pattern_infix_and_constructor(
         &self,
     ) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
