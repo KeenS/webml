@@ -449,18 +449,18 @@ fn parse_binopr() {
                 rec: false,
                 pattern: Pattern {
                     ty: Empty {},
-                    span: Location::new(1, 15)..Location::new(1, 16),
+                    span: Location::new(1, 16)..Location::new(1, 17),
                     inner: PatternKind::Variable {
                         name: Symbol::new("x"),
                     }
                 },
                 expr: Expr {
                     ty: Empty {},
-                    span: Location::new(1, 19)..Location::new(1, 24),
+                    span: Location::new(1, 20)..Location::new(1, 25),
                     inner: ExprKind::App {
                         fun: Expr {
                             ty: Empty {},
-                            span: Location::new(1, 21)..Location::new(1, 22),
+                            span: Location::new(1, 22)..Location::new(1, 23),
                             inner: ExprKind::Symbol {
                                 name: Symbol::new("+")
                             }
@@ -468,19 +468,19 @@ fn parse_binopr() {
                         .boxed(),
                         arg: Expr {
                             ty: Empty {},
-                            span: Location::new(1, 19)..Location::new(1, 24),
+                            span: Location::new(1, 20)..Location::new(1, 25),
                             inner: ExprKind::Tuple {
                                 tuple: vec![
                                     Expr {
                                         ty: Empty {},
-                                        span: Location::new(1, 19)..Location::new(1, 20),
+                                        span: Location::new(1, 20)..Location::new(1, 21),
                                         inner: ExprKind::Literal {
                                             value: Literal::Int(1),
                                         }
                                     },
                                     Expr {
                                         ty: Empty {},
-                                        span: Location::new(1, 23)..Location::new(1, 24),
+                                        span: Location::new(1, 24)..Location::new(1, 25),
                                         inner: ExprKind::Literal {
                                             value: Literal::Int(2),
                                         }
@@ -659,7 +659,7 @@ fn parse_binopr_assoc() {
     assert_eq!(
         ast,
         AST(vec![
-            Declaration::D(DerivedDeclaration::Infix {
+            Declaration::D(DerivedDeclaration::Infixr {
                 priority: Some(6),
                 names: vec![Symbol::new("+")],
             }),
@@ -698,7 +698,7 @@ fn parse_binopr_assoc() {
                                     },
                                     Expr {
                                         ty: Empty {},
-                                        span: Location::new(1, 20)..Location::new(1, 25),
+                                        span: Location::new(1, 24)..Location::new(1, 29),
                                         inner: ExprKind::App {
                                             fun: Expr {
                                                 ty: Empty {},
@@ -710,7 +710,7 @@ fn parse_binopr_assoc() {
                                             .boxed(),
                                             arg: Expr {
                                                 ty: Empty {},
-                                                span: Location::new(1, 20)..Location::new(1, 25),
+                                                span: Location::new(1, 24)..Location::new(1, 29),
                                                 inner: ExprKind::Tuple {
                                                     tuple: vec![
                                                         Expr {
