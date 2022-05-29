@@ -1212,7 +1212,7 @@ impl Parser {
     }
 
     // require constructor to have arg for now.
-    // constructor withouth arg is parsed as variable and
+    // constructor without arg is parsed as variable and
     // will be converted in later phases
     fn pattern_constructor(&self) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
         with_position(move |i| {
