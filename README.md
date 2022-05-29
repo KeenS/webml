@@ -48,7 +48,7 @@ Compiles only minimal subset of SML codes. The garbage collector is not complete
         - [x] `decl ; decl`
     + [x] `infix`
     + [x] `infixr`
-    + [ ] `nofix`
+    + [x] `nofix`
 * Expressions
     + [ ] special constant
         - [x] integer
