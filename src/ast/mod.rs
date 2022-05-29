@@ -237,6 +237,9 @@ pub enum DerivedExprKind<Ty> {
     String {
         value: Vec<u32>,
     },
+    Op {
+        name: Symbol,
+    },
 }
 
 pub type CorePattern<Ty> = Pattern<Ty, Nothing>;
@@ -277,6 +280,7 @@ pub enum PatternKind<Ty, DP = DerivedPatternKind> {
 #[derive(Debug, Clone, PartialEq)]
 pub enum DerivedPatternKind {
     String { value: Vec<u32> },
+    Op { name: Symbol },
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]

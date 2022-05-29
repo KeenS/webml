@@ -256,13 +256,14 @@ impl Parser {
 
     fn decl_funbind(&self) -> impl Fn(Input) -> IResult<Input, (Symbol, Vec<UntypedPattern>)> + '_ {
         move |i| {
+            // TODO: support infix ops
             map(
                 tuple((
                     self.op_symbol_eq(),
                     self.space0(),
                     separated_list0(self.space1(), self.pattern_atmic()),
                 )),
-                |((_, name), _, pats)| (name, pats),
+                |((_, _, name), _, pats)| (name, pats),
             )(i)
         }
     }
@@ -590,17 +591,14 @@ impl Parser {
     fn expr1_sym(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
         move |i| {
             // = is allowed to be used in expression exceptionally
-            map(
-                alt((
-                    self.symbol(),
-                    // perhups this is not needed
-                    map(tag("="), |i: Input| {
-                        let cur = current_location(&i);
-                        (cur..cur, Symbol::new(*i.fragment()))
-                    }),
-                )),
-                |(span, name)| Expr::new(span, ExprKind::Symbol { name }),
-            )(i)
+            map(self.op_symbol_eq(), |(span, op, name)| {
+                let kind = if op {
+                    ExprKind::D(DerivedExprKind::Op { name })
+                } else {
+                    ExprKind::Symbol { name }
+                };
+                Expr::new(span, kind)
+            })(i)
         }
     }
 
@@ -978,30 +976,45 @@ impl Parser {
         move |i| alt((self.symbol_alphanumeric(), self.symbol_symbolic()))(i)
     }
 
-    fn op_symbol_eq(&self) -> impl Fn(Input) -> IResult<Input, (Span, Symbol)> + '_ {
+    fn op_symbol_eq(&self) -> impl Fn(Input) -> IResult<Input, (Span, bool, Symbol)> + '_ {
         move |i| alt((self.op_symbol_alphanumeric(), self.op_symbol_symbolic_eq()))(i)
     }
 
-    fn op_symbol_alphanumeric(&self) -> impl Fn(Input) -> IResult<Input, (Span, Symbol)> + '_ {
+    fn op_symbol(&self) -> impl Fn(Input) -> IResult<Input, (Span, bool, Symbol)> + '_ {
+        move |i| alt((self.op_symbol_alphanumeric(), self.op_symbol_symbolic()))(i)
+    }
+
+    fn op_symbol_alphanumeric(
+        &self,
+    ) -> impl Fn(Input) -> IResult<Input, (Span, bool, Symbol)> + '_ {
         move |i| {
             let start = current_location(&i);
-            let (i, _) = opt(tuple((tag("op"), self.space1())))(i)?;
+            let (i, op) = opt(tuple((tag("op"), self.space1())))(i)?;
             let (i, (loc, sym)) = self.symbol_alphanumeric()(i)?;
-            Ok((i, (start..loc.end, sym)))
+            Ok((i, (start..loc.end, op.is_some(), sym)))
         }
     }
 
-    fn op_symbol_symbolic_eq(&self) -> impl Fn(Input) -> IResult<Input, (Span, Symbol)> + '_ {
+    fn op_symbol_symbolic(&self) -> impl Fn(Input) -> IResult<Input, (Span, bool, Symbol)> + '_ {
         move |i| {
             let start = current_location(&i);
-            let (i, _) = opt(tuple((tag("op"), self.space0())))(i)?;
+            let (i, op) = opt(tuple((tag("op"), self.space1())))(i)?;
+            let (i, (loc, sym)) = self.symbol_symbolic()(i)?;
+            Ok((i, (start..loc.end, op.is_some(), sym)))
+        }
+    }
+
+    fn op_symbol_symbolic_eq(&self) -> impl Fn(Input) -> IResult<Input, (Span, bool, Symbol)> + '_ {
+        move |i| {
+            let start = current_location(&i);
+            let (i, op) = opt(tuple((tag("op"), self.space0())))(i)?;
             let cur = current_location(&i);
             let (i, (loc, sym)) = alt((
                 self.symbol_symbolic(),
                 // FIXME: calculate correct span
                 value((cur..cur, Symbol::new("=")), tag("=")),
             ))(i)?;
-            Ok((i, (start..loc.end, sym)))
+            Ok((i, (start..loc.end, op.is_some(), sym)))
         }
     }
 
@@ -1205,7 +1218,8 @@ impl Parser {
                     E(e) => e,
                     App { span, f, arg } => {
                         let name = match convert(*f).inner {
-                            PatternKind::Variable { name } => name,
+                            PatternKind::Variable { name }
+                            | PatternKind::D(DerivedPatternKind::Op { name }) => name,
                             _ => panic!("non symbol infix operator"),
                         };
                         let arg = convert(*arg);
@@ -1240,8 +1254,13 @@ impl Parser {
 
     fn pattern_var(&self) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
         move |i| {
-            map(self.symbol(), |(span, name)| {
-                Pattern::new(span, PatternKind::Variable { name })
+            map(self.op_symbol(), |(span, op, name)| {
+                let kind = if op {
+                    PatternKind::D(DerivedPatternKind::Op { name })
+                } else {
+                    PatternKind::Variable { name }
+                };
+                Pattern::new(span, kind)
             })(i)
         }
     }
