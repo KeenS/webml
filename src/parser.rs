@@ -144,7 +144,6 @@ impl Parser {
                 self.decl_val(),
                 self.decl_fun(),
                 self.decl_infix(),
-                self.decl_infixr(),
                 self.decl_nofix(),
                 self.decl_local(),
                 self.decl_expr(),
@@ -282,51 +281,37 @@ impl Parser {
 
     fn decl_infix(&self) -> impl Fn(Input) -> IResult<Input, UntypedDeclaration> + '_ {
         move |i| {
-            let (i, _) = tag("infix")(i)?;
+            let (i, decl) = alt((tag("infix"), tag("infixr")))(i)?;
             let (i, _) = self.space1()(i)?;
             let (i, priority) = opt(digit1)(i)?;
             let (i, _) = self.space1()(i)?;
             let (i, names) = separated_list0(self.space1(), self.symbol_eq())(i)?;
-            let names = names.into_iter().map(|(_, name)| name).collect::<Vec<_>>();
-            let names_with_fixity = names
-                .iter()
-                .cloned()
-                .map(|name| (Fixity::Left, name))
-                .collect::<Vec<_>>();
             let priority = priority.map(|s| {
                 s.parse()
                     .expect("internal error: falied to parse digits as integer")
             });
-            self.new_infix_op(priority, names_with_fixity);
-            Ok((
-                i,
-                Declaration::D(DerivedDeclaration::Infix { priority, names }),
-            ))
-        }
-    }
-
-    fn decl_infixr(&self) -> impl Fn(Input) -> IResult<Input, UntypedDeclaration> + '_ {
-        move |i| {
-            let (i, _) = tag("infixr")(i)?;
-            let (i, _) = self.space1()(i)?;
-            let (i, priority) = opt(digit1)(i)?;
-            let (i, _) = self.space1()(i)?;
-            let (i, names) = separated_list0(self.space1(), self.symbol_eq())(i)?;
             let names = names.into_iter().map(|(_, name)| name).collect::<Vec<_>>();
+            let fixity;
+            let d;
+            if *decl == "infix" {
+                fixity = Fixity::Left;
+                d = DerivedDeclaration::Infix {
+                    priority,
+                    names: names.clone(),
+                };
+            } else {
+                fixity = Fixity::Right;
+                d = DerivedDeclaration::Infixr {
+                    priority,
+                    names: names.clone(),
+                };
+            }
             let names_with_fixity = names
-                .iter()
-                .cloned()
-                .map(|name| (Fixity::Right, name))
+                .into_iter()
+                .map(|name| (fixity, name))
                 .collect::<Vec<_>>();
-            let priority = priority.map(|s| {
-                s.parse()
-                    .expect("internal error: falied to parse digits as integer")
-            });
             self.new_infix_op(priority, names_with_fixity);
-            Ok((
-                i,
-                Declaration::D(DerivedDeclaration::Infixr { priority, names }),
-            ))
+            Ok((i, Declaration::D(d)))
         }
     }
 
