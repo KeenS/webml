@@ -108,7 +108,7 @@ Compiles only minimal subset of SML codes. The garbage collector is not complete
     + [ ] list
     + [x] paren
     + [x] Constructor
-    + [ ] infix
+    + [x] infix
     + [ ] typed (`pat : ty`)
     + [ ] layerd (`ident as pat`)
 * Type
