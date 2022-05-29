@@ -61,7 +61,7 @@ Compiles only minimal subset of SML codes. The garbage collector is not complete
         - [x] char
         - [x] string
     + [x] value identifier
-    + [ ] `op`
+    + [x] `op`
     + [ ] record
         - [ ] basic (`{ label = expr , ...}`)
         - [x] tuple
@@ -98,7 +98,7 @@ Compiles only minimal subset of SML codes. The garbage collector is not complete
         - [x] char
         - [x] string
     + [x]  value identifier
-    + [ ] `op`
+    + [x] `op`
     + [ ] record
         - [ ] basic (`{ label = pat , ...}`)
         - [ ] wildcard (`...`)
