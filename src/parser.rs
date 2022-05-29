@@ -1085,13 +1085,7 @@ impl Parser {
     }
 
     fn pattern(&self) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
-        move |i| {
-            alt((
-                //                self.pattern_infix(),
-                self.pattern_constructor(),
-                self.pattern_atmic(),
-            ))(i)
-        }
+        move |i| alt((self.pattern_infix_and_constructor(), self.pattern_atmic()))(i)
     }
 
     fn pattern_atmic(&self) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
@@ -1178,46 +1172,76 @@ impl Parser {
         })
     }
 
-    // // treat all of the infix operators and applications, i.e. sequeces of expressions
-    // fn pattern_infix_and_constructor(
-    //     &self,
-    // ) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
-    //     move |i| {
-    //         // TODO: support 1+1
-    //         let (i, mixed) = many1(map(
-    //             tuple((self.space0(), self.pattern_atmic())),
-    //             |(_, e)| e,
-    //         ))(i)?;
-    //     }
-    // }
-
-    // fn pattern_infix(&self) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
-    //     with_position(move |i| {
-    //         let start = current_location(&i);
-    //         let (i, p1) = self.pattern_atmic()(i)?;
-    //         let (i, _) = self.space0()(i)?;
-    //         let (i, (_, op)) = self.symbol()(i)?;
-    //         let (i, _) = self.space0()(i)?;
-    //         let (i, p2) = self.pattern_atmic()(i)?;
-    //         let end = current_location(&i);
-    //         let span = start..end;
-    //         Ok((
-    //             i,
-    //             PatternKind::Constructor {
-    //                 name: op,
-    //                 arg: Some(
-    //                     Pattern::new(
-    //                         span,
-    //                         PatternKind::Tuple {
-    //                             tuple: vec![p1, p2],
-    //                         },
-    //                     )
-    //                     .boxed(),
-    //                 ),
-    //             },
-    //         ))
-    //     })
-    // }
+    // treat all of the infix operators and applications, i.e. sequeces of expressions
+    fn pattern_infix_and_constructor(
+        &self,
+    ) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
+        move |i| {
+            // TODO: support 1+1
+            let (i, mixed) = many1(map(
+                tuple((self.space0(), self.pattern_atmic())),
+                |(_, e)| e,
+            ))(i)?;
+            // find infixes
+            let mixed = mixed
+                .into_iter()
+                .map(|mut e| match e.inner {
+                    PatternKind::Variable { name } => {
+                        for (f, table) in self.get_table() {
+                            for (fixity, op) in table {
+                                if name == op {
+                                    return infix_tree::Input::Fix(fixity, e.span, f, name);
+                                }
+                            }
+                        }
+                        e.inner = PatternKind::Variable { name };
+                        infix_tree::Input::E(e)
+                    }
+                    inner => {
+                        e.inner = inner;
+                        infix_tree::Input::E(e)
+                    }
+                })
+                .collect::<Vec<_>>();
+            let tree = infix_tree::parse(mixed);
+            fn convert(tree: infix_tree::Tree<UntypedPattern>) -> UntypedPattern {
+                use infix_tree::Tree::*;
+                match tree {
+                    E(e) => e,
+                    App { span, f, arg } => {
+                        let name = match convert(*f).inner {
+                            PatternKind::Variable { name } => name,
+                            _ => panic!("non symbol infix operator"),
+                        };
+                        let arg = convert(*arg);
+                        Pattern::new(
+                            span,
+                            PatternKind::Constructor {
+                                name,
+                                arg: Some(arg.boxed()),
+                            },
+                        )
+                    }
+                    Op { span, op, l, r } => {
+                        let l = convert(*l);
+                        let r = convert(*r);
+                        Pattern::new(
+                            span.clone(),
+                            PatternKind::Constructor {
+                                name: op.1,
+                                arg: Some(
+                                    Pattern::new(span, PatternKind::Tuple { tuple: vec![l, r] })
+                                        .boxed(),
+                                ),
+                            },
+                        )
+                    }
+                    Fix(_, _, _, _) => panic!("unhandled fix"),
+                }
+            }
+            Ok((i, convert(tree)))
+        }
+    }
 
     fn pattern_var(&self) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
         move |i| {
