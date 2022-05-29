@@ -498,7 +498,7 @@ fn parse_binopr() {
 
 #[test]
 fn parse_nofix() {
-    let input = r#"infix 6 + nofix + val x = +(1, 2)"#;
+    let input = r#"infix 6 + nonfix + val x = +(1, 2)"#;
     let ast = parse(input).unwrap();
     assert_eq!(
         ast,
@@ -507,25 +507,25 @@ fn parse_nofix() {
                 priority: Some(6),
                 names: vec![Symbol::new("+")],
             }),
-            Declaration::D(DerivedDeclaration::Nofix {
+            Declaration::D(DerivedDeclaration::Nonfix {
                 names: vec![Symbol::new("+")],
             }),
             Declaration::Val {
                 rec: false,
                 pattern: Pattern {
                     ty: Empty {},
-                    span: Location::new(1, 23)..Location::new(1, 24),
+                    span: Location::new(1, 24)..Location::new(1, 25),
                     inner: PatternKind::Variable {
                         name: Symbol::new("x"),
                     }
                 },
                 expr: Expr {
                     ty: Empty {},
-                    span: Location::new(1, 27)..Location::new(1, 34),
+                    span: Location::new(1, 28)..Location::new(1, 35),
                     inner: ExprKind::App {
                         fun: Expr {
                             ty: Empty {},
-                            span: Location::new(1, 27)..Location::new(1, 28),
+                            span: Location::new(1, 28)..Location::new(1, 29),
                             inner: ExprKind::Symbol {
                                 name: Symbol::new("+")
                             }
@@ -533,19 +533,19 @@ fn parse_nofix() {
                         .boxed(),
                         arg: Expr {
                             ty: Empty {},
-                            span: Location::new(1, 28)..Location::new(1, 34),
+                            span: Location::new(1, 29)..Location::new(1, 35),
                             inner: ExprKind::Tuple {
                                 tuple: vec![
                                     Expr {
                                         ty: Empty {},
-                                        span: Location::new(1, 29)..Location::new(1, 30),
+                                        span: Location::new(1, 30)..Location::new(1, 31),
                                         inner: ExprKind::Literal {
                                             value: Literal::Int(1),
                                         }
                                     },
                                     Expr {
                                         ty: Empty {},
-                                        span: Location::new(1, 32)..Location::new(1, 33),
+                                        span: Location::new(1, 33)..Location::new(1, 34),
                                         inner: ExprKind::Literal {
                                             value: Literal::Int(2),
                                         }

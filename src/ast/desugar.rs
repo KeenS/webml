@@ -39,7 +39,7 @@ impl Desugar {
             D(
                 DerivedDeclaration::Infix { .. }
                 | DerivedDeclaration::Infixr { .. }
-                | DerivedDeclaration::Nofix { .. },
+                | DerivedDeclaration::Nonfix { .. },
             ) => None,
             D(DerivedDeclaration::Expr { expr }) => Some(self.transform_decl_expr(expr)),
         }

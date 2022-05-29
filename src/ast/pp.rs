@@ -214,8 +214,8 @@ impl<Ty: PP> PP for DerivedDeclaration<Ty> {
                 }
                 Ok(())
             }
-            Nofix { names } => {
-                write!(w, "nofix")?;
+            Nonfix { names } => {
+                write!(w, "nonfix")?;
                 for name in names {
                     write!(w, " ")?;
                     name.pp(w, indent)?;
@@ -273,8 +273,8 @@ impl<Ty: fmt::Display> fmt::Display for DerivedDeclaration<Ty> {
                 }
                 Ok(())
             }
-            Nofix { names } => {
-                write!(f, "nofix")?;
+            Nonfix { names } => {
+                write!(f, "nonfix")?;
                 for name in names {
                     write!(f, " {}", name)?;
                 }

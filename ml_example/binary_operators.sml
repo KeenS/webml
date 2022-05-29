@@ -6,3 +6,4 @@ val e = 5 > 6
 val f = 7 >= 8
 val g = 9 < 10
 val h = 11 <= 12
+val i = op+(1,op*(2, 3))
