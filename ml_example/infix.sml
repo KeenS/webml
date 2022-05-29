@@ -13,3 +13,14 @@ in
 end
 
 val z = sub (2, 3)
+
+datatype intlist = :: of int * intlist | nil
+infixr 7 ::
+
+val list = 1 :: 2 :: 3 :: nil
+val b = case list of
+            1 :: 2 :: 3 :: nil => print "true\n"
+         | _ => print "false\n"
+nonfix add
+
+val a = add(1, 2)

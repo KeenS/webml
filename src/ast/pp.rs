@@ -203,6 +203,25 @@ impl<Ty: PP> PP for DerivedDeclaration<Ty> {
                 }
                 Ok(())
             }
+            Infixr { priority, names } => {
+                write!(w, "infixr")?;
+                if let Some(p) = priority {
+                    write!(w, " {}", p)?;
+                }
+                for name in names {
+                    write!(w, " ")?;
+                    name.pp(w, indent)?;
+                }
+                Ok(())
+            }
+            Nonfix { names } => {
+                write!(w, "nonfix")?;
+                for name in names {
+                    write!(w, " ")?;
+                    name.pp(w, indent)?;
+                }
+                Ok(())
+            }
             Expr { expr } => {
                 expr.pp(w, indent)?;
                 Ok(())
@@ -239,6 +258,23 @@ impl<Ty: fmt::Display> fmt::Display for DerivedDeclaration<Ty> {
                 if let Some(p) = priority {
                     write!(f, " {}", p)?;
                 }
+                for name in names {
+                    write!(f, " {}", name)?;
+                }
+                Ok(())
+            }
+            Infixr { priority, names } => {
+                write!(f, "infixr")?;
+                if let Some(p) = priority {
+                    write!(f, " {}", p)?;
+                }
+                for name in names {
+                    write!(f, " {}", name)?;
+                }
+                Ok(())
+            }
+            Nonfix { names } => {
+                write!(f, "nonfix")?;
                 for name in names {
                     write!(f, " {}", name)?;
                 }
@@ -536,6 +572,9 @@ impl<Ty: PP> PP for DerivedExprKind<Ty> {
             String { value } => {
                 write!(w, "{:?}", value)?;
             }
+            Op { name } => {
+                write!(w, "op {:indent$}", name, indent = indent)?;
+            }
         }
         Ok(())
     }
@@ -606,6 +645,9 @@ impl<Ty: fmt::Display> fmt::Display for DerivedExprKind<Ty> {
             }
             String { value } => {
                 write!(f, "{:?}", value)?;
+            }
+            Op { name } => {
+                write!(f, "op {:indent$}", name, indent = indent)?;
             }
         }
         Ok(())
@@ -704,6 +746,9 @@ impl PP for DerivedPatternKind {
                     .map(|&u| char::from_u32(u).unwrap())
                     .collect::<String>()
             ),
+            DerivedPatternKind::Op { name } => {
+                write!(w, "{}", name)
+            }
         }
     }
 }
@@ -719,6 +764,9 @@ impl fmt::Display for DerivedPatternKind {
                     .map(|&u| char::from_u32(u).unwrap())
                     .collect::<String>()
             ),
+            DerivedPatternKind::Op { name } => {
+                write!(f, "{}", name)
+            }
         }
     }
 }

@@ -47,8 +47,8 @@ Compiles only minimal subset of SML codes. The garbage collector is not complete
         - [x] `decl decl`
         - [x] `decl ; decl`
     + [x] `infix`
-    + [ ] `infixr`
-    + [ ] `nofix`
+    + [x] `infixr`
+    + [x] `nonfix`
 * Expressions
     + [ ] special constant
         - [x] integer
@@ -61,7 +61,7 @@ Compiles only minimal subset of SML codes. The garbage collector is not complete
         - [x] char
         - [x] string
     + [x] value identifier
-    + [ ] `op`
+    + [x] `op`
     + [ ] record
         - [ ] basic (`{ label = expr , ...}`)
         - [x] tuple
@@ -74,9 +74,9 @@ Compiles only minimal subset of SML codes. The garbage collector is not complete
         - [x] basic (`let decl ... in expr end`)
         - [x] derived (`let decl ... in expr; ...; expr end`)
     + [x] function application
-    + [ ] infix operator
+    + [x] infix operator
         - [x] L
-        - [ ] R
+        - [x] R
     + [ ] typed (`exp : ty`)
     + [ ] exception
         - [ ] `handle`
@@ -98,7 +98,7 @@ Compiles only minimal subset of SML codes. The garbage collector is not complete
         - [x] char
         - [x] string
     + [x]  value identifier
-    + [ ] `op`
+    + [x] `op`
     + [ ] record
         - [ ] basic (`{ label = pat , ...}`)
         - [ ] wildcard (`...`)
@@ -108,7 +108,7 @@ Compiles only minimal subset of SML codes. The garbage collector is not complete
     + [ ] list
     + [x] paren
     + [x] Constructor
-    + [ ] infix
+    + [x] infix
     + [ ] typed (`pat : ty`)
     + [ ] layerd (`ident as pat`)
 * Type

@@ -91,6 +91,13 @@ pub enum DerivedDeclaration<Ty> {
         priority: Option<u8>,
         names: Vec<Symbol>,
     },
+    Infixr {
+        priority: Option<u8>,
+        names: Vec<Symbol>,
+    },
+    Nonfix {
+        names: Vec<Symbol>,
+    },
     Expr {
         expr: Expr<Ty>,
     },
@@ -230,6 +237,9 @@ pub enum DerivedExprKind<Ty> {
     String {
         value: Vec<u32>,
     },
+    Op {
+        name: Symbol,
+    },
 }
 
 pub type CorePattern<Ty> = Pattern<Ty, Nothing>;
@@ -270,6 +280,7 @@ pub enum PatternKind<Ty, DP = DerivedPatternKind> {
 #[derive(Debug, Clone, PartialEq)]
 pub enum DerivedPatternKind {
     String { value: Vec<u32> },
+    Op { name: Symbol },
 }
 
 #[derive(Debug, Clone, PartialEq, Default)]
@@ -335,6 +346,16 @@ pub enum BIF {
     LeInt,
     LeReal,
     LeChar,
+}
+
+pub trait HaveLocation {
+    fn span(&self) -> Span;
+}
+
+impl<Ty, T> HaveLocation for Annot<Ty, T> {
+    fn span(&self) -> Span {
+        self.span.clone()
+    }
 }
 
 impl<Ty, Inner> Annot<Ty, Inner> {

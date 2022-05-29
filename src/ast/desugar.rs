@@ -36,7 +36,11 @@ impl Desugar {
             LangItem { name, decl } => self.transform_langitem(name, *decl),
             Local { binds, body } => Some(self.transform_local(binds, body)),
             D(DerivedDeclaration::Fun { name, clauses }) => Some(self.transform_fun(name, clauses)),
-            D(DerivedDeclaration::Infix { .. }) => None,
+            D(
+                DerivedDeclaration::Infix { .. }
+                | DerivedDeclaration::Infixr { .. }
+                | DerivedDeclaration::Nonfix { .. },
+            ) => None,
             D(DerivedDeclaration::Expr { expr }) => Some(self.transform_decl_expr(expr)),
         }
     }
@@ -196,6 +200,7 @@ impl Desugar {
             D(DerivedExprKind::Seq { seq }) => self.transform_seq(span, seq),
             D(DerivedExprKind::BindSeq { binds, ret }) => self.transform_bind_seq(span, binds, ret),
             D(DerivedExprKind::String { value }) => self.transform_string(span, value),
+            D(DerivedExprKind::Op { name }) => self.transform_op(span, name),
         };
         UntypedCoreExpr {
             ty: expr.ty,
@@ -465,6 +470,10 @@ impl Desugar {
             .inner
     }
 
+    fn transform_op(&mut self, _: Span, name: Symbol) -> UntypedCoreExprKind {
+        ExprKind::Symbol { name }
+    }
+
     fn transform_pattern(&mut self, pattern: UntypedPattern) -> UntypedCorePattern {
         use PatternKind::*;
         let span = pattern.span;
@@ -509,6 +518,7 @@ impl Desugar {
                     .rfold(empty, |s, c| cons(span.clone(), s, c))
                     .inner
             }
+            D(DerivedPatternKind::Op { name }) => UntypedCorePatternKind::Variable { name },
         };
         UntypedCorePattern::new(span, inner)
     }

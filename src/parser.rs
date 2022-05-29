@@ -1,6 +1,7 @@
 use crate::pass::Pass;
 use crate::prim::*;
 use crate::{ast::*, Config};
+use log::warn;
 use nom::branch::alt;
 use nom::bytes::complete::tag;
 use nom::character::complete::{alphanumeric1, digit1, multispace1};
@@ -11,17 +12,24 @@ use nom::sequence::{preceded, terminated, tuple};
 use nom::{IResult, InputIter, InputTake};
 use nom_locate::LocatedSpan;
 use std::cell::RefCell;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 static KEYWORDS: &[&str] = &[
     "val", "fun", "local", "fn", "let", "in", "end", "if", "then", "else", "case", "of", "_",
-    "datatype", "op", "=>", "infix", "infixr", "andalso", "orelse",
+    "datatype", "op", "=>", "infix", "infixr", "nonfix", "andalso", "orelse",
 ];
 
 static RESERVED: &[&str] = &["|", "=", "#"];
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum Fixity {
+    Left,
+    Right,
+}
+
 pub struct Parser {
-    infixes: RefCell<Vec<BTreeMap<u8, Vec<Symbol>>>>,
+    infixes: RefCell<Vec<BTreeMap<u8, Vec<(Fixity, Symbol)>>>>,
+    nonfixes: RefCell<Vec<HashSet<Symbol>>>,
 }
 
 type Input<'a> = LocatedSpan<&'a str>;
@@ -48,13 +56,15 @@ where
 impl Parser {
     fn with_scope<R>(&self, f: impl FnOnce() -> R) -> R {
         self.infixes.borrow_mut().push(BTreeMap::default());
+        self.nonfixes.borrow_mut().push(HashSet::default());
         let r = f();
         self.infixes.borrow_mut().pop();
+        self.nonfixes.borrow_mut().pop();
         r
     }
 
     // TODO: support let scopes
-    fn new_infix_op(&self, priority: Option<u8>, mut names: Vec<Symbol>) {
+    fn new_infix_op(&self, priority: Option<u8>, mut names: Vec<(Fixity, Symbol)>) {
         let priority = priority.unwrap_or(0);
         let mut infixes = self.infixes.borrow_mut();
         let len = infixes.len();
@@ -64,21 +74,32 @@ impl Parser {
             .append(&mut names)
     }
 
-    fn get_table(&self) -> BTreeMap<u8, Vec<Symbol>> {
+    fn new_nonfix_op(&self, names: Vec<Symbol>) {
+        let mut nonfixes = self.nonfixes.borrow_mut();
+        let len = nonfixes.len();
+        nonfixes[len - 1].extend(names);
+    }
+
+    fn get_table(&self) -> BTreeMap<u8, Vec<(Fixity, Symbol)>> {
+        let nonfix = |name| self.nonfixes.borrow().iter().any(|set| set.contains(name));
         self.infixes
             .borrow()
             .iter()
             .fold(HashMap::new(), |mut acc, map| {
                 for (&priority, names) in map {
-                    for name in names {
-                        acc.insert(name, priority);
+                    for (fixity, name) in names {
+                        if !nonfix(&name) {
+                            acc.insert(name, (fixity, priority));
+                        }
                     }
                 }
                 acc
             })
             .into_iter()
-            .fold(BTreeMap::new(), |mut acc, (name, priority)| {
-                acc.entry(priority).or_insert(Vec::new()).push(name.clone());
+            .fold(BTreeMap::new(), |mut acc, (name, (&fixity, priority))| {
+                acc.entry(priority)
+                    .or_insert(Vec::new())
+                    .push((fixity, name.clone()));
                 acc
             })
     }
@@ -88,6 +109,7 @@ impl Default for Parser {
     fn default() -> Self {
         Self {
             infixes: RefCell::new(vec![BTreeMap::new()]),
+            nonfixes: RefCell::new(vec![HashSet::new()]),
         }
     }
 }
@@ -122,6 +144,7 @@ impl Parser {
                 self.decl_val(),
                 self.decl_fun(),
                 self.decl_infix(),
+                self.decl_nonfix(),
                 self.decl_local(),
                 self.decl_expr(),
             ))(i)
@@ -233,13 +256,14 @@ impl Parser {
 
     fn decl_funbind(&self) -> impl Fn(Input) -> IResult<Input, (Symbol, Vec<UntypedPattern>)> + '_ {
         move |i| {
+            // TODO: support infix ops
             map(
                 tuple((
                     self.op_symbol_eq(),
                     self.space0(),
                     separated_list0(self.space1(), self.pattern_atmic()),
                 )),
-                |((_, name), _, pats)| (name, pats),
+                |((_, _, name), _, pats)| (name, pats),
             )(i)
         }
     }
@@ -258,21 +282,48 @@ impl Parser {
 
     fn decl_infix(&self) -> impl Fn(Input) -> IResult<Input, UntypedDeclaration> + '_ {
         move |i| {
-            let (i, _) = tag("infix")(i)?;
+            let (i, decl) = alt((tag("infixr"), tag("infix")))(i)?;
             let (i, _) = self.space1()(i)?;
             let (i, priority) = opt(digit1)(i)?;
             let (i, _) = self.space1()(i)?;
             let (i, names) = separated_list0(self.space1(), self.symbol_eq())(i)?;
-            let names = names.into_iter().map(|(_, name)| name).collect::<Vec<_>>();
             let priority = priority.map(|s| {
                 s.parse()
                     .expect("internal error: falied to parse digits as integer")
             });
-            self.new_infix_op(priority, names.clone());
-            Ok((
-                i,
-                Declaration::D(DerivedDeclaration::Infix { priority, names }),
-            ))
+            let names = names.into_iter().map(|(_, name)| name).collect::<Vec<_>>();
+            let fixity;
+            let d;
+            if *decl == "infix" {
+                fixity = Fixity::Left;
+                d = DerivedDeclaration::Infix {
+                    priority,
+                    names: names.clone(),
+                };
+            } else {
+                fixity = Fixity::Right;
+                d = DerivedDeclaration::Infixr {
+                    priority,
+                    names: names.clone(),
+                };
+            }
+            let names_with_fixity = names
+                .into_iter()
+                .map(|name| (fixity, name))
+                .collect::<Vec<_>>();
+            self.new_infix_op(priority, names_with_fixity);
+            Ok((i, Declaration::D(d)))
+        }
+    }
+
+    fn decl_nonfix(&self) -> impl Fn(Input) -> IResult<Input, UntypedDeclaration> + '_ {
+        move |i| {
+            let (i, _) = tag("nonfix")(i)?;
+            let (i, _) = self.space1()(i)?;
+            let (i, names) = separated_list0(self.space1(), self.symbol_eq())(i)?;
+            let names = names.into_iter().map(|(_, name)| name).collect::<Vec<_>>();
+            self.new_nonfix_op(names.clone());
+            Ok((i, Declaration::D(DerivedDeclaration::Nonfix { names })))
         }
     }
 
@@ -478,102 +529,76 @@ impl Parser {
     // treat all of the infix operators and applications, i.e. sequeces of expressions
     fn expr_infix_and_app(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
         move |i| {
-            // TODO: support 1+1
             let (i, mixed) = many1(map(tuple((self.space0(), self.expr1())), |(_, e)| e))(i)?;
-            #[derive(Debug)]
-            enum Mixed {
-                E(UntypedExpr),
-                Fix(Span, u8, Symbol),
-            }
-            use Mixed::*;
             // find infixes
             let mixed = mixed
                 .into_iter()
                 .map(|mut e| match e.inner {
                     ExprKind::Symbol { name } => {
                         for (f, table) in self.get_table() {
-                            if table.contains(&name) {
-                                return Fix(e.span, f, name);
+                            for (fixity, op) in table {
+                                if name == op {
+                                    return infix_tree::Input::Fix(fixity, e.span, f, name);
+                                }
                             }
                         }
                         e.inner = ExprKind::Symbol { name };
-                        E(e)
+                        infix_tree::Input::E(e)
                     }
                     inner => {
                         e.inner = inner;
-                        E(e)
+                        infix_tree::Input::E(e)
                     }
                 })
                 .collect::<Vec<_>>();
-            // reduce applys
-            let rest = map_window2(mixed, |m1, m2| match (m1, m2) {
-                (E(e1), E(e2)) => {
-                    let start = e1.span.start;
-                    let end = e2.span.end;
-                    (
-                        E(Expr::new(
-                            start..end,
+            let tree = infix_tree::parse(mixed);
+            fn convert(tree: infix_tree::Tree<UntypedExpr>) -> UntypedExpr {
+                use infix_tree::Tree::*;
+                match tree {
+                    E(e) => e,
+                    App { span, f, arg } => {
+                        let f = convert(*f);
+                        let arg = convert(*arg);
+                        Expr::new(
+                            span,
                             ExprKind::App {
-                                fun: e1.boxed(),
-                                arg: e2.boxed(),
+                                fun: f.boxed(),
+                                arg: arg.boxed(),
                             },
-                        )),
-                        None,
-                    )
-                }
-                (m1, m2) => (m1, Some(m2)),
-            });
-
-            // reduce infixes
-            fn reduce_infixl_n(n: u8, mixed: Vec<Mixed>) -> Vec<Mixed> {
-                use Mixed::*;
-                map_window3(mixed, |m1, m2, m3| match (m1, m2, m3) {
-                    (E(l), Fix(op_span, fixty, op), E(r)) if fixty == n => {
-                        let start = l.span.start;
-                        let end = r.span.end;
-                        (
-                            E(Expr::new(
-                                start..end,
-                                ExprKind::App {
-                                    fun: Expr::new(op_span, ExprKind::Symbol { name: op }).boxed(),
-                                    arg: Expr::new(
-                                        start..end,
-                                        ExprKind::Tuple { tuple: vec![l, r] },
-                                    )
-                                    .boxed(),
-                                },
-                            )),
-                            None,
                         )
                     }
-                    (m1, m2, m3) => (m1, Some((m2, m3))),
-                })
+                    Op { span, op, l, r } => {
+                        let l = convert(*l);
+                        let r = convert(*r);
+                        Expr::new(
+                            span,
+                            ExprKind::App {
+                                fun: Expr::new(op.0, ExprKind::Symbol { name: op.1 }).boxed(),
+                                arg: Expr::new(
+                                    l.span.start..r.span.end,
+                                    ExprKind::Tuple { tuple: vec![l, r] },
+                                )
+                                .boxed(),
+                            },
+                        )
+                    }
+                    Fix(_, _, _, _) => panic!("unhandled fix"),
+                }
             }
-            let mut rest = (1u8..=9)
-                .rev()
-                .fold(rest, |rest, n| reduce_infixl_n(n, rest));
-            assert_eq!(rest.len(), 1);
-            let e = match rest.remove(0) {
-                E(e) => e,
-                Fix(..) => unreachable!("infix alone"),
-            };
-            Ok((i, e))
+            Ok((i, convert(tree)))
         }
     }
     fn expr1_sym(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
         move |i| {
             // = is allowed to be used in expression exceptionally
-            map(
-                alt((
-                    self.symbol(),
-                    // perhups this is not needed
-                    map(tag("="), |i: Input| {
-                        let cur = current_location(&i);
-                        (cur..cur, Symbol::new(*i.fragment()))
-                    }),
-                )),
-                |(span, name)| Expr::new(span, ExprKind::Symbol { name }),
-            )(i)
+            map(self.op_symbol_eq(), |(span, op, name)| {
+                let kind = if op {
+                    ExprKind::D(DerivedExprKind::Op { name })
+                } else {
+                    ExprKind::Symbol { name }
+                };
+                Expr::new(span, kind)
+            })(i)
         }
     }
 
@@ -951,30 +976,45 @@ impl Parser {
         move |i| alt((self.symbol_alphanumeric(), self.symbol_symbolic()))(i)
     }
 
-    fn op_symbol_eq(&self) -> impl Fn(Input) -> IResult<Input, (Span, Symbol)> + '_ {
+    fn op_symbol_eq(&self) -> impl Fn(Input) -> IResult<Input, (Span, bool, Symbol)> + '_ {
         move |i| alt((self.op_symbol_alphanumeric(), self.op_symbol_symbolic_eq()))(i)
     }
 
-    fn op_symbol_alphanumeric(&self) -> impl Fn(Input) -> IResult<Input, (Span, Symbol)> + '_ {
+    fn op_symbol(&self) -> impl Fn(Input) -> IResult<Input, (Span, bool, Symbol)> + '_ {
+        move |i| alt((self.op_symbol_alphanumeric(), self.op_symbol_symbolic()))(i)
+    }
+
+    fn op_symbol_alphanumeric(
+        &self,
+    ) -> impl Fn(Input) -> IResult<Input, (Span, bool, Symbol)> + '_ {
         move |i| {
             let start = current_location(&i);
-            let (i, _) = opt(tuple((tag("op"), self.space1())))(i)?;
+            let (i, op) = opt(tuple((tag("op"), self.space1())))(i)?;
             let (i, (loc, sym)) = self.symbol_alphanumeric()(i)?;
-            Ok((i, (start..loc.end, sym)))
+            Ok((i, (start..loc.end, op.is_some(), sym)))
         }
     }
 
-    fn op_symbol_symbolic_eq(&self) -> impl Fn(Input) -> IResult<Input, (Span, Symbol)> + '_ {
+    fn op_symbol_symbolic(&self) -> impl Fn(Input) -> IResult<Input, (Span, bool, Symbol)> + '_ {
         move |i| {
             let start = current_location(&i);
-            let (i, _) = opt(tuple((tag("op"), self.space0())))(i)?;
+            let (i, op) = opt(tuple((tag("op"), self.space1())))(i)?;
+            let (i, (loc, sym)) = self.symbol_symbolic()(i)?;
+            Ok((i, (start..loc.end, op.is_some(), sym)))
+        }
+    }
+
+    fn op_symbol_symbolic_eq(&self) -> impl Fn(Input) -> IResult<Input, (Span, bool, Symbol)> + '_ {
+        move |i| {
+            let start = current_location(&i);
+            let (i, op) = opt(tuple((tag("op"), self.space0())))(i)?;
             let cur = current_location(&i);
             let (i, (loc, sym)) = alt((
                 self.symbol_symbolic(),
                 // FIXME: calculate correct span
                 value((cur..cur, Symbol::new("=")), tag("=")),
             ))(i)?;
-            Ok((i, (start..loc.end, sym)))
+            Ok((i, (start..loc.end, op.is_some(), sym)))
         }
     }
 
@@ -1068,7 +1108,7 @@ impl Parser {
     }
 
     fn pattern(&self) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
-        move |i| alt((self.pattern_constructor(), self.pattern_atmic()))(i)
+        move |i| alt((self.pattern_infix_and_constructor(), self.pattern_atmic()))(i)
     }
 
     fn pattern_atmic(&self) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
@@ -1138,27 +1178,89 @@ impl Parser {
     }
 
     // require constructor to have arg for now.
-    // constructor withouth arg is parsed as variable and
+    // constructor without arg is parsed as variable and
     // will be converted in later phases
-    fn pattern_constructor(&self) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
-        with_position(move |i| {
-            let (i, (_, name)) = self.symbol()(i)?;
-            let (i, _) = self.space0()(i)?;
-            let (i, arg) = self.pattern_atmic()(i)?;
-            Ok((
-                i,
-                PatternKind::Constructor {
-                    name,
-                    arg: Some(Box::new(arg)),
-                },
-            ))
-        })
+    // treat all of the infix patterns and Constructors, i.e. sequeces of patterns
+    fn pattern_infix_and_constructor(
+        &self,
+    ) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
+        move |i| {
+            // TODO: support 1+1
+            let (i, mixed) = many1(map(
+                tuple((self.space0(), self.pattern_atmic())),
+                |(_, e)| e,
+            ))(i)?;
+            // find infixes
+            let mixed = mixed
+                .into_iter()
+                .map(|mut e| match e.inner {
+                    PatternKind::Variable { name } => {
+                        for (f, table) in self.get_table() {
+                            for (fixity, op) in table {
+                                if name == op {
+                                    return infix_tree::Input::Fix(fixity, e.span, f, name);
+                                }
+                            }
+                        }
+                        e.inner = PatternKind::Variable { name };
+                        infix_tree::Input::E(e)
+                    }
+                    inner => {
+                        e.inner = inner;
+                        infix_tree::Input::E(e)
+                    }
+                })
+                .collect::<Vec<_>>();
+            let tree = infix_tree::parse(mixed);
+            fn convert(tree: infix_tree::Tree<UntypedPattern>) -> UntypedPattern {
+                use infix_tree::Tree::*;
+                match tree {
+                    E(e) => e,
+                    App { span, f, arg } => {
+                        let name = match convert(*f).inner {
+                            PatternKind::Variable { name }
+                            | PatternKind::D(DerivedPatternKind::Op { name }) => name,
+                            _ => panic!("non symbol infix operator"),
+                        };
+                        let arg = convert(*arg);
+                        Pattern::new(
+                            span,
+                            PatternKind::Constructor {
+                                name,
+                                arg: Some(arg.boxed()),
+                            },
+                        )
+                    }
+                    Op { span, op, l, r } => {
+                        let l = convert(*l);
+                        let r = convert(*r);
+                        Pattern::new(
+                            span.clone(),
+                            PatternKind::Constructor {
+                                name: op.1,
+                                arg: Some(
+                                    Pattern::new(span, PatternKind::Tuple { tuple: vec![l, r] })
+                                        .boxed(),
+                                ),
+                            },
+                        )
+                    }
+                    Fix(_, _, _, _) => panic!("unhandled fix"),
+                }
+            }
+            Ok((i, convert(tree)))
+        }
     }
 
     fn pattern_var(&self) -> impl Fn(Input) -> IResult<Input, UntypedPattern> + '_ {
         move |i| {
-            map(self.symbol(), |(span, name)| {
-                Pattern::new(span, PatternKind::Variable { name })
+            map(self.op_symbol(), |(span, op, name)| {
+                let kind = if op {
+                    PatternKind::D(DerivedPatternKind::Op { name })
+                } else {
+                    PatternKind::Variable { name }
+                };
+                Pattern::new(span, kind)
             })(i)
         }
     }
@@ -1180,80 +1282,214 @@ impl Parser {
     }
 }
 
-fn map_window2<I>(
-    iter: I,
-    mut f: impl FnMut(I::Item, I::Item) -> (I::Item, Option<I::Item>),
-) -> Vec<I::Item>
-where
-    I: IntoIterator,
-{
-    let mut ret = vec![];
-    let mut iter = iter.into_iter();
-    let mut e = match iter.next() {
-        Some(e) => e,
-        None => return ret,
-    };
+mod infix_tree {
+    use super::*;
+    #[derive(Debug)]
+    pub(super) enum Input<T> {
+        E(T),
+        Fix(Fixity, Span, u8, Symbol),
+    }
 
-    for e2 in iter {
-        let (e1, e2) = f(e, e2);
-        match e2 {
-            Some(e2) => {
-                ret.push(e1);
-                e = e2;
+    #[derive(Debug)]
+    pub(super) enum Tree<T> {
+        E(T),
+        Fix(Fixity, Span, u8, Symbol),
+        Op {
+            span: Span,
+            op: (Span, Symbol),
+            l: Box<Tree<T>>,
+            r: Box<Tree<T>>,
+        },
+        App {
+            span: Span,
+            f: Box<Tree<T>>,
+            arg: Box<Tree<T>>,
+        },
+    }
+
+    impl<T: HaveLocation> HaveLocation for Tree<T> {
+        fn span(&self) -> Span {
+            use Tree::*;
+            match self {
+                E(t) => t.span(),
+                Fix(_, span, _, _) | Op { span, .. } | App { span, .. } => Clone::clone(span),
             }
-            None => e = e1,
         }
     }
-    ret.push(e);
-    ret
-}
 
-fn map_window3<I>(
-    iter: I,
-    mut f: impl FnMut(I::Item, I::Item, I::Item) -> (I::Item, Option<(I::Item, I::Item)>),
-) -> Vec<I::Item>
-where
-    I: IntoIterator,
-{
-    let mut ret = vec![];
-    let mut iter = iter.into_iter();
-
-    let mut e1 = match iter.next() {
-        Some(e) => e,
-        None => return ret,
-    };
-
-    let mut e2 = match iter.next() {
-        Some(e) => e,
-        None => {
-            ret.push(e1);
-            return ret;
-        }
-    };
-
-    while let Some(e3) = iter.next() {
-        let (r1, r2) = f(e1, e2, e3);
-        match r2 {
-            Some((r2, r3)) => {
-                ret.push(r1);
-                e1 = r2;
-                e2 = r3;
+    pub(super) fn parse<T: HaveLocation + std::fmt::Debug>(mixed: Vec<Input<T>>) -> Tree<T> {
+        use Tree::*;
+        let mixed = mixed
+            .into_iter()
+            .map(|i| match i {
+                Input::E(e) => E(e),
+                Input::Fix(f, s, p, n) => Fix(f, s, p, n),
+            })
+            .collect::<Vec<_>>();
+        // reduce constructors
+        let rest = map_window2(mixed, |m1, m2| match (m1, m2) {
+            (e1 @ (E(..) | App { .. }), e2 @ (E(..) | App { .. })) => {
+                let start = e1.span().start;
+                let end = e2.span().end;
+                (
+                    App {
+                        span: start..end,
+                        f: Box::new(e1),
+                        arg: Box::new(e2),
+                    },
+                    None,
+                )
             }
-            None => {
-                e1 = r1;
-                e2 = match iter.next() {
-                    Some(e) => e,
-                    None => {
-                        ret.push(e1);
-                        return ret;
+            (m1, m2) => (m1, Some(m2)),
+        });
+
+        // check fixity conflicts
+        let mut prev = None;
+        for i in (2..rest.len()).step_by(2) {
+            if let Fix(fixity1, _, priority1, _) = rest[i] {
+                if let Some((fixity2, priority2)) = prev {
+                    if priority1 == priority2 && fixity1 != fixity2 {
+                        warn!("left and right assosiative operator of same precedence");
                     }
-                };
+                }
+                prev = Some((fixity1, priority1))
             }
         }
+
+        // reduce infixes
+        fn reduce_infixl_n<T: HaveLocation + std::fmt::Debug>(
+            mixed: Vec<Tree<T>>,
+            n: u8,
+        ) -> Vec<Tree<T>> {
+            let cls = |f| {
+                move |m1: Tree<T>, m2, m3: Tree<T>| match (m1, m2, m3) {
+                    (
+                        e1 @ (E(..) | App { .. } | Op { .. }),
+                        Fix(fixity, op_span, priority, op),
+                        e2 @ (E(..) | App { .. } | Op { .. }),
+                    ) if priority == n && fixity == f => {
+                        let start;
+                        let end;
+                        let l;
+                        let r;
+                        match fixity {
+                            Fixity::Left => {
+                                start = e1.span().start;
+                                end = e2.span().end;
+                                l = Box::new(e1);
+                                r = Box::new(e2);
+                            }
+                            // infixr is scaned in reverse order
+                            Fixity::Right => {
+                                start = e2.span().start;
+                                end = e1.span().end;
+                                l = Box::new(e2);
+                                r = Box::new(e1);
+                            }
+                        };
+                        (
+                            Op {
+                                span: start..end,
+                                op: (op_span, op),
+                                l,
+                                r,
+                            },
+                            None,
+                        )
+                    }
+                    (m1, m2, m3) => (m1, Some((m2, m3))),
+                }
+            };
+            let mixed = map_window3(mixed, cls(Fixity::Left));
+            let mixed = map_window3(mixed.into_iter().rev(), cls(Fixity::Right));
+            mixed.into_iter().rev().collect()
+        }
+        let mut rest = (1u8..=9).rev().fold(rest, reduce_infixl_n);
+        assert_eq!(
+            rest.len(),
+            1,
+            "failed to parse infix operators around {:?}",
+            rest[0].span()
+        );
+        let ret = rest.remove(0);
+        ret
     }
-    ret.push(e1);
-    ret.push(e2);
-    ret
+
+    fn map_window2<I>(
+        iter: I,
+        mut f: impl FnMut(I::Item, I::Item) -> (I::Item, Option<I::Item>),
+    ) -> Vec<I::Item>
+    where
+        I: IntoIterator,
+    {
+        let mut ret = vec![];
+        let mut iter = iter.into_iter();
+        let mut e = match iter.next() {
+            Some(e) => e,
+            None => return ret,
+        };
+
+        for e2 in iter {
+            let (e1, e2) = f(e, e2);
+            match e2 {
+                Some(e2) => {
+                    ret.push(e1);
+                    e = e2;
+                }
+                None => e = e1,
+            }
+        }
+        ret.push(e);
+        ret
+    }
+
+    fn map_window3<I>(
+        iter: I,
+        mut f: impl FnMut(I::Item, I::Item, I::Item) -> (I::Item, Option<(I::Item, I::Item)>),
+    ) -> Vec<I::Item>
+    where
+        I: IntoIterator,
+    {
+        let mut ret = vec![];
+        let mut iter = iter.into_iter();
+
+        let mut e1 = match iter.next() {
+            Some(e) => e,
+            None => return ret,
+        };
+
+        let mut e2 = match iter.next() {
+            Some(e) => e,
+            None => {
+                ret.push(e1);
+                return ret;
+            }
+        };
+
+        while let Some(e3) = iter.next() {
+            let (r1, r2) = f(e1, e2, e3);
+            match r2 {
+                Some((r2, r3)) => {
+                    ret.push(r1);
+                    e1 = r2;
+                    e2 = r3;
+                }
+                None => {
+                    e1 = r1;
+                    e2 = match iter.next() {
+                        Some(e) => e,
+                        None => {
+                            ret.push(e1);
+                            return ret;
+                        }
+                    };
+                }
+            }
+        }
+        ret.push(e1);
+        ret.push(e2);
+        ret
+    }
 }
 
 #[test]
