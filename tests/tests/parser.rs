@@ -435,6 +435,68 @@ fn parse_binop() {
 }
 
 #[test]
+fn parse_binopr() {
+    let input = r#"infixr 6 + val x = 1 + 2"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![
+            Declaration::D(DerivedDeclaration::Infixr {
+                priority: Some(6),
+                names: vec![Symbol::new("+")],
+            }),
+            Declaration::Val {
+                rec: false,
+                pattern: Pattern {
+                    ty: Empty {},
+                    span: Location::new(1, 15)..Location::new(1, 16),
+                    inner: PatternKind::Variable {
+                        name: Symbol::new("x"),
+                    }
+                },
+                expr: Expr {
+                    ty: Empty {},
+                    span: Location::new(1, 19)..Location::new(1, 24),
+                    inner: ExprKind::App {
+                        fun: Expr {
+                            ty: Empty {},
+                            span: Location::new(1, 21)..Location::new(1, 22),
+                            inner: ExprKind::Symbol {
+                                name: Symbol::new("+")
+                            }
+                        }
+                        .boxed(),
+                        arg: Expr {
+                            ty: Empty {},
+                            span: Location::new(1, 19)..Location::new(1, 24),
+                            inner: ExprKind::Tuple {
+                                tuple: vec![
+                                    Expr {
+                                        ty: Empty {},
+                                        span: Location::new(1, 19)..Location::new(1, 20),
+                                        inner: ExprKind::Literal {
+                                            value: Literal::Int(1),
+                                        }
+                                    },
+                                    Expr {
+                                        ty: Empty {},
+                                        span: Location::new(1, 23)..Location::new(1, 24),
+                                        inner: ExprKind::Literal {
+                                            value: Literal::Int(2),
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                        .boxed()
+                    }
+                }
+            },
+        ])
+    )
+}
+
+#[test]
 fn parse_binop_space() {
     let input = r#"infix 6 + val x = 1+2"#;
     let ast = parse(input).unwrap();
@@ -579,6 +641,100 @@ fn parse_binop_assoc() {
                                             value: Literal::Int(3),
                                         }
                                     }
+                                ]
+                            }
+                        }
+                        .boxed()
+                    }
+                }
+            },
+        ])
+    )
+}
+
+#[test]
+fn parse_binopr_assoc() {
+    let input = r#"infixr 6 + val x = 1 + 2 + 3"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![
+            Declaration::D(DerivedDeclaration::Infix {
+                priority: Some(6),
+                names: vec![Symbol::new("+")],
+            }),
+            Declaration::Val {
+                rec: false,
+                pattern: Pattern {
+                    ty: Empty {},
+                    span: Location::new(1, 16)..Location::new(1, 17),
+                    inner: PatternKind::Variable {
+                        name: Symbol::new("x"),
+                    }
+                },
+                expr: Expr {
+                    ty: Empty {},
+                    span: Location::new(1, 20)..Location::new(1, 29),
+                    inner: ExprKind::App {
+                        fun: Expr {
+                            ty: Empty {},
+                            span: Location::new(1, 22)..Location::new(1, 23),
+                            inner: ExprKind::Symbol {
+                                name: Symbol::new("+"),
+                            }
+                        }
+                        .boxed(),
+                        arg: Expr {
+                            ty: Empty {},
+                            span: Location::new(1, 20)..Location::new(1, 29),
+                            inner: ExprKind::Tuple {
+                                tuple: vec![
+                                    Expr {
+                                        ty: Empty {},
+                                        span: Location::new(1, 20)..Location::new(1, 21),
+                                        inner: ExprKind::Literal {
+                                            value: Literal::Int(1),
+                                        }
+                                    },
+                                    Expr {
+                                        ty: Empty {},
+                                        span: Location::new(1, 20)..Location::new(1, 25),
+                                        inner: ExprKind::App {
+                                            fun: Expr {
+                                                ty: Empty {},
+                                                span: Location::new(1, 26)..Location::new(1, 27),
+                                                inner: ExprKind::Symbol {
+                                                    name: Symbol::new("+"),
+                                                }
+                                            }
+                                            .boxed(),
+                                            arg: Expr {
+                                                ty: Empty {},
+                                                span: Location::new(1, 20)..Location::new(1, 25),
+                                                inner: ExprKind::Tuple {
+                                                    tuple: vec![
+                                                        Expr {
+                                                            ty: Empty {},
+                                                            span: Location::new(1, 24)
+                                                                ..Location::new(1, 25),
+                                                            inner: ExprKind::Literal {
+                                                                value: Literal::Int(2),
+                                                            }
+                                                        },
+                                                        Expr {
+                                                            ty: Empty {},
+                                                            span: Location::new(1, 28)
+                                                                ..Location::new(1, 29),
+                                                            inner: ExprKind::Literal {
+                                                                value: Literal::Int(3),
+                                                            }
+                                                        }
+                                                    ]
+                                                }
+                                            }
+                                            .boxed()
+                                        }
+                                    },
                                 ]
                             }
                         }

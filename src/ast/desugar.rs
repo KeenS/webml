@@ -36,7 +36,7 @@ impl Desugar {
             LangItem { name, decl } => self.transform_langitem(name, *decl),
             Local { binds, body } => Some(self.transform_local(binds, body)),
             D(DerivedDeclaration::Fun { name, clauses }) => Some(self.transform_fun(name, clauses)),
-            D(DerivedDeclaration::Infix { .. }) => None,
+            D(DerivedDeclaration::Infix { .. } | DerivedDeclaration::Infixr { .. }) => None,
             D(DerivedDeclaration::Expr { expr }) => Some(self.transform_decl_expr(expr)),
         }
     }
