@@ -41,7 +41,7 @@ Compiles only minimal subset of SML codes. The garbage collector is not complete
         - [ ] `datatype ident = datatype ident`
     + [ ] `abstype`
     + [ ] `exception`
-    + [ ] `local ... in ... end`
+    + [x] `local ... in ... end`
     + [ ] `open ..`
     + [x] `decl ; decl`
         - [x] `decl decl`
