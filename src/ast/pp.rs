@@ -214,6 +214,14 @@ impl<Ty: PP> PP for DerivedDeclaration<Ty> {
                 }
                 Ok(())
             }
+            Nofix { names } => {
+                write!(w, "nofix")?;
+                for name in names {
+                    write!(w, " ")?;
+                    name.pp(w, indent)?;
+                }
+                Ok(())
+            }
             Expr { expr } => {
                 expr.pp(w, indent)?;
                 Ok(())
@@ -260,6 +268,13 @@ impl<Ty: fmt::Display> fmt::Display for DerivedDeclaration<Ty> {
                 if let Some(p) = priority {
                     write!(f, " {}", p)?;
                 }
+                for name in names {
+                    write!(f, " {}", name)?;
+                }
+                Ok(())
+            }
+            Nofix { names } => {
+                write!(f, "nofix")?;
                 for name in names {
                     write!(f, " {}", name)?;
                 }

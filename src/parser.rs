@@ -12,11 +12,11 @@ use nom::sequence::{preceded, terminated, tuple};
 use nom::{IResult, InputIter, InputTake};
 use nom_locate::LocatedSpan;
 use std::cell::RefCell;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::{BTreeMap, HashMap, HashSet};
 
 static KEYWORDS: &[&str] = &[
     "val", "fun", "local", "fn", "let", "in", "end", "if", "then", "else", "case", "of", "_",
-    "datatype", "op", "=>", "infix", "infixr", "andalso", "orelse",
+    "datatype", "op", "=>", "infix", "infixr", "nofix", "andalso", "orelse",
 ];
 
 static RESERVED: &[&str] = &["|", "=", "#"];
@@ -29,6 +29,7 @@ enum Fixity {
 
 pub struct Parser {
     infixes: RefCell<Vec<BTreeMap<u8, Vec<(Fixity, Symbol)>>>>,
+    nofixes: RefCell<Vec<HashSet<Symbol>>>,
 }
 
 type Input<'a> = LocatedSpan<&'a str>;
@@ -55,8 +56,10 @@ where
 impl Parser {
     fn with_scope<R>(&self, f: impl FnOnce() -> R) -> R {
         self.infixes.borrow_mut().push(BTreeMap::default());
+        self.nofixes.borrow_mut().push(HashSet::default());
         let r = f();
         self.infixes.borrow_mut().pop();
+        self.nofixes.borrow_mut().pop();
         r
     }
 
@@ -71,14 +74,23 @@ impl Parser {
             .append(&mut names)
     }
 
+    fn new_nofix_op(&self, names: Vec<Symbol>) {
+        let mut nofixes = self.nofixes.borrow_mut();
+        let len = nofixes.len();
+        nofixes[len - 1].extend(names);
+    }
+
     fn get_table(&self) -> BTreeMap<u8, Vec<(Fixity, Symbol)>> {
+        let nofix = |name| self.nofixes.borrow().iter().any(|set| set.contains(name));
         self.infixes
             .borrow()
             .iter()
             .fold(HashMap::new(), |mut acc, map| {
                 for (&priority, names) in map {
                     for (fixity, name) in names {
-                        acc.insert(name, (fixity, priority));
+                        if !nofix(&name) {
+                            acc.insert(name, (fixity, priority));
+                        }
                     }
                 }
                 acc
@@ -97,6 +109,7 @@ impl Default for Parser {
     fn default() -> Self {
         Self {
             infixes: RefCell::new(vec![BTreeMap::new()]),
+            nofixes: RefCell::new(vec![HashSet::new()]),
         }
     }
 }
@@ -132,6 +145,7 @@ impl Parser {
                 self.decl_fun(),
                 self.decl_infix(),
                 self.decl_infixr(),
+                self.decl_nofix(),
                 self.decl_local(),
                 self.decl_expr(),
             ))(i)
@@ -313,6 +327,17 @@ impl Parser {
                 i,
                 Declaration::D(DerivedDeclaration::Infixr { priority, names }),
             ))
+        }
+    }
+
+    fn decl_nofix(&self) -> impl Fn(Input) -> IResult<Input, UntypedDeclaration> + '_ {
+        move |i| {
+            let (i, _) = tag("nofix")(i)?;
+            let (i, _) = self.space1()(i)?;
+            let (i, names) = separated_list0(self.space1(), self.symbol_eq())(i)?;
+            let names = names.into_iter().map(|(_, name)| name).collect::<Vec<_>>();
+            self.new_nofix_op(names.clone());
+            Ok((i, Declaration::D(DerivedDeclaration::Nofix { names })))
         }
     }
 

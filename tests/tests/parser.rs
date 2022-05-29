@@ -497,6 +497,71 @@ fn parse_binopr() {
 }
 
 #[test]
+fn parse_nofix() {
+    let input = r#"infix 6 + nofix + val x = +(1, 2)"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![
+            Declaration::D(DerivedDeclaration::Infix {
+                priority: Some(6),
+                names: vec![Symbol::new("+")],
+            }),
+            Declaration::D(DerivedDeclaration::Nofix {
+                names: vec![Symbol::new("+")],
+            }),
+            Declaration::Val {
+                rec: false,
+                pattern: Pattern {
+                    ty: Empty {},
+                    span: Location::new(1, 23)..Location::new(1, 24),
+                    inner: PatternKind::Variable {
+                        name: Symbol::new("x"),
+                    }
+                },
+                expr: Expr {
+                    ty: Empty {},
+                    span: Location::new(1, 27)..Location::new(1, 34),
+                    inner: ExprKind::App {
+                        fun: Expr {
+                            ty: Empty {},
+                            span: Location::new(1, 27)..Location::new(1, 28),
+                            inner: ExprKind::Symbol {
+                                name: Symbol::new("+")
+                            }
+                        }
+                        .boxed(),
+                        arg: Expr {
+                            ty: Empty {},
+                            span: Location::new(1, 28)..Location::new(1, 34),
+                            inner: ExprKind::Tuple {
+                                tuple: vec![
+                                    Expr {
+                                        ty: Empty {},
+                                        span: Location::new(1, 29)..Location::new(1, 30),
+                                        inner: ExprKind::Literal {
+                                            value: Literal::Int(1),
+                                        }
+                                    },
+                                    Expr {
+                                        ty: Empty {},
+                                        span: Location::new(1, 32)..Location::new(1, 33),
+                                        inner: ExprKind::Literal {
+                                            value: Literal::Int(2),
+                                        }
+                                    }
+                                ]
+                            }
+                        }
+                        .boxed()
+                    }
+                }
+            },
+        ])
+    )
+}
+
+#[test]
 fn parse_binop_space() {
     let input = r#"infix 6 + val x = 1+2"#;
     let ast = parse(input).unwrap();

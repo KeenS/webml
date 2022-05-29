@@ -95,6 +95,9 @@ pub enum DerivedDeclaration<Ty> {
         priority: Option<u8>,
         names: Vec<Symbol>,
     },
+    Nofix {
+        names: Vec<Symbol>,
+    },
     Expr {
         expr: Expr<Ty>,
     },
