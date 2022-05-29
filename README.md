@@ -47,7 +47,7 @@ Compiles only minimal subset of SML codes. The garbage collector is not complete
         - [x] `decl decl`
         - [x] `decl ; decl`
     + [x] `infix`
-    + [ ] `infixr`
+    + [x] `infixr`
     + [ ] `nofix`
 * Expressions
     + [ ] special constant
@@ -74,9 +74,9 @@ Compiles only minimal subset of SML codes. The garbage collector is not complete
         - [x] basic (`let decl ... in expr end`)
         - [x] derived (`let decl ... in expr; ...; expr end`)
     + [x] function application
-    + [ ] infix operator
+    + [x] infix operator
         - [x] L
-        - [ ] R
+        - [x] R
     + [ ] typed (`exp : ty`)
     + [ ] exception
         - [ ] `handle`
