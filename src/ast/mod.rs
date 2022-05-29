@@ -341,6 +341,16 @@ pub enum BIF {
     LeChar,
 }
 
+pub trait HaveLocation {
+    fn span(&self) -> Span;
+}
+
+impl<Ty, T> HaveLocation for Annot<Ty, T> {
+    fn span(&self) -> Span {
+        self.span.clone()
+    }
+}
+
 impl<Ty, Inner> Annot<Ty, Inner> {
     pub fn boxed(self) -> Box<Self> {
         Box::new(self)
