@@ -282,7 +282,7 @@ impl Parser {
 
     fn decl_infix(&self) -> impl Fn(Input) -> IResult<Input, UntypedDeclaration> + '_ {
         move |i| {
-            let (i, decl) = alt((tag("infix"), tag("infixr")))(i)?;
+            let (i, decl) = alt((tag("infixr"), tag("infix")))(i)?;
             let (i, _) = self.space1()(i)?;
             let (i, priority) = opt(digit1)(i)?;
             let (i, _) = self.space1()(i)?;
