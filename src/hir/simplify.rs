@@ -4,11 +4,14 @@ use crate::hir::*;
 use crate::id::Id;
 use crate::pass::Pass;
 use crate::prim::*;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 pub struct Simplify {
     id: Id,
     aliases: HashMap<Symbol, Symbol>,
+    // TODO: do not copy expr
+    normals: HashMap<Symbol, Expr>,
+    used_variables: HashSet<Symbol>,
 }
 
 impl Simplify {
@@ -16,6 +19,8 @@ impl Simplify {
         Self {
             id,
             aliases: HashMap::new(),
+            normals: HashMap::new(),
+            used_variables: HashSet::new(),
         }
     }
 
@@ -44,10 +49,23 @@ impl Transform for Simplify {
         }
 
         let expr = if let Some(new_bind) = new_bind {
-            Let {
-                ty,
-                bind: Box::new(self.transform_val(new_bind)),
-                ret: Box::new(self.transform_expr(*ret)),
+            let bind = Box::new(self.transform_val(new_bind));
+            if bind.expr.is_normal() {
+                self.normals.insert(bind.name.clone(), bind.expr.clone());
+            }
+            let ret = self.transform_expr(*ret);
+            let bind_is_removable =
+                bind.expr.is_normal() && !self.used_variables.contains(&bind.name);
+            self.normals.remove(&bind.name);
+            self.used_variables.remove(&bind.name);
+            if bind_is_removable {
+                ret
+            } else {
+                Let {
+                    ty,
+                    bind,
+                    ret: Box::new(ret),
+                }
             }
         } else {
             self.transform_expr(*ret)
@@ -70,6 +88,11 @@ impl Transform for Simplify {
             Some(alias) => alias.clone(),
             None => fname,
         };
+        for (_, name) in &envs {
+            self.used_variables.insert(name.clone());
+        }
+        self.used_variables.insert(fname.clone());
+
         Expr::Closure {
             envs,
             param_ty,
@@ -79,7 +102,8 @@ impl Transform for Simplify {
     }
 
     fn transform_app(&mut self, ty: HTy, fun: Box<Expr>, arg: Box<Expr>) -> Expr {
-        match *fun {
+        let arg = self.transform_expr(*arg);
+        match self.transform_expr(*fun) {
             Fun {
                 param,
                 body_ty,
@@ -87,7 +111,6 @@ impl Transform for Simplify {
                 captures,
             } => {
                 assert!(captures.is_empty());
-                let body = Box::new(self.transform_expr(*body));
                 let (param_ty, param) = param;
                 let ret = Let {
                     ty: body_ty,
@@ -95,24 +118,22 @@ impl Transform for Simplify {
                         ty: param_ty,
                         rec: false,
                         name: param,
-                        expr: *arg,
+                        expr: arg,
                     }),
                     ret: body,
                 };
                 self.transform_expr(ret)
             }
-            fun => {
-                let fun = Box::new(fun);
-                App {
-                    ty,
-                    fun: Box::new(self.transform_expr(*fun)),
-                    arg: Box::new(self.transform_expr(*arg)),
-                }
-            }
+            fun => App {
+                ty,
+                fun: Box::new(fun),
+                arg: Box::new(arg),
+            },
         }
     }
 
     fn transform_case(&mut self, ty: HTy, cond: Box<Expr>, mut arms: Vec<(Pattern, Expr)>) -> Expr {
+        let cond = self.transform_expr(*cond);
         if arms.len() == 1 && arms[0].0.is_irrefutable() {
             let (pat, arm) = arms.remove(0);
             let binds = match pat {
@@ -120,7 +141,7 @@ impl Transform for Simplify {
                     ty,
                     name,
                     rec: false,
-                    expr: *cond,
+                    expr: cond,
                 }],
                 Pattern::Tuple { tys, tuple } => {
                     let tmp = self.gensym();
@@ -129,7 +150,7 @@ impl Transform for Simplify {
                         ty: cond.ty(),
                         name: tmp.clone(),
                         rec: false,
-                        expr: *cond,
+                        expr: cond,
                     }];
                     for (i, (ty, name)) in tys.into_iter().zip(tuple).enumerate() {
                         binds.push(Val {
@@ -162,7 +183,7 @@ impl Transform for Simplify {
         } else {
             Expr::Case {
                 ty,
-                expr: Box::new(self.transform_expr(*cond)),
+                expr: Box::new(cond),
                 arms: arms
                     .into_iter()
                     .map(|(pat, expr)|
@@ -214,6 +235,16 @@ impl Transform for Simplify {
                     }),
                 }
             }
+            Expr::Sym { ty: tuple_ty, name } if self.normals.contains_key(&name) => {
+                match &self.normals[&name] {
+                    Expr::Tuple { tuple, .. } => tuple[index as usize].clone(),
+                    _ => Expr::Proj {
+                        ty,
+                        index,
+                        tuple: Box::new(Expr::Sym { ty: tuple_ty, name }),
+                    },
+                }
+            }
             tuple => Expr::Proj {
                 ty,
                 index,
@@ -224,11 +255,17 @@ impl Transform for Simplify {
 
     fn transform_sym(&mut self, ty: HTy, name: Symbol) -> Expr {
         match self.aliases.get(&name) {
-            Some(alias) => Sym {
-                ty,
-                name: alias.clone(),
-            },
-            None => Sym { ty, name },
+            Some(alias) => {
+                self.used_variables.insert(alias.clone());
+                Sym {
+                    ty,
+                    name: alias.clone(),
+                }
+            }
+            None => {
+                self.used_variables.insert(name.clone());
+                Sym { ty, name }
+            }
         }
     }
 }

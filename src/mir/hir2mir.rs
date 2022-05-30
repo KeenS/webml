@@ -540,7 +540,23 @@ impl HIR2MIRPass {
                 assert_eq!(ty, ty_);
                 (eb, name)
             }
-            e => panic!("internal error: block should be let or symbol: {:?}", e),
+            e => {
+                let tmp = self.gensym("tmp");
+                let expr = Let {
+                    ty: ty_.clone(),
+                    bind: Box::new(hir::Val {
+                        ty: ty_.clone(),
+                        rec: false,
+                        name: tmp.clone(),
+                        expr: e,
+                    }),
+                    ret: Box::new(hir::Expr::Sym {
+                        ty: ty_.clone(),
+                        name: tmp,
+                    }),
+                };
+                self.trans_expr_block(fb, eb, ty_, expr)
+            }
         }
     }
 }
