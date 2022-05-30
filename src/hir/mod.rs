@@ -184,6 +184,24 @@ impl Expr {
         }
     }
 
+    pub fn is_normal(&self) -> bool {
+        use Expr::*;
+        match self {
+            Let { .. } => false,
+            BuiltinCall { .. } => false,
+            ExternCall { .. } => false,
+            Fun { .. } => true,
+            Closure { .. } => true,
+            App { .. } => false,
+            Case { .. } => false,
+            Tuple { tuple, .. } => tuple.iter().all(|e| e.is_normal()),
+            Proj { .. } => false,
+            Constructor { arg, .. } => arg.as_ref().map(|e| e.is_normal()).unwrap_or(true),
+            Sym { .. } => true,
+            Lit { .. } => true,
+        }
+    }
+
     pub fn ty(&self) -> HTy {
         use crate::hir::Expr::*;
 
