@@ -696,7 +696,7 @@ impl fmt::Display for Op {
                         writeln!(f, "{}{} => {}()", space, val, arm)?;
                     }
                     for (arm, _) in default {
-                        write!(f, "{}default => {}({}\n)", space, arm, cond)?;
+                        writeln!(f, "{}default => {}({})", space, arm, cond)?;
                     }
                 }
                 writeln!(f, "{}}}", space)?;

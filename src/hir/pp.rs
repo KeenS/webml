@@ -39,7 +39,7 @@ impl fmt::Display for HIR {
 
 impl PP for Val {
     fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
-        let rec = if self.rec { " rec " } else { "" };
+        let rec = if self.rec { " rec" } else { "" };
         write!(w, "{}val{} ", Self::nspaces(indent), rec)?;
         self.name.pp(w, indent)?;
         write!(w, ": ")?;
@@ -54,7 +54,7 @@ impl fmt::Display for Val {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let indent = f.width().unwrap_or(0);
         let next = indent + 4;
-        let rec = if self.rec { " rec " } else { "" };
+        let rec = if self.rec { " rec" } else { "" };
         write!(
             f,
             "{}val{} {}: {} = {:next$}",
@@ -97,7 +97,7 @@ impl PP for Expr {
                 }
                 write!(w, ") ")?;
                 param.1.pp(w, indent)?;
-                write!(w, " => ")?;
+                write!(w, " =>\n")?;
                 body.pp(w, indent + 4)?;
             }
             Closure { envs, fname, .. } => {
@@ -189,8 +189,9 @@ impl fmt::Display for Expr {
         let next = indent + 4;
         match self {
             Let { bind, ret, .. } => {
+                let ind = Self::nspaces(indent);
                 writeln!(f, "let {} in", bind)?;
-                write!(f, "{:next$}", ret, next = next)?;
+                write!(f, "{ind}{:indent$}", ret, indent = indent)?;
             }
             Fun {
                 body,
@@ -198,6 +199,7 @@ impl fmt::Display for Expr {
                 captures,
                 ..
             } => {
+                let nextind = Self::nspaces(next);
                 write!(f, "fun(")?;
                 inter_iter! {
                     captures,
@@ -208,7 +210,7 @@ impl fmt::Display for Expr {
                 }
                 write!(
                     f,
-                    ") {:indent$} => {:next$}",
+                    ") {:indent$} =>\n{nextind}{:next$}",
                     param.1,
                     body,
                     indent = indent,
