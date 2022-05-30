@@ -173,6 +173,55 @@ impl Transform for Simplify {
         }
     }
 
+    fn transform_proj(&mut self, ty: HTy, index: u32, tuple: Box<Expr>) -> Expr {
+        match self.transform_expr(*tuple) {
+            Expr::Tuple { tys, mut tuple } => {
+                let tuple_var = self.gensym();
+                let tuple_ty = HTy::Tuple(tys.clone());
+                let nth_var = self.gensym();
+                let nth_ty = tys[index as usize].clone();
+                let nth_expr = std::mem::replace(
+                    &mut tuple[index as usize],
+                    Expr::Sym {
+                        ty: nth_ty.clone(),
+                        name: nth_var.clone(),
+                    },
+                );
+                Expr::Let {
+                    ty: ty.clone(),
+                    bind: Box::new(Val {
+                        ty: nth_ty,
+                        rec: false,
+                        name: nth_var,
+                        expr: nth_expr,
+                    }),
+                    ret: Box::new(Expr::Let {
+                        ty: ty.clone(),
+                        bind: Box::new(Val {
+                            ty: tuple_ty.clone(),
+                            rec: false,
+                            name: tuple_var.clone(),
+                            expr: Expr::Tuple { tys, tuple },
+                        }),
+                        ret: Box::new(Expr::Proj {
+                            ty,
+                            index,
+                            tuple: Box::new(Expr::Sym {
+                                ty: tuple_ty,
+                                name: tuple_var,
+                            }),
+                        }),
+                    }),
+                }
+            }
+            tuple => Expr::Proj {
+                ty,
+                index,
+                tuple: Box::new(tuple),
+            },
+        }
+    }
+
     fn transform_sym(&mut self, ty: HTy, name: Symbol) -> Expr {
         match self.aliases.get(&name) {
             Some(alias) => Sym {
