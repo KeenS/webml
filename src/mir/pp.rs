@@ -637,7 +637,6 @@ impl fmt::Display for Op {
                     }
                 }
                 write!(f, ") := (")?;
-                write!(f, "(")?;
                 inter_iter! {
                     tuple.iter(),
                     write!(f, ", ")?,
