@@ -206,26 +206,24 @@ impl Expr {
         use crate::hir::Expr::*;
 
         match self {
-            &Closure {
-                ref param_ty,
-                ref body_ty,
-                ..
+            Closure {
+                param_ty, body_ty, ..
             }
-            | &Fun {
-                param: (ref param_ty, _),
-                ref body_ty,
+            | Fun {
+                param: (param_ty, _),
+                body_ty,
                 ..
             } => HTy::fun(param_ty.clone(), body_ty.clone()),
-            &Tuple { ref tys, .. } => HTy::Tuple(tys.clone()),
-            &Proj { ref ty, .. }
-            | &Let { ref ty, .. }
-            | &BuiltinCall { ref ty, .. }
-            | &ExternCall { ref ty, .. }
-            | &App { ref ty, .. }
-            | &Case { ref ty, .. }
-            | &Constructor { ref ty, .. }
-            | &Sym { ref ty, .. }
-            | &Lit { ref ty, .. } => ty.clone(),
+            Tuple { tys, .. } => HTy::Tuple(tys.clone()),
+            Proj { ty, .. }
+            | Let { ty, .. }
+            | BuiltinCall { ty, .. }
+            | ExternCall { ty, .. }
+            | App { ty, .. }
+            | Case { ty, .. }
+            | Constructor { ty, .. }
+            | Sym { ty, .. }
+            | Lit { ty, .. } => ty.clone(),
         }
     }
 }
