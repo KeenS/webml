@@ -21,7 +21,7 @@ pub fn nspaces(n: usize) -> String {
 
 #[macro_export]
 macro_rules! inter_iter {
-    ($v:expr, $inter: expr, |$e: pat| => $body: expr) => {
+    ($v:expr, $inter: expr, |$e:pat_param| => $body: expr) => {
         loop {
             let mut itr = $v.into_iter();
             let $e = match itr.next() {
