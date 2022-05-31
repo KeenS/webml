@@ -28,6 +28,12 @@ impl Simplify {
         let id = self.id.next();
         Symbol("#g".into(), id)
     }
+
+    fn clear(&mut self) {
+        self.aliases.clear();
+        self.normals.clear();
+        self.used_variables.clear();
+    }
 }
 
 use crate::hir::Expr::*;
@@ -278,6 +284,9 @@ impl<E> Pass<Context, E> for Simplify {
         Context(symbol_table, hir): Context,
         _: &Config,
     ) -> ::std::result::Result<Self::Target, E> {
-        Ok(Context(symbol_table, self.transform_hir(hir)))
+        let fst = self.transform_hir(hir);
+        self.clear();
+        let snd = self.transform_hir(fst);
+        Ok(Context(symbol_table, snd))
     }
 }
