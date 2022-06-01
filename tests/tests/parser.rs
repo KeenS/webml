@@ -2665,6 +2665,47 @@ fn parse_multistatement_val_datatype() {
 }
 
 #[test]
+fn parse_while() {
+    let input = r#"while true do f ()"#;
+    let ast = parse(input).unwrap();
+    assert_eq!(
+        ast,
+        AST(vec![Declaration::D(DerivedDeclaration::Expr {
+            expr: Expr::new(
+                Location::new(1, 1)..Location::new(1, 19),
+                ExprKind::D(DerivedExprKind::While {
+                    cond: Expr::new(
+                        Location::new(1, 7)..Location::new(1, 11),
+                        ExprKind::Symbol {
+                            name: Symbol::new("true")
+                        }
+                    )
+                    .boxed(),
+                    body: Expr::new(
+                        Location::new(1, 15)..Location::new(1, 19),
+                        ExprKind::App {
+                            fun: Expr::new(
+                                Location::new(1, 15)..Location::new(1, 16),
+                                ExprKind::Symbol {
+                                    name: Symbol::new("f")
+                                }
+                            )
+                            .boxed(),
+                            arg: Expr::new(
+                                Location::new(1, 17)..Location::new(1, 19),
+                                ExprKind::Tuple { tuple: vec![] }
+                            )
+                            .boxed()
+                        }
+                    )
+                    .boxed()
+                })
+            )
+        })])
+    );
+}
+
+#[test]
 fn pares_comment() {
     let input = r#"(* comment (* is *) nestable *)"#;
     let ast = parse(input).unwrap();

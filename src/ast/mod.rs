@@ -240,6 +240,10 @@ pub enum DerivedExprKind<Ty> {
     Op {
         name: Symbol,
     },
+    While {
+        cond: Box<Expr<Ty>>,
+        body: Box<Expr<Ty>>,
+    },
 }
 
 pub type CorePattern<Ty> = Pattern<Ty, Nothing>;

@@ -16,7 +16,7 @@ use std::collections::{BTreeMap, HashMap, HashSet};
 
 static KEYWORDS: &[&str] = &[
     "val", "fun", "local", "fn", "let", "in", "end", "if", "then", "else", "case", "of", "_",
-    "datatype", "op", "=>", "infix", "infixr", "nonfix", "andalso", "orelse",
+    "datatype", "op", "=>", "infix", "infixr", "nonfix", "andalso", "orelse", "while", "do",
 ];
 
 static RESERVED: &[&str] = &["|", "=", "#"];
@@ -396,6 +396,7 @@ impl Parser {
                 self.expr_fun(),
                 self.expr_if(),
                 self.expr_case(),
+                self.expr_while(),
                 self.expr_infix_and_app(),
             ))(i)
         }
@@ -522,6 +523,23 @@ impl Parser {
                 cond: cond.boxed(),
                 clauses,
             };
+            Ok((i, inner))
+        })
+    }
+
+    fn expr_while(&self) -> impl Fn(Input) -> IResult<Input, UntypedExpr> + '_ {
+        with_position(move |i| {
+            let (i, _) = tag("while")(i)?;
+            let (i, _) = self.space1()(i)?;
+            let (i, cond) = self.expr()(i)?;
+            let (i, _) = self.space1()(i)?;
+            let (i, _) = tag("do")(i)?;
+            let (i, _) = self.space1()(i)?;
+            let (i, body) = self.expr()(i)?;
+            let inner = ExprKind::D(DerivedExprKind::While {
+                cond: cond.boxed(),
+                body: body.boxed(),
+            });
             Ok((i, inner))
         })
     }

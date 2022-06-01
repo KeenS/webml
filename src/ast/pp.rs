@@ -336,6 +336,17 @@ impl<Ty: fmt::Display> fmt::Display for DerivedExprKind<Ty> {
             Op { name } => {
                 write!(f, "op {:indent$}", name, indent = indent)?;
             }
+            While { cond, body } => {
+                let ind = nspaces(indent);
+                write!(
+                    f,
+                    "while {:indent$}\n{}do {:indent$}",
+                    cond,
+                    ind,
+                    body,
+                    indent = next
+                )?;
+            }
         }
         Ok(())
     }

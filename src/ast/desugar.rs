@@ -201,6 +201,7 @@ impl Desugar {
             D(DerivedExprKind::BindSeq { binds, ret }) => self.transform_bind_seq(span, binds, ret),
             D(DerivedExprKind::String { value }) => self.transform_string(span, value),
             D(DerivedExprKind::Op { name }) => self.transform_op(span, name),
+            D(DerivedExprKind::While { cond, body }) => self.transform_while(span, cond, body),
         };
         UntypedCoreExpr {
             ty: expr.ty,
@@ -472,6 +473,83 @@ impl Desugar {
 
     fn transform_op(&mut self, _: Span, name: Symbol) -> UntypedCoreExprKind {
         ExprKind::Symbol { name }
+    }
+
+    fn transform_while(
+        &mut self,
+        span: Span,
+        cond: Box<UntypedExpr>,
+        body: Box<UntypedExpr>,
+    ) -> UntypedCoreExprKind {
+        // whlie e1 do e2
+        // ->
+        // let val rec vid = fn () =>
+        //   if e1
+        //   then (e2; vid())
+        //   else ()
+        // in vid() end
+
+        let vid = self.gensym();
+        let tmp = self.gensym();
+        let bind = Declaration::D(DerivedDeclaration::Fun {
+            name: vid.clone(),
+            clauses: vec![(
+                vec![Pattern::new(
+                    span.clone(),
+                    PatternKind::Tuple { tuple: vec![] },
+                )],
+                Expr::new(
+                    span.clone(),
+                    ExprKind::Fn {
+                        param: tmp,
+                        body: Expr::new(
+                            span.clone(),
+                            ExprKind::D(DerivedExprKind::If {
+                                cond,
+                                then: Expr::new(
+                                    span.clone(),
+                                    ExprKind::D(DerivedExprKind::Seq {
+                                        seq: vec![
+                                            *body,
+                                            Expr::new(
+                                                span.clone(),
+                                                ExprKind::App {
+                                                    fun: Expr::new(
+                                                        span.clone(),
+                                                        ExprKind::Symbol { name: vid.clone() },
+                                                    )
+                                                    .boxed(),
+                                                    arg: Expr::new(
+                                                        span.clone(),
+                                                        ExprKind::Tuple { tuple: vec![] },
+                                                    )
+                                                    .boxed(),
+                                                },
+                                            ),
+                                        ],
+                                    }),
+                                )
+                                .boxed(),
+                                else_: Expr::new(span.clone(), ExprKind::Tuple { tuple: vec![] })
+                                    .boxed(),
+                            }),
+                        )
+                        .boxed(),
+                    },
+                ),
+            )],
+        });
+        ExprKind::Binds {
+            binds: vec![self.transform_statement(bind).unwrap()],
+            ret: Expr::new(
+                span.clone(),
+                ExprKind::App {
+                    fun: Expr::new(span.clone(), ExprKind::Symbol { name: vid }).boxed(),
+                    arg: Expr::new(span.clone(), ExprKind::Tuple { tuple: vec![] }).boxed(),
+                },
+            )
+            .boxed(),
+        }
     }
 
     fn transform_pattern(&mut self, pattern: UntypedPattern) -> UntypedCorePattern {
