@@ -1,29 +1,11 @@
-use std::io;
-
 use crate::hir::*;
-use crate::util::PP;
+use crate::util;
 use std::fmt;
-
-impl PP for Context {
-    fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
-        self.1.pp(w, indent)
-    }
-}
 
 impl fmt::Display for Context {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let indent = f.width().unwrap_or(0);
         write!(f, "{:indent$}", self.1, indent = indent)
-    }
-}
-
-impl PP for HIR {
-    fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
-        for bind in &self.0 {
-            bind.pp(w, indent)?;
-            writeln!(w)?;
-        }
-        Ok(())
     }
 }
 
@@ -37,19 +19,6 @@ impl fmt::Display for HIR {
     }
 }
 
-impl PP for Val {
-    fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
-        let rec = if self.rec { " rec" } else { "" };
-        write!(w, "{}val{} ", Self::nspaces(indent), rec)?;
-        self.name.pp(w, indent)?;
-        write!(w, ": ")?;
-        self.ty.pp(w, indent)?;
-        write!(w, " = ")?;
-        self.expr.pp(w, indent + 4)?;
-        Ok(())
-    }
-}
-
 impl fmt::Display for Val {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let indent = f.width().unwrap_or(0);
@@ -58,125 +27,13 @@ impl fmt::Display for Val {
         write!(
             f,
             "{}val{} {}: {} = {:next$}",
-            Self::nspaces(indent),
+            util::nspaces(indent),
             rec,
             self.name,
             self.ty,
             self.expr,
             next = next
         )?;
-        Ok(())
-    }
-}
-
-impl PP for Expr {
-    fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
-        use crate::hir::Expr::*;
-        match self {
-            Let { bind, ret, .. } => {
-                let ind = Self::nspaces(indent);
-                let nextind = Self::nspaces(indent + 4);
-                write!(w, "let ")?;
-                bind.pp(w, indent + 4)?;
-                write!(w, "{}in\n{}", ind, nextind)?;
-                ret.pp(w, indent + 4)?;
-            }
-            Fun {
-                body,
-                param,
-                captures,
-                ..
-            } => {
-                write!(w, "fun(")?;
-                inter_iter! {
-                    captures,
-                    write!(w, ", ")?,
-                    |(_,  cap)| => {
-                        cap.pp(w, indent)?
-                    }
-                }
-                write!(w, ") ")?;
-                param.1.pp(w, indent)?;
-                write!(w, " =>\n")?;
-                body.pp(w, indent + 4)?;
-            }
-            Closure { envs, fname, .. } => {
-                write!(w, "<closure ")?;
-                fname.pp(w, indent)?;
-                write!(w, " (")?;
-                inter_iter! {
-                    envs.iter(),
-                    write!(w, ", ")?,
-                    |(_,  var)| => {
-                        var.pp(w, indent)?
-                    }
-                }
-                write!(w, ")>")?;
-            }
-            App { fun, arg, .. } => {
-                write!(w, "(")?;
-                fun.pp(w, indent)?;
-                write!(w, ") ")?;
-                arg.pp(w, indent + 4)?;
-            }
-            Case { expr, arms, .. } => {
-                let ind = Self::nspaces(indent);
-                write!(w, "case ")?;
-                expr.pp(w, indent + 4)?;
-                write!(w, " of")?;
-                for (pat, arm) in arms {
-                    write!(w, "\n{}", ind)?;
-                    pat.pp(w, indent + 4)?;
-                    write!(w, " => ")?;
-                    arm.pp(w, indent + 4)?;
-                }
-            }
-            Tuple { tuple, .. } => {
-                write!(w, "(")?;
-                inter_iter! {
-                    tuple.iter(),
-                    write!(w, ", ")?,
-                    |t| => {
-                        t.pp(w, indent)?
-                    }
-                }
-                write!(w, ")")?;
-            }
-            Proj { index, tuple, .. } => {
-                write!(w, "#{} ", index)?;
-                tuple.pp(w, indent + 4)?;
-            }
-            BuiltinCall { fun, args, .. } => {
-                fun.pp(w, indent)?;
-                write!(w, "(")?;
-                inter_iter! {args.iter(), write!(w, ", ")?, |arg| => arg.pp(w, indent)?};
-                write!(w, ")")?;
-            }
-            ExternCall {
-                module, fun, args, ..
-            } => {
-                write!(w, "\"{}\".\"{}\"(", module, fun)?;
-                inter_iter! {args.iter(), write!(w, ", ")?, |arg| => arg.pp(w, indent)?};
-                write!(w, ")")?;
-            }
-            Constructor {
-                descriminant, arg, ..
-            } => match arg {
-                None => {
-                    write!(w, "{}", descriminant)?;
-                }
-                Some(arg) => {
-                    write!(w, "{} ", descriminant)?;
-                    arg.pp(w, indent)?;
-                }
-            },
-            Sym { name, .. } => {
-                name.pp(w, indent)?;
-            }
-            Lit { value, .. } => {
-                value.pp(w, indent)?;
-            }
-        }
         Ok(())
     }
 }
@@ -189,7 +46,7 @@ impl fmt::Display for Expr {
         let next = indent + 4;
         match self {
             Let { bind, ret, .. } => {
-                let ind = Self::nspaces(indent);
+                let ind = util::nspaces(indent);
                 writeln!(f, "let {} in", bind)?;
                 write!(f, "{ind}{:indent$}", ret, indent = indent)?;
             }
@@ -199,7 +56,7 @@ impl fmt::Display for Expr {
                 captures,
                 ..
             } => {
-                let nextind = Self::nspaces(next);
+                let nextind = util::nspaces(next);
                 write!(f, "fun(")?;
                 inter_iter! {
                     captures,
@@ -239,7 +96,7 @@ impl fmt::Display for Expr {
                 )?;
             }
             Case { expr, arms, .. } => {
-                let ind = Self::nspaces(indent);
+                let ind = util::nspaces(indent);
                 write!(f, "case {:next$} of", expr, next = next)?;
                 for (pat, arm) in arms {
                     write!(f, "\n{}{:next$} => {:next$}", ind, pat, arm, next = next)?;
@@ -304,38 +161,6 @@ impl fmt::Display for Expr {
     }
 }
 
-impl PP for Pattern {
-    fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
-        match self {
-            Pattern::Constant { value, .. } => write!(w, "{}", value),
-            Pattern::Char { value, .. } => write!(w, r##"#"{}""##, value),
-            Pattern::Constructor {
-                descriminant, arg, ..
-            } => match arg {
-                None => write!(w, "{}", descriminant),
-                Some((_, sym)) => {
-                    write!(w, "{}(", descriminant)?;
-                    sym.pp(w, indent)?;
-                    write!(w, ")")?;
-                    Ok(())
-                }
-            },
-            Pattern::Tuple { tuple, .. } => {
-                write!(w, "(")?;
-                inter_iter! {
-                    tuple.iter(),
-                    write!(w, ", ")?,
-                    |t| => {
-                        t.pp(w, indent)?
-                    }
-                }
-                write!(w, ")")
-            }
-            Pattern::Var { name, .. } => name.pp(w, indent),
-        }
-    }
-}
-
 impl fmt::Display for Pattern {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
@@ -366,37 +191,6 @@ impl fmt::Display for Pattern {
     }
 }
 
-impl PP for HTy {
-    fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()> {
-        use crate::hir::HTy::*;
-        match self {
-            Char => write!(w, "char")?,
-            Int => write!(w, "int")?,
-            Real => write!(w, "real")?,
-            Tuple(tys) => {
-                write!(w, "(")?;
-                inter_iter! {
-                    tys.iter(),
-                    write!(w, " * ")?,
-                    |ty| => {
-                        ty.pp(w, indent)?
-                    }
-                }
-                write!(w, ")")?;
-            }
-            Fun(t1, t2) => {
-                t1.pp(w, indent)?;
-                write!(w, " -> ")?;
-                t2.pp(w, indent)?;
-            }
-            Datatype(name) => {
-                name.pp(w, indent)?;
-            }
-        }
-        Ok(())
-    }
-}
-
 impl fmt::Display for HTy {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use crate::hir::HTy::*;
@@ -419,48 +213,6 @@ impl fmt::Display for HTy {
                 write!(f, "{} -> {}", t1, t2)?;
             }
             Datatype(name) => write!(f, "{}", name)?,
-        }
-        Ok(())
-    }
-}
-
-impl PP for BIF {
-    fn pp<W: io::Write>(&self, w: &mut W, _indent: usize) -> io::Result<()> {
-        use self::BIF::*;
-        match self {
-            AddInt | AddReal => {
-                write!(w, "add")?;
-            }
-            SubInt | SubReal => {
-                write!(w, "sub")?;
-            }
-            MulInt | MulReal => {
-                write!(w, "mul")?;
-            }
-            DivInt | DivReal => {
-                write!(w, "div")?;
-            }
-            ModInt => {
-                write!(w, "mod")?;
-            }
-            EqInt | EqReal | EqChar => {
-                write!(w, "eq")?;
-            }
-            NeqInt | NeqReal | NeqChar => {
-                write!(w, "neq")?;
-            }
-            GtInt | GtReal | GtChar => {
-                write!(w, "gt")?;
-            }
-            GeInt | GeReal | GeChar => {
-                write!(w, "ge")?;
-            }
-            LtInt | LtReal | LtChar => {
-                write!(w, "lt")?;
-            }
-            LeInt | LeReal | LeChar => {
-                write!(w, "le")?;
-            }
         }
         Ok(())
     }

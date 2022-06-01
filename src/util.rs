@@ -1,16 +1,3 @@
-use std::io;
-
-pub trait PP {
-    fn pp<W: io::Write>(&self, w: &mut W, indent: usize) -> io::Result<()>;
-    fn nspaces(n: usize) -> String {
-        let mut s = String::new();
-        for _ in 0..n {
-            s.push(' ');
-        }
-        s
-    }
-}
-
 pub fn nspaces(n: usize) -> String {
     let mut s = String::new();
     for _ in 0..n {

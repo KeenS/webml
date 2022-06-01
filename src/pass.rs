@@ -1,5 +1,4 @@
 use crate::config::Config;
-use crate::util::PP;
 use log::info;
 use std::fmt::{Debug, Display};
 use std::marker::PhantomData;
@@ -48,22 +47,6 @@ where
     fn trans(&mut self, i: In, config: &Config) -> Result<Self::Target, Err> {
         let o = self.0.trans(i, config)?;
         println!("{}", o);
-        Ok(o)
-    }
-}
-
-pub struct PPPass<T>(pub T);
-
-impl<T, In, Out, Err> Pass<In, Err> for PPPass<T>
-where
-    T: Pass<In, Err, Target = Out>,
-    Out: PP,
-{
-    type Target = Out;
-
-    fn trans(&mut self, i: In, config: &Config) -> Result<Self::Target, Err> {
-        let o = self.0.trans(i, config)?;
-        o.pp(&mut ::std::io::stdout(), 0).unwrap();
         Ok(o)
     }
 }
