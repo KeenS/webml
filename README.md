@@ -88,7 +88,7 @@ Compiles only minimal subset of SML codes. The garbage collector is not complete
     + [x] `andalso`
     + [x] `orelse`
     + [x] `if .. then .. else`
-    + [ ] `while .. do ..`
+    + [x] `while .. do ..`
     + [x] `case .. of ..`
 * Pattern
     + [x] wildcard
