@@ -270,6 +270,20 @@ impl TyEnv {
         self.env.insert(k, v)
     }
 
+    fn is_polymorphic(&self, ty: NodeId) -> bool {
+        use Typing::*;
+        match self.pool.pool.value_of(ty) {
+            Variable(_) => true,
+            Char | Int | Real | OverloadedNum | OverloadedNumText => false,
+            Fun(param, body) => {
+                self.is_polymorphic(param.clone()) || self.is_polymorphic(body.clone())
+            }
+            Tuple(tys) => tys.iter().any(|ty| self.is_polymorphic(ty.clone())),
+            // currently Datatype will not be polymorphic
+            Datatype(_) => false,
+        }
+    }
+
     fn convert(&mut self, ty: Type) -> Typing {
         match ty {
             Type::Variable(v) => Typing::Variable(v),
@@ -321,6 +335,10 @@ impl TyEnv {
                     for &(name, ty) in &names {
                         self.insert(name.clone(), Clone::clone(ty));
                     }
+                }
+                let ty = expr.ty();
+                if self.is_polymorphic(ty) && !expr.is_value() {
+                    return Err(TypeError::PolymorphicExpression);
                 }
                 Ok(())
             }

@@ -489,6 +489,24 @@ impl<Ty> CoreExpr<Ty> {
         };
         Expr { ty, span, inner }
     }
+
+    fn is_value(&self) -> bool {
+        use crate::ast::ExprKind::*;
+        match &self.inner {
+            Binds { .. } => false,
+            BuiltinCall { .. } => false,
+            ExternCall { .. } => false,
+            Fn { .. } => true,
+            App { .. } => false,
+            // TODO: check compatibility with fn
+            Case { .. } => false,
+            Tuple { tuple } => tuple.iter().all(|e| e.is_value()),
+            Symbol { .. } => true,
+            Constructor { arg, .. } => arg.as_ref().map(|e| e.is_value()).unwrap_or(true),
+            Literal { .. } => true,
+            D(d) => match *d {},
+        }
+    }
 }
 
 impl<Ty, DP> Pattern<Ty, DP> {
@@ -599,6 +617,7 @@ impl SymbolTable {
 #[derive(Debug)]
 pub enum TypeError {
     MisMatch { expected: Type, actual: Type },
+    PolymorphicExpression,
     CannotInfer,
     FreeVar,
     NotFunction(ast::Expr<Type>),
@@ -616,6 +635,9 @@ impl Error for TypeError {
         use self::TypeError::*;
         match self {
             MisMatch { .. } => "type mismatches against expected type",
+            PolymorphicExpression => {
+                "a compound expression cannot be polymorphic (value restriction)"
+            }
             CannotInfer => "cannot infer the type",
             FreeVar => "free variable is found",
             NotFunction(_) => "not a function",

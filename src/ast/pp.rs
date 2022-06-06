@@ -49,8 +49,9 @@ impl<Ty: fmt::Display, DE: fmt::Display, DS: fmt::Display, DP: fmt::Display> fmt
                 }
                 write!(
                     f,
-                    "{:indent$} = {:next$}",
+                    "{:indent$}: {} = {:next$}",
                     pattern,
+                    expr.ty,
                     expr,
                     indent = indent,
                     next = next
