@@ -151,7 +151,7 @@ impl Transform<Type> for Resolver {
 }
 
 use crate::pass::Pass;
-impl Pass<TypedCoreContext, TypeError> for ResolveOverload {
+impl Pass<TypedCoreContext, crate::Error> for ResolveOverload {
     type Target = TypedCoreContext;
 
     fn trans(&mut self, context: TypedCoreContext, _: &Config) -> Result<Self::Target> {

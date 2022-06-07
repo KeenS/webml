@@ -56,7 +56,7 @@ impl Traverse<Empty> for Collector {
 }
 
 use crate::pass::Pass;
-impl Pass<UntypedCoreContext, TypeError> for CollectLangItems {
+impl Pass<UntypedCoreContext, crate::Error> for CollectLangItems {
     type Target = UntypedCoreContext;
 
     fn trans(&mut self, context: UntypedCoreContext, _: &Config) -> Result<Self::Target> {

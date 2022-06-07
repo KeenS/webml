@@ -857,7 +857,7 @@ impl Transform<Type> for WildcardToVariable {
 }
 
 use crate::pass::Pass;
-impl Pass<TypedCoreContext, TypeError> for CaseSimplify {
+impl Pass<TypedCoreContext, crate::Error> for CaseSimplify {
     type Target = TypedCoreContext;
 
     fn trans(&mut self, context: TypedCoreContext, _: &Config) -> Result<Self::Target> {

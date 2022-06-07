@@ -3,6 +3,7 @@ pub mod util;
 pub mod ast;
 pub mod backend;
 mod config;
+pub mod error;
 pub mod hir;
 pub mod id;
 pub mod lir;
@@ -12,14 +13,14 @@ pub mod pass;
 pub mod prim;
 mod unification_pool;
 
-pub use crate::ast::TypeError;
 pub use crate::config::Config;
 pub use crate::parser::Parser;
 pub use crate::pass::{Chain, Pass};
+pub use error::Error;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
-pub fn compile_string(input: String, config: &Config) -> Result<Vec<u8>, TypeError> {
+pub fn compile_string(input: String, config: &Config) -> Result<Vec<u8>, Error> {
     use crate::pass::PrintablePass;
     use wasm::Dump;
 

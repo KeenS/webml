@@ -1,7 +1,7 @@
 use std::fs;
 use std::io::{self, prelude::*};
 use std::path::{Path, PathBuf};
-use webml::TypeError;
+use webml::Error;
 use webml::{compile_string, Config};
 
 fn read_and_append_to_string(path: impl AsRef<Path>, buf: &mut String) -> io::Result<usize> {
@@ -10,7 +10,7 @@ fn read_and_append_to_string(path: impl AsRef<Path>, buf: &mut String) -> io::Re
     input.read_to_string(buf)
 }
 
-fn with_compile_result(path: impl AsRef<Path>, callback: impl FnOnce(Result<Vec<u8>, TypeError>)) {
+fn with_compile_result(path: impl AsRef<Path>, callback: impl FnOnce(Result<Vec<u8>, Error>)) {
     let path = path.as_ref();
     let mut input = include_str!("../../ml_src/prelude.sml").to_string();
     let config = Config::default();

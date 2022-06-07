@@ -140,6 +140,12 @@ impl Location {
     }
 }
 
+impl fmt::Display for Location {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "{}.{}", self.line, self.column)
+    }
+}
+
 pub type Span = Range<Location>;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -614,8 +620,8 @@ impl SymbolTable {
     }
 }
 
-#[derive(Debug)]
-pub enum TypeError {
+#[derive(Debug, Clone)]
+pub enum TypeErrorKind {
     MisMatch { expected: Type, actual: Type },
     PolymorphicExpression,
     CannotInfer,
@@ -624,26 +630,28 @@ pub enum TypeError {
     ParseError(String),
 }
 
+pub type TypeError = Annot<Empty, TypeErrorKind>;
+
 impl fmt::Display for TypeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        fmt::Debug::fmt(self, f)
-    }
-}
+        use self::TypeErrorKind::*;
+        write!(f, "type error at {}-{}", self.span.start, self.span.end,)?;
 
-impl Error for TypeError {
-    fn description(&self) -> &str {
-        use self::TypeError::*;
-        match self {
-            MisMatch { .. } => "type mismatches against expected type",
+        match self.inner {
+            MisMatch { .. } => writeln!(f, "type mismatches against expected type"),
             PolymorphicExpression => {
-                "a compound expression cannot be polymorphic (value restriction)"
+                writeln!(
+                    f,
+                    "a compound expression cannot be polymorphic (value restriction)"
+                )
             }
-            CannotInfer => "cannot infer the type",
-            FreeVar => "free variable is found",
-            NotFunction(_) => "not a function",
-            ParseError(_) => "parse error",
+            CannotInfer => writeln!(f, "cannot infer the type"),
+            FreeVar => writeln!(f, "free variable is found"),
+            NotFunction(_) => writeln!(f, "not a function"),
+            ParseError(_) => writeln!(f, "parse error"),
         }
     }
 }
 
-pub type Result<T> = ::std::result::Result<T, TypeError>;
+impl Error for TypeError {}
+pub type Result<T> = ::std::result::Result<T, crate::Error>;

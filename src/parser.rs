@@ -1568,14 +1568,18 @@ fn test_expr_infix_and_app2() {
     )
 }
 
-impl Pass<String, TypeError> for Parser {
+impl Pass<String, crate::Error> for Parser {
     type Target = UntypedAst;
 
-    fn trans(&mut self, input: String, _: &Config) -> std::result::Result<Self::Target, TypeError> {
+    fn trans(
+        &mut self,
+        input: String,
+        _: &Config,
+    ) -> std::result::Result<Self::Target, crate::Error> {
         let input = Input::new(&input);
         match all_consuming(self.top())(input) {
             Ok((_, iresult)) => Ok(iresult),
-            Err(e) => Err(TypeError::ParseError(format!("{e}"))),
+            Err(e) => Err(crate::Error::Parser(format!("{e}"))),
         }
     }
 }
