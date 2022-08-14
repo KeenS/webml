@@ -299,9 +299,11 @@ pub struct SymbolTable {
     pub constructors: HashMap<Symbol, Symbol>,
 }
 
+type TypeId = u64;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Type {
-    Variable(u64),
+    Variable(TypeId),
     Char,
     Int,
     Real,

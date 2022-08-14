@@ -27,7 +27,7 @@ struct TypePool {
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 enum Typing {
-    Variable(u64),
+    Variable(TypeId),
     Char,
     Int,
     Real,
@@ -282,7 +282,7 @@ impl TyEnv {
         self.env.insert(k, v)
     }
 
-    fn polymorphic_variables(&self, ty: NodeId) -> Vec<u64> {
+    fn polymorphic_variables(&self, ty: NodeId) -> Vec<TypeId> {
         use Typing::*;
         match self.pool.pool.value_of(ty) {
             Variable(id) => vec![*id],
