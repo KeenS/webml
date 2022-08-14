@@ -635,10 +635,14 @@ pub type TypeError = Annot<Empty, TypeErrorKind>;
 impl fmt::Display for TypeError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use self::TypeErrorKind::*;
-        write!(f, "type error at {}-{}", self.span.start, self.span.end,)?;
+        write!(f, "type error at {}-{}: ", self.span.start, self.span.end,)?;
 
-        match self.inner {
-            MisMatch { .. } => writeln!(f, "type mismatches against expected type"),
+        match &self.inner {
+            MisMatch { expected, actual } => writeln!(
+                f,
+                "type mismatches against expected type\n    {}\nand\n    {}",
+                expected, actual
+            ),
             PolymorphicExpression => {
                 writeln!(
                     f,
