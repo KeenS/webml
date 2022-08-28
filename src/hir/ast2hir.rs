@@ -54,7 +54,7 @@ fn conv_ty(ty: ast::Type) -> HTy {
         Tuple(tys) => HTy::Tuple(tys.into_iter().map(conv_ty).collect()),
         Fun(arg, ret) => HTy::fun(conv_ty(*arg), conv_ty(*ret)),
         Datatype(name) => HTy::Datatype(name),
-        Variable(_) => panic!("polymorphism is not supported yet"),
+        TyAbs(_, _) | Variable(_) => panic!("polymorphism is not supported yet"),
     }
 }
 
@@ -295,6 +295,9 @@ impl AST2HIRPass {
                 }
             }
             E::App { fun, arg } => self.conv_expr(*fun).app1(conv_ty(ty), self.conv_expr(*arg)),
+            E::TyApp { fun, arg } => {
+                panic!("Function {} is not monomorphized with {:?}", fun, arg)
+            }
             E::Case { cond, clauses } => Expr::Case {
                 ty: conv_ty(ty),
                 expr: Box::new(self.conv_expr(*cond)),

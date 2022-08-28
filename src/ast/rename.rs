@@ -161,6 +161,7 @@ impl<'a> Scope<'a> {
                     }
                 }
             }
+            TyAbs(_, ty) => self.rename_type(ty),
         }
     }
 }

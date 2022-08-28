@@ -67,6 +67,7 @@ pub trait Traverse<Ty> {
             } => self.traverse_externcall(span, module, fun, args, argty, retty),
             Fn { param, body } => self.traverse_fn(span, param, body),
             App { fun, arg } => self.traverse_app(span, fun, arg),
+            TyApp { fun, arg } => self.traverse_tyapp(span, fun, arg),
             Case { cond, clauses } => self.traverse_case(span, cond, clauses),
             Tuple { tuple } => self.traverse_tuple(span, tuple),
             Constructor { arg, name } => self.traverse_constructor(span, arg, name),
@@ -115,6 +116,8 @@ pub trait Traverse<Ty> {
         self.traverse_expr(fun);
         self.traverse_expr(arg);
     }
+
+    fn traverse_tyapp(&mut self, _: Span, _: &mut Symbol, _: &mut Vec<Ty>) {}
 
     fn traverse_case(
         &mut self,
@@ -260,6 +263,7 @@ pub trait Transform<Ty> {
             } => self.transform_externcall(span, module, fun, args, argty, retty),
             Fn { param, body } => self.transform_fn(span, param, body),
             App { fun, arg } => self.transform_app(span, fun, arg),
+            TyApp { fun, arg } => self.transform_tyapp(span, fun, arg),
             Case { cond, clauses } => self.transform_case(span, cond, clauses),
             Tuple { tuple } => self.transform_tuple(span, tuple),
             Constructor { arg, name } => self.transform_constructor(span, arg, name),
@@ -342,6 +346,10 @@ pub trait Transform<Ty> {
             fun: self.transform_expr(*fun).boxed(),
             arg: self.transform_expr(*arg).boxed(),
         }
+    }
+
+    fn transform_tyapp(&mut self, _: Span, fun: Symbol, arg: Vec<Ty>) -> CoreExprKind<Ty> {
+        ExprKind::TyApp { fun, arg }
     }
 
     fn transform_case(
