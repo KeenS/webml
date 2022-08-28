@@ -87,6 +87,7 @@ fn rewrite_type(ty: &mut Type, params: &[TypeId], args: &[Type]) {
 pub struct Instanciator<'a> {
     params: &'a [TypeId],
     args: &'a [Type],
+    m: &'a mut Monomorphizer,
 }
 
 impl<'a> Traverse<Type> for Instanciator<'a> {
@@ -135,6 +136,11 @@ impl<'a> Traverse<Type> for Instanciator<'a> {
             D(d) => match *d {},
         }
     }
+    fn traverse_pat_variable(&mut self, _: Span, name: &mut Symbol) {
+        if self.m.instance_table.contains_key(&name) {
+            *name = self.m.instanciated_name(name.clone(), self.args.to_vec())
+        }
+    }
 }
 
 impl Transform<Type> for Monomorphizer {
@@ -147,33 +153,25 @@ impl Transform<Type> for Monomorphizer {
         let pattern = self.transform_pattern(pattern);
         let expr = self.transform_expr(expr);
 
+        if !matches!(pattern.ty, Type::TyAbs(_, _)) {
+            return Declaration::Val { rec, pattern, expr };
+        }
+
         let binds = pattern
             .binds()
             .into_iter()
             .map(|(n, _)| n)
             .cloned()
             .collect::<Vec<_>>();
-        if binds.iter().all(|b| !self.instance_table.contains_key(b)) {
-            return Declaration::Val { rec, pattern, expr };
-        }
+
         // currently only supports `val variable = expr`
         assert_eq!(binds.len(), 1);
-        assert!(matches!(pattern.ty, Type::TyAbs(_, _)));
 
-        for args in &self.instance_table[&binds[0]] {
+        let mut ret = vec![];
+        // TODO: no need to clone
+        for args in self.instance_table[&binds[0]].clone() {
             let mut expr = expr.clone();
             let mut pattern = pattern.clone();
-            match expr.ty {
-                Type::TyAbs(params, body) => {
-                    expr.ty = *body;
-                    Instanciator {
-                        params: &params,
-                        args: &args,
-                    }
-                    .traverse_expr(&mut expr);
-                }
-                _ => (),
-            }
             match pattern.ty {
                 Type::TyAbs(params, body) => {
                     pattern.ty = *body;
@@ -181,15 +179,31 @@ impl Transform<Type> for Monomorphizer {
                     Instanciator {
                         params: &params,
                         args: &args,
+                        m: self,
                     }
                     .traverse_pattern(&mut pattern);
                 }
                 _ => (),
             }
-            // TODO: insert into AST
-            Declaration::Val { rec, expr, pattern };
+
+            match expr.ty {
+                Type::TyAbs(params, body) => {
+                    expr.ty = *body;
+                    Instanciator {
+                        params: &params,
+                        args: &args,
+                        m: self,
+                    }
+                    .traverse_expr(&mut expr);
+                }
+                _ => (),
+            }
+            ret.push(Declaration::Val { rec, expr, pattern });
         }
-        unimplemented!()
+        Declaration::Local {
+            binds: vec![],
+            body: ret,
+        }
     }
 
     fn transform_tyapp(&mut self, _: Span, fun: Symbol, arg: Vec<Type>) -> CoreExprKind<Type> {

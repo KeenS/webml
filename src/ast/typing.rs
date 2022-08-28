@@ -403,10 +403,8 @@ impl TyEnv {
                         TypeErrorKind::PolymorphicExpression,
                     )),
                     (vars, true) => {
-                        println!("generalized {:?}", ty);
                         let cloned = self.pool.ty(self.pool.pool.value_of(ty).clone());
                         let new_ty = self.pool.ty(Typing::TyAbs(vars, cloned));
-                        println!("new_ty {:?}", new_ty);
                         self.pool.set(ty, new_ty);
                         Ok(())
                     }

@@ -54,7 +54,7 @@ fn conv_ty(ty: ast::Type) -> HTy {
         Tuple(tys) => HTy::Tuple(tys.into_iter().map(conv_ty).collect()),
         Fun(arg, ret) => HTy::fun(conv_ty(*arg), conv_ty(*ret)),
         Datatype(name) => HTy::Datatype(name),
-        TyAbs(_, _) | Variable(_) => panic!("polymorphism is not supported yet"),
+        TyAbs(_, _) | Variable(_) => panic!("polymorphism is not supported yet: {:?}", ty),
     }
 }
 

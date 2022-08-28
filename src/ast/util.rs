@@ -176,7 +176,11 @@ pub trait Traverse<Ty> {
         _arg: &mut Option<Box<CorePattern<Ty>>>,
     ) {
     }
-    fn traverse_pat_tuple(&mut self, _: Span, _tuple: &mut Vec<CorePattern<Ty>>) {}
+    fn traverse_pat_tuple(&mut self, _: Span, tuple: &mut Vec<CorePattern<Ty>>) {
+        for t in tuple {
+            self.traverse_pattern(t)
+        }
+    }
     fn traverse_pat_variable(&mut self, _: Span, _value: &mut Symbol) {}
     fn traverse_pat_wildcard(&mut self, _: Span) {}
 }
