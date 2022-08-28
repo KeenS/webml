@@ -1,6 +1,7 @@
 mod case_simplify;
 mod collect_langitems;
 mod desugar;
+mod monomorphize;
 mod pp;
 mod rename;
 mod resolve_overload;
@@ -11,6 +12,7 @@ mod var2constructor;
 pub use self::case_simplify::CaseSimplify;
 pub use self::collect_langitems::CollectLangItems;
 pub use self::desugar::Desugar;
+pub use self::monomorphize::Monomorphize;
 pub use self::rename::Rename;
 pub use self::resolve_overload::ResolveOverload;
 pub use self::typing::Typer;
@@ -305,7 +307,7 @@ pub struct SymbolTable {
 
 type TypeId = u64;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Type {
     Variable(TypeId),
     Char,
