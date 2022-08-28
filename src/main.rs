@@ -44,6 +44,12 @@ fn main() {
     let prelude = include_str!("../ml_src/prelude.sml").to_string();
     let mut input = prelude;
     read_and_append_to_string(filename, &mut input).expect("failed to load file");
-    let code = compile_string(input, &config).expect("failed to compile file");
+    let code = match compile_string(input, &config) {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("compile error: {e}");
+            std::process::exit(1)
+        }
+    };
     fs::write("out.wasm", &code).unwrap()
 }
