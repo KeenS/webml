@@ -21,6 +21,10 @@ pub use error::Error;
 use wasm_bindgen::prelude::*;
 
 pub fn compile_string(input: String, config: &Config) -> Result<Vec<u8>, Error> {
+    compile_strings(vec![input], config)
+}
+
+pub fn compile_strings(inputs: Vec<String>, config: &Config) -> Result<Vec<u8>, Error> {
     use crate::pass::PrintablePass;
     use wasm::Dump;
 
@@ -50,7 +54,7 @@ pub fn compile_string(input: String, config: &Config) -> Result<Vec<u8>, Error> 
        backend: backend::LIR2WASM::default(),
     ];
 
-    let module: backend::Output = passes.trans(input, config)?;
+    let module: backend::Output = passes.trans(inputs, config)?;
 
     let mut code = Vec::new();
     module.0.dump(&mut code);
@@ -61,8 +65,8 @@ pub fn compile_string(input: String, config: &Config) -> Result<Vec<u8>, Error> 
 #[cfg_attr(target_arch = "wasm32", wasm_bindgen)]
 pub fn compile_string_all(input: String) -> Result<Vec<u8>, JsValue> {
     let mut prelude = include_str!("../ml_src/prelude.sml").to_string();
-    prelude.push_str(&input);
 
     let config = Config::default();
-    compile_string(prelude, &config).map_err(|e| format!("Compile failed: {}", e).into())
+    compile_strings(vec![prelude, input], &config)
+        .map_err(|e| format!("Compile failed: {}", e).into())
 }

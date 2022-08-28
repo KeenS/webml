@@ -1568,18 +1568,22 @@ fn test_expr_infix_and_app2() {
     )
 }
 
-impl Pass<String, crate::Error> for Parser {
+impl Pass<Vec<String>, crate::Error> for Parser {
     type Target = UntypedAst;
 
     fn trans(
         &mut self,
-        input: String,
+        inputs: Vec<String>,
         _: &Config,
     ) -> std::result::Result<Self::Target, crate::Error> {
-        let input = Input::new(&input);
-        match all_consuming(self.top())(input) {
-            Ok((_, iresult)) => Ok(iresult),
-            Err(e) => Err(crate::Error::Parser(format!("{e}"))),
+        let mut result = vec![];
+        for input in inputs {
+            let input = Input::new(&input);
+            match all_consuming(self.top())(input) {
+                Ok((_, iresult)) => result.push(iresult),
+                Err(e) => return Err(crate::Error::Parser(format!("{e}"))),
+            }
         }
+        Ok(AST(result.into_iter().flat_map(|ast| ast.0).collect()))
     }
 }

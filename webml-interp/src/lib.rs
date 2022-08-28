@@ -49,15 +49,14 @@ impl WebmlInterp {
     pub fn run_file(&mut self, path: impl AsRef<Path>) {
         use std::fs;
         let prog = fs::read(path).expect("failed to read file");
-        self.run(&prog)
+        self.run(prog)
     }
 
-    pub fn run(&mut self, prog: &[u8]) {
-        use std::str::from_utf8;
-        if Self::is_wasm(prog) {
-            self.run_wasm(prog)
+    pub fn run(&mut self, prog: Vec<u8>) {
+        if Self::is_wasm(&prog) {
+            self.run_wasm(&prog)
         } else {
-            let prog = from_utf8(prog).expect("program must be a utf-8 string");
+            let prog = String::from_utf8(prog).expect("program must be a utf-8 string");
             let module_data = Self::compile(prog);
             self.run_wasm(&module_data)
         }
@@ -71,10 +70,9 @@ impl WebmlInterp {
             .expect("failed to instanciate module");
     }
 
-    pub fn compile(input: &str) -> Vec<u8> {
-        use webml::{compile_string, Config};
-        let mut prelude = include_str!("../../ml_src/prelude.sml").to_string();
-        prelude.push_str(input);
-        compile_string(prelude, &Config::default()).expect("failed to compile")
+    pub fn compile(input: String) -> Vec<u8> {
+        use webml::{compile_strings, Config};
+        let prelude = include_str!("../../ml_src/prelude.sml").to_string();
+        compile_strings(vec![prelude, input], &Config::default()).expect("failed to compile")
     }
 }
