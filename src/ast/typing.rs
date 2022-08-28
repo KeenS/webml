@@ -286,16 +286,23 @@ impl TyEnv {
         use Typing::*;
         match self.pool.pool.value_of(ty) {
             Variable(id) => vec![*id],
-            Char | Int | Real | OverloadedNum | OverloadedNumText => vec![],
+            Char | Int | Real | TyAbs(_, _) | OverloadedNum | OverloadedNumText => vec![],
             Fun(param, body) => {
                 let mut ret = self.polymorphic_variables(param.clone());
                 ret.append(&mut self.polymorphic_variables(body.clone()));
+                ret.sort();
+                ret.dedup();
                 ret
             }
-            Tuple(tys) => tys
-                .iter()
-                .flat_map(|ty| self.polymorphic_variables(ty.clone()))
-                .collect(),
+            Tuple(tys) => {
+                let mut ret = tys
+                    .iter()
+                    .flat_map(|ty| self.polymorphic_variables(ty.clone()))
+                    .collect::<Vec<_>>();
+                ret.sort();
+                ret.dedup();
+                ret
+            }
             // currently Datatype will not be polymorphic
             Datatype(_) => vec![],
         }
