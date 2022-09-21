@@ -187,6 +187,7 @@ impl Desugar {
             } => self.transform_externcall(span, module, fun, args, argty, retty),
             Fn { param, body } => self.transform_fn(span, param, body),
             App { fun, arg } => self.transform_app(span, fun, arg),
+            TyApp { fun, arg } => self.transform_tyapp(span, fun, arg),
             Case { cond, clauses } => self.transform_case(span, cond, clauses),
             Tuple { tuple } => self.transform_tuple(span, tuple),
             Constructor { arg, name } => self.transform_constructor(span, arg, name),
@@ -282,6 +283,10 @@ impl Desugar {
             fun: self.transform_expr(*fun).boxed(),
             arg: self.transform_expr(*arg).boxed(),
         }
+    }
+
+    fn transform_tyapp(&mut self, _: Span, fun: Symbol, arg: Vec<Empty>) -> UntypedCoreExprKind {
+        ExprKind::TyApp { fun, arg }
     }
 
     fn transform_if(
