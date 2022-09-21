@@ -19,15 +19,120 @@ impl Monomorphize {
 
 #[derive(Debug, Default)]
 struct InstanceCollector {
-    instance_table: HashMap<Symbol, HashSet<Vec<Type>>>,
+    root_set: HashMap<Symbol, HashSet<Vec<Type>>>,
+    blocked: HashMap<Symbol, HashSet<Vec<Type>>>,
+    param_dependencies: HashMap<TypeId, HashSet<Symbol>>,
+    symbol_params: HashMap<Symbol, Vec<TypeId>>,
 }
 
 impl Traverse<Type> for InstanceCollector {
+    fn traverse_val(
+        &mut self,
+        _: &mut bool,
+        pattern: &mut CorePattern<Type>,
+        expr: &mut CoreExpr<Type>,
+    ) {
+        let params = match &pattern.ty {
+            Type::TyAbs(params, _) => params.clone(),
+            _ => vec![],
+        };
+        let mut binds = pattern
+            .binds()
+            .into_iter()
+            .map(|(n, _)| n)
+            .cloned()
+            .collect::<Vec<_>>();
+        // currently only supports `val variable = expr`
+        if binds.len() == 1 {
+            let name = binds.remove(0);
+            self.symbol_params.insert(name, params);
+        }
+
+        // the original traverse_val
+        self.traverse_expr(expr);
+        self.traverse_pattern(pattern)
+    }
+
     fn traverse_tyapp(&mut self, _: Span, fun: &mut Symbol, arg: &mut Vec<Type>) {
-        self.instance_table
-            .entry(fun.clone())
-            .or_default()
-            .insert(arg.clone());
+        if arg.iter().any(|t| matches! {t, Type::Variable(_)}) {
+            self.blocked
+                .entry(fun.clone())
+                .or_default()
+                .insert(arg.clone());
+            let params = arg.iter().filter_map(|t| match t {
+                Type::Variable(id) => Some(id),
+                _ => None,
+            });
+            for param in params {
+                self.param_dependencies
+                    .entry(param.clone())
+                    .or_default()
+                    .insert(fun.clone());
+            }
+        } else {
+            self.root_set
+                .entry(fun.clone())
+                .or_default()
+                .insert(arg.clone());
+        }
+    }
+}
+
+impl InstanceCollector {
+    fn generate_instance_table(self) -> HashMap<Symbol, HashSet<Vec<Type>>> {
+        let mut ret: HashMap<Symbol, HashSet<Vec<Type>>> = HashMap::new();
+        let InstanceCollector {
+            mut root_set,
+            mut blocked,
+            mut param_dependencies,
+            symbol_params,
+        } = self;
+
+        // resolve all the parameter dependencies
+        while !root_set.is_empty() {
+            let mut next_root_set: HashMap<Symbol, HashSet<Vec<Type>>> = HashMap::new();
+            for (name, args_set) in root_set {
+                let params = &symbol_params[&name];
+                for args in args_set.clone() {
+                    assert_eq!(params.len(), args.len());
+                    for (param, arg) in params.iter().zip(args) {
+                        let dependencies = match param_dependencies.remove(param) {
+                            Some(ds) => ds,
+                            None => continue,
+                        };
+                        for dep in dependencies {
+                            // Because hash value may change, we cannot modify values in hashset.
+                            // Thus, we remove onece and re-insert
+                            let dep_args_set = blocked.remove(&dep).expect("must exist");
+                            let mut next_dep_args_set = HashSet::new();
+                            for mut dep_args in dep_args_set {
+                                for dep_arg in &mut dep_args {
+                                    if dep_arg == &Type::Variable(*param) {
+                                        *dep_arg = arg.clone()
+                                    }
+                                }
+                                if dep_args.iter().all(|a| !matches! {a, Type::Variable(_)}) {
+                                    next_root_set
+                                        .entry(dep.clone())
+                                        .or_default()
+                                        .insert(dep_args);
+                                } else {
+                                    next_dep_args_set.insert(dep_args);
+                                }
+                            }
+                            blocked.insert(dep, next_dep_args_set);
+                        }
+                    }
+                }
+                let set = ret.entry(name).or_default();
+                for args in args_set {
+                    set.insert(args);
+                }
+            }
+            root_set = next_root_set;
+        }
+        assert!(param_dependencies.is_empty());
+        ret
     }
 }
 
@@ -120,6 +225,12 @@ impl<'a> Traverse<Type> for Instanciator<'a> {
         }
     }
 
+    fn traverse_tyapp(&mut self, _: Span, _: &mut Symbol, args: &mut Vec<Type>) {
+        for arg in args {
+            rewrite_type(arg, self.params, self.args)
+        }
+    }
+
     fn traverse_pattern(&mut self, pattern: &mut CorePattern<Type>) {
         rewrite_type(&mut pattern.ty, self.params, self.args);
 
@@ -150,10 +261,9 @@ impl Transform<Type> for Monomorphizer {
         pattern: CorePattern<Type>,
         expr: CoreExpr<Type>,
     ) -> CoreDeclaration<Type> {
-        let pattern = self.transform_pattern(pattern);
-        let expr = self.transform_expr(expr);
-
         if !matches!(pattern.ty, Type::TyAbs(_, _)) {
+            let pattern = self.transform_pattern(pattern);
+            let expr = self.transform_expr(expr);
             return Declaration::Val { rec, pattern, expr };
         }
 
@@ -198,8 +308,12 @@ impl Transform<Type> for Monomorphizer {
                 }
                 _ => (),
             }
+            let pattern = self.transform_pattern(pattern);
+            let expr = self.transform_expr(expr);
+
             ret.push(Declaration::Val { rec, expr, pattern });
         }
+
         Declaration::Local {
             binds: vec![],
             body: ret,
@@ -207,6 +321,7 @@ impl Transform<Type> for Monomorphizer {
     }
 
     fn transform_tyapp(&mut self, _: Span, fun: Symbol, arg: Vec<Type>) -> CoreExprKind<Type> {
+        // mark
         let name = self.instanciated_name(fun, arg);
         ExprKind::Symbol { name }
     }
@@ -221,7 +336,8 @@ impl Pass<TypedCoreContext, crate::Error> for Monomorphize {
 
         let mut collector = InstanceCollector::default();
         collector.traverse_ast(&mut ast);
-        let mut monomorphizer = Monomorphizer::new(collector.instance_table, self.id.clone());
+        let mut monomorphizer =
+            Monomorphizer::new(collector.generate_instance_table(), self.id.clone());
         let ast = monomorphizer.transform_ast(ast);
         let symbol_table = context.symbol_table;
         let lang_items = context.lang_items;
