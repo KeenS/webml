@@ -289,7 +289,7 @@ impl Parser {
             let (i, names) = separated_list0(self.space1(), self.symbol_eq())(i)?;
             let priority = priority.map(|s| {
                 s.parse()
-                    .expect("internal error: falied to parse digits as integer")
+                    .expect("internal error: failed to parse digits as integer")
             });
             let names = names.into_iter().map(|(_, name)| name).collect::<Vec<_>>();
             let fixity;
