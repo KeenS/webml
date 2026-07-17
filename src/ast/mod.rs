@@ -1,6 +1,7 @@
 mod case_simplify;
 mod collect_langitems;
 mod desugar;
+mod monomorphize;
 mod pp;
 mod rename;
 mod resolve_overload;
@@ -11,6 +12,7 @@ mod var2constructor;
 pub use self::case_simplify::CaseSimplify;
 pub use self::collect_langitems::CollectLangItems;
 pub use self::desugar::Desugar;
+pub use self::monomorphize::Monomorphize;
 pub use self::rename::Rename;
 pub use self::resolve_overload::ResolveOverload;
 pub use self::typing::Typer;
@@ -198,6 +200,10 @@ pub enum ExprKind<
         fun: Box<Expr<Ty, DE, DS, DP>>,
         arg: Box<Expr<Ty, DE, DS, DP>>,
     },
+    TyApp {
+        fun: Symbol,
+        arg: Vec<Ty>,
+    },
     Case {
         cond: Box<Expr<Ty, DE, DS, DP>>,
         clauses: Vec<(Pattern<Ty, DP>, Expr<Ty, DE, DS, DP>)>,
@@ -301,7 +307,7 @@ pub struct SymbolTable {
 
 type TypeId = u64;
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum Type {
     Variable(TypeId),
     Char,
@@ -310,6 +316,7 @@ pub enum Type {
     Fun(Box<Type>, Box<Type>),
     Tuple(Vec<Type>),
     Datatype(Symbol),
+    TyAbs(Vec<TypeId>, Box<Type>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -476,6 +483,10 @@ impl<Ty> CoreExpr<Ty> {
                 fun: fun.map_ty(f).boxed(),
                 arg: arg.map_ty(f).boxed(),
             },
+            TyApp { fun, arg } => TyApp {
+                fun,
+                arg: arg.into_iter().map(f).collect(),
+            },
             Case { cond, clauses } => Case {
                 cond: cond.map_ty(&mut *f).boxed(),
                 clauses: clauses
@@ -506,6 +517,7 @@ impl<Ty> CoreExpr<Ty> {
             ExternCall { .. } => false,
             Fn { .. } => true,
             App { .. } => false,
+            TyApp { .. } => true,
             // TODO: check compatibility with fn
             Case { .. } => false,
             Tuple { tuple } => tuple.iter().all(|e| e.is_value()),

@@ -709,7 +709,9 @@ impl CaseSimplifyPass {
     ) -> bool {
         use Type::*;
         match ty {
-            Real | Variable(_) | Fun(_, _) => panic!("no way to pattern match against this type"),
+            Real | Variable(_) | Fun(_, _) | TyAbs(_, _) => {
+                panic!("no way to pattern match against this type")
+            }
             Char | Int => false,
             Tuple(_) => {
                 // unlikely reachable, but writing incase it reaches.

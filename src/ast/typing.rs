@@ -34,6 +34,7 @@ enum Typing {
     Fun(NodeId, NodeId),
     Tuple(Vec<NodeId>),
     Datatype(Symbol),
+    TyAbs(Vec<TypeId>, NodeId),
     OverloadedNum,
     OverloadedNumText,
 }
@@ -60,6 +61,7 @@ fn conv_ty(pool: &UnificationPool<Typing>, ty: Typing) -> Type {
         ),
         Tuple(tys) => Type::Tuple(tys.into_iter().map(|ty| resolve(pool, ty)).collect()),
         Datatype(type_id) => Type::Datatype(type_id),
+        TyAbs(vars, ty) => Type::TyAbs(vars, Box::new(resolve(pool, ty))),
         OverloadedNum => Type::Int,
         OverloadedNumText => Type::Int,
     }
@@ -215,6 +217,35 @@ impl TypePool {
     ) -> std::result::Result<NodeId, TypingError> {
         self.pool.try_unify_with(id1, id2, try_unify)
     }
+
+    fn set(&mut self, old: NodeId, new: NodeId) {
+        self.pool
+            .try_unify_with::<TypingError>(old, new, |_, _, new| Ok(new))
+            .unwrap();
+    }
+    fn app_types(&mut self, ty: NodeId, params: &[TypeId], args: &[NodeId]) -> NodeId {
+        use Typing::*;
+        match self.pool.value_of(ty).clone() {
+            Variable(id) => match params.iter().position(|&p| p == id) {
+                Some(i) => args[i].clone(),
+                None => ty,
+            },
+            Char | Int | Real | OverloadedNum | OverloadedNumText | Datatype(_) => ty,
+            Fun(f, a) => {
+                let f = self.app_types(f, params, args);
+                let a = self.app_types(a, params, args);
+                self.ty(Fun(f, a))
+            }
+            Tuple(ts) => {
+                let ts = ts
+                    .into_iter()
+                    .map(|t| self.app_types(t, params, args))
+                    .collect();
+                self.ty(Tuple(ts))
+            }
+            TyAbs(_, _) => unreachable!(),
+        }
+    }
 }
 
 impl TypePool {
@@ -286,16 +317,23 @@ impl TyEnv {
         use Typing::*;
         match self.pool.pool.value_of(ty) {
             Variable(id) => vec![*id],
-            Char | Int | Real | OverloadedNum | OverloadedNumText => vec![],
+            Char | Int | Real | TyAbs(_, _) | OverloadedNum | OverloadedNumText => vec![],
             Fun(param, body) => {
                 let mut ret = self.polymorphic_variables(param.clone());
                 ret.append(&mut self.polymorphic_variables(body.clone()));
+                ret.sort();
+                ret.dedup();
                 ret
             }
-            Tuple(tys) => tys
-                .iter()
-                .flat_map(|ty| self.polymorphic_variables(ty.clone()))
-                .collect(),
+            Tuple(tys) => {
+                let mut ret = tys
+                    .iter()
+                    .flat_map(|ty| self.polymorphic_variables(ty.clone()))
+                    .collect::<Vec<_>>();
+                ret.sort();
+                ret.dedup();
+                ret
+            }
             // currently Datatype will not be polymorphic
             Datatype(_) => vec![],
         }
@@ -322,19 +360,23 @@ impl TyEnv {
                     .collect(),
             ),
             Type::Datatype(name) => Typing::Datatype(name),
+            Type::TyAbs(vars, ty) => {
+                let typing = self.convert(*ty);
+                Typing::TyAbs(vars, self.pool.ty(typing))
+            }
         }
     }
 }
 
 impl TyEnv {
-    fn infer_ast(&mut self, ast: &Core<NodeId>) -> Result<()> {
-        for decl in ast.0.iter() {
+    fn infer_ast(&mut self, ast: &mut Core<NodeId>) -> Result<()> {
+        for decl in &mut ast.0 {
             self.infer_statement(decl)?;
         }
         Ok(())
     }
 
-    fn infer_statement(&mut self, decl: &CoreDeclaration<NodeId>) -> Result<()> {
+    fn infer_statement(&mut self, decl: &mut CoreDeclaration<NodeId>) -> Result<()> {
         use Declaration::*;
         match decl {
             Datatype { .. } => Ok(()),
@@ -348,22 +390,27 @@ impl TyEnv {
                 self.infer_expr(expr)?;
                 self.infer_pat(pattern.span(), pattern)?;
                 self.unify(expr.span(), expr.ty(), pattern.ty())?;
-                if !rec {
+                if !*rec {
                     for &(name, ty) in &names {
                         self.insert(name.clone(), Clone::clone(ty));
                     }
                 }
                 let ty = expr.ty();
-                match (&self.polymorphic_variables(ty)[..], expr.is_value()) {
-                    ([], _) => Ok(()),
+                match (self.polymorphic_variables(ty), expr.is_value()) {
+                    (v, _) if v.is_empty() => Ok(()),
                     (_, false) => Err(TypeError::new(
                         expr.span(),
                         TypeErrorKind::PolymorphicExpression,
                     )),
-                    (_vars, true) => todo!(),
+                    (vars, true) => {
+                        let cloned = self.pool.ty(self.pool.pool.value_of(ty).clone());
+                        let new_ty = self.pool.ty(Typing::TyAbs(vars, cloned));
+                        self.pool.set(ty, new_ty);
+                        Ok(())
+                    }
                 }
             }
-            LangItem { decl, .. } => self.infer_statement(decl.as_ref()),
+            LangItem { decl, .. } => self.infer_statement(decl.as_mut()),
             Local { binds, body } => {
                 for b in binds {
                     self.infer_statement(b)?
@@ -377,7 +424,7 @@ impl TyEnv {
         }
     }
 
-    fn infer_expr(&mut self, expr: &CoreExpr<NodeId>) -> Result<()> {
+    fn infer_expr(&mut self, expr: &mut CoreExpr<NodeId>) -> Result<()> {
         use crate::ast::ExprKind::*;
         let int = self.pool.ty_int();
         let real = self.pool.ty_real();
@@ -385,7 +432,8 @@ impl TyEnv {
         let overloaded_num = self.pool.ty_overloaded_num();
         let overloaded_num_text = self.pool.ty_overloaded_num_text();
         let ty = &expr.ty;
-        match &expr.inner {
+        let span = expr.span();
+        match &mut expr.inner {
             Binds { binds, ret } => {
                 for decl in binds {
                     self.infer_statement(decl)?;
@@ -399,48 +447,56 @@ impl TyEnv {
                 match fun {
                     Add | Sub | Mul => {
                         assert!(args.len() == 2);
-                        let l = &args[0];
-                        let r = &args[1];
+                        let (l, r) = match &mut args[..] {
+                            [l, r] => (l, r),
+                            _ => unreachable!(),
+                        };
 
                         self.infer_expr(l)?;
                         self.infer_expr(r)?;
                         self.unify(r.span(), l.ty(), r.ty())?;
                         self.unify(l.span(), l.ty(), overloaded_num)?;
-                        self.unify(expr.span(), *ty, l.ty())?;
+                        self.unify(span, *ty, l.ty())?;
                         Ok(())
                     }
                     Eq | Neq | Gt | Ge | Lt | Le => {
                         assert!(args.len() == 2);
-                        let l = &args[0];
-                        let r = &args[1];
+                        let (l, r) = match &mut args[..] {
+                            [l, r] => (l, r),
+                            _ => unreachable!(),
+                        };
 
                         self.infer_expr(l)?;
                         self.infer_expr(r)?;
                         self.unify(r.span(), l.ty(), r.ty())?;
                         self.unify(l.span(), l.ty(), overloaded_num_text)?;
-                        self.unify(expr.span(), *ty, bool)?;
+                        self.unify(span, *ty, bool)?;
                         Ok(())
                     }
                     Div | Mod => {
                         assert!(args.len() == 2);
-                        let l = &args[0];
-                        let r = &args[1];
+                        let (l, r) = match &mut args[..] {
+                            [l, r] => (l, r),
+                            _ => unreachable!(),
+                        };
 
                         self.unify(l.span(), l.ty(), int)?;
                         self.unify(r.span(), r.ty(), int)?;
-                        self.unify(expr.span(), *ty, int)?;
+                        self.unify(span, *ty, int)?;
                         self.infer_expr(l)?;
                         self.infer_expr(r)?;
                         Ok(())
                     }
                     Divf => {
                         assert!(args.len() == 2);
-                        let l = &args[0];
-                        let r = &args[1];
+                        let (l, r) = match &mut args[..] {
+                            [l, r] => (l, r),
+                            _ => unreachable!(),
+                        };
 
                         self.unify(l.span(), l.ty(), real)?;
                         self.unify(r.span(), r.ty(), real)?;
-                        self.unify(expr.span(), *ty, real)?;
+                        self.unify(span, *ty, real)?;
                         self.infer_expr(l)?;
                         self.infer_expr(r)?;
                         Ok(())
@@ -456,7 +512,7 @@ impl TyEnv {
             ExternCall {
                 args, argty, retty, ..
             } => {
-                for (arg, argty) in args.iter().zip(argty) {
+                for (arg, argty) in args.iter_mut().zip(argty) {
                     self.infer_expr(arg)?;
                     let argty = self.convert(argty.clone());
                     self.give(arg.span(), arg.ty(), argty)?;
@@ -469,14 +525,19 @@ impl TyEnv {
                 let param_ty = self.pool.tyvar();
                 self.insert(param.clone(), param_ty);
                 self.infer_expr(body)?;
-                self.give(expr.span(), *ty, Typing::Fun(param_ty, body.ty()))?;
+                self.give(span, *ty, Typing::Fun(param_ty, body.ty()))?;
                 Ok(())
             }
             App { fun, arg } => {
                 self.infer_expr(fun)?;
                 self.infer_expr(arg)?;
-                self.give(expr.span(), fun.ty(), Typing::Fun(arg.ty(), *ty))?;
+                self.give(span, fun.ty(), Typing::Fun(arg.ty(), *ty))?;
                 Ok(())
+            }
+            TyApp { .. } => {
+                // Do nothing
+                // This term is generated after typing
+                unreachable!()
             }
             Case { cond, clauses } => {
                 self.infer_expr(cond)?;
@@ -489,19 +550,40 @@ impl TyEnv {
                 Ok(())
             }
             Tuple { tuple } => {
-                self.infer_tuple(expr.span(), tuple, *ty)?;
+                self.infer_tuple(span, tuple, *ty)?;
                 Ok(())
             }
             Constructor { arg, name } => {
-                self.infer_constructor(expr.span(), name, arg, *ty)?;
+                self.infer_constructor(span, name, arg, *ty)?;
                 Ok(())
             }
             Symbol { name } => {
-                self.infer_symbol(expr.span(), name, *ty)?;
+                use std::iter;
+                let mut name = name.clone();
+                self.infer_symbol(span, &mut name, *ty)?;
+                let (vars, bodyty) = match self.pool.pool.value_of(*ty) {
+                    Typing::TyAbs(vars, bodyty) => (vars.clone(), bodyty.clone()),
+                    // monomorphic path
+                    _ => return Ok(()),
+                };
+                // polymorphic path
+                let newtyvars = iter::repeat(())
+                    .take(vars.len())
+                    .map(|_| self.pool.tyvar())
+                    .collect::<Vec<_>>();
+                let newty = self.pool.app_types(bodyty, &vars, &newtyvars);
+                *expr = Expr {
+                    ty: newty,
+                    span: expr.span.clone(),
+                    inner: TyApp {
+                        fun: name,
+                        arg: newtyvars,
+                    },
+                };
                 Ok(())
             }
             Literal { value } => {
-                self.infer_literal(expr.span(), value, *ty)?;
+                self.infer_literal(span, value, *ty)?;
                 Ok(())
             }
             D(d) => match *d {},
@@ -512,15 +594,15 @@ impl TyEnv {
         &mut self,
         span: Span,
         sym: &Symbol,
-        arg: &Option<Box<CoreExpr<NodeId>>>,
+        arg: &mut Option<Box<CoreExpr<NodeId>>>,
         given: NodeId,
     ) -> Result<()> {
         match self.get(sym) {
             Some(ty) => {
                 self.unify(span, ty, given)?;
                 let arg_ty = self.symbol_table().get_argtype_of_constructor(sym);
-                if let (Some(arg), Some(arg_ty)) = (arg.clone(), arg_ty.cloned()) {
-                    self.infer_expr(&arg)?;
+                if let (Some(mut arg), Some(arg_ty)) = (arg.clone(), arg_ty.cloned()) {
+                    self.infer_expr(&mut arg)?;
                     let arg_typing = self.convert(arg_ty);
                     let arg_ty_id = self.pool.ty(arg_typing);
                     self.unify(arg.span(), arg.ty(), arg_ty_id)?;
@@ -616,7 +698,7 @@ impl TyEnv {
     fn infer_tuple(
         &mut self,
         span: Span,
-        tuple: &Vec<CoreExpr<NodeId>>,
+        tuple: &mut Vec<CoreExpr<NodeId>>,
         given: NodeId,
     ) -> Result<()> {
         use std::iter;
@@ -624,7 +706,7 @@ impl TyEnv {
             .take(tuple.len())
             .collect::<Vec<_>>();
 
-        for (e, t) in tuple.iter().zip(tys.iter()) {
+        for (e, t) in tuple.iter_mut().zip(tys.iter()) {
             self.infer_expr(e)?;
             self.unify(e.span(), e.ty(), *t)?;
         }

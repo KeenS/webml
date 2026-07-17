@@ -230,6 +230,16 @@ impl<Ty: fmt::Display, DE: fmt::Display, DS: fmt::Display, DP: fmt::Display> fmt
                     next = next
                 )?;
             }
+            TyApp { fun, arg } => {
+                write!(f, "({:indent$})@", fun, indent = indent,)?;
+                inter_iter! {
+                    arg.iter(),
+                    write!(f, ", ")?,
+                    |ty| => {
+                        write!(f,"{:indent$}", ty, indent = indent)?;
+                    }
+                }
+            }
             Case { cond, clauses } => {
                 let ind = nspaces(indent);
                 write!(f, "case {:next$} of", cond, next = next)?;
@@ -432,6 +442,10 @@ impl fmt::Display for Type {
                 write!(f, ")")?;
             }
             Datatype(name) => write!(f, "{}", name)?,
+            TyAbs(vars, ty) => {
+                inter_iter!(vars.iter(), write!(f, ", ")?, |id| => { write!(f, "'{}", id)? });
+                write!(f, " {}", ty)?
+            }
         }
         Ok(())
     }
